@@ -48,6 +48,13 @@ body {
   padding: 24px 16px;
 }
 
+/* [hidden] and .auth-screen{display:flex} have equal specificity, so without
+   this the later rule (this one) would always win and the screen would stay
+   visible even when JS sets the hidden attribute after sign-in. */
+.auth-screen[hidden] {
+  display: none;
+}
+
 .auth-card {
   background: var(--surface);
   border: 1px solid var(--border);
