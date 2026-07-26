@@ -1,10 +1,12 @@
 # Weekly CO2 Tracker
 
-A small client-side web app for tracking your weekly carbon footprint from
-commuting and food.
+A web app for tracking your weekly carbon footprint from commuting and food,
+with accounts and a friends leaderboard backed by Supabase.
 
 ## Pages
 
+- **Login** — email/password sign-in and sign-up (with a "forgot password"
+  flow), gating the rest of the app.
 - **This Week** — the inputs. For each day (M–S) pick how you got to work
   (Walk, Cycle, Train, Car, or Didn't travel) and what you ate (Meat, Veggie,
   Vegan). Choosing Meat opens a dialog to pick the type of meat and roughly
@@ -15,31 +17,39 @@ commuting and food.
   type (e.g. beef vs chicken).
 - **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
   Each box shows that week's total CO2e, color-coded against your goal from
-  the Account page. Tap a box for a day-by-day breakdown.
-- **Leaderboard** — ranks your own tracked weeks, lowest footprint first.
-  (Ranking against other people would need shared accounts/a backend, which
-  this static, local-storage-only version doesn't have yet.)
-- **Account** — your display name, one-way commute distance, and weekly CO2e
-  goal, plus export/import/reset for your data.
+  the Account page, with an over/under-goal indicator. Tap a box for a
+  day-by-day breakdown.
+- **Leaderboard** — you and your accepted friends, ranked by this week's
+  total CO2e, lowest first.
+- **Account** — display name, one-way commute distance, weekly CO2e goal,
+  a friends list (add by email, accept/decline requests), sign-out, and
+  export/import/reset for your data.
 
-All data (profile + week history) is saved to your browser's local storage,
-so it persists between visits on the same browser/device, but does not sync
-across devices — there's no server/account system behind it.
+## Architecture
+
+Static HTML/CSS/JS frontend (no build step) talking directly to
+[Supabase](https://supabase.com) (Postgres + Auth) from the browser via the
+vendored `@supabase/supabase-js` client in `vendor/supabase.js`. See
+`supabase/README.md` for how the backend is set up and `supabase/schema.sql`
+for the full schema — profiles, weeks, and friendships tables with
+row-level security, so friends only ever see each other's weekly totals on
+the leaderboard, never day-by-day commute/diet detail.
 
 ## Running it
 
-No build step or dependencies — it's static HTML/CSS/JS. Serve the folder
-with any static file server, for example:
+No build step — it's static HTML/CSS/JS. Serve the folder with any static
+file server, for example:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Then open http://localhost:8000 in your browser.
+Then open http://localhost:8000 in your browser. (`file://` won't work here
+since the Supabase client needs a real origin.)
 
-(Opening `index.html` directly via `file://` also works in most browsers,
-but some browsers restrict `localStorage` under `file://`, so a local server
-is recommended.)
+You'll need your own Supabase project — see `supabase/README.md` — with its
+URL and anon key set in the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants
+near the top of `app.js`.
 
 ## Emission factor assumptions
 

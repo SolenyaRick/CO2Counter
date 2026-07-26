@@ -1,9 +1,21 @@
 (function () {
   "use strict";
 
-  const OLD_STORAGE_KEY = "co2-tracker-week-v1";
-  const PROFILE_KEY = "co2-tracker-profile-v1";
-  const HISTORY_KEY = "co2-tracker-history-v1";
+  const SUPABASE_URL = "https://fbgfylfnbtxzbwgilktt.supabase.co";
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiZ2Z5bGZuYnR4emJ3Z2lsa3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTg1MjUsImV4cCI6MjEwMDY3NDUyNX0.S-c144dilgUwf8saEjuIQMAp4q-B86R2TRkLV6l9Ym0";
+
+  // If vendor/supabase.js failed to load for any reason, don't let that crash
+  // the whole script — surface it on the login screen instead.
+  let sbClient = null;
+  function initSupabaseClient() {
+    if (window.supabase && typeof window.supabase.createClient === "function") {
+      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return true;
+    }
+    return false;
+  }
+
   const WEEKS_GRID_COUNT = 15;
 
   const DAYS = [
@@ -75,55 +87,17 @@
 
   const CURRENT_WEEK_KEY = weekKeyFor(new Date());
 
-  // ---------- Persistence ----------
-  function loadProfile() {
-    try {
-      const raw = localStorage.getItem(PROFILE_KEY);
-      return raw ? { ...DEFAULT_PROFILE, ...JSON.parse(raw) } : { ...DEFAULT_PROFILE };
-    } catch (e) {
-      return { ...DEFAULT_PROFILE };
-    }
-  }
-
-  function loadHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  function migrateOldData(profile, history) {
-    const raw = localStorage.getItem(OLD_STORAGE_KEY);
-    if (!raw) return;
-    try {
-      const old = JSON.parse(raw);
-      if (typeof old.commuteDistanceKm === "number") profile.commuteDistanceKm = old.commuteDistanceKm;
-      if (old.commute || old.diet) {
-        history[CURRENT_WEEK_KEY] = {
-          commute: { ...blankWeek().commute, ...(old.commute || {}) },
-          diet: { ...blankWeek().diet, ...(old.diet || {}) },
-        };
-      }
-    } catch (e) {
-      // ignore corrupt legacy data
-    }
-    localStorage.removeItem(OLD_STORAGE_KEY);
-    saveProfile(profile);
-    saveHistory(history);
-  }
-
-  function saveProfile(p) { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }
-  function saveHistory(h) { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
-
-  let profile = loadProfile();
-  let history = loadHistory();
-  migrateOldData(profile, history);
+  // ---------- Signed-in state ----------
+  let currentUser = null;
+  let loadedUserId = null;
+  let profile = { ...DEFAULT_PROFILE };
+  let weeksCache = {}; // week_key -> { commute, diet, total_kg? }
+  let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
+  let pendingMeatDayKey = null;
 
   function getWeek(weekKey) {
-    if (!history[weekKey]) history[weekKey] = blankWeek();
-    return history[weekKey];
+    if (!weeksCache[weekKey]) weeksCache[weekKey] = blankWeek();
+    return weeksCache[weekKey];
   }
 
   function hasAnyEntries(weekData) {
@@ -132,8 +106,6 @@
     const ate = Object.values(weekData.diet).some((e) => e && e.type);
     return commuted || ate;
   }
-
-  let pendingMeatDayKey = null;
 
   // ---------- Footprint math ----------
   function commuteFootprint(weekData, dayKey) {
@@ -194,6 +166,228 @@
 
   function fmt(n) { return n.toFixed(1); }
 
+  // ---------- Supabase: profile ----------
+  async function ensureProfile() {
+    const { data } = await sbClient.from("profiles").select("*").eq("id", currentUser.id).maybeSingle();
+    if (data) {
+      profile = {
+        name: data.display_name || "",
+        commuteDistanceKm: data.commute_distance_km ?? DEFAULT_PROFILE.commuteDistanceKm,
+        weeklyGoalKg: data.weekly_goal_kg ?? DEFAULT_PROFILE.weeklyGoalKg,
+      };
+    } else {
+      profile = { ...DEFAULT_PROFILE };
+      await sbClient.from("profiles").insert({
+        id: currentUser.id,
+        display_name: profile.name,
+        commute_distance_km: profile.commuteDistanceKm,
+        weekly_goal_kg: profile.weeklyGoalKg,
+      });
+    }
+  }
+
+  async function persistProfile() {
+    if (!currentUser) return;
+    await sbClient.from("profiles").upsert({
+      id: currentUser.id,
+      display_name: profile.name,
+      commute_distance_km: profile.commuteDistanceKm,
+      weekly_goal_kg: profile.weeklyGoalKg,
+    });
+  }
+
+  // ---------- Supabase: weeks ----------
+  async function loadAllWeeks() {
+    weeksCache = {};
+    const { data } = await sbClient.from("weeks").select("*").eq("user_id", currentUser.id);
+    (data || []).forEach((row) => {
+      weeksCache[row.week_key] = { commute: row.commute, diet: row.diet, total_kg: row.total_kg };
+    });
+  }
+
+  function showSyncStatus(state) {
+    const el = document.getElementById("sync-status");
+    if (!el) return;
+    if (state === "saving") {
+      el.textContent = "Saving…";
+      el.className = "sync-status";
+    } else if (state === "saved") {
+      el.textContent = "Saved";
+      el.className = "sync-status";
+      setTimeout(() => {
+        if (el.textContent === "Saved") el.textContent = "";
+      }, 1500);
+    } else {
+      el.textContent = "Sync failed — check your connection";
+      el.className = "sync-status sync-error";
+    }
+  }
+
+  async function persistCurrentWeek() {
+    if (!currentUser) return;
+    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const totals = weekTotals(weekData);
+    showSyncStatus("saving");
+    const { error } = await sbClient.from("weeks").upsert(
+      {
+        user_id: currentUser.id,
+        week_key: CURRENT_WEEK_KEY,
+        commute: weekData.commute,
+        diet: weekData.diet,
+        total_kg: totals.total,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,week_key" }
+    );
+    showSyncStatus(error ? "error" : "saved");
+  }
+
+  // ---------- Supabase: friends ----------
+  async function loadFriends() {
+    if (!currentUser) return;
+    const me = currentUser.id;
+    const { data: rows, error } = await sbClient
+      .from("friendships")
+      .select("*")
+      .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
+
+    if (error || !rows) {
+      friendships = [];
+      return;
+    }
+
+    const otherIds = [...new Set(rows.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
+    let namesById = {};
+    if (otherIds.length > 0) {
+      const { data: profs } = await sbClient.from("profiles").select("id, display_name").in("id", otherIds);
+      (profs || []).forEach((p) => {
+        namesById[p.id] = p.display_name || "(no name set)";
+      });
+    }
+
+    friendships = rows.map((r) => {
+      const otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
+      return {
+        id: r.id,
+        status: r.status,
+        otherId,
+        otherName: namesById[otherId] || "(pending profile)",
+        iAmRequester: r.requester_id === me,
+      };
+    });
+  }
+
+  function fillFriendList(elementId, items, actionsFor) {
+    const el = document.getElementById(elementId);
+    el.innerHTML = "";
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "friend-row";
+      const name = document.createElement("span");
+      name.textContent = item.otherName;
+      li.appendChild(name);
+
+      const actions = document.createElement("span");
+      actions.className = "friend-actions";
+      actionsFor(item).forEach(({ label, className, onClick }) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = className;
+        btn.textContent = label;
+        btn.addEventListener("click", onClick);
+        actions.appendChild(btn);
+      });
+      li.appendChild(actions);
+      el.appendChild(li);
+    });
+  }
+
+  function renderFriendsUI() {
+    const incoming = friendships.filter((f) => f.status === "pending" && !f.iAmRequester);
+    const outgoing = friendships.filter((f) => f.status === "pending" && f.iAmRequester);
+    const accepted = friendships.filter((f) => f.status === "accepted");
+
+    fillFriendList("incoming-requests", incoming, (f) => [
+      { label: "Accept", className: "btn-primary", onClick: () => respondToFriendRequest(f.id, true) },
+      { label: "Decline", className: "btn-secondary", onClick: () => respondToFriendRequest(f.id, false) },
+    ]);
+    fillFriendList("outgoing-requests", outgoing, (f) => [
+      { label: "Cancel", className: "btn-secondary", onClick: () => removeFriendship(f.id) },
+    ]);
+    fillFriendList("friends-list", accepted, (f) => [
+      { label: "Remove", className: "btn-secondary", onClick: () => removeFriendship(f.id) },
+    ]);
+  }
+
+  async function respondToFriendRequest(id, accept) {
+    if (accept) {
+      await sbClient.from("friendships").update({ status: "accepted" }).eq("id", id);
+    } else {
+      await sbClient.from("friendships").delete().eq("id", id);
+    }
+    await loadFriends();
+    renderFriendsUI();
+    renderLeaderboard();
+  }
+
+  async function removeFriendship(id) {
+    await sbClient.from("friendships").delete().eq("id", id);
+    await loadFriends();
+    renderFriendsUI();
+    renderLeaderboard();
+  }
+
+  async function addFriendByEmail(email) {
+    const errorEl = document.getElementById("friend-error");
+    errorEl.hidden = true;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return;
+
+    const { data: foundId, error } = await sbClient.rpc("find_user_by_email", { lookup_email: cleanEmail });
+    if (error) {
+      errorEl.textContent = "Something went wrong looking that up.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (!foundId) {
+      errorEl.textContent = "No account found with that email.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (foundId === currentUser.id) {
+      errorEl.textContent = "That's your own account.";
+      errorEl.hidden = false;
+      return;
+    }
+
+    const existing = friendships.find((f) => f.otherId === foundId);
+    if (existing?.status === "accepted") {
+      errorEl.textContent = "Already friends.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (existing?.status === "pending" && existing.iAmRequester) {
+      errorEl.textContent = "Request already sent.";
+      errorEl.hidden = false;
+      return;
+    }
+    if (existing?.status === "pending" && !existing.iAmRequester) {
+      await respondToFriendRequest(existing.id, true);
+      return;
+    }
+
+    const { error: insertError } = await sbClient
+      .from("friendships")
+      .insert({ requester_id: currentUser.id, addressee_id: foundId, status: "pending" });
+    if (insertError) {
+      errorEl.textContent = "Could not send request.";
+      errorEl.hidden = false;
+      return;
+    }
+    await loadFriends();
+    renderFriendsUI();
+  }
+
   // ---------- Tab routing ----------
   const TABS = ["week", "weeks", "leaderboard", "account"];
 
@@ -244,7 +438,7 @@
       select.value = weekData.commute[day.key];
       select.addEventListener("change", () => {
         weekData.commute[day.key] = select.value;
-        saveHistory(history);
+        persistCurrentWeek();
         renderFootprints();
       });
       modeTd.appendChild(select);
@@ -330,13 +524,13 @@
             meat: existing?.meat || "chicken",
             portion: existing?.portion || "medium",
           };
-          saveHistory(history);
+          persistCurrentWeek();
           refreshMeatUI();
           renderFootprints();
           openMeatModal(day.key);
         } else {
           weekData.diet[day.key] = { type: value };
-          saveHistory(history);
+          persistCurrentWeek();
           refreshMeatUI();
           renderFootprints();
         }
@@ -375,7 +569,7 @@
     const weekData = getWeek(CURRENT_WEEK_KEY);
     const totals = weekTotals(weekData);
 
-    DAYS.forEach((day, i) => {
+    DAYS.forEach((day) => {
       const c = commuteFootprint(weekData, day.key);
       const f = foodFootprint(weekData, day.key);
       const cCell = document.querySelector(`[data-commute-footprint="${day.key}"]`);
@@ -387,7 +581,7 @@
     document.getElementById("total-commute").textContent = fmt(totals.commute);
     document.getElementById("total-food").textContent = fmt(totals.food);
     document.getElementById("total-week").textContent = fmt(totals.total);
-    document.getElementById("week-range-heading").textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)})`;
+    document.getElementById("week-range-heading").firstChild.textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)}) `;
 
     renderComparisonCard(weekData, totals);
     renderChart(totals.daily);
@@ -473,7 +667,7 @@
     const goal = currentGoal();
     for (let i = 0; i < WEEKS_GRID_COUNT; i++) {
       const key = shiftedWeekKey(CURRENT_WEEK_KEY, -i);
-      const weekData = history[key];
+      const weekData = weeksCache[key];
       const started = hasAnyEntries(weekData);
       const totals = started ? weekTotals(weekData) : null;
 
@@ -522,7 +716,7 @@
   }
 
   function openWeekDetail(key) {
-    const weekData = history[key];
+    const weekData = weeksCache[key];
     const started = hasAnyEntries(weekData);
     document.getElementById("week-detail-title").textContent = weekLabel(key);
     const body = document.getElementById("week-detail-body");
@@ -559,24 +753,26 @@
   }
 
   // ---------- Page 3: Leaderboard ----------
-  function renderLeaderboard() {
+  async function renderLeaderboard() {
     const list = document.getElementById("leaderboard-list");
+    if (!currentUser) return;
+
+    const { data, error } = await sbClient.rpc("friend_leaderboard", { target_week_key: CURRENT_WEEK_KEY });
     list.innerHTML = "";
 
-    const entries = Object.keys(history)
-      .filter((key) => hasAnyEntries(history[key]))
-      .map((key) => ({ key, totals: weekTotals(history[key]) }))
-      .sort((a, b) => a.totals.total - b.totals.total);
-
-    if (entries.length === 0) {
-      list.innerHTML = '<p class="empty-note">Log a week on the This Week page to see it ranked here.</p>';
+    if (error) {
+      list.innerHTML = '<p class="empty-note">Could not load the leaderboard right now.</p>';
+      return;
+    }
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p class="empty-note">Log this week, then add friends from the Account page to compare.</p>';
       return;
     }
 
     const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
-    entries.forEach((entry, i) => {
+    data.forEach((entry, i) => {
       const li = document.createElement("li");
-      li.className = "leaderboard-row" + (entry.key === CURRENT_WEEK_KEY ? " is-current" : "");
+      li.className = "leaderboard-row" + (entry.is_self ? " is-current" : "");
 
       const rank = document.createElement("span");
       rank.className = "leaderboard-rank";
@@ -584,18 +780,18 @@
 
       const info = document.createElement("span");
       info.className = "leaderboard-info";
-      const weekLabelEl = document.createElement("div");
-      weekLabelEl.className = "leaderboard-week-label";
-      weekLabelEl.textContent = weekLabel(entry.key);
+      const nameEl = document.createElement("div");
+      nameEl.className = "leaderboard-week-label";
+      nameEl.textContent = entry.is_self ? "You" : entry.display_name || "Friend";
       const sub = document.createElement("div");
       sub.className = "leaderboard-sub";
-      sub.textContent = entry.key === CURRENT_WEEK_KEY ? "This week" : `${fmt(entry.totals.commute)} kg commute · ${fmt(entry.totals.food)} kg food`;
-      info.appendChild(weekLabelEl);
+      sub.textContent = weekLabel(CURRENT_WEEK_KEY);
+      info.appendChild(nameEl);
       info.appendChild(sub);
 
       const total = document.createElement("span");
       total.className = "leaderboard-total";
-      total.textContent = `${fmt(entry.totals.total)} kg`;
+      total.textContent = `${fmt(entry.total_kg)} kg`;
 
       li.appendChild(rank);
       li.appendChild(info);
@@ -609,10 +805,12 @@
     document.getElementById("profile-name").value = profile.name || "";
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
     document.getElementById("profile-goal").value = profile.weeklyGoalKg;
+    document.getElementById("account-email").textContent = currentUser?.email || "";
+    renderFriendsUI();
   }
 
   function exportData() {
-    const payload = { profile, history };
+    const payload = { profile, weeks: weeksCache };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -624,32 +822,200 @@
     URL.revokeObjectURL(url);
   }
 
-  function importData(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(reader.result);
-        if (!parsed.profile || !parsed.history) throw new Error("Missing profile/history");
-        if (!confirm("Import will replace your current data. Continue?")) return;
-        profile = { ...DEFAULT_PROFILE, ...parsed.profile };
-        history = parsed.history;
-        saveProfile(profile);
-        saveHistory(history);
-        showTab(currentTab());
-        renderAccountPage();
-      } catch (e) {
-        alert("That file doesn't look like a valid CO2 Tracker export.");
+  async function importData(file) {
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch (e) {
+      alert("That file doesn't look like valid JSON.");
+      return;
+    }
+    const importedWeeks = parsed.weeks || parsed.history;
+    if (!parsed.profile || !importedWeeks) {
+      alert("That file doesn't look like a valid CO2 Tracker export.");
+      return;
+    }
+    if (!confirm("Import will replace your current profile and weeks. Continue?")) return;
+
+    profile = { ...DEFAULT_PROFILE, ...parsed.profile };
+    await persistProfile();
+
+    for (const [weekKey, weekData] of Object.entries(importedWeeks)) {
+      const totals = weekTotals(weekData);
+      await sbClient.from("weeks").upsert(
+        {
+          user_id: currentUser.id,
+          week_key: weekKey,
+          commute: weekData.commute,
+          diet: weekData.diet,
+          total_kg: totals.total,
+        },
+        { onConflict: "user_id,week_key" }
+      );
+    }
+
+    await loadAllWeeks();
+    showTab(currentTab());
+  }
+
+  async function resetWeek() {
+    if (!confirm("Reset all entries for this week?")) return;
+    weeksCache[CURRENT_WEEK_KEY] = blankWeek();
+    if (currentUser) {
+      await sbClient.from("weeks").delete().eq("user_id", currentUser.id).eq("week_key", CURRENT_WEEK_KEY);
+    }
+    renderWeekPage();
+  }
+
+  async function resetAllData() {
+    if (!confirm("This deletes ALL your saved weeks and resets your profile. This cannot be undone. Continue?")) return;
+    await sbClient.from("weeks").delete().eq("user_id", currentUser.id);
+    profile = { ...DEFAULT_PROFILE };
+    await persistProfile();
+    await loadAllWeeks();
+    showTab(currentTab());
+  }
+
+  // ---------- Auth ----------
+  let authMode = "signin";
+
+  function updateAuthModeUI() {
+    document.getElementById("auth-submit").textContent = authMode === "signin" ? "Sign in" : "Create account";
+    document.getElementById("auth-toggle-mode").textContent =
+      authMode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in";
+    document.getElementById("auth-error").hidden = true;
+    document.getElementById("auth-status").hidden = true;
+  }
+
+  async function handleAuthSubmit(e) {
+    e.preventDefault();
+    const email = document.getElementById("auth-email").value.trim();
+    const password = document.getElementById("auth-password").value;
+    const errorEl = document.getElementById("auth-error");
+    const statusEl = document.getElementById("auth-status");
+    errorEl.hidden = true;
+    statusEl.hidden = true;
+    const submitBtn = document.getElementById("auth-submit");
+    submitBtn.disabled = true;
+
+    try {
+      if (authMode === "signin") {
+        const { error } = await sbClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          errorEl.textContent = error.message;
+          errorEl.hidden = false;
+        }
+      } else {
+        const { data, error } = await sbClient.auth.signUp({ email, password });
+        if (error) {
+          errorEl.textContent = error.message;
+          errorEl.hidden = false;
+        } else if (!data.session) {
+          statusEl.textContent = "Check your email to confirm your account, then sign in.";
+          statusEl.hidden = false;
+          authMode = "signin";
+          updateAuthModeUI();
+        }
       }
-    };
-    reader.readAsText(file);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  async function handleForgotPassword() {
+    const email = document.getElementById("auth-email").value.trim();
+    const errorEl = document.getElementById("auth-error");
+    const statusEl = document.getElementById("auth-status");
+    errorEl.hidden = true;
+    if (!email) {
+      errorEl.textContent = "Enter your email above first.";
+      errorEl.hidden = false;
+      return;
+    }
+    const { error } = await sbClient.auth.resetPasswordForEmail(email);
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.hidden = false;
+      return;
+    }
+    statusEl.textContent = "Password reset email sent.";
+    statusEl.hidden = false;
+  }
+
+  function resetAuthForm() {
+    document.getElementById("auth-form").reset();
+    authMode = "signin";
+    updateAuthModeUI();
+  }
+
+  async function onSignedIn(user) {
+    currentUser = user;
+    document.getElementById("auth-screen").hidden = true;
+    document.getElementById("app-root").hidden = false;
+    // Each of these can fail independently on a flaky connection — don't let
+    // one failure strand the user on a half-initialized, unusable screen.
+    try {
+      await ensureProfile();
+    } catch (e) {
+      console.error("Failed to load profile", e);
+    }
+    try {
+      await loadAllWeeks();
+    } catch (e) {
+      console.error("Failed to load weeks", e);
+    }
+    try {
+      await loadFriends();
+    } catch (e) {
+      console.error("Failed to load friends", e);
+    }
+    showTab(currentTab());
+  }
+
+  function onSignedOut() {
+    currentUser = null;
+    profile = { ...DEFAULT_PROFILE };
+    weeksCache = {};
+    friendships = [];
+    document.getElementById("app-root").hidden = true;
+    document.getElementById("auth-screen").hidden = false;
+    resetAuthForm();
+  }
+
+  async function handleSession(session) {
+    if (session && session.user) {
+      if (loadedUserId === session.user.id) return;
+      loadedUserId = session.user.id;
+      await onSignedIn(session.user);
+    } else {
+      loadedUserId = null;
+      onSignedOut();
+    }
   }
 
   // ---------- Init ----------
   function init() {
+    if (!initSupabaseClient()) {
+      const errorEl = document.getElementById("auth-error");
+      errorEl.textContent = "Could not reach the login service. Check your connection and reload the page.";
+      errorEl.hidden = false;
+      document.getElementById("auth-submit").disabled = true;
+      return;
+    }
+
+    document.getElementById("auth-form").addEventListener("submit", handleAuthSubmit);
+    document.getElementById("auth-toggle-mode").addEventListener("click", () => {
+      authMode = authMode === "signin" ? "signup" : "signin";
+      updateAuthModeUI();
+    });
+    document.getElementById("auth-forgot").addEventListener("click", handleForgotPassword);
+
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
     });
     window.addEventListener("hashchange", () => showTab(currentTab()));
+
+    document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
 
     document.getElementById("meat-save").addEventListener("click", () => {
       if (!pendingMeatDayKey) return;
@@ -657,7 +1023,7 @@
       const meat = document.getElementById("meat-type").value;
       const portion = document.getElementById("meat-portion").value;
       weekData.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
-      saveHistory(history);
+      persistCurrentWeek();
       closeMeatModal();
       buildDietTable();
       renderFootprints();
@@ -672,27 +1038,29 @@
       if (e.target.id === "week-detail-backdrop") closeWeekDetail();
     });
 
-    document.getElementById("reset-week").addEventListener("click", () => {
-      if (!confirm("Reset all entries for this week?")) return;
-      history[CURRENT_WEEK_KEY] = blankWeek();
-      saveHistory(history);
-      renderWeekPage();
-    });
+    document.getElementById("reset-week").addEventListener("click", resetWeek);
 
     document.getElementById("profile-name").addEventListener("input", (e) => {
       profile.name = e.target.value;
-      saveProfile(profile);
+      persistProfile();
     });
     document.getElementById("profile-distance").addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       profile.commuteDistanceKm = Number.isFinite(val) && val >= 0 ? val : 0;
-      saveProfile(profile);
+      persistProfile();
       renderFootprints();
     });
     document.getElementById("profile-goal").addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       profile.weeklyGoalKg = Number.isFinite(val) && val >= 0 ? val : 0;
-      saveProfile(profile);
+      persistProfile();
+    });
+
+    document.getElementById("add-friend-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("friend-email");
+      addFriendByEmail(input.value);
+      input.value = "";
     });
 
     document.getElementById("export-data").addEventListener("click", exportData);
@@ -701,17 +1069,14 @@
       if (file) importData(file);
       e.target.value = "";
     });
-    document.getElementById("reset-all-data").addEventListener("click", () => {
-      if (!confirm("This deletes ALL saved weeks and profile settings in this browser. Continue?")) return;
-      profile = { ...DEFAULT_PROFILE };
-      history = {};
-      saveProfile(profile);
-      saveHistory(history);
-      showTab(currentTab());
-      renderAccountPage();
-    });
+    document.getElementById("reset-all-data").addEventListener("click", resetAllData);
 
-    showTab(currentTab());
+    updateAuthModeUI();
+
+    sbClient.auth.getSession().then(({ data }) => {
+      handleSession(data.session);
+      sbClient.auth.onAuthStateChange((_event, session) => { handleSession(session); });
+    });
   }
 
   document.addEventListener("DOMContentLoaded", init);

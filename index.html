@@ -11,9 +11,36 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png" />
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <link rel="stylesheet" href="style.css" />
+<script src="vendor/supabase.js"></script>
 </head>
 <body>
-  <div class="app">
+  <div class="auth-screen" id="auth-screen">
+    <div class="auth-card">
+      <h1>Weekly CO2 Tracker</h1>
+      <p class="subtitle">Sign in to track your week and compare with friends.</p>
+      <form id="auth-form">
+        <label class="field">
+          Email
+          <input type="email" id="auth-email" required autocomplete="email" />
+        </label>
+        <label class="field">
+          Password
+          <input type="password" id="auth-password" required autocomplete="current-password" minlength="6" />
+        </label>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <p class="auth-status" id="auth-status" hidden></p>
+        <div class="auth-actions">
+          <button type="submit" class="btn-primary" id="auth-submit">Sign in</button>
+        </div>
+        <div class="auth-links">
+          <button type="button" class="link-btn" id="auth-toggle-mode">Need an account? Sign up</button>
+          <button type="button" class="link-btn" id="auth-forgot">Forgot password?</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="app" id="app-root" hidden>
     <header class="app-header">
       <h1>Weekly CO2 Tracker</h1>
       <p class="subtitle">Track how you commute and eat each day, and see your estimated carbon footprint.</p>
@@ -29,7 +56,7 @@
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week">
       <section class="card">
-        <h2 id="week-range-heading">This week</h2>
+        <h2 id="week-range-heading">This week <span class="sync-status" id="sync-status"></span></h2>
         <table class="tracker-table" id="commute-table">
           <caption class="table-caption">How did you get to work?</caption>
           <thead>
@@ -114,10 +141,10 @@
     <!-- PAGE 3: Leaderboard -->
     <section class="view" id="view-leaderboard" hidden>
       <section class="card">
-        <h2>Leaderboard</h2>
+        <h2 id="leaderboard-heading">Leaderboard</h2>
         <p class="assumptions">
-          Comparing other people needs shared accounts, so for now this ranks your own
-          tracked weeks, lowest footprint first.
+          You and your accepted friends, ranked by this week's total CO2e, lowest first.
+          Add friends from the Account page.
         </p>
         <ol class="leaderboard-list" id="leaderboard-list"><!-- rows injected by app.js --></ol>
       </section>
@@ -125,6 +152,13 @@
 
     <!-- PAGE 4: Account -->
     <section class="view" id="view-account" hidden>
+      <section class="card account-header-card">
+        <div class="account-header">
+          <span>Signed in as <strong id="account-email">&hellip;</strong></span>
+          <button id="sign-out-btn" class="btn-secondary">Sign out</button>
+        </div>
+      </section>
+
       <section class="card">
         <h2>Profile</h2>
         <label class="field">
@@ -143,6 +177,26 @@
       </section>
 
       <section class="card">
+        <h2>Friends</h2>
+        <form id="add-friend-form" class="friend-add-form">
+          <input type="email" id="friend-email" placeholder="Friend's email" required />
+          <button type="submit" class="btn-primary">Add</button>
+        </form>
+        <p class="auth-error" id="friend-error" hidden></p>
+
+        <h3 class="subheading">Requests received</h3>
+        <ul class="friend-list" id="incoming-requests"></ul>
+
+        <h3 class="subheading">Requests sent</h3>
+        <ul class="friend-list" id="outgoing-requests"></ul>
+
+        <h3 class="subheading">Your friends</h3>
+        <ul class="friend-list" id="friends-list"></ul>
+
+        <p class="assumptions">Friends can see your weekly total on the Leaderboard once you've both accepted &mdash; never your day-by-day commute or diet detail.</p>
+      </section>
+
+      <section class="card">
         <h2>Your data</h2>
         <div class="account-actions">
           <button id="export-data" class="btn-secondary">Export data (.json)</button>
@@ -153,8 +207,8 @@
           <button id="reset-all-data" class="btn-secondary danger">Reset all data</button>
         </div>
         <p class="assumptions">
-          Everything is stored only in this browser (local storage) &mdash; there is no server
-          account yet, so data does not sync between devices.
+          Resets your weekly logs and profile settings (not your friends). Everything is
+          stored in your account, synced across devices you sign in on.
         </p>
       </section>
     </section>

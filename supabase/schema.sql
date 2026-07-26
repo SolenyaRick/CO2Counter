@@ -19,12 +19,16 @@ drop policy if exists "profiles: owner can select" on public.profiles;
 create policy "profiles: owner can select" on public.profiles
   for select using (auth.uid() = id);
 
+-- Visible once a friend request exists in either direction (pending or
+-- accepted) so both sides can see who a request is from/to, not just
+-- confirmed friends. The leaderboard itself (friend_leaderboard()) still
+-- only ever includes accepted friendships.
 drop policy if exists "profiles: friends can select" on public.profiles;
 create policy "profiles: friends can select" on public.profiles
   for select using (
     exists (
       select 1 from public.friendships f
-      where f.status = 'accepted'
+      where f.status in ('pending', 'accepted')
         and ((f.requester_id = auth.uid() and f.addressee_id = profiles.id)
           or (f.addressee_id = auth.uid() and f.requester_id = profiles.id))
     )
