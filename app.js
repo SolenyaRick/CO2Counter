@@ -155,6 +155,29 @@
     return 0;
   }
 
+  // How much extra a meat choice adds on top of an equivalent veggie day —
+  // exactly the meat portion's own footprint, since the baseline for the
+  // rest of the day is valued the same either way.
+  function meatExtra(entry) {
+    const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
+    const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
+    return meatFactor * portionKg;
+  }
+
+  function veggieSavings(weekData) {
+    let total = 0;
+    const byType = {};
+    DAYS.forEach((day) => {
+      const entry = weekData.diet[day.key];
+      if (entry && entry.type === "meat") {
+        const extra = meatExtra(entry);
+        total += extra;
+        byType[entry.meat] = (byType[entry.meat] || 0) + extra;
+      }
+    });
+    return { total, byType };
+  }
+
   function weekTotals(weekData) {
     let commute = 0;
     let food = 0;
@@ -366,7 +389,38 @@
     document.getElementById("total-week").textContent = fmt(totals.total);
     document.getElementById("week-range-heading").textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)})`;
 
+    renderSavingsBox(weekData);
     renderChart(totals.daily);
+  }
+
+  function renderSavingsBox(weekData) {
+    const savings = veggieSavings(weekData);
+    const valueEl = document.getElementById("savings-value");
+    const labelEl = document.getElementById("savings-label");
+    const breakdownEl = document.getElementById("savings-breakdown");
+    breakdownEl.innerHTML = "";
+
+    if (savings.total <= 0) {
+      valueEl.textContent = "0.0";
+      labelEl.textContent = "kg CO2e · No meat logged this week";
+      return;
+    }
+
+    valueEl.textContent = fmt(savings.total);
+    labelEl.textContent = "kg CO2e · Would save if meat days were veggie";
+
+    Object.entries(savings.byType)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([meat, kg]) => {
+        const li = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = MEAT_LABELS[meat] ?? "Meat";
+        const value = document.createElement("span");
+        value.textContent = `${fmt(kg)} kg`;
+        li.appendChild(label);
+        li.appendChild(value);
+        breakdownEl.appendChild(li);
+      });
   }
 
   function renderChart(dailyTotals) {
