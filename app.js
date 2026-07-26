@@ -94,6 +94,10 @@
   let weeksCache = {}; // week_key -> { commute, diet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
   let pendingMeatDayKey = null;
+  // Purely a UI affordance (auto-save already persists on every change) - tracks
+  // which day rows have been explicitly confirmed this session, so the checkmark
+  // survives table rebuilds but resets whenever that day's value changes.
+  let confirmedDays = { commute: new Set(), diet: new Set() };
 
   function getWeek(weekKey) {
     if (!weeksCache[weekKey]) weeksCache[weekKey] = blankWeek();
@@ -410,6 +414,22 @@
   }
 
   // ---------- Page 1: This Week ----------
+  function createConfirmButton(kind, dayKey) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "day-confirm-btn" + (confirmedDays[kind].has(dayKey) ? " confirmed" : "");
+    btn.textContent = "✓";
+    btn.setAttribute("aria-label", `Confirm ${dayKey} entry`);
+    btn.addEventListener("click", () => {
+      confirmedDays[kind].add(dayKey);
+      btn.classList.remove("pop");
+      void btn.offsetWidth; // restart the animation if clicked again
+      btn.classList.add("confirmed", "pop");
+      persistCurrentWeek();
+    });
+    return btn;
+  }
+
   function buildCommuteTable() {
     const weekData = getWeek(CURRENT_WEEK_KEY);
     const tbody = document.querySelector("#commute-table tbody");
@@ -436,8 +456,11 @@
         select.appendChild(opt);
       });
       select.value = weekData.commute[day.key];
+      const confirmBtn = createConfirmButton("commute", day.key);
       select.addEventListener("change", () => {
         weekData.commute[day.key] = select.value;
+        confirmedDays.commute.delete(day.key);
+        confirmBtn.classList.remove("confirmed", "pop");
         persistCurrentWeek();
         renderFootprints();
       });
@@ -448,6 +471,11 @@
       footTd.className = "row-footprint";
       footTd.dataset.commuteFootprint = day.key;
       tr.appendChild(footTd);
+
+      const confirmTd = document.createElement("td");
+      confirmTd.className = "day-confirm-cell";
+      confirmTd.appendChild(confirmBtn);
+      tr.appendChild(confirmTd);
 
       tbody.appendChild(tr);
     });
@@ -515,8 +543,12 @@
       }
       refreshMeatUI();
 
+      const confirmBtn = createConfirmButton("diet", day.key);
+
       select.addEventListener("change", () => {
         const value = select.value;
+        confirmedDays.diet.delete(day.key);
+        confirmBtn.classList.remove("confirmed", "pop");
         if (value === "meat") {
           const existing = weekData.diet[day.key];
           weekData.diet[day.key] = {
@@ -546,6 +578,11 @@
       footTd.className = "row-footprint";
       footTd.dataset.foodFootprint = day.key;
       tr.appendChild(footTd);
+
+      const confirmTd = document.createElement("td");
+      confirmTd.className = "day-confirm-cell";
+      confirmTd.appendChild(confirmBtn);
+      tr.appendChild(confirmTd);
 
       tbody.appendChild(tr);
     });
@@ -861,6 +898,7 @@
   async function resetWeek() {
     if (!confirm("Reset all entries for this week?")) return;
     weeksCache[CURRENT_WEEK_KEY] = blankWeek();
+    confirmedDays = { commute: new Set(), diet: new Set() };
     if (currentUser) {
       await sbClient.from("weeks").delete().eq("user_id", currentUser.id).eq("week_key", CURRENT_WEEK_KEY);
     }
@@ -950,6 +988,7 @@
 
   async function onSignedIn(user) {
     currentUser = user;
+    confirmedDays = { commute: new Set(), diet: new Set() };
     document.getElementById("auth-screen").hidden = true;
     document.getElementById("app-root").hidden = false;
     // Each of these can fail independently on a flaky connection — don't let
@@ -1023,6 +1062,7 @@
       const meat = document.getElementById("meat-type").value;
       const portion = document.getElementById("meat-portion").value;
       weekData.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
+      confirmedDays.diet.delete(pendingMeatDayKey);
       persistCurrentWeek();
       closeMeatModal();
       buildDietTable();
