@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weekly CO2 Tracker</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Weekly CO2 Tracker</h1>
+      <p class="subtitle">Track how you commute and eat each day, and see your estimated weekly carbon footprint.</p>
+    </header>
+
+    <section class="card">
+      <h2>Commute distance</h2>
+      <label class="inline-field">
+        One-way distance to work (km)
+        <input type="number" id="commute-distance" min="0" step="0.5" />
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>How did you get to work?</h2>
+      <table class="tracker-table" id="commute-table">
+        <thead>
+          <tr>
+            <th class="day-col">Day</th>
+            <th>Mode of transport</th>
+            <th class="footprint-col">Est. CO2e</th>
+          </tr>
+        </thead>
+        <tbody><!-- rows injected by app.js --></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>What did you eat this week?</h2>
+      <table class="tracker-table" id="diet-table">
+        <thead>
+          <tr>
+            <th class="day-col">Day</th>
+            <th>Diet</th>
+            <th class="footprint-col">Est. CO2e</th>
+          </tr>
+        </thead>
+        <tbody><!-- rows injected by app.js --></tbody>
+      </table>
+    </section>
+
+    <section class="card summary-card">
+      <h2>Weekly summary</h2>
+      <div class="summary-totals">
+        <div class="stat">
+          <span class="stat-value" id="total-commute">0</span>
+          <span class="stat-label">kg CO2e &middot; Commute</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="total-food">0</span>
+          <span class="stat-label">kg CO2e &middot; Food</span>
+        </div>
+        <div class="stat stat-highlight">
+          <span class="stat-value" id="total-week">0</span>
+          <span class="stat-label">kg CO2e &middot; Total this week</span>
+        </div>
+      </div>
+      <div class="chart" id="daily-chart" aria-label="Daily CO2e totals"><!-- bars injected by app.js --></div>
+      <p class="assumptions">
+        Figures are rough estimates for illustration, based on commonly cited average
+        emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
+        style averages). They will not match your actual footprint exactly.
+      </p>
+      <button id="reset-week" class="btn-secondary">Reset week</button>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="meat-modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="meat-modal-title">
+      <h3 id="meat-modal-title">What kind of meat, and how much?</h3>
+      <label class="field">
+        Type of meat
+        <select id="meat-type">
+          <option value="chicken">Chicken / poultry</option>
+          <option value="fish">Fish / seafood</option>
+          <option value="pork">Pork</option>
+          <option value="beef">Beef</option>
+          <option value="lamb">Lamb</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label class="field">
+        Roughly how much
+        <select id="meat-portion">
+          <option value="small">Small (~100g)</option>
+          <option value="medium" selected>Medium (~150g)</option>
+          <option value="large">Large (~250g+)</option>
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button id="meat-cancel" class="btn-secondary">Cancel</button>
+        <button id="meat-save" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
