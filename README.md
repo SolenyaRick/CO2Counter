@@ -8,9 +8,11 @@ commuting and food.
 - **This Week** — the inputs. For each day (M–S) pick how you got to work
   (Walk, Cycle, Train, Car, or Didn't travel) and what you ate (Meat, Veggie,
   Vegan). Choosing Meat opens a dialog to pick the type of meat and roughly
-  how much of it. Shows a running weekly total, a daily bar chart, and how
-  much CO2e you'd have saved this week if every meat day had been veggie
-  instead, broken down by meat type (e.g. beef vs chicken).
+  how much of it. Shows a running weekly total and a daily bar chart, plus a
+  "This week, in context" card that converts your total into an equivalent
+  car-km distance (DEFRA-style car factor) and shows how much CO2e you'd
+  have saved if every meat day had been veggie instead, broken down by meat
+  type (e.g. beef vs chicken).
 - **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
   Each box shows that week's total CO2e, color-coded against your goal from
   the Account page. Tap a box for a day-by-day breakdown.

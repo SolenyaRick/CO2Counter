@@ -389,11 +389,14 @@
     document.getElementById("total-week").textContent = fmt(totals.total);
     document.getElementById("week-range-heading").textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)})`;
 
-    renderSavingsBox(weekData);
+    renderComparisonCard(weekData, totals);
     renderChart(totals.daily);
   }
 
-  function renderSavingsBox(weekData) {
+  function renderComparisonCard(weekData, totals) {
+    const carKm = totals.total / TRANSPORT_FACTORS.car;
+    document.getElementById("car-km-value").textContent = Math.round(carKm).toLocaleString();
+
     const savings = veggieSavings(weekData);
     const valueEl = document.getElementById("savings-value");
     const labelEl = document.getElementById("savings-label");
@@ -402,12 +405,12 @@
 
     if (savings.total <= 0) {
       valueEl.textContent = "0.0";
-      labelEl.textContent = "kg CO2e · No meat logged this week";
+      labelEl.textContent = "kg CO2e · no meat logged this week";
       return;
     }
 
     valueEl.textContent = fmt(savings.total);
-    labelEl.textContent = "kg CO2e · Would save if meat days were veggie";
+    labelEl.textContent = "kg CO2e · would save if meat days were veggie";
 
     Object.entries(savings.byType)
       .sort((a, b) => b[1] - a[1])

@@ -219,8 +219,31 @@ input, select {
   border-color: var(--accent);
 }
 
-.stat-savings {
-  flex-basis: 100%;
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.comparison-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.comparison-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.comparison-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .savings-breakdown {

@@ -66,11 +66,6 @@
             <span class="stat-value" id="total-week">0</span>
             <span class="stat-label">kg CO2e &middot; Total this week</span>
           </div>
-          <div class="stat stat-savings" id="savings-box">
-            <span class="stat-value" id="savings-value">0.0</span>
-            <span class="stat-label" id="savings-label">kg CO2e &middot; Would save if meat days were veggie</span>
-            <ul class="savings-breakdown" id="savings-breakdown"><!-- injected by app.js --></ul>
-          </div>
         </div>
         <div class="chart" id="daily-chart" aria-label="Daily CO2e totals"><!-- bars injected by app.js --></div>
         <p class="assumptions">
@@ -79,6 +74,25 @@
           style averages). They will not match your actual footprint exactly.
         </p>
         <button id="reset-week" class="btn-secondary">Reset this week</button>
+      </section>
+
+      <section class="card comparison-card">
+        <h2>This week, in context</h2>
+        <div class="comparison-grid">
+          <div class="comparison-item">
+            <span class="comparison-value" id="car-km-value">0</span>
+            <span class="comparison-label">km driven by an average car &mdash; that's how far you'd have to drive to match this week's total CO2e</span>
+          </div>
+          <div class="comparison-item" id="veggie-comparison-item">
+            <span class="comparison-value" id="savings-value">0.0</span>
+            <span class="comparison-label" id="savings-label">kg CO2e &middot; would save if meat days were veggie</span>
+            <ul class="savings-breakdown" id="savings-breakdown"><!-- injected by app.js --></ul>
+          </div>
+        </div>
+        <p class="assumptions">
+          Car-km uses the same ~0.171 kg CO2e/km DEFRA-style average car factor used for your
+          commute days.
+        </p>
       </section>
     </section>
 
