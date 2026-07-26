@@ -398,9 +398,11 @@
   }
 
   // ---------- Page 2: Weeks grid ----------
+  function currentGoal() { return profile.weeklyGoalKg || DEFAULT_PROFILE.weeklyGoalKg; }
+
   function statusClass(total, started) {
     if (!started) return "status-empty";
-    const goal = profile.weeklyGoalKg || DEFAULT_PROFILE.weeklyGoalKg;
+    const goal = currentGoal();
     if (total <= goal) return "status-good";
     if (total <= goal * 1.3) return "status-warn";
     return "status-high";
@@ -409,6 +411,7 @@
   function renderWeeksGrid() {
     const grid = document.getElementById("weeks-grid");
     grid.innerHTML = "";
+    const goal = currentGoal();
     for (let i = 0; i < WEEKS_GRID_COUNT; i++) {
       const key = shiftedWeekKey(CURRENT_WEEK_KEY, -i);
       const weekData = history[key];
@@ -432,10 +435,27 @@
       label.textContent = weekLabel(key);
       box.appendChild(label);
 
+      const bottomRow = document.createElement("span");
+      bottomRow.className = "week-box-bottom";
+
       const total = document.createElement("span");
       total.className = "week-box-total";
       total.textContent = started ? `${fmt(totals.total)} kg` : "No data";
-      box.appendChild(total);
+      bottomRow.appendChild(total);
+
+      if (started) {
+        const diff = totals.total - goal;
+        const over = diff > 0;
+        const diffEl = document.createElement("span");
+        diffEl.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;
+        diffEl.textContent = `${over ? "▲" : "▼"} ${fmt(Math.abs(diff))}`;
+        diffEl.title = over
+          ? `${fmt(diff)} kg over your ${fmt(goal)} kg goal`
+          : `${fmt(Math.abs(diff))} kg under your ${fmt(goal)} kg goal`;
+        bottomRow.appendChild(diffEl);
+      }
+
+      box.appendChild(bottomRow);
 
       box.addEventListener("click", () => openWeekDetail(key));
       grid.appendChild(box);

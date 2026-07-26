@@ -334,10 +334,32 @@ input, select {
   padding-right: 28px;
 }
 
+.week-box-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
 .week-box-total {
   font-size: 1.1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.week-diff {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-diff-over {
+  color: var(--danger);
+}
+
+.week-diff-under {
+  color: var(--accent);
 }
 
 .week-box-badge {
