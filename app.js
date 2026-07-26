@@ -27,8 +27,10 @@
   const PORTION_KG = { small: 0.1, medium: 0.15, large: 0.25 };
   const PORTION_LABELS = { small: "Small (~100g)", medium: "Medium (~150g)", large: "Large (~250g+)" };
 
-  const MEAT_SIDES_BASELINE = 0.5; // rough baseline for the rest of a meat day's food
   const FOOD_DAY_FACTORS = { veggie: 1.5, vegan: 0.9 };
+  // The rest of a meat day's food (breakfast, sides, etc.) is valued the same as a
+  // vegetarian day, since it isn't any more carbon-efficient — the meat is added on top.
+  const MEAT_SIDES_BASELINE = FOOD_DAY_FACTORS.veggie;
 
   const DEFAULT_PROFILE = { name: "", commuteDistanceKm: 8, weeklyGoalKg: 20 };
 

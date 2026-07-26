@@ -43,10 +43,13 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 
 - **Transport** (kg CO2e per passenger-km): Walk/Cycle 0, Train ~0.041, Car
   ~0.171. Applied to a round trip using your commute distance.
-- **Food** (kg CO2e per day): Vegan ~0.9, Veggie ~1.5. A Meat day is
-  calculated from the chosen meat type's average footprint per kg (e.g.
-  beef and lamb are much higher than chicken or fish) times the chosen
-  portion size, plus a small baseline for the rest of the day's food.
+- **Food** (kg CO2e per day): Vegan ~0.9, Veggie ~1.5. A Meat day is the
+  same ~1.5 kg baseline for the rest of that day's food (it isn't any more
+  carbon-efficient just because the main is meat), plus the chosen meat
+  type's average footprint per kg (beef and lamb much higher than chicken
+  or fish) times the chosen portion size. So a meat day is always at least
+  as high as a veggie day, e.g. a medium chicken portion comes to ~2.4 kg,
+  a medium beef portion to ~5.6 kg.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
