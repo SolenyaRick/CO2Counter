@@ -63,6 +63,39 @@ body {
   font-size: 1.05rem;
 }
 
+.table-caption {
+  text-align: left;
+  font-weight: 600;
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+  caption-side: top;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  font: inherit;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 .inline-field {
   display: flex;
   align-items: center;
@@ -257,6 +290,137 @@ input, select {
   border-color: var(--border);
 }
 
+/* Weeks grid (page 2) */
+.weeks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 10px;
+  max-width: 700px;
+}
+
+.week-box {
+  position: relative;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.week-box:hover {
+  border-color: var(--accent);
+}
+
+.week-box.is-current {
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+
+.week-box.status-good { border-left-color: #3a9d5d; }
+.week-box.status-warn { border-left-color: #d0a020; }
+.week-box.status-high { border-left-color: var(--danger); }
+.week-box.status-empty { border-left-color: var(--border); opacity: 0.6; }
+
+.week-box-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-right: 28px;
+}
+
+.week-box-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-box-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.65rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Leaderboard (page 3) */
+.leaderboard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.leaderboard-row.is-current {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.leaderboard-rank {
+  font-weight: 700;
+  width: 28px;
+  text-align: center;
+}
+
+.leaderboard-info {
+  flex: 1;
+}
+
+.leaderboard-week-label {
+  font-weight: 600;
+}
+
+.leaderboard-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.leaderboard-total {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Account (page 4) */
+.account-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-secondary.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .modal-backdrop {
   display: none;
   position: fixed;
@@ -279,6 +443,32 @@ input, select {
   width: 100%;
   max-width: 340px;
   box-shadow: var(--shadow);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-wide {
+  max-width: 480px;
+}
+
+.week-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.week-detail-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.week-detail-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 .modal h3 {

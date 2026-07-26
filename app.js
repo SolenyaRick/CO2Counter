@@ -1,7 +1,10 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "co2-tracker-week-v1";
+  const OLD_STORAGE_KEY = "co2-tracker-week-v1";
+  const PROFILE_KEY = "co2-tracker-profile-v1";
+  const HISTORY_KEY = "co2-tracker-history-v1";
+  const WEEKS_GRID_COUNT = 15;
 
   const DAYS = [
     { key: "mon", short: "M", full: "Monday" },
@@ -14,85 +17,131 @@
   ];
 
   // Rough average emission factors, kg CO2e per passenger-km.
-  const TRANSPORT_FACTORS = {
-    none: 0,
-    walk: 0,
-    cycle: 0,
-    train: 0.041,
-    car: 0.171,
-  };
-
-  const TRANSPORT_LABELS = {
-    none: "Didn't travel",
-    walk: "Walk",
-    cycle: "Cycle",
-    train: "Train",
-    car: "Car",
-  };
+  const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
+  const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
 
   // Rough average emission factors, kg CO2e per kg of product.
-  const MEAT_FACTORS = {
-    chicken: 6,
-    fish: 5,
-    pork: 7,
-    beef: 27,
-    lamb: 25,
-    other: 10,
-  };
-
-  const MEAT_LABELS = {
-    chicken: "Chicken / poultry",
-    fish: "Fish / seafood",
-    pork: "Pork",
-    beef: "Beef",
-    lamb: "Lamb",
-    other: "Other",
-  };
+  const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 27, lamb: 25, other: 10 };
+  const MEAT_LABELS = { chicken: "Chicken / poultry", fish: "Fish / seafood", pork: "Pork", beef: "Beef", lamb: "Lamb", other: "Other" };
 
   const PORTION_KG = { small: 0.1, medium: 0.15, large: 0.25 };
   const PORTION_LABELS = { small: "Small (~100g)", medium: "Medium (~150g)", large: "Large (~250g+)" };
 
-  // Rough baseline for the rest of a day's food beyond the flagged meat/main.
-  const MEAT_SIDES_BASELINE = 0.5;
+  const MEAT_SIDES_BASELINE = 0.5; // rough baseline for the rest of a meat day's food
   const FOOD_DAY_FACTORS = { veggie: 1.5, vegan: 0.9 };
 
-  const DEFAULT_STATE = {
-    commuteDistanceKm: 8,
-    commute: Object.fromEntries(DAYS.map((d) => [d.key, "none"])),
-    diet: Object.fromEntries(DAYS.map((d) => [d.key, { type: "" }])),
-  };
+  const DEFAULT_PROFILE = { name: "", commuteDistanceKm: 8, weeklyGoalKg: 20 };
 
-  function loadState() {
+  function blankWeek() {
+    return {
+      commute: Object.fromEntries(DAYS.map((d) => [d.key, "none"])),
+      diet: Object.fromEntries(DAYS.map((d) => [d.key, { type: "" }])),
+    };
+  }
+
+  // ---------- Date / week-key helpers ----------
+  // A week is keyed by its Monday's date, e.g. "2026-07-20".
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function dateKey(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+
+  function weekStart(d) {
+    const copy = new Date(d);
+    copy.setHours(0, 0, 0, 0);
+    const day = (copy.getDay() + 6) % 7; // Monday = 0 ... Sunday = 6
+    copy.setDate(copy.getDate() - day);
+    return copy;
+  }
+
+  function weekKeyFor(d) { return dateKey(weekStart(d)); }
+
+  function weekLabel(weekKey) {
+    const monday = new Date(`${weekKey}T00:00:00`);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const opts = { day: "numeric", month: "short" };
+    const start = monday.toLocaleDateString("en-GB", opts);
+    const sameYear = monday.getFullYear() === new Date().getFullYear();
+    const end = sunday.toLocaleDateString("en-GB", sameYear ? opts : { ...opts, year: "numeric" });
+    return `${start} – ${end}`;
+  }
+
+  function shiftedWeekKey(weekKey, deltaWeeks) {
+    const monday = new Date(`${weekKey}T00:00:00`);
+    monday.setDate(monday.getDate() + deltaWeeks * 7);
+    return dateKey(monday);
+  }
+
+  const CURRENT_WEEK_KEY = weekKeyFor(new Date());
+
+  // ---------- Persistence ----------
+  function loadProfile() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return structuredClone(DEFAULT_STATE);
-      const parsed = JSON.parse(raw);
-      return {
-        commuteDistanceKm: typeof parsed.commuteDistanceKm === "number" ? parsed.commuteDistanceKm : DEFAULT_STATE.commuteDistanceKm,
-        commute: { ...DEFAULT_STATE.commute, ...(parsed.commute || {}) },
-        diet: { ...structuredClone(DEFAULT_STATE.diet), ...(parsed.diet || {}) },
-      };
+      const raw = localStorage.getItem(PROFILE_KEY);
+      return raw ? { ...DEFAULT_PROFILE, ...JSON.parse(raw) } : { ...DEFAULT_PROFILE };
     } catch (e) {
-      return structuredClone(DEFAULT_STATE);
+      return { ...DEFAULT_PROFILE };
     }
   }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
   }
 
-  let state = loadState();
+  function migrateOldData(profile, history) {
+    const raw = localStorage.getItem(OLD_STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const old = JSON.parse(raw);
+      if (typeof old.commuteDistanceKm === "number") profile.commuteDistanceKm = old.commuteDistanceKm;
+      if (old.commute || old.diet) {
+        history[CURRENT_WEEK_KEY] = {
+          commute: { ...blankWeek().commute, ...(old.commute || {}) },
+          diet: { ...blankWeek().diet, ...(old.diet || {}) },
+        };
+      }
+    } catch (e) {
+      // ignore corrupt legacy data
+    }
+    localStorage.removeItem(OLD_STORAGE_KEY);
+    saveProfile(profile);
+    saveHistory(history);
+  }
+
+  function saveProfile(p) { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }
+  function saveHistory(h) { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }
+
+  let profile = loadProfile();
+  let history = loadHistory();
+  migrateOldData(profile, history);
+
+  function getWeek(weekKey) {
+    if (!history[weekKey]) history[weekKey] = blankWeek();
+    return history[weekKey];
+  }
+
+  function hasAnyEntries(weekData) {
+    if (!weekData) return false;
+    const commuted = Object.values(weekData.commute).some((m) => m && m !== "none");
+    const ate = Object.values(weekData.diet).some((e) => e && e.type);
+    return commuted || ate;
+  }
+
   let pendingMeatDayKey = null;
 
-  function commuteFootprint(dayKey) {
-    const mode = state.commute[dayKey];
+  // ---------- Footprint math ----------
+  function commuteFootprint(weekData, dayKey) {
+    const mode = weekData.commute[dayKey];
     const factor = TRANSPORT_FACTORS[mode] ?? 0;
-    const roundTripKm = (state.commuteDistanceKm || 0) * 2;
-    return factor * roundTripKm;
+    return factor * (profile.commuteDistanceKm || 0) * 2;
   }
 
-  function foodFootprint(dayKey) {
-    const entry = state.diet[dayKey];
+  function foodFootprint(weekData, dayKey) {
+    const entry = weekData.diet[dayKey];
     if (!entry || !entry.type) return 0;
     if (entry.type === "vegan") return FOOD_DAY_FACTORS.vegan;
     if (entry.type === "veggie") return FOOD_DAY_FACTORS.veggie;
@@ -104,11 +153,46 @@
     return 0;
   }
 
-  function fmt(n) {
-    return n.toFixed(1);
+  function weekTotals(weekData) {
+    let commute = 0;
+    let food = 0;
+    const daily = [];
+    DAYS.forEach((day) => {
+      const c = commuteFootprint(weekData, day.key);
+      const f = foodFootprint(weekData, day.key);
+      commute += c;
+      food += f;
+      daily.push(c + f);
+    });
+    return { commute, food, total: commute + food, daily };
   }
 
+  function fmt(n) { return n.toFixed(1); }
+
+  // ---------- Tab routing ----------
+  const TABS = ["week", "weeks", "leaderboard", "account"];
+
+  function currentTab() {
+    const fromHash = (location.hash || "").replace("#", "");
+    return TABS.includes(fromHash) ? fromHash : "week";
+  }
+
+  function showTab(tab) {
+    TABS.forEach((t) => {
+      document.getElementById(`view-${t}`).hidden = t !== tab;
+    });
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tab);
+    });
+    if (tab === "weeks") renderWeeksGrid();
+    if (tab === "leaderboard") renderLeaderboard();
+    if (tab === "account") renderAccountPage();
+    if (tab === "week") renderWeekPage();
+  }
+
+  // ---------- Page 1: This Week ----------
   function buildCommuteTable() {
+    const weekData = getWeek(CURRENT_WEEK_KEY);
     const tbody = document.querySelector("#commute-table tbody");
     tbody.innerHTML = "";
     DAYS.forEach((day) => {
@@ -132,10 +216,10 @@
         opt.textContent = TRANSPORT_LABELS[mode];
         select.appendChild(opt);
       });
-      select.value = state.commute[day.key];
+      select.value = weekData.commute[day.key];
       select.addEventListener("change", () => {
-        state.commute[day.key] = select.value;
-        saveState();
+        weekData.commute[day.key] = select.value;
+        saveHistory(history);
         renderFootprints();
       });
       modeTd.appendChild(select);
@@ -156,6 +240,7 @@
   }
 
   function buildDietTable() {
+    const weekData = getWeek(CURRENT_WEEK_KEY);
     const tbody = document.querySelector("#diet-table tbody");
     tbody.innerHTML = "";
     DAYS.forEach((day) => {
@@ -187,7 +272,7 @@
         opt.textContent = label;
         select.appendChild(opt);
       });
-      select.value = state.diet[day.key]?.type || "";
+      select.value = weekData.diet[day.key]?.type || "";
 
       const detail = document.createElement("span");
       detail.className = "meat-detail";
@@ -200,7 +285,7 @@
       editLink.addEventListener("click", () => openMeatModal(day.key));
 
       function refreshMeatUI() {
-        const entry = state.diet[day.key];
+        const entry = weekData.diet[day.key];
         if (entry && entry.type === "meat") {
           detail.textContent = dietSummaryText(entry);
           editLink.style.display = "inline";
@@ -214,19 +299,19 @@
       select.addEventListener("change", () => {
         const value = select.value;
         if (value === "meat") {
-          const existing = state.diet[day.key];
-          state.diet[day.key] = {
+          const existing = weekData.diet[day.key];
+          weekData.diet[day.key] = {
             type: "meat",
             meat: existing?.meat || "chicken",
             portion: existing?.portion || "medium",
           };
-          saveState();
+          saveHistory(history);
           refreshMeatUI();
           renderFootprints();
           openMeatModal(day.key);
         } else {
-          state.diet[day.key] = { type: value };
-          saveState();
+          weekData.diet[day.key] = { type: value };
+          saveHistory(history);
           refreshMeatUI();
           renderFootprints();
         }
@@ -244,14 +329,13 @@
       tr.appendChild(footTd);
 
       tbody.appendChild(tr);
-
-      day._refreshMeatUI = refreshMeatUI;
     });
   }
 
   function openMeatModal(dayKey) {
+    const weekData = getWeek(CURRENT_WEEK_KEY);
     pendingMeatDayKey = dayKey;
-    const entry = state.diet[dayKey];
+    const entry = weekData.diet[dayKey];
     document.getElementById("meat-type").value = entry?.meat || "chicken";
     document.getElementById("meat-portion").value = entry?.portion || "medium";
     document.getElementById("meat-modal-backdrop").classList.add("open");
@@ -263,29 +347,24 @@
   }
 
   function renderFootprints() {
-    let totalCommute = 0;
-    let totalFood = 0;
-    const dailyTotals = [];
+    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const totals = weekTotals(weekData);
 
-    DAYS.forEach((day) => {
-      const c = commuteFootprint(day.key);
-      const f = foodFootprint(day.key);
-      totalCommute += c;
-      totalFood += f;
-      dailyTotals.push(c + f);
-
+    DAYS.forEach((day, i) => {
+      const c = commuteFootprint(weekData, day.key);
+      const f = foodFootprint(weekData, day.key);
       const cCell = document.querySelector(`[data-commute-footprint="${day.key}"]`);
       if (cCell) cCell.textContent = c > 0 ? `${fmt(c)} kg` : "–";
-
       const fCell = document.querySelector(`[data-food-footprint="${day.key}"]`);
       if (fCell) fCell.textContent = f > 0 ? `${fmt(f)} kg` : "–";
     });
 
-    document.getElementById("total-commute").textContent = fmt(totalCommute);
-    document.getElementById("total-food").textContent = fmt(totalFood);
-    document.getElementById("total-week").textContent = fmt(totalCommute + totalFood);
+    document.getElementById("total-commute").textContent = fmt(totals.commute);
+    document.getElementById("total-food").textContent = fmt(totals.food);
+    document.getElementById("total-week").textContent = fmt(totals.total);
+    document.getElementById("week-range-heading").textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)})`;
 
-    renderChart(dailyTotals);
+    renderChart(totals.daily);
   }
 
   function renderChart(dailyTotals) {
@@ -312,48 +391,248 @@
     });
   }
 
-  function init() {
-    const distanceInput = document.getElementById("commute-distance");
-    distanceInput.value = state.commuteDistanceKm;
-    distanceInput.addEventListener("input", () => {
-      const val = parseFloat(distanceInput.value);
-      state.commuteDistanceKm = Number.isFinite(val) && val >= 0 ? val : 0;
-      saveState();
-      renderFootprints();
-    });
-
+  function renderWeekPage() {
     buildCommuteTable();
     buildDietTable();
     renderFootprints();
+  }
+
+  // ---------- Page 2: Weeks grid ----------
+  function statusClass(total, started) {
+    if (!started) return "status-empty";
+    const goal = profile.weeklyGoalKg || DEFAULT_PROFILE.weeklyGoalKg;
+    if (total <= goal) return "status-good";
+    if (total <= goal * 1.3) return "status-warn";
+    return "status-high";
+  }
+
+  function renderWeeksGrid() {
+    const grid = document.getElementById("weeks-grid");
+    grid.innerHTML = "";
+    for (let i = 0; i < WEEKS_GRID_COUNT; i++) {
+      const key = shiftedWeekKey(CURRENT_WEEK_KEY, -i);
+      const weekData = history[key];
+      const started = hasAnyEntries(weekData);
+      const totals = started ? weekTotals(weekData) : null;
+
+      const box = document.createElement("button");
+      box.type = "button";
+      box.className = `week-box ${statusClass(totals?.total ?? 0, started)}`;
+      if (key === CURRENT_WEEK_KEY) box.classList.add("is-current");
+
+      if (key === CURRENT_WEEK_KEY) {
+        const badge = document.createElement("span");
+        badge.className = "week-box-badge";
+        badge.textContent = "NOW";
+        box.appendChild(badge);
+      }
+
+      const label = document.createElement("span");
+      label.className = "week-box-label";
+      label.textContent = weekLabel(key);
+      box.appendChild(label);
+
+      const total = document.createElement("span");
+      total.className = "week-box-total";
+      total.textContent = started ? `${fmt(totals.total)} kg` : "No data";
+      box.appendChild(total);
+
+      box.addEventListener("click", () => openWeekDetail(key));
+      grid.appendChild(box);
+    }
+  }
+
+  function openWeekDetail(key) {
+    const weekData = history[key];
+    const started = hasAnyEntries(weekData);
+    document.getElementById("week-detail-title").textContent = weekLabel(key);
+    const body = document.getElementById("week-detail-body");
+
+    if (!started) {
+      body.innerHTML = '<p class="empty-note">No entries logged for this week.</p>';
+    } else {
+      const totals = weekTotals(weekData);
+      const rows = DAYS.map((day) => {
+        const commuteLabel = TRANSPORT_LABELS[weekData.commute[day.key]] || "–";
+        const dietEntry = weekData.diet[day.key];
+        let dietText = "–";
+        if (dietEntry?.type === "meat") dietText = dietSummaryText(dietEntry);
+        else if (dietEntry?.type === "veggie") dietText = "Veggie";
+        else if (dietEntry?.type === "vegan") dietText = "Vegan";
+        const dayTotal = commuteFootprint(weekData, day.key) + foodFootprint(weekData, day.key);
+        return `<tr><td>${day.full}</td><td>${commuteLabel}</td><td>${dietText}</td><td>${fmt(dayTotal)} kg</td></tr>`;
+      }).join("");
+
+      body.innerHTML = `
+        <table class="week-detail-table">
+          <thead><tr><th>Day</th><th>Commute</th><th>Diet</th><th>CO2e</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p><strong>Total: ${fmt(totals.total)} kg CO2e</strong> (${fmt(totals.commute)} kg commute, ${fmt(totals.food)} kg food)</p>
+      `;
+    }
+
+    document.getElementById("week-detail-backdrop").classList.add("open");
+  }
+
+  function closeWeekDetail() {
+    document.getElementById("week-detail-backdrop").classList.remove("open");
+  }
+
+  // ---------- Page 3: Leaderboard ----------
+  function renderLeaderboard() {
+    const list = document.getElementById("leaderboard-list");
+    list.innerHTML = "";
+
+    const entries = Object.keys(history)
+      .filter((key) => hasAnyEntries(history[key]))
+      .map((key) => ({ key, totals: weekTotals(history[key]) }))
+      .sort((a, b) => a.totals.total - b.totals.total);
+
+    if (entries.length === 0) {
+      list.innerHTML = '<p class="empty-note">Log a week on the This Week page to see it ranked here.</p>';
+      return;
+    }
+
+    const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+    entries.forEach((entry, i) => {
+      const li = document.createElement("li");
+      li.className = "leaderboard-row" + (entry.key === CURRENT_WEEK_KEY ? " is-current" : "");
+
+      const rank = document.createElement("span");
+      rank.className = "leaderboard-rank";
+      rank.textContent = medals[i] || `#${i + 1}`;
+
+      const info = document.createElement("span");
+      info.className = "leaderboard-info";
+      const weekLabelEl = document.createElement("div");
+      weekLabelEl.className = "leaderboard-week-label";
+      weekLabelEl.textContent = weekLabel(entry.key);
+      const sub = document.createElement("div");
+      sub.className = "leaderboard-sub";
+      sub.textContent = entry.key === CURRENT_WEEK_KEY ? "This week" : `${fmt(entry.totals.commute)} kg commute · ${fmt(entry.totals.food)} kg food`;
+      info.appendChild(weekLabelEl);
+      info.appendChild(sub);
+
+      const total = document.createElement("span");
+      total.className = "leaderboard-total";
+      total.textContent = `${fmt(entry.totals.total)} kg`;
+
+      li.appendChild(rank);
+      li.appendChild(info);
+      li.appendChild(total);
+      list.appendChild(li);
+    });
+  }
+
+  // ---------- Page 4: Account ----------
+  function renderAccountPage() {
+    document.getElementById("profile-name").value = profile.name || "";
+    document.getElementById("profile-distance").value = profile.commuteDistanceKm;
+    document.getElementById("profile-goal").value = profile.weeklyGoalKg;
+  }
+
+  function exportData() {
+    const payload = { profile, history };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "co2-tracker-data.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed.profile || !parsed.history) throw new Error("Missing profile/history");
+        if (!confirm("Import will replace your current data. Continue?")) return;
+        profile = { ...DEFAULT_PROFILE, ...parsed.profile };
+        history = parsed.history;
+        saveProfile(profile);
+        saveHistory(history);
+        showTab(currentTab());
+        renderAccountPage();
+      } catch (e) {
+        alert("That file doesn't look like a valid CO2 Tracker export.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- Init ----------
+  function init() {
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
+    });
+    window.addEventListener("hashchange", () => showTab(currentTab()));
 
     document.getElementById("meat-save").addEventListener("click", () => {
       if (!pendingMeatDayKey) return;
+      const weekData = getWeek(CURRENT_WEEK_KEY);
       const meat = document.getElementById("meat-type").value;
       const portion = document.getElementById("meat-portion").value;
-      state.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
-      saveState();
+      weekData.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
+      saveHistory(history);
       closeMeatModal();
       buildDietTable();
       renderFootprints();
     });
-
-    document.getElementById("meat-cancel").addEventListener("click", () => {
-      closeMeatModal();
-    });
-
+    document.getElementById("meat-cancel").addEventListener("click", closeMeatModal);
     document.getElementById("meat-modal-backdrop").addEventListener("click", (e) => {
       if (e.target.id === "meat-modal-backdrop") closeMeatModal();
     });
 
+    document.getElementById("week-detail-close").addEventListener("click", closeWeekDetail);
+    document.getElementById("week-detail-backdrop").addEventListener("click", (e) => {
+      if (e.target.id === "week-detail-backdrop") closeWeekDetail();
+    });
+
     document.getElementById("reset-week").addEventListener("click", () => {
       if (!confirm("Reset all entries for this week?")) return;
-      state = structuredClone(DEFAULT_STATE);
-      saveState();
-      distanceInput.value = state.commuteDistanceKm;
-      buildCommuteTable();
-      buildDietTable();
+      history[CURRENT_WEEK_KEY] = blankWeek();
+      saveHistory(history);
+      renderWeekPage();
+    });
+
+    document.getElementById("profile-name").addEventListener("input", (e) => {
+      profile.name = e.target.value;
+      saveProfile(profile);
+    });
+    document.getElementById("profile-distance").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      profile.commuteDistanceKm = Number.isFinite(val) && val >= 0 ? val : 0;
+      saveProfile(profile);
       renderFootprints();
     });
+    document.getElementById("profile-goal").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      profile.weeklyGoalKg = Number.isFinite(val) && val >= 0 ? val : 0;
+      saveProfile(profile);
+    });
+
+    document.getElementById("export-data").addEventListener("click", exportData);
+    document.getElementById("import-data").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) importData(file);
+      e.target.value = "";
+    });
+    document.getElementById("reset-all-data").addEventListener("click", () => {
+      if (!confirm("This deletes ALL saved weeks and profile settings in this browser. Continue?")) return;
+      profile = { ...DEFAULT_PROFILE };
+      history = {};
+      saveProfile(profile);
+      saveHistory(history);
+      showTab(currentTab());
+      renderAccountPage();
+    });
+
+    showTab(currentTab());
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -10,68 +10,128 @@
   <div class="app">
     <header class="app-header">
       <h1>Weekly CO2 Tracker</h1>
-      <p class="subtitle">Track how you commute and eat each day, and see your estimated weekly carbon footprint.</p>
+      <p class="subtitle">Track how you commute and eat each day, and see your estimated carbon footprint.</p>
     </header>
 
-    <section class="card">
-      <h2>Commute distance</h2>
-      <label class="inline-field">
-        One-way distance to work (km)
-        <input type="number" id="commute-distance" min="0" step="0.5" />
-      </label>
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn" data-tab="week">This Week</button>
+      <button class="tab-btn" data-tab="weeks">Weeks</button>
+      <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+      <button class="tab-btn" data-tab="account">Account</button>
+    </nav>
+
+    <!-- PAGE 1: This Week (inputs) -->
+    <section class="view" id="view-week">
+      <section class="card">
+        <h2 id="week-range-heading">This week</h2>
+        <table class="tracker-table" id="commute-table">
+          <caption class="table-caption">How did you get to work?</caption>
+          <thead>
+            <tr>
+              <th class="day-col">Day</th>
+              <th>Mode of transport</th>
+              <th class="footprint-col">Est. CO2e</th>
+            </tr>
+          </thead>
+          <tbody><!-- rows injected by app.js --></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <table class="tracker-table" id="diet-table">
+          <caption class="table-caption">What did you eat this week?</caption>
+          <thead>
+            <tr>
+              <th class="day-col">Day</th>
+              <th>Diet</th>
+              <th class="footprint-col">Est. CO2e</th>
+            </tr>
+          </thead>
+          <tbody><!-- rows injected by app.js --></tbody>
+        </table>
+      </section>
+
+      <section class="card summary-card">
+        <h2>Weekly summary</h2>
+        <div class="summary-totals">
+          <div class="stat">
+            <span class="stat-value" id="total-commute">0</span>
+            <span class="stat-label">kg CO2e &middot; Commute</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="total-food">0</span>
+            <span class="stat-label">kg CO2e &middot; Food</span>
+          </div>
+          <div class="stat stat-highlight">
+            <span class="stat-value" id="total-week">0</span>
+            <span class="stat-label">kg CO2e &middot; Total this week</span>
+          </div>
+        </div>
+        <div class="chart" id="daily-chart" aria-label="Daily CO2e totals"><!-- bars injected by app.js --></div>
+        <p class="assumptions">
+          Figures are rough estimates for illustration, based on commonly cited average
+          emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
+          style averages). They will not match your actual footprint exactly.
+        </p>
+        <button id="reset-week" class="btn-secondary">Reset this week</button>
+      </section>
     </section>
 
-    <section class="card">
-      <h2>How did you get to work?</h2>
-      <table class="tracker-table" id="commute-table">
-        <thead>
-          <tr>
-            <th class="day-col">Day</th>
-            <th>Mode of transport</th>
-            <th class="footprint-col">Est. CO2e</th>
-          </tr>
-        </thead>
-        <tbody><!-- rows injected by app.js --></tbody>
-      </table>
+    <!-- PAGE 2: Weeks grid -->
+    <section class="view" id="view-weeks" hidden>
+      <section class="card">
+        <h2>Your weeks</h2>
+        <p class="assumptions">Each box is one week (Mon&ndash;Sun). Tap a box to see the day-by-day breakdown.</p>
+        <div class="weeks-grid" id="weeks-grid"><!-- boxes injected by app.js --></div>
+      </section>
     </section>
 
-    <section class="card">
-      <h2>What did you eat this week?</h2>
-      <table class="tracker-table" id="diet-table">
-        <thead>
-          <tr>
-            <th class="day-col">Day</th>
-            <th>Diet</th>
-            <th class="footprint-col">Est. CO2e</th>
-          </tr>
-        </thead>
-        <tbody><!-- rows injected by app.js --></tbody>
-      </table>
+    <!-- PAGE 3: Leaderboard -->
+    <section class="view" id="view-leaderboard" hidden>
+      <section class="card">
+        <h2>Leaderboard</h2>
+        <p class="assumptions">
+          Comparing other people needs shared accounts, so for now this ranks your own
+          tracked weeks, lowest footprint first.
+        </p>
+        <ol class="leaderboard-list" id="leaderboard-list"><!-- rows injected by app.js --></ol>
+      </section>
     </section>
 
-    <section class="card summary-card">
-      <h2>Weekly summary</h2>
-      <div class="summary-totals">
-        <div class="stat">
-          <span class="stat-value" id="total-commute">0</span>
-          <span class="stat-label">kg CO2e &middot; Commute</span>
+    <!-- PAGE 4: Account -->
+    <section class="view" id="view-account" hidden>
+      <section class="card">
+        <h2>Profile</h2>
+        <label class="field">
+          Display name
+          <input type="text" id="profile-name" placeholder="Your name" />
+        </label>
+        <label class="field">
+          One-way commute distance (km)
+          <input type="number" id="profile-distance" min="0" step="0.5" />
+        </label>
+        <label class="field">
+          Weekly CO2e goal (kg)
+          <input type="number" id="profile-goal" min="0" step="1" />
+        </label>
+        <p class="assumptions">Your goal colors the boxes on the Weeks page: green at or under goal, amber a bit over, red well over.</p>
+      </section>
+
+      <section class="card">
+        <h2>Your data</h2>
+        <div class="account-actions">
+          <button id="export-data" class="btn-secondary">Export data (.json)</button>
+          <label class="btn-secondary file-btn">
+            Import data (.json)
+            <input type="file" id="import-data" accept="application/json" hidden />
+          </label>
+          <button id="reset-all-data" class="btn-secondary danger">Reset all data</button>
         </div>
-        <div class="stat">
-          <span class="stat-value" id="total-food">0</span>
-          <span class="stat-label">kg CO2e &middot; Food</span>
-        </div>
-        <div class="stat stat-highlight">
-          <span class="stat-value" id="total-week">0</span>
-          <span class="stat-label">kg CO2e &middot; Total this week</span>
-        </div>
-      </div>
-      <div class="chart" id="daily-chart" aria-label="Daily CO2e totals"><!-- bars injected by app.js --></div>
-      <p class="assumptions">
-        Figures are rough estimates for illustration, based on commonly cited average
-        emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
-        style averages). They will not match your actual footprint exactly.
-      </p>
-      <button id="reset-week" class="btn-secondary">Reset week</button>
+        <p class="assumptions">
+          Everything is stored only in this browser (local storage) &mdash; there is no server
+          account yet, so data does not sync between devices.
+        </p>
+      </section>
     </section>
   </div>
 
@@ -100,6 +160,16 @@
       <div class="modal-actions">
         <button id="meat-cancel" class="btn-secondary">Cancel</button>
         <button id="meat-save" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="week-detail-backdrop">
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="week-detail-title">
+      <h3 id="week-detail-title">Week</h3>
+      <div id="week-detail-body"><!-- injected by app.js --></div>
+      <div class="modal-actions">
+        <button id="week-detail-close" class="btn-primary">Close</button>
       </div>
     </div>
   </div>

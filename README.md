@@ -3,17 +3,24 @@
 A small client-side web app for tracking your weekly carbon footprint from
 commuting and food.
 
-## Features
+## Pages
 
-- **Commute log**: for each day (M–S), pick how you got to work — Walk,
-  Cycle, Train, Car, or Didn't travel. Set your one-way commute distance once
-  and it's used for every day.
-- **Food log**: for each day, pick Meat, Veggie, or Vegan. Choosing Meat opens
-  a dialog to pick the type of meat and roughly how much of it.
-- **Weekly summary**: totals for commute and food emissions, a combined
-  weekly total, and a simple daily bar chart.
-- Data is saved to your browser's local storage, so it persists between
-  visits (per browser/device).
+- **This Week** — the inputs. For each day (M–S) pick how you got to work
+  (Walk, Cycle, Train, Car, or Didn't travel) and what you ate (Meat, Veggie,
+  Vegan). Choosing Meat opens a dialog to pick the type of meat and roughly
+  how much of it. Shows a running weekly total and daily bar chart.
+- **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
+  Each box shows that week's total CO2e, color-coded against your goal from
+  the Account page. Tap a box for a day-by-day breakdown.
+- **Leaderboard** — ranks your own tracked weeks, lowest footprint first.
+  (Ranking against other people would need shared accounts/a backend, which
+  this static, local-storage-only version doesn't have yet.)
+- **Account** — your display name, one-way commute distance, and weekly CO2e
+  goal, plus export/import/reset for your data.
+
+All data (profile + week history) is saved to your browser's local storage,
+so it persists between visits on the same browser/device, but does not sync
+across devices — there's no server/account system behind it.
 
 ## Running it
 
