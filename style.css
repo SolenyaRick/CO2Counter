@@ -476,6 +476,14 @@ input, select {
   border-color: var(--accent);
 }
 
+.stat-percentile {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
 .comparison-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -501,6 +509,11 @@ input, select {
 .comparison-label {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.comparison-item .week-diff {
+  display: block;
+  margin-top: 6px;
 }
 
 .savings-breakdown {

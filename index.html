@@ -165,49 +165,6 @@
     <!-- PAGE 4: Stats (yearly estimate) -->
     <section class="view" id="view-stats" hidden>
       <section class="card">
-        <h2>Your year, estimated</h2>
-        <div class="summary-totals" id="yearly-summary-totals">
-          <div class="stat">
-            <span class="stat-value" id="yearly-avg-food">0.0</span>
-            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Food</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-avg-commute">0.0</span>
-            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Commute</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-food">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Food (&times;52 weeks)</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-commute">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-flying">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Flying</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-home-energy">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Home energy (your share)</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-goods">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Buying goods</span>
-          </div>
-          <div class="stat stat-highlight">
-            <span class="stat-value" id="yearly-total">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
-          </div>
-        </div>
-        <p class="assumptions">
-          Commute and food are extrapolated from the average of your confirmed weeks so
-          far (needs at least one confirmed week to be non-zero); everything else comes
-          from your answers below. All figures are rough, illustrative estimates.
-        </p>
-      </section>
-
-      <section class="card">
         <h2>Flying</h2>
         <label class="field">
           Short-haul flights within Europe per year
@@ -251,6 +208,71 @@
           Uses a rough blended average of ~10 kg CO2e per item &mdash; a T-shirt is much
           less, a coat or a pair of jeans much more.
         </p>
+      </section>
+
+      <section class="card">
+        <h2>Your year, estimated</h2>
+        <div class="summary-totals" id="yearly-summary-totals">
+          <div class="stat">
+            <span class="stat-value" id="yearly-avg-food">0.0</span>
+            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Food</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-avg-commute">0.0</span>
+            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Commute</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-food">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Food (&times;52 weeks)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-commute">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-flying">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Flying</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-home-energy">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Home energy (your share)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-goods">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Buying goods</span>
+          </div>
+          <div class="stat stat-highlight">
+            <span class="stat-value" id="yearly-total">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
+            <span class="stat-percentile" id="yearly-percentile"></span>
+          </div>
+        </div>
+        <p class="assumptions">
+          Commute and food are extrapolated from the average of your confirmed weeks so
+          far (needs at least one confirmed week to be non-zero); everything else comes
+          from your answers above. All figures are rough, illustrative estimates.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>How your year compares</h2>
+        <p class="assumptions">
+          UK average: roughly <strong id="uk-average-value">0</strong> kg CO2e/yr per
+          person (a commonly cited rough estimate, not exact). The comparisons below are
+          illustrative ways to picture that number, not precise conversions.
+        </p>
+        <div class="comparison-grid">
+          <div class="comparison-item">
+            <span class="comparison-value" id="compare-car-miles">0</span>
+            <span class="comparison-label">miles driven by an average car &mdash; that's how far you'd have to drive to match your estimated year</span>
+            <span class="week-diff" id="compare-car-miles-diff"></span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-value" id="compare-trees">0</span>
+            <span class="comparison-label">mature trees' worth of a year's CO2 absorption</span>
+            <span class="week-diff" id="compare-trees-diff"></span>
+          </div>
+        </div>
       </section>
     </section>
 

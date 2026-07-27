@@ -56,6 +56,11 @@
   const GRID_ELECTRICITY_KG_PER_KWH = 0.2; // rough average grid electricity factor
   const CLOTHING_ITEM_KG = 10; // rough blended average per clothing item
 
+  // For the "How your year compares" card - all rough, illustrative figures.
+  const UK_AVERAGE_YEARLY_KG = 8500; // commonly cited rough average UK personal footprint
+  const KM_PER_MILE = 1.60934;
+  const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
+
   const DEFAULT_PROFILE = {
     name: "",
     commuteDistanceKm: 8,
@@ -220,6 +225,27 @@
   }
 
   function fmt(n) { return n.toFixed(1); }
+
+  // Standard normal CDF via the Abramowitz & Stegun 7.1.26 approximation -
+  // used to turn a yearly total into a rough UK percentile (see below).
+  function normalCdf(z) {
+    const sign = z < 0 ? -1 : 1;
+    const x = Math.abs(z) / Math.SQRT2;
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    const t = 1 / (1 + p * x);
+    const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return 0.5 * (1 + sign * y);
+  }
+
+  // Rough illustrative percentile: models UK personal footprints as
+  // log-normal around UK_AVERAGE_YEARLY_KG (used as the median), with an
+  // assumed spread - not based on real ONS/population distribution data.
+  function ukPercentileBetterThan(yourYearlyKg) {
+    if (!yourYearlyKg || yourYearlyKg <= 0) return null;
+    const sigma = 0.5;
+    const z = (Math.log(yourYearlyKg) - Math.log(UK_AVERAGE_YEARLY_KG)) / sigma;
+    return (1 - normalCdf(z)) * 100;
+  }
 
   // ---------- Supabase: profile ----------
   async function ensureProfile() {
@@ -981,6 +1007,37 @@
     document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
     document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
+
+    const percentileEl = document.getElementById("yearly-percentile");
+    const betterThanPct = ukPercentileBetterThan(yearlyTotal);
+    percentileEl.textContent = betterThanPct === null
+      ? ""
+      : `~lower than ${Math.round(betterThanPct)}% of people in the UK`;
+
+    renderYearComparison(yearlyTotal);
+  }
+
+  function renderYearComparison(yearlyTotal) {
+    const carKgPerMile = TRANSPORT_FACTORS.car * KM_PER_MILE;
+    const yourCarMiles = yearlyTotal / carKgPerMile;
+    const ukCarMiles = UK_AVERAGE_YEARLY_KG / carKgPerMile;
+    const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
+    const ukTrees = UK_AVERAGE_YEARLY_KG / TREE_KG_PER_YEAR;
+
+    document.getElementById("uk-average-value").textContent = UK_AVERAGE_YEARLY_KG.toLocaleString();
+    document.getElementById("compare-car-miles").textContent = Math.round(yourCarMiles).toLocaleString();
+    document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
+
+    setComparisonDiff("compare-car-miles-diff", yourCarMiles, ukCarMiles, "miles");
+    setComparisonDiff("compare-trees-diff", yourTrees, ukTrees, "trees");
+  }
+
+  function setComparisonDiff(elementId, yourValue, ukValue, unit) {
+    const el = document.getElementById(elementId);
+    const diff = yourValue - ukValue;
+    const over = diff > 0;
+    el.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;
+    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} ${unit} vs UK average`;
   }
 
   function exportData() {

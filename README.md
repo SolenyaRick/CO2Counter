@@ -24,11 +24,16 @@ with accounts and a friends leaderboard backed by Supabase.
   day-by-day breakdown.
 - **Leaderboard** — you and your accepted friends, ranked by this week's
   total CO2e, lowest first.
-- **Stats** — a yearly estimate: your confirmed weeks' average, extrapolated
-  commute/food totals (×52), plus flights (short-haul European vs long-haul
-  international), home energy (household kWh/month split across everyone in
-  the household), and clothing purchases, each converted to a yearly kg
-  CO2e figure and rolled into an estimated yearly total.
+- **Stats** — a yearly estimate. Inputs (flights: short-haul European vs
+  long-haul international; home energy: household kWh/month split across
+  everyone in the household; clothing purchases per month) come first, each
+  converted to a yearly kg CO2e figure; the "Your year, estimated" analysis
+  card below rolls those together with your confirmed weeks' average
+  commute/food (extrapolated ×52) into an estimated yearly total, next to a
+  rough percentile ("lower than ~X% of people in the UK"). A "How your year
+  compares" card at the bottom shows the UK average alongside your total
+  converted into car miles and mature-trees-of-CO2-absorption equivalents,
+  each with a delta against the UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal, a
   food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
   everywhere to account for produced-but-wasted food), a friends list (add
@@ -85,6 +90,13 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   (rough grid average), divided evenly across everyone in the household.
 - **Buying goods** (Stats page): ~10 kg CO2e per clothing item bought, a
   rough blended average across garment types.
+- **UK percentile & comparisons** (Stats page): assumes a rough UK average
+  personal footprint of ~8,500 kg CO2e/yr, and models the population as
+  log-normally distributed around it (median = average, an assumed spread)
+  to estimate a percentile — illustrative, not based on real ONS/population
+  distribution data. The car-miles comparison reuses the same car factor as
+  commuting (~0.171 kg CO2e/km, converted to miles); the trees comparison
+  uses ~22 kg CO2e absorbed per mature tree per year.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
