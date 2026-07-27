@@ -50,6 +50,8 @@
     return {
       commute: Object.fromEntries(DAYS.map((d) => [d.key, "none"])),
       diet: Object.fromEntries(DAYS.map((d) => [d.key, { type: "" }])),
+      confirmedCommute: Object.fromEntries(DAYS.map((d) => [d.key, false])),
+      confirmedDiet: Object.fromEntries(DAYS.map((d) => [d.key, false])),
     };
   }
 
@@ -86,28 +88,38 @@
   }
 
   const CURRENT_WEEK_KEY = weekKeyFor(new Date());
+  const LAST_WEEK_KEY = shiftedWeekKey(CURRENT_WEEK_KEY, -1);
 
   // ---------- Signed-in state ----------
   let currentUser = null;
   let loadedUserId = null;
   let profile = { ...DEFAULT_PROFILE };
-  let weeksCache = {}; // week_key -> { commute, diet, total_kg? }
+  let weeksCache = {}; // week_key -> { commute, diet, confirmedCommute, confirmedDiet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
   let pendingMeatDayKey = null;
-  // Purely a UI affordance (auto-save already persists on every change) - tracks
-  // which day rows have been explicitly confirmed this session, so the checkmark
-  // survives table rebuilds but resets whenever that day's value changes.
-  let confirmedDays = { commute: new Set(), diet: new Set() };
+  // Which week the This Week page is currently showing/editing.
+  let selectedWeekKey = CURRENT_WEEK_KEY;
 
   function getWeek(weekKey) {
     if (!weeksCache[weekKey]) weeksCache[weekKey] = blankWeek();
     return weeksCache[weekKey];
   }
 
+  // Any picks made at all, confirmed or still a draft.
   function hasAnyEntries(weekData) {
     if (!weekData) return false;
     const commuted = Object.values(weekData.commute).some((m) => m && m !== "none");
     const ate = Object.values(weekData.diet).some((e) => e && e.type);
+    return commuted || ate;
+  }
+
+  // At least one day actually confirmed - this is what "counts" everywhere
+  // (Weeks grid totals, leaderboard eligibility), as opposed to hasAnyEntries
+  // above, which is also true for a week that's all unconfirmed drafts.
+  function hasAnyConfirmed(weekData) {
+    if (!weekData) return false;
+    const commuted = Object.values(weekData.confirmedCommute || {}).some(Boolean);
+    const ate = Object.values(weekData.confirmedDiet || {}).some(Boolean);
     return commuted || ate;
   }
 
@@ -140,12 +152,22 @@
     return meatFactor * portionKg;
   }
 
+  // Confirmed days count toward totals/chart/leaderboard; picked-but-unconfirmed
+  // days are saved as drafts (so nothing is lost) but contribute 0 until confirmed.
+  function countedCommuteFootprint(weekData, dayKey) {
+    return weekData.confirmedCommute?.[dayKey] ? commuteFootprint(weekData, dayKey) : 0;
+  }
+
+  function countedFoodFootprint(weekData, dayKey) {
+    return weekData.confirmedDiet?.[dayKey] ? foodFootprint(weekData, dayKey) : 0;
+  }
+
   function veggieSavings(weekData) {
     let total = 0;
     const byType = {};
     DAYS.forEach((day) => {
       const entry = weekData.diet[day.key];
-      if (entry && entry.type === "meat") {
+      if (entry && entry.type === "meat" && weekData.confirmedDiet?.[day.key]) {
         const extra = meatExtra(entry);
         total += extra;
         byType[entry.meat] = (byType[entry.meat] || 0) + extra;
@@ -159,8 +181,8 @@
     let food = 0;
     const daily = [];
     DAYS.forEach((day) => {
-      const c = commuteFootprint(weekData, day.key);
-      const f = foodFootprint(weekData, day.key);
+      const c = countedCommuteFootprint(weekData, day.key);
+      const f = countedFoodFootprint(weekData, day.key);
       commute += c;
       food += f;
       daily.push(c + f);
@@ -205,7 +227,15 @@
     weeksCache = {};
     const { data } = await sbClient.from("weeks").select("*").eq("user_id", currentUser.id);
     (data || []).forEach((row) => {
-      weeksCache[row.week_key] = { commute: row.commute, diet: row.diet, total_kg: row.total_kg };
+      const blank = blankWeek();
+      weeksCache[row.week_key] = {
+        commute: row.commute,
+        diet: row.diet,
+        // Fall back to all-false for rows saved before these columns existed.
+        confirmedCommute: { ...blank.confirmedCommute, ...(row.confirmed_commute || {}) },
+        confirmedDiet: { ...blank.confirmedDiet, ...(row.confirmed_diet || {}) },
+        total_kg: row.total_kg,
+      };
     });
   }
 
@@ -227,17 +257,19 @@
     }
   }
 
-  async function persistCurrentWeek() {
+  async function persistWeek(weekKey) {
     if (!currentUser) return;
-    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const weekData = getWeek(weekKey);
     const totals = weekTotals(weekData);
     showSyncStatus("saving");
     const { error } = await sbClient.from("weeks").upsert(
       {
         user_id: currentUser.id,
-        week_key: CURRENT_WEEK_KEY,
+        week_key: weekKey,
         commute: weekData.commute,
         diet: weekData.diet,
+        confirmed_commute: weekData.confirmedCommute,
+        confirmed_diet: weekData.confirmedDiet,
         total_kg: totals.total,
         updated_at: new Date().toISOString(),
       },
@@ -414,24 +446,26 @@
   }
 
   // ---------- Page 1: This Week ----------
-  function createConfirmButton(kind, dayKey) {
+  function createConfirmButton(weekData, kind, dayKey) {
+    const confirmedMap = kind === "commute" ? weekData.confirmedCommute : weekData.confirmedDiet;
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "day-confirm-btn" + (confirmedDays[kind].has(dayKey) ? " confirmed" : "");
+    btn.className = "day-confirm-btn" + (confirmedMap[dayKey] ? " confirmed" : "");
     btn.textContent = "✓";
     btn.setAttribute("aria-label", `Confirm ${dayKey} entry`);
     btn.addEventListener("click", () => {
-      confirmedDays[kind].add(dayKey);
+      confirmedMap[dayKey] = true;
       btn.classList.remove("pop");
       void btn.offsetWidth; // restart the animation if clicked again
       btn.classList.add("confirmed", "pop");
-      persistCurrentWeek();
+      persistWeek(selectedWeekKey);
+      renderFootprints();
     });
     return btn;
   }
 
   function buildCommuteTable() {
-    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const weekData = getWeek(selectedWeekKey);
     const tbody = document.querySelector("#commute-table tbody");
     tbody.innerHTML = "";
     DAYS.forEach((day) => {
@@ -456,12 +490,12 @@
         select.appendChild(opt);
       });
       select.value = weekData.commute[day.key];
-      const confirmBtn = createConfirmButton("commute", day.key);
+      const confirmBtn = createConfirmButton(weekData, "commute", day.key);
       select.addEventListener("change", () => {
         weekData.commute[day.key] = select.value;
-        confirmedDays.commute.delete(day.key);
+        weekData.confirmedCommute[day.key] = false;
         confirmBtn.classList.remove("confirmed", "pop");
-        persistCurrentWeek();
+        persistWeek(selectedWeekKey);
         renderFootprints();
       });
       modeTd.appendChild(select);
@@ -487,7 +521,7 @@
   }
 
   function buildDietTable() {
-    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const weekData = getWeek(selectedWeekKey);
     const tbody = document.querySelector("#diet-table tbody");
     tbody.innerHTML = "";
     DAYS.forEach((day) => {
@@ -543,11 +577,11 @@
       }
       refreshMeatUI();
 
-      const confirmBtn = createConfirmButton("diet", day.key);
+      const confirmBtn = createConfirmButton(weekData, "diet", day.key);
 
       select.addEventListener("change", () => {
         const value = select.value;
-        confirmedDays.diet.delete(day.key);
+        weekData.confirmedDiet[day.key] = false;
         confirmBtn.classList.remove("confirmed", "pop");
         if (value === "meat") {
           const existing = weekData.diet[day.key];
@@ -556,13 +590,13 @@
             meat: existing?.meat || "chicken",
             portion: existing?.portion || "medium",
           };
-          persistCurrentWeek();
+          persistWeek(selectedWeekKey);
           refreshMeatUI();
           renderFootprints();
           openMeatModal(day.key);
         } else {
           weekData.diet[day.key] = { type: value };
-          persistCurrentWeek();
+          persistWeek(selectedWeekKey);
           refreshMeatUI();
           renderFootprints();
         }
@@ -589,7 +623,7 @@
   }
 
   function openMeatModal(dayKey) {
-    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const weekData = getWeek(selectedWeekKey);
     pendingMeatDayKey = dayKey;
     const entry = weekData.diet[dayKey];
     document.getElementById("meat-type").value = entry?.meat || "chicken";
@@ -602,23 +636,43 @@
     pendingMeatDayKey = null;
   }
 
+  function weekPickerHeading(weekKey) {
+    if (weekKey === CURRENT_WEEK_KEY) return "This week";
+    if (weekKey === LAST_WEEK_KEY) return "Last week";
+    return weekLabel(weekKey);
+  }
+
   function renderFootprints() {
-    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const weekData = getWeek(selectedWeekKey);
     const totals = weekTotals(weekData);
 
     DAYS.forEach((day) => {
+      // Preview values always show what a day WOULD contribute; only confirmed
+      // days actually count toward the totals below (see weekTotals()).
       const c = commuteFootprint(weekData, day.key);
       const f = foodFootprint(weekData, day.key);
       const cCell = document.querySelector(`[data-commute-footprint="${day.key}"]`);
-      if (cCell) cCell.textContent = c > 0 ? `${fmt(c)} kg` : "–";
+      if (cCell) {
+        cCell.textContent = c > 0 ? `${fmt(c)} kg` : "–";
+        cCell.classList.toggle("counted", Boolean(weekData.confirmedCommute[day.key]));
+      }
       const fCell = document.querySelector(`[data-food-footprint="${day.key}"]`);
-      if (fCell) fCell.textContent = f > 0 ? `${fmt(f)} kg` : "–";
+      if (fCell) {
+        fCell.textContent = f > 0 ? `${fmt(f)} kg` : "–";
+        fCell.classList.toggle("counted", Boolean(weekData.confirmedDiet[day.key]));
+      }
     });
 
     document.getElementById("total-commute").textContent = fmt(totals.commute);
     document.getElementById("total-food").textContent = fmt(totals.food);
     document.getElementById("total-week").textContent = fmt(totals.total);
-    document.getElementById("week-range-heading").firstChild.textContent = `This week (${weekLabel(CURRENT_WEEK_KEY)}) `;
+    document.getElementById("week-range-heading").firstChild.textContent =
+      `${weekPickerHeading(selectedWeekKey)} (${weekLabel(selectedWeekKey)}) `;
+
+    document.querySelectorAll(".week-picker-btn").forEach((btn) => {
+      const isCurrent = btn.dataset.week === "current";
+      btn.classList.toggle("active", isCurrent ? selectedWeekKey === CURRENT_WEEK_KEY : selectedWeekKey === LAST_WEEK_KEY);
+    });
 
     renderComparisonCard(weekData, totals);
     renderChart(totals.daily);
@@ -636,7 +690,7 @@
 
     if (savings.total <= 0) {
       valueEl.textContent = "0.0";
-      labelEl.textContent = "kg CO2e · no meat logged this week";
+      labelEl.textContent = "kg CO2e · no confirmed meat days";
       return;
     }
 
@@ -705,7 +759,7 @@
     for (let i = 0; i < WEEKS_GRID_COUNT; i++) {
       const key = shiftedWeekKey(CURRENT_WEEK_KEY, -i);
       const weekData = weeksCache[key];
-      const started = hasAnyEntries(weekData);
+      const started = hasAnyConfirmed(weekData);
       const totals = started ? weekTotals(weekData) : null;
 
       const box = document.createElement("button");
@@ -754,11 +808,10 @@
 
   function openWeekDetail(key) {
     const weekData = weeksCache[key];
-    const started = hasAnyEntries(weekData);
     document.getElementById("week-detail-title").textContent = weekLabel(key);
     const body = document.getElementById("week-detail-body");
 
-    if (!started) {
+    if (!hasAnyEntries(weekData)) {
       body.innerHTML = '<p class="empty-note">No entries logged for this week.</p>';
     } else {
       const totals = weekTotals(weekData);
@@ -769,16 +822,18 @@
         if (dietEntry?.type === "meat") dietText = dietSummaryText(dietEntry);
         else if (dietEntry?.type === "veggie") dietText = "Veggie";
         else if (dietEntry?.type === "vegan") dietText = "Vegan";
-        const dayTotal = commuteFootprint(weekData, day.key) + foodFootprint(weekData, day.key);
-        return `<tr><td>${day.full}</td><td>${commuteLabel}</td><td>${dietText}</td><td>${fmt(dayTotal)} kg</td></tr>`;
+        const confirmed = weekData.confirmedCommute[day.key] || weekData.confirmedDiet[day.key];
+        const dayTotal = countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key);
+        const status = confirmed ? "✓" : "<span class=\"empty-note\">draft</span>";
+        return `<tr><td>${day.full}</td><td>${commuteLabel}</td><td>${dietText}</td><td>${fmt(dayTotal)} kg</td><td>${status}</td></tr>`;
       }).join("");
 
       body.innerHTML = `
         <table class="week-detail-table">
-          <thead><tr><th>Day</th><th>Commute</th><th>Diet</th><th>CO2e</th></tr></thead>
+          <thead><tr><th>Day</th><th>Commute</th><th>Diet</th><th>CO2e</th><th>Confirmed</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <p><strong>Total: ${fmt(totals.total)} kg CO2e</strong> (${fmt(totals.commute)} kg commute, ${fmt(totals.food)} kg food)</p>
+        <p><strong>Total: ${fmt(totals.total)} kg CO2e</strong> (${fmt(totals.commute)} kg commute, ${fmt(totals.food)} kg food) &mdash; confirmed days only</p>
       `;
     }
 
@@ -896,11 +951,10 @@
   }
 
   async function resetWeek() {
-    if (!confirm("Reset all entries for this week?")) return;
-    weeksCache[CURRENT_WEEK_KEY] = blankWeek();
-    confirmedDays = { commute: new Set(), diet: new Set() };
+    if (!confirm(`Reset all entries for ${weekPickerHeading(selectedWeekKey).toLowerCase()}?`)) return;
+    weeksCache[selectedWeekKey] = blankWeek();
     if (currentUser) {
-      await sbClient.from("weeks").delete().eq("user_id", currentUser.id).eq("week_key", CURRENT_WEEK_KEY);
+      await sbClient.from("weeks").delete().eq("user_id", currentUser.id).eq("week_key", selectedWeekKey);
     }
     renderWeekPage();
   }
@@ -988,7 +1042,7 @@
 
   async function onSignedIn(user) {
     currentUser = user;
-    confirmedDays = { commute: new Set(), diet: new Set() };
+    selectedWeekKey = CURRENT_WEEK_KEY;
     document.getElementById("auth-screen").hidden = true;
     document.getElementById("app-root").hidden = false;
     // Each of these can fail independently on a flaky connection — don't let
@@ -1058,12 +1112,12 @@
 
     document.getElementById("meat-save").addEventListener("click", () => {
       if (!pendingMeatDayKey) return;
-      const weekData = getWeek(CURRENT_WEEK_KEY);
+      const weekData = getWeek(selectedWeekKey);
       const meat = document.getElementById("meat-type").value;
       const portion = document.getElementById("meat-portion").value;
       weekData.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
-      confirmedDays.diet.delete(pendingMeatDayKey);
-      persistCurrentWeek();
+      weekData.confirmedDiet[pendingMeatDayKey] = false;
+      persistWeek(selectedWeekKey);
       closeMeatModal();
       buildDietTable();
       renderFootprints();
@@ -1079,6 +1133,13 @@
     });
 
     document.getElementById("reset-week").addEventListener("click", resetWeek);
+
+    document.querySelectorAll(".week-picker-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedWeekKey = btn.dataset.week === "current" ? CURRENT_WEEK_KEY : LAST_WEEK_KEY;
+        renderWeekPage();
+      });
+    });
 
     document.getElementById("profile-name").addEventListener("input", (e) => {
       profile.name = e.target.value;

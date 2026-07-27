@@ -56,7 +56,16 @@
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week">
       <section class="card">
+        <div class="week-picker" id="week-picker" role="tablist" aria-label="Which week to log">
+          <button type="button" class="week-picker-btn" data-week="current">This week</button>
+          <button type="button" class="week-picker-btn" data-week="last">Last week</button>
+        </div>
         <h2 id="week-range-heading">This week <span class="sync-status" id="sync-status"></span></h2>
+        <p class="assumptions">
+          Only confirmed days (the ✓ button) count toward the totals, chart, and
+          leaderboard below — picking an option saves it as a draft, but it won't
+          add to your figures until you confirm it.
+        </p>
         <table class="tracker-table" id="commute-table">
           <caption class="table-caption">How did you get to work?</caption>
           <thead>

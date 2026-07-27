@@ -7,14 +7,17 @@ with accounts and a friends leaderboard backed by Supabase.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
-- **This Week** — the inputs. For each day (M–S) pick how you got to work
-  (Walk, Cycle, Train, Car, or Didn't travel) and what you ate (Meat, Veggie,
-  Vegan). Choosing Meat opens a dialog to pick the type of meat and roughly
-  how much of it. Shows a running weekly total and a daily bar chart, plus a
-  "This week, in context" card that converts your total into an equivalent
-  car-km distance (DEFRA-style car factor) and shows how much CO2e you'd
-  have saved if every meat day had been veggie instead, broken down by meat
-  type (e.g. beef vs chicken).
+- **This Week** — the inputs, toggleable between "This week" and "Last week".
+  For each day (M–S) pick how you got to work (Walk, Cycle, Train, Car, or
+  Didn't travel) and what you ate (Meat, Veggie, Vegan). Choosing Meat opens
+  a dialog to pick the type of meat and roughly how much of it. A pick is
+  saved as a draft immediately, but only counts toward the weekly totals,
+  chart, and leaderboard once you press that day's ✓ confirm button (which
+  plays a small pop animation) — changing a confirmed day's pick un-confirms
+  it again. Also shows a "This week, in context" card that converts your
+  confirmed total into an equivalent car-km distance (DEFRA-style car
+  factor) and how much CO2e you'd have saved if every confirmed meat day had
+  been veggie instead, broken down by meat type (e.g. beef vs chicken).
 - **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
   Each box shows that week's total CO2e, color-coded against your goal from
   the Account page, with an over/under-goal indicator. Tap a box for a

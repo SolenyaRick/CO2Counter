@@ -30,9 +30,13 @@ The app is already wired up to a Supabase project — its URL and anon key are
 in the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants near the top of
 `app.js`. If you already ran an earlier version of `schema.sql`, re-run the
 current version — every statement uses `drop ... if exists` / `create or
-replace` so it's safe to run again, and it picks up the fix that lets both
-sides of a pending friend request see each other's display name (previously
-only accepted friends could).
+replace` / `add column if not exists` so it's safe to run again. The latest
+run adds `confirmed_commute` and `confirmed_diet` columns to `weeks`: a
+day's commute/diet pick is saved as soon as you choose it, but only counts
+toward the weekly totals, chart, and leaderboard once you press that day's
+confirm button. **If you'd already entered test data before this column
+existed**, those days will show as unconfirmed (0 kg) until you go back and
+press confirm on them again — the raw choices themselves aren't lost.
 
 The `@supabase/supabase-js` client library is vendored at
 `vendor/supabase.js` rather than loaded from a CDN, so the app doesn't
@@ -43,10 +47,12 @@ from the tarball, and overwrite `vendor/supabase.js`.
 ## Note on the network sandbox this was built in
 
 The environment this app was developed in blocks outbound connections to
-`supabase.co` by policy, so the login/friends/leaderboard code could not be
-tested end-to-end against a live project from there — only the logged-out
-UI (forms, validation, tab navigation) could be verified directly. The
-Supabase API calls follow the documented supabase-js v2 interface, but you
-should test the full sign-up → log in → add a friend → leaderboard flow
-yourself once this is deployed somewhere with normal internet access, and
-report back anything that doesn't work as expected.
+`supabase.co` by policy, so nothing here could be tested against your real
+project directly. The sign-in → app rendering flow (tables, footprints,
+tabs) has since been verified by mocking the Supabase REST/auth endpoints
+in a headless browser, which caught and fixed a real CSS bug (the login
+screen not disappearing after sign-in). Anything that depends on your
+actual data or the real friend_leaderboard()/find_user_by_email() functions
+— confirming days, switching between this/last week, adding a friend by
+email, the leaderboard — still hasn't been exercised against the live
+project, so please test that yourself and report back anything unexpected.

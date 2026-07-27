@@ -58,6 +58,14 @@ create table if not exists public.weeks (
   unique (user_id, week_key)
 );
 
+-- Per-day confirmation: a day's commute/diet choice is saved as a draft as
+-- soon as it's picked, but only counts toward total_kg (and therefore the
+-- weekly figures, chart, and leaderboard) once its confirm button has been
+-- pressed. Added via ALTER so this is safe to re-run against a table that
+-- already existed before this column was introduced.
+alter table public.weeks add column if not exists confirmed_commute jsonb not null default '{}'::jsonb;
+alter table public.weeks add column if not exists confirmed_diet jsonb not null default '{}'::jsonb;
+
 alter table public.weeks enable row level security;
 
 drop policy if exists "weeks: owner full access" on public.weeks;
@@ -115,7 +123,10 @@ revoke all on function public.find_user_by_email(text) from public;
 grant execute on function public.find_user_by_email(text) to authenticated;
 
 -- Leaderboard: self + accepted friends' totals for one week, with display
--- names. Everything else about a friend's week stays private.
+-- names. Everything else about a friend's week stays private. Only weeks
+-- with at least one confirmed day are included - otherwise a week with
+-- nothing but unconfirmed drafts (total_kg = 0) would misleadingly rank as
+-- a perfect zero-carbon week.
 create or replace function public.friend_leaderboard(target_week_key text)
 returns table (user_id uuid, display_name text, total_kg numeric, is_self boolean)
 language sql
@@ -126,6 +137,10 @@ as $$
   from public.weeks w
   join public.profiles p on p.id = w.user_id
   where w.week_key = target_week_key
+    and (
+      exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
+      or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true')
+    )
     and (
       w.user_id = auth.uid()
       or exists (

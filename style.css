@@ -208,6 +208,39 @@ body {
   font-size: 1.05rem;
 }
 
+.week-picker {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.week-picker-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: none;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.week-picker-btn + .week-picker-btn {
+  border-left: 1px solid var(--border);
+}
+
+.week-picker-btn.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.row-footprint.counted {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .table-caption {
   text-align: left;
   font-weight: 600;
