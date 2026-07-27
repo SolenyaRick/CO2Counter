@@ -264,7 +264,7 @@
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
-      await sbClient.from("profiles").insert(profileToRow());
+      await persistProfile(); // upsert acts as the initial insert here too
     }
   }
 
@@ -283,9 +283,36 @@
     };
   }
 
+  let profileSaveErrorShown = false;
+
   async function persistProfile() {
     if (!currentUser) return;
-    await sbClient.from("profiles").upsert(profileToRow());
+    const { error } = await sbClient.from("profiles").upsert(profileToRow());
+    const statusEl = document.getElementById("profile-sync-status");
+    if (error) {
+      console.error("Failed to save profile", error);
+      if (statusEl) {
+        statusEl.textContent = "Save failed — see console";
+        statusEl.className = "sync-status sync-error";
+      }
+      // Alert once per session rather than on every keystroke, but make sure
+      // a real save failure (e.g. an out-of-date database schema) is never
+      // silent - this used to fail quietly and lose changes.
+      if (!profileSaveErrorShown) {
+        profileSaveErrorShown = true;
+        alert(
+          "Couldn't save your profile/settings changes: " + error.message +
+          "\n\nThis usually means the Supabase database schema needs updating " +
+          "(re-run the latest supabase/schema.sql). Your change is NOT saved."
+        );
+      }
+    } else if (statusEl) {
+      statusEl.textContent = "Saved";
+      statusEl.className = "sync-status";
+      setTimeout(() => {
+        if (statusEl.textContent === "Saved") statusEl.textContent = "";
+      }, 1500);
+    }
   }
 
   // ---------- Supabase: weeks ----------
@@ -323,6 +350,8 @@
     }
   }
 
+  let weekSaveErrorShown = false;
+
   async function persistWeek(weekKey) {
     if (!currentUser) return;
     const weekData = getWeek(weekKey);
@@ -342,6 +371,17 @@
       { onConflict: "user_id,week_key" }
     );
     showSyncStatus(error ? "error" : "saved");
+    if (error) {
+      console.error("Failed to save week", error);
+      if (!weekSaveErrorShown) {
+        weekSaveErrorShown = true;
+        alert(
+          "Couldn't save this week's changes: " + error.message +
+          "\n\nThis usually means the Supabase database schema needs updating " +
+          "(re-run the latest supabase/schema.sql). Your change is NOT saved."
+        );
+      }
+    }
   }
 
   // ---------- Supabase: friends ----------
