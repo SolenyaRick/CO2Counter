@@ -44,7 +44,29 @@
   // vegetarian day, since it isn't any more carbon-efficient — the meat is added on top.
   const MEAT_SIDES_BASELINE = FOOD_DAY_FACTORS.veggie;
 
-  const DEFAULT_PROFILE = { name: "", commuteDistanceKm: 8, weeklyGoalKg: 20 };
+  // Wasted food still carries the emissions it took to produce. Modeled as
+  // "you have to buy/produce 1/(1-waste%) times what you actually eat", using
+  // the midpoint of each bracket as a representative waste percentage.
+  const FOOD_WASTE_MULTIPLIERS = { low: 1.02, some: 1.07, high: 1.25, severe: 1.67 };
+
+  // Rough yearly-estimate factors (Stats page), kept separate from the
+  // per-day factors above since they're coarser, once-a-year-ish figures.
+  const SHORT_HAUL_FLIGHT_KG = 250; // per short-haul European return flight
+  const LONG_HAUL_FLIGHT_KG = 1600; // per long-haul international return flight
+  const GRID_ELECTRICITY_KG_PER_KWH = 0.2; // rough average grid electricity factor
+  const CLOTHING_ITEM_KG = 10; // rough blended average per clothing item
+
+  const DEFAULT_PROFILE = {
+    name: "",
+    commuteDistanceKm: 8,
+    weeklyGoalKg: 20,
+    foodWaste: "low",
+    shortHaulFlights: 0,
+    longHaulFlights: 0,
+    householdPeople: 1,
+    householdKwhPerMonth: 0,
+    clothesPerMonth: 0,
+  };
 
   function blankWeek() {
     return {
@@ -130,17 +152,24 @@
     return factor * (profile.commuteDistanceKm || 0) * 2;
   }
 
+  function wasteMultiplier() {
+    return FOOD_WASTE_MULTIPLIERS[profile.foodWaste] ?? 1;
+  }
+
   function foodFootprint(weekData, dayKey) {
     const entry = weekData.diet[dayKey];
     if (!entry || !entry.type) return 0;
-    if (entry.type === "vegan") return FOOD_DAY_FACTORS.vegan;
-    if (entry.type === "veggie") return FOOD_DAY_FACTORS.veggie;
-    if (entry.type === "meat") {
+    let base;
+    if (entry.type === "vegan") base = FOOD_DAY_FACTORS.vegan;
+    else if (entry.type === "veggie") base = FOOD_DAY_FACTORS.veggie;
+    else if (entry.type === "meat") {
       const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
       const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
-      return meatFactor * portionKg + MEAT_SIDES_BASELINE;
+      base = meatFactor * portionKg + MEAT_SIDES_BASELINE;
+    } else {
+      return 0;
     }
-    return 0;
+    return base * wasteMultiplier();
   }
 
   // How much extra a meat choice adds on top of an equivalent veggie day —
@@ -149,7 +178,7 @@
   function meatExtra(entry) {
     const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
     const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
-    return meatFactor * portionKg;
+    return meatFactor * portionKg * wasteMultiplier();
   }
 
   // Confirmed days count toward totals/chart/leaderboard; picked-but-unconfirmed
@@ -200,26 +229,37 @@
         name: data.display_name || "",
         commuteDistanceKm: data.commute_distance_km ?? DEFAULT_PROFILE.commuteDistanceKm,
         weeklyGoalKg: data.weekly_goal_kg ?? DEFAULT_PROFILE.weeklyGoalKg,
+        foodWaste: data.food_waste_bracket ?? DEFAULT_PROFILE.foodWaste,
+        shortHaulFlights: data.short_haul_flights_per_year ?? DEFAULT_PROFILE.shortHaulFlights,
+        longHaulFlights: data.long_haul_flights_per_year ?? DEFAULT_PROFILE.longHaulFlights,
+        householdPeople: data.household_people ?? DEFAULT_PROFILE.householdPeople,
+        householdKwhPerMonth: data.household_kwh_per_month ?? DEFAULT_PROFILE.householdKwhPerMonth,
+        clothesPerMonth: data.clothes_per_month ?? DEFAULT_PROFILE.clothesPerMonth,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
-      await sbClient.from("profiles").insert({
-        id: currentUser.id,
-        display_name: profile.name,
-        commute_distance_km: profile.commuteDistanceKm,
-        weekly_goal_kg: profile.weeklyGoalKg,
-      });
+      await sbClient.from("profiles").insert(profileToRow());
     }
   }
 
-  async function persistProfile() {
-    if (!currentUser) return;
-    await sbClient.from("profiles").upsert({
+  function profileToRow() {
+    return {
       id: currentUser.id,
       display_name: profile.name,
       commute_distance_km: profile.commuteDistanceKm,
       weekly_goal_kg: profile.weeklyGoalKg,
-    });
+      food_waste_bracket: profile.foodWaste,
+      short_haul_flights_per_year: profile.shortHaulFlights,
+      long_haul_flights_per_year: profile.longHaulFlights,
+      household_people: profile.householdPeople,
+      household_kwh_per_month: profile.householdKwhPerMonth,
+      clothes_per_month: profile.clothesPerMonth,
+    };
+  }
+
+  async function persistProfile() {
+    if (!currentUser) return;
+    await sbClient.from("profiles").upsert(profileToRow());
   }
 
   // ---------- Supabase: weeks ----------
@@ -425,7 +465,7 @@
   }
 
   // ---------- Tab routing ----------
-  const TABS = ["week", "weeks", "leaderboard", "account"];
+  const TABS = ["week", "weeks", "leaderboard", "stats", "account"];
 
   function currentTab() {
     const fromHash = (location.hash || "").replace("#", "");
@@ -441,6 +481,7 @@
     });
     if (tab === "weeks") renderWeeksGrid();
     if (tab === "leaderboard") renderLeaderboard();
+    if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
   }
@@ -897,8 +938,49 @@
     document.getElementById("profile-name").value = profile.name || "";
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
     document.getElementById("profile-goal").value = profile.weeklyGoalKg;
+    document.getElementById("profile-food-waste").value = profile.foodWaste;
     document.getElementById("account-email").textContent = currentUser?.email || "";
     renderFriendsUI();
+  }
+
+  // ---------- Page: Stats (yearly estimate) ----------
+  function averageConfirmedWeekly(kind) {
+    const weeks = Object.values(weeksCache).filter(hasAnyConfirmed);
+    if (weeks.length === 0) return 0;
+    const sum = weeks.reduce((acc, weekData) => acc + weekTotals(weekData)[kind], 0);
+    return sum / weeks.length;
+  }
+
+  function renderStatsPage() {
+    document.getElementById("flights-short-haul").value = profile.shortHaulFlights;
+    document.getElementById("flights-long-haul").value = profile.longHaulFlights;
+    document.getElementById("household-people").value = profile.householdPeople;
+    document.getElementById("household-kwh").value = profile.householdKwhPerMonth;
+    document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
+
+    const avgFood = averageConfirmedWeekly("food");
+    const avgCommute = averageConfirmedWeekly("commute");
+    const yearlyFood = avgFood * 52;
+    const yearlyCommute = avgCommute * 52;
+
+    const yearlyFlying = profile.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + profile.longHaulFlights * LONG_HAUL_FLIGHT_KG;
+
+    const householdYearlyKwh = profile.householdKwhPerMonth * 12;
+    const householdYearlyEnergy = householdYearlyKwh * GRID_ELECTRICITY_KG_PER_KWH;
+    const yearlyHomeEnergy = householdYearlyEnergy / Math.max(1, profile.householdPeople || 1);
+
+    const yearlyGoods = profile.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
+
+    const yearlyTotal = yearlyFood + yearlyCommute + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
+
+    document.getElementById("yearly-avg-food").textContent = fmt(avgFood);
+    document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
+    document.getElementById("yearly-food").textContent = Math.round(yearlyFood).toLocaleString();
+    document.getElementById("yearly-commute").textContent = Math.round(yearlyCommute).toLocaleString();
+    document.getElementById("yearly-flying").textContent = Math.round(yearlyFlying).toLocaleString();
+    document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
+    document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
+    document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
   }
 
   function exportData() {
@@ -1156,6 +1238,25 @@
       profile.weeklyGoalKg = Number.isFinite(val) && val >= 0 ? val : 0;
       persistProfile();
     });
+    document.getElementById("profile-food-waste").addEventListener("change", (e) => {
+      profile.foodWaste = e.target.value;
+      persistProfile();
+      renderFootprints();
+    });
+
+    function bindNumberField(id, applyToProfile, { min = 0, rerenderStats = true } = {}) {
+      document.getElementById(id).addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value);
+        applyToProfile(Number.isFinite(val) && val >= min ? val : min);
+        persistProfile();
+        if (rerenderStats) renderStatsPage();
+      });
+    }
+    bindNumberField("flights-short-haul", (v) => { profile.shortHaulFlights = v; });
+    bindNumberField("flights-long-haul", (v) => { profile.longHaulFlights = v; });
+    bindNumberField("household-people", (v) => { profile.householdPeople = v; }, { min: 1 });
+    bindNumberField("household-kwh", (v) => { profile.householdKwhPerMonth = v; });
+    bindNumberField("clothes-per-month", (v) => { profile.clothesPerMonth = v; });
 
     document.getElementById("add-friend-form").addEventListener("submit", (e) => {
       e.preventDefault();

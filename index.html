@@ -50,6 +50,7 @@
       <button class="tab-btn" data-tab="week">This Week</button>
       <button class="tab-btn" data-tab="weeks">Weeks</button>
       <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
       <button class="tab-btn" data-tab="account">Account</button>
     </nav>
 
@@ -161,7 +162,99 @@
       </section>
     </section>
 
-    <!-- PAGE 4: Account -->
+    <!-- PAGE 4: Stats (yearly estimate) -->
+    <section class="view" id="view-stats" hidden>
+      <section class="card">
+        <h2>Your year, estimated</h2>
+        <div class="summary-totals" id="yearly-summary-totals">
+          <div class="stat">
+            <span class="stat-value" id="yearly-avg-food">0.0</span>
+            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Food</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-avg-commute">0.0</span>
+            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Commute</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-food">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Food (&times;52 weeks)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-commute">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-flying">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Flying</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-home-energy">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Home energy (your share)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-goods">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Buying goods</span>
+          </div>
+          <div class="stat stat-highlight">
+            <span class="stat-value" id="yearly-total">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
+          </div>
+        </div>
+        <p class="assumptions">
+          Commute and food are extrapolated from the average of your confirmed weeks so
+          far (needs at least one confirmed week to be non-zero); everything else comes
+          from your answers below. All figures are rough, illustrative estimates.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Flying</h2>
+        <label class="field">
+          Short-haul flights within Europe per year
+          <input type="number" id="flights-short-haul" min="0" step="1" />
+        </label>
+        <label class="field">
+          Long-haul international flights per year (Americas, Australia, Asia, etc.)
+          <input type="number" id="flights-long-haul" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Counted per return trip: ~250 kg CO2e for a short-haul European flight, ~1,600 kg
+          CO2e for a long-haul international one &mdash; rough averages, actual footprint
+          varies a lot by distance and cabin class.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Home energy</h2>
+        <label class="field">
+          People in your household
+          <input type="number" id="household-people" min="1" step="1" />
+        </label>
+        <label class="field">
+          Household electricity use (kWh per month)
+          <input type="number" id="household-kwh" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Include everyday use like showering (if electric water heating), lighting,
+          heating, and appliances &mdash; check a recent bill if unsure. Uses a rough grid
+          average of ~0.2 kg CO2e/kWh, split evenly across everyone in the household.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Buying goods</h2>
+        <label class="field">
+          Clothing items bought per month
+          <input type="number" id="clothes-per-month" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Uses a rough blended average of ~10 kg CO2e per item &mdash; a T-shirt is much
+          less, a coat or a pair of jeans much more.
+        </p>
+      </section>
+    </section>
+
+    <!-- PAGE 5: Account -->
     <section class="view" id="view-account" hidden>
       <section class="card account-header-card">
         <div class="account-header">
@@ -184,7 +277,22 @@
           Weekly CO2e goal (kg)
           <input type="number" id="profile-goal" min="0" step="1" />
         </label>
-        <p class="assumptions">Your goal colors the boxes on the Weeks page: green at or under goal, amber a bit over, red well over.</p>
+        <label class="field">
+          How much food do you waste?
+          <select id="profile-food-waste">
+            <option value="low">0&ndash;3% &mdash; barely any</option>
+            <option value="some">3&ndash;10% &mdash; a bit goes off before I use it</option>
+            <option value="high">10&ndash;30% &mdash; regularly toss unused food</option>
+            <option value="severe">More than 30% &mdash; a lot goes to waste</option>
+          </select>
+        </label>
+        <p class="assumptions">
+          Wasted food still carries the emissions it took to produce, so this scales up
+          your food figures everywhere (This Week, Stats) to account for it &mdash; e.g.
+          10&ndash;30% waste means buying/producing about 25% more than you actually eat.
+          Your goal colors the boxes on the Weeks page: green at or under goal, amber a
+          bit over, red well over.
+        </p>
       </section>
 
       <section class="card">

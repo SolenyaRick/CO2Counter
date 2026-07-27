@@ -13,6 +13,19 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Yearly-estimate inputs (Stats page) and the food-waste setting (Account
+-- page). Added via ALTER so this is safe to re-run against a table that
+-- already existed before these columns were introduced.
+alter table public.profiles add column if not exists short_haul_flights_per_year numeric not null default 0;
+alter table public.profiles add column if not exists long_haul_flights_per_year numeric not null default 0;
+alter table public.profiles add column if not exists household_people numeric not null default 1;
+alter table public.profiles add column if not exists household_kwh_per_month numeric not null default 0;
+alter table public.profiles add column if not exists clothes_per_month numeric not null default 0;
+alter table public.profiles add column if not exists food_waste_bracket text not null default 'low';
+alter table public.profiles drop constraint if exists profiles_food_waste_bracket_check;
+alter table public.profiles add constraint profiles_food_waste_bracket_check
+  check (food_waste_bracket in ('low', 'some', 'high', 'severe'));
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "profiles: owner can select" on public.profiles;

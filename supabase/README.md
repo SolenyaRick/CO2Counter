@@ -36,7 +36,10 @@ day's commute/diet pick is saved as soon as you choose it, but only counts
 toward the weekly totals, chart, and leaderboard once you press that day's
 confirm button. **If you'd already entered test data before this column
 existed**, those days will show as unconfirmed (0 kg) until you go back and
-press confirm on them again — the raw choices themselves aren't lost.
+press confirm on them again — the raw choices themselves aren't lost. It
+also adds flight/home-energy/clothing columns for the Stats page and a
+`food_waste_bracket` column for the Account page's food-waste setting, all
+on `profiles`.
 
 The `@supabase/supabase-js` client library is vendored at
 `vendor/supabase.js` rather than loaded from a CDN, so the app doesn't

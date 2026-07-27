@@ -24,9 +24,16 @@ with accounts and a friends leaderboard backed by Supabase.
   day-by-day breakdown.
 - **Leaderboard** — you and your accepted friends, ranked by this week's
   total CO2e, lowest first.
-- **Account** — display name, one-way commute distance, weekly CO2e goal,
-  a friends list (add by email, accept/decline requests), sign-out, and
-  export/import/reset for your data.
+- **Stats** — a yearly estimate: your confirmed weeks' average, extrapolated
+  commute/food totals (×52), plus flights (short-haul European vs long-haul
+  international), home energy (household kWh/month split across everyone in
+  the household), and clothing purchases, each converted to a yearly kg
+  CO2e figure and rolled into an estimated yearly total.
+- **Account** — display name, one-way commute distance, weekly CO2e goal, a
+  food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
+  everywhere to account for produced-but-wasted food), a friends list (add
+  by email, accept/decline requests), sign-out, and export/import/reset for
+  your data.
 
 ## Architecture
 
@@ -67,6 +74,17 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   or fish) times the chosen portion size. So a meat day is always at least
   as high as a veggie day, e.g. a medium chicken portion comes to ~2.4 kg,
   a medium beef portion to ~5.6 kg.
+- **Food waste** (Account page setting): scales every food figure by
+  1/(1-waste%), using each bracket's midpoint — 0–3% → ×1.02, 3–10% → ×1.07,
+  10–30% → ×1.25, 30%+ → ×1.67 (assuming 40%). Wasted food still carries the
+  emissions it took to produce, so higher waste means you effectively have
+  to account for more food produced than you actually eat.
+- **Flying** (Stats page, per return trip): ~250 kg CO2e short-haul within
+  Europe, ~1,600 kg CO2e long-haul international.
+- **Home energy** (Stats page): household kWh/month × 12 × ~0.2 kg CO2e/kWh
+  (rough grid average), divided evenly across everyone in the household.
+- **Buying goods** (Stats page): ~10 kg CO2e per clothing item bought, a
+  rough blended average across garment types.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
