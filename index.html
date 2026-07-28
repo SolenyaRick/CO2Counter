@@ -40,6 +40,24 @@
     </div>
   </div>
 
+  <div class="auth-screen" id="reset-password-screen" hidden>
+    <div class="auth-card">
+      <h1>Set a new password</h1>
+      <p class="subtitle">You followed a password reset link &mdash; choose a new password below.</p>
+      <form id="reset-password-form">
+        <label class="field">
+          New password
+          <input type="password" id="reset-password-input" required minlength="6" autocomplete="new-password" />
+        </label>
+        <p class="auth-error" id="reset-password-error" hidden></p>
+        <p class="auth-status" id="reset-password-status" hidden></p>
+        <div class="auth-actions">
+          <button type="submit" class="btn-primary" id="reset-password-submit">Set new password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="app" id="app-root" hidden>
     <header class="app-header">
       <h1>Weekly CO2 Tracker</h1>

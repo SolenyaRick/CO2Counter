@@ -25,6 +25,23 @@ auth) once login is wired up. To set that up:
    log in. For quicker local testing you can turn this off under
    **Authentication > Providers > Email > Confirm email**, then turn it back
    on before any real users sign up.
+6. **Required for signup-confirmation and password-reset emails to actually
+   work**: go to **Authentication > URL Configuration** and:
+   - Set **Site URL** to wherever the app is actually hosted, e.g.
+     `https://solenyarick.github.io/CO2Counter/`.
+   - Add that same URL under **Redirect URLs** (a wildcard like
+     `https://solenyarick.github.io/CO2Counter/**` also works, and covers
+     local testing origins too if you add e.g. `http://localhost:8000/**`).
+
+   The app tells Supabase where to send the user back to (via
+   `emailRedirectTo`/`redirectTo`, computed from whatever URL the app is
+   actually running at when the user signs up or requests a reset) - but
+   Supabase silently ignores any redirect target that isn't on this
+   allowlist and falls back to the Site URL default, which is
+   `http://localhost:3000` until you change it. Skipping this step is why
+   email links can look like they "don't work" — they're likely redirecting
+   to a `localhost` URL that doesn't exist for anyone but you, and only then
+   if you happen to be running something on port 3000.
 
 The app is already wired up to a Supabase project — its URL and anon key are
 in the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants near the top of

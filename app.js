@@ -1150,6 +1150,16 @@
   // ---------- Auth ----------
   let authMode = "signin";
 
+  // Where Supabase should send the user back to after clicking a signup
+  // confirmation or password-reset email link. Computed from wherever the
+  // app actually is (not hardcoded), so this works on GitHub Pages, a
+  // custom domain, or localhost alike - as long as that URL is also added
+  // to the Supabase project's Authentication > URL Configuration >
+  // Redirect URLs allowlist (Supabase ignores redirects not on that list).
+  function currentAppUrl() {
+    return window.location.origin + window.location.pathname;
+  }
+
   function updateAuthModeUI() {
     document.getElementById("auth-submit").textContent = authMode === "signin" ? "Sign in" : "Create account";
     document.getElementById("auth-toggle-mode").textContent =
@@ -1177,7 +1187,11 @@
           errorEl.hidden = false;
         }
       } else {
-        const { data, error } = await sbClient.auth.signUp({ email, password });
+        const { data, error } = await sbClient.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: currentAppUrl() },
+        });
         if (error) {
           errorEl.textContent = error.message;
           errorEl.hidden = false;
@@ -1203,7 +1217,7 @@
       errorEl.hidden = false;
       return;
     }
-    const { error } = await sbClient.auth.resetPasswordForEmail(email);
+    const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: currentAppUrl() });
     if (error) {
       errorEl.textContent = error.message;
       errorEl.hidden = false;
@@ -1211,6 +1225,44 @@
     }
     statusEl.textContent = "Password reset email sent.";
     statusEl.hidden = false;
+  }
+
+  async function handleResetPasswordSubmit(e) {
+    e.preventDefault();
+    const newPassword = document.getElementById("reset-password-input").value;
+    const errorEl = document.getElementById("reset-password-error");
+    const statusEl = document.getElementById("reset-password-status");
+    errorEl.hidden = true;
+    statusEl.hidden = true;
+    const submitBtn = document.getElementById("reset-password-submit");
+    submitBtn.disabled = true;
+
+    try {
+      const { error } = await sbClient.auth.updateUser({ password: newPassword });
+      if (error) {
+        errorEl.textContent = error.message;
+        errorEl.hidden = false;
+        return;
+      }
+      statusEl.textContent = "Password updated — signing you in…";
+      statusEl.hidden = false;
+      document.getElementById("reset-password-screen").hidden = true;
+      const { data } = await sbClient.auth.getSession();
+      await handleSession(data.session);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  function showResetPasswordScreen() {
+    // A recovery session may have already run through handleSession() (e.g.
+    // if getSession() at init picked it up before this listener was even
+    // subscribed), setting loadedUserId. Clear it so the real sign-in after
+    // the password is actually changed isn't skipped as a no-op duplicate.
+    loadedUserId = null;
+    document.getElementById("auth-screen").hidden = true;
+    document.getElementById("app-root").hidden = true;
+    document.getElementById("reset-password-screen").hidden = false;
   }
 
   function resetAuthForm() {
@@ -1281,6 +1333,7 @@
       updateAuthModeUI();
     });
     document.getElementById("auth-forgot").addEventListener("click", handleForgotPassword);
+    document.getElementById("reset-password-form").addEventListener("submit", handleResetPasswordSubmit);
 
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
@@ -1374,7 +1427,16 @@
 
     sbClient.auth.getSession().then(({ data }) => {
       handleSession(data.session);
-      sbClient.auth.onAuthStateChange((_event, session) => { handleSession(session); });
+      sbClient.auth.onAuthStateChange((event, session) => {
+        // Supabase signs the user into a temporary session when they land
+        // back here from a password-reset email link. Don't let that fall
+        // through to a normal sign-in - force setting a new password first.
+        if (event === "PASSWORD_RECOVERY") {
+          showResetPasswordScreen();
+          return;
+        }
+        handleSession(session);
+      });
     });
   }
 
