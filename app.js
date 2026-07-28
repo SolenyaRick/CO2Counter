@@ -56,10 +56,57 @@
   const GRID_ELECTRICITY_KG_PER_KWH = 0.2; // rough average grid electricity factor
   const CLOTHING_ITEM_KG = 10; // rough blended average per clothing item
 
-  // For the "How your year compares" card - all rough, illustrative figures.
-  const UK_AVERAGE_YEARLY_KG = 8500; // commonly cited rough average UK personal footprint
   const KM_PER_MILE = 1.60934;
   const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
+
+  // ---------- UK average reference ("How your year compares" card) ----------
+  // Built bottom-up from representative average UK inputs for exactly the
+  // categories this app tracks, run through the same formulas as your own
+  // totals - a fair like-for-like comparison, rather than a generic "average
+  // UK footprint" statistic that also covers things this app doesn't model
+  // at all (see the note on the Stats page for what's missing).
+  const UK_AVERAGE_ASSUMPTIONS = {
+    commuteOneWayKm: 10, // rough average UK one-way commute, assumed by car (the majority mode)
+    // A representative average week's meat: mostly poultry (the most-eaten
+    // meat in the UK), with one day each of the next few most common types.
+    weeklyMeatDays: [
+      { meat: "chicken", portion: "medium" },
+      { meat: "chicken", portion: "medium" },
+      { meat: "beef", portion: "medium" },
+      { meat: "pork", portion: "medium" },
+      { meat: "fish", portion: "medium" },
+    ],
+    weeklyVeggieDays: 2,
+    foodWaste: "some", // 3-10%, a representative middle assumption
+    shortHaulFlights: 1,
+    longHaulFlights: 0.2,
+    householdKwhPerYear: 2900, // rough average UK household electricity use
+    householdPeople: 2.4, // rough average UK household size
+    clothesPerMonth: 3,
+  };
+
+  function computeUkAverageYearlyKg() {
+    const a = UK_AVERAGE_ASSUMPTIONS;
+    const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
+
+    const commuteYearly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * 52;
+
+    const meatWeekly = a.weeklyMeatDays.reduce((sum, day) => {
+      const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
+      const portionKg = PORTION_KG[day.portion] ?? PORTION_KG.medium;
+      return sum + (meatFactor * portionKg + MEAT_SIDES_BASELINE) * wasteMult;
+    }, 0);
+    const veggieWeekly = a.weeklyVeggieDays * FOOD_DAY_FACTORS.veggie * wasteMult;
+    const foodYearly = (meatWeekly + veggieWeekly) * 52;
+
+    const flyingYearly = a.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + a.longHaulFlights * LONG_HAUL_FLIGHT_KG;
+    const homeEnergyYearly = (a.householdKwhPerYear * GRID_ELECTRICITY_KG_PER_KWH) / a.householdPeople;
+    const goodsYearly = a.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
+
+    return commuteYearly + foodYearly + flyingYearly + homeEnergyYearly + goodsYearly;
+  }
+
+  const UK_AVERAGE_YEARLY_KG = computeUkAverageYearlyKg();
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -1065,7 +1112,7 @@
     const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
     const ukTrees = UK_AVERAGE_YEARLY_KG / TREE_KG_PER_YEAR;
 
-    document.getElementById("uk-average-value").textContent = UK_AVERAGE_YEARLY_KG.toLocaleString();
+    document.getElementById("uk-average-value").textContent = Math.round(UK_AVERAGE_YEARLY_KG).toLocaleString();
     document.getElementById("compare-car-miles").textContent = Math.round(yourCarMiles).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
 

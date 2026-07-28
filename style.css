@@ -525,6 +525,16 @@ input, select {
   gap: 2px;
 }
 
+.unaccounted-list {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
 .savings-breakdown li {
   font-size: 0.8rem;
   color: var(--text-muted);

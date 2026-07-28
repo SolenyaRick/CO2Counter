@@ -90,13 +90,25 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   (rough grid average), divided evenly across everyone in the household.
 - **Buying goods** (Stats page): ~10 kg CO2e per clothing item bought, a
   rough blended average across garment types.
-- **UK percentile & comparisons** (Stats page): assumes a rough UK average
-  personal footprint of ~8,500 kg CO2e/yr, and models the population as
-  log-normally distributed around it (median = average, an assumed spread)
-  to estimate a percentile — illustrative, not based on real ONS/population
-  distribution data. The car-miles comparison reuses the same car factor as
-  commuting (~0.171 kg CO2e/km, converted to miles); the trees comparison
-  uses ~22 kg CO2e absorbed per mature tree per year.
+- **UK average reference** (Stats page): computed bottom-up the same way as
+  your own total, from representative average UK inputs run through the
+  same formulas — a 10 km one-way commute by car, a representative average
+  week's food (5 meat days weighted toward poultry + 2 veggie days, 3–10%
+  waste), 1 short-haul + 0.2 long-haul flights/yr, ~2,900 kWh/yr household
+  electricity split across ~2.4 people, and 3 clothing items/month — rather
+  than a generic "average footprint" statistic, which would cover a lot
+  this app doesn't track (see the Stats page's "What this doesn't account
+  for" card). This comes to roughly 2,400 kg CO2e/yr for just these
+  categories, well below often-cited "average person" figures (8–10 tonnes)
+  because those are scoped much more broadly.
+- **UK percentile** (Stats page): models the population as log-normally
+  distributed around the UK average above (median = average, an assumed
+  spread) to estimate a percentile — illustrative, not based on real
+  ONS/population distribution data.
+- **Car-miles / trees comparisons** (Stats page): the car-miles comparison
+  reuses the same car factor as commuting (~0.171 kg CO2e/km, converted to
+  miles); the trees comparison uses ~22 kg CO2e absorbed per mature tree
+  per year.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
