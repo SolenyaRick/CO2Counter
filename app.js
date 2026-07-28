@@ -120,6 +120,7 @@
   // ---------- Signed-in state ----------
   let currentUser = null;
   let loadedUserId = null;
+  let expectingPasswordRecovery = false;
   let profile = { ...DEFAULT_PROFILE };
   let weeksCache = {}; // week_key -> { commute, diet, confirmedCommute, confirmedDiet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
@@ -1160,6 +1161,19 @@
     return window.location.origin + window.location.pathname;
   }
 
+  // Supabase's recovery link can land back here in more than one shape
+  // depending on flow (implicit "#access_token=...&type=recovery" hash, or
+  // PKCE "?code=...&type=recovery" query) - checking the URL directly for
+  // "type=recovery" is more robust than relying on any one specific
+  // supabase-js auth event firing, since that can vary by flow/version.
+  function urlIndicatesPasswordRecovery() {
+    return /type=recovery/.test(window.location.hash) || /type=recovery/.test(window.location.search);
+  }
+
+  function clearAuthParamsFromUrl() {
+    history.replaceState(null, "", window.location.pathname);
+  }
+
   function updateAuthModeUI() {
     document.getElementById("auth-submit").textContent = authMode === "signin" ? "Sign in" : "Create account";
     document.getElementById("auth-toggle-mode").textContent =
@@ -1246,6 +1260,7 @@
       }
       statusEl.textContent = "Password updated — signing you in…";
       statusEl.hidden = false;
+      expectingPasswordRecovery = false;
       document.getElementById("reset-password-screen").hidden = true;
       const { data } = await sbClient.auth.getSession();
       await handleSession(data.session);
@@ -1425,18 +1440,26 @@
 
     updateAuthModeUI();
 
+    expectingPasswordRecovery = urlIndicatesPasswordRecovery();
+
+    function routeSession(event, session) {
+      // Supabase signs the user into a temporary session when they land
+      // back here from a password-reset email link. Don't let that fall
+      // through to a normal sign-in - force setting a new password first.
+      // Checked two ways since the exact event name isn't reliable across
+      // Supabase's different redirect flows: the URL itself is the one
+      // thing that's always present regardless of flow/event naming.
+      if (event === "PASSWORD_RECOVERY" || (expectingPasswordRecovery && session)) {
+        clearAuthParamsFromUrl();
+        showResetPasswordScreen();
+        return;
+      }
+      handleSession(session);
+    }
+
     sbClient.auth.getSession().then(({ data }) => {
-      handleSession(data.session);
-      sbClient.auth.onAuthStateChange((event, session) => {
-        // Supabase signs the user into a temporary session when they land
-        // back here from a password-reset email link. Don't let that fall
-        // through to a normal sign-in - force setting a new password first.
-        if (event === "PASSWORD_RECOVERY") {
-          showResetPasswordScreen();
-          return;
-        }
-        handleSession(session);
-      });
+      routeSession(null, data.session);
+      sbClient.auth.onAuthStateChange((event, session) => { routeSession(event, session); });
     });
   }
 
