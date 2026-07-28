@@ -30,16 +30,23 @@ The app is already wired up to a Supabase project — its URL and anon key are
 in the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants near the top of
 `app.js`. If you already ran an earlier version of `schema.sql`, re-run the
 current version — every statement uses `drop ... if exists` / `create or
-replace` / `add column if not exists` so it's safe to run again. The latest
-run adds `confirmed_commute` and `confirmed_diet` columns to `weeks`: a
-day's commute/diet pick is saved as soon as you choose it, but only counts
-toward the weekly totals, chart, and leaderboard once you press that day's
-confirm button. **If you'd already entered test data before this column
-existed**, those days will show as unconfirmed (0 kg) until you go back and
-press confirm on them again — the raw choices themselves aren't lost. It
-also adds flight/home-energy/clothing columns for the Stats page and a
+replace` / `add column if not exists` so it's safe to run again. Recent runs
+add `confirmed_commute` and `confirmed_diet` columns to `weeks` (a day's
+commute/diet pick is saved as soon as you choose it, but only counts toward
+the weekly totals, chart, and leaderboard once you press that day's confirm
+button — if you'd already entered test data before this column existed,
+those days will show as unconfirmed/0 kg until confirmed again, nothing is
+lost), plus flight/home-energy/clothing columns for the Stats page and a
 `food_waste_bracket` column for the Account page's food-waste setting, all
 on `profiles`.
+
+**If running this on a brand-new/empty database gave you
+`ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
+real ordering bug (a `profiles` policy referenced the `friendships` table
+before it existed yet in the file) — fixed by moving all `create table`
+statements before any policy. Just re-run the current file; the tables it
+already managed to create before hitting the error are safe (`create table
+if not exists`), so nothing needs cleaning up first.
 
 The `@supabase/supabase-js` client library is vendored at
 `vendor/supabase.js` rather than loaded from a CDN, so the app doesn't

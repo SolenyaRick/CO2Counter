@@ -1,6 +1,14 @@
 -- Weekly CO2 Tracker: Supabase schema
 -- Run this once in the Supabase SQL Editor (Project > SQL Editor > New query).
 -- Safe to re-run: guards with "if not exists" / "or replace" where possible.
+--
+-- Structure: all tables are created first, then all row-level-security
+-- policies. Policies can reference other tables (e.g. profiles' policy
+-- checks friendships), so every table this file creates must already exist
+-- before any policy is defined - on a fresh database, creating a policy
+-- that references a not-yet-created table fails immediately.
+
+-- ==================== tables ====================
 
 -- ---------- profiles ----------
 -- One row per user, mirrors auth.users. Row is created by the app right
@@ -26,7 +34,48 @@ alter table public.profiles drop constraint if exists profiles_food_waste_bracke
 alter table public.profiles add constraint profiles_food_waste_bracket_check
   check (food_waste_bracket in ('low', 'some', 'high', 'severe'));
 
+-- ---------- weeks ----------
+-- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
+-- total_kg is computed client-side (same emission-factor logic as the rest
+-- of the app) and stored alongside so friends' leaderboard totals don't
+-- require duplicating that math in SQL.
+create table if not exists public.weeks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  week_key text not null,
+  commute jsonb not null default '{}'::jsonb,
+  diet jsonb not null default '{}'::jsonb,
+  total_kg numeric not null default 0,
+  updated_at timestamptz not null default now(),
+  unique (user_id, week_key)
+);
+
+-- Per-day confirmation: a day's commute/diet choice is saved as a draft as
+-- soon as it's picked, but only counts toward total_kg (and therefore the
+-- weekly figures, chart, and leaderboard) once its confirm button has been
+-- pressed. Added via ALTER so this is safe to re-run against a table that
+-- already existed before this column was introduced.
+alter table public.weeks add column if not exists confirmed_commute jsonb not null default '{}'::jsonb;
+alter table public.weeks add column if not exists confirmed_diet jsonb not null default '{}'::jsonb;
+
+-- ---------- friendships ----------
+create table if not exists public.friendships (
+  id uuid primary key default gen_random_uuid(),
+  requester_id uuid not null references auth.users(id) on delete cascade,
+  addressee_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
+  created_at timestamptz not null default now(),
+  unique (requester_id, addressee_id),
+  check (requester_id <> addressee_id)
+);
+
+-- ==================== row-level security ====================
+
 alter table public.profiles enable row level security;
+alter table public.weeks enable row level security;
+alter table public.friendships enable row level security;
+
+-- ---------- profiles policies ----------
 
 drop policy if exists "profiles: owner can select" on public.profiles;
 create policy "profiles: owner can select" on public.profiles
@@ -55,31 +104,7 @@ drop policy if exists "profiles: owner can update" on public.profiles;
 create policy "profiles: owner can update" on public.profiles
   for update using (auth.uid() = id);
 
--- ---------- weeks ----------
--- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
--- total_kg is computed client-side (same emission-factor logic as the rest
--- of the app) and stored alongside so friends' leaderboard totals don't
--- require duplicating that math in SQL.
-create table if not exists public.weeks (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  week_key text not null,
-  commute jsonb not null default '{}'::jsonb,
-  diet jsonb not null default '{}'::jsonb,
-  total_kg numeric not null default 0,
-  updated_at timestamptz not null default now(),
-  unique (user_id, week_key)
-);
-
--- Per-day confirmation: a day's commute/diet choice is saved as a draft as
--- soon as it's picked, but only counts toward total_kg (and therefore the
--- weekly figures, chart, and leaderboard) once its confirm button has been
--- pressed. Added via ALTER so this is safe to re-run against a table that
--- already existed before this column was introduced.
-alter table public.weeks add column if not exists confirmed_commute jsonb not null default '{}'::jsonb;
-alter table public.weeks add column if not exists confirmed_diet jsonb not null default '{}'::jsonb;
-
-alter table public.weeks enable row level security;
+-- ---------- weeks policies ----------
 
 drop policy if exists "weeks: owner full access" on public.weeks;
 create policy "weeks: owner full access" on public.weeks
@@ -89,18 +114,7 @@ create policy "weeks: owner full access" on public.weeks
 -- day-by-day commute/diet detail) — they only see totals, via the
 -- friend_leaderboard() function below.
 
--- ---------- friendships ----------
-create table if not exists public.friendships (
-  id uuid primary key default gen_random_uuid(),
-  requester_id uuid not null references auth.users(id) on delete cascade,
-  addressee_id uuid not null references auth.users(id) on delete cascade,
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
-  created_at timestamptz not null default now(),
-  unique (requester_id, addressee_id),
-  check (requester_id <> addressee_id)
-);
-
-alter table public.friendships enable row level security;
+-- ---------- friendships policies ----------
 
 drop policy if exists "friendships: view own" on public.friendships;
 create policy "friendships: view own" on public.friendships
@@ -118,7 +132,7 @@ drop policy if exists "friendships: either side can delete" on public.friendship
 create policy "friendships: either side can delete" on public.friendships
   for delete using (auth.uid() = requester_id or auth.uid() = addressee_id);
 
--- ---------- helper functions ----------
+-- ==================== helper functions ====================
 
 -- Look up a user id by email, for sending a friend request. Returns null if
 -- no match. security definer so it can read auth.users without granting
