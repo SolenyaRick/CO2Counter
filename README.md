@@ -121,9 +121,12 @@ with accounts and a friends leaderboard backed by Supabase.
   data; your name/email/account are never included, see
   `supabase/README.md` for exactly how this is scoped — signed in as the
   app owner, this card also shows buttons to download every opted-in
-  user's data as either .json or .xlsx, gated server-side on the
-  signed-in account's email rather than anything checkable client-side), a
-  friends list (add by email, accept/decline requests), sign-out, and
+  user's data as either .json or .xlsx (the latter includes each week's
+  actual kg CO2e breakdown by commute/food/alcohol, not just the raw
+  day-by-day choices, and an Average/Std Dev row under every numeric
+  column on both sheets), gated server-side on the signed-in account's
+  email rather than anything checkable client-side), a friends list (add
+  by email, accept/decline requests), sign-out, and
   export/import/reset for your data.
 
 ## Architecture

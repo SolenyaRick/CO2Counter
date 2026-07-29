@@ -143,6 +143,28 @@ returns the opted-in rows and calling as any other id returns none. If
 the app owner's account email ever changes, update the literal in both
 functions (and `OWNER_EMAIL` in `app.js`).
 
+The most recent run adds `commute_kg`, `food_kg`, and `alcohol_kg`
+columns to `weeks` - a per-category kg CO2e breakdown alongside the
+pre-existing combined `commute_food_kg`/`total_kg` figures (computed and
+stored client-side the same way, at `persistWeek()` time), and includes
+all three in `research_weeks`. This was a real gotcha to get right: the
+three new columns had to be appended to the END of that view's SELECT
+list, not inserted before the pre-existing `commute_food_kg`/`total_kg`
+columns - `CREATE OR REPLACE VIEW` treats output columns positionally,
+so inserting a column earlier in the list reads as renaming whatever
+existing column that position used to hold, and fails with
+`ERROR: cannot change name of view column "commute_food_kg" to
+"commute_kg"`. Reproduced this by upgrading a database that already had
+the old column order before fixing the column order in this file -
+apply this version fresh (or over an older one) and it won't happen.
+The Excel export also now appends an "Average" and "Std Dev (sample)"
+row under each sheet's data for every numeric column, computed
+client-side in `app.js` from whatever `research_export_profiles()` /
+`research_export_weeks()` return - not part of the schema itself, but
+worth knowing the standard deviation is sample (n-1), not population,
+and any column with fewer than two numeric values is left blank there
+rather than showing a misleading 0.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

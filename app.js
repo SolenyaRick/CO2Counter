@@ -673,6 +673,9 @@
         alcohol: weekData.alcohol,
         total_kg: totals.total,
         commute_food_kg: totals.commute + totals.food,
+        commute_kg: totals.commute,
+        food_kg: totals.food,
+        alcohol_kg: totals.alcohol,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,week_key" }
@@ -1936,6 +1939,36 @@
     return flat;
   }
 
+  function round2(n) { return Math.round(n * 100) / 100; }
+
+  // Appends an "Average" and "Std Dev (sample)" row for every numeric
+  // column, after a blank spacer row, so a sheet's summary stats sit right
+  // under its data rather than needing a separate tab. Sample standard
+  // deviation (n-1) since opted-in users are a sample, not the whole
+  // population. Non-numeric columns (text, booleans, jsonb-as-string) are
+  // left blank in both summary rows rather than guessed at.
+  function withSummaryStats(rows) {
+    if (rows.length === 0) return rows;
+    const keys = Object.keys(rows[0]);
+    const spacer = {};
+    const avgRow = {};
+    const sdRow = {};
+    keys.forEach((k) => { spacer[k] = ""; avgRow[k] = ""; sdRow[k] = ""; });
+    avgRow[keys[0]] = "Average";
+    sdRow[keys[0]] = "Std Dev (sample)";
+    keys.forEach((k) => {
+      const values = rows.map((r) => r[k]).filter((v) => typeof v === "number" && Number.isFinite(v));
+      if (values.length === 0) return;
+      const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+      avgRow[k] = round2(mean);
+      if (values.length > 1) {
+        const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / (values.length - 1);
+        sdRow[k] = round2(Math.sqrt(variance));
+      }
+    });
+    return [...rows, spacer, avgRow, sdRow];
+  }
+
   async function exportResearchDataXlsx() {
     const data = await fetchResearchData();
     if (!data) return;
@@ -1947,9 +1980,9 @@
       return;
     }
     const wb = window.XLSX.utils.book_new();
-    const profilesSheet = window.XLSX.utils.json_to_sheet(data.profiles);
+    const profilesSheet = window.XLSX.utils.json_to_sheet(withSummaryStats(data.profiles));
     window.XLSX.utils.book_append_sheet(wb, profilesSheet, "Profiles");
-    const weeksSheet = window.XLSX.utils.json_to_sheet(data.weeks.map(flattenWeekRowForXlsx));
+    const weeksSheet = window.XLSX.utils.json_to_sheet(withSummaryStats(data.weeks.map(flattenWeekRowForXlsx)));
     window.XLSX.utils.book_append_sheet(wb, weeksSheet, "Weeks");
     window.XLSX.writeFile(wb, "co2-tracker-research-data.xlsx");
   }

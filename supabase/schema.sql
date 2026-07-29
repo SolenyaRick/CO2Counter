@@ -87,6 +87,16 @@ alter table public.weeks add column if not exists alcohol jsonb not null default
 -- alcohol emission-factor math in SQL either.
 alter table public.weeks add column if not exists commute_food_kg numeric not null default 0;
 
+-- Per-category kg breakdown (commute_food_kg/total_kg only give combined
+-- figures) - computed and stored client-side the same way as those two,
+-- so commute_kg + food_kg = commute_food_kg and + alcohol_kg = total_kg.
+-- Mainly for the research export (research_weeks view below), which needs
+-- an actual kg CO2e breakdown per category, not just the raw day-by-day
+-- commute/diet choices.
+alter table public.weeks add column if not exists commute_kg numeric not null default 0;
+alter table public.weeks add column if not exists food_kg numeric not null default 0;
+alter table public.weeks add column if not exists alcohol_kg numeric not null default 0;
+
 -- ---------- friendships ----------
 create table if not exists public.friendships (
   id uuid primary key default gen_random_uuid(),
@@ -399,7 +409,11 @@ grant execute on function public.app_wide_weekly_average() to authenticated;
 --     day-by-day commute/diet choices and alcohol figures behind their
 --     weekly totals, useful for checking the real distribution of commute
 --     modes and meat/veggie/vegan choices against the assumptions in
---     UK_AVERAGE_ASSUMPTIONS. Also excludes user_id/display_name.
+--     UK_AVERAGE_ASSUMPTIONS, PLUS the actual computed kg CO2e breakdown
+--     for that week (commute_kg, food_kg, alcohol_kg, and the pre-existing
+--     commute_food_kg/total_kg combined figures) - so the exported data
+--     covers both "what did they choose" and "what did it come to in
+--     kg CO2e", not just one or the other. Also excludes user_id/display_name.
 --
 -- Neither view is granted to `authenticated` or `anon` - the app itself
 -- never queries them, and a signed-in user has no way to read them through
@@ -429,6 +443,13 @@ select
 from public.profiles
 where research_opt_in = true;
 
+-- New output columns must be appended at the end, never inserted before
+-- existing ones - CREATE OR REPLACE VIEW treats columns positionally, so
+-- inserting a column earlier in the list reads as "rename the existing
+-- column at that position" and fails (verified: reproduced
+-- "cannot change name of view column ... to ..." by upgrading a database
+-- that already had the old column order, then fixed by moving the three
+-- new columns after commute_food_kg/total_kg instead of before them).
 create or replace view public.research_weeks as
 select
   w.week_key,
@@ -438,7 +459,10 @@ select
   w.confirmed_diet,
   w.alcohol,
   w.commute_food_kg,
-  w.total_kg
+  w.total_kg,
+  w.commute_kg,
+  w.food_kg,
+  w.alcohol_kg
 from public.weeks w
 join public.profiles p on p.id = w.user_id
 where p.research_opt_in = true;
