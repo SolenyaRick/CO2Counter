@@ -49,7 +49,9 @@
   const PORTION_LABELS = { small: "Small (~100g)", medium: "Medium (~150g)", large: "Large (~250g+)" };
   const PORTION_SHORT_LABELS = { small: "S", medium: "M", large: "L" };
 
-  const FOOD_DAY_FACTORS = { veggie: 1.5, vegan: 0.9 };
+  // Rosi et al. 2017 (seven-day diets, ~150 people, Italy): ovo-lacto-vegetarian
+  // 2.6, vegan 2.3 kg CO2e per person per day.
+  const FOOD_DAY_FACTORS = { veggie: 2.6, vegan: 2.3 };
   // The rest of a meat day's food (breakfast, sides, etc.) is valued the same as a
   // vegetarian day, since it isn't any more carbon-efficient — the meat is added on top.
   const MEAT_SIDES_BASELINE = FOOD_DAY_FACTORS.veggie;
