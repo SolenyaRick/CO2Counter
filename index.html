@@ -628,12 +628,17 @@
           measured data.
         </p>
         <div id="owner-research-export" hidden>
-          <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
+          <div class="account-actions">
+            <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
+            <button type="button" class="btn-secondary" id="export-research-data-xlsx">Download as Excel (.xlsx)</button>
+          </div>
           <p class="assumptions">
             Only visible signed in as the app owner &mdash; pulls every opted-in
             user's data via a server-side check on your account email, same
             data as the <code>research_profiles</code>/<code>research_weeks</code>
-            views in <code>supabase/schema.sql</code>.
+            views in <code>supabase/schema.sql</code>. The Excel version loads
+            a small spreadsheet library on demand (only when you click it), and
+            splits the data into a "Profiles" and a "Weeks" sheet.
           </p>
         </div>
       </section>

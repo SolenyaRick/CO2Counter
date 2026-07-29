@@ -120,8 +120,8 @@ with accounts and a friends leaderboard backed by Supabase.
   app developer for calibrating the UK-average assumptions against real
   data; your name/email/account are never included, see
   `supabase/README.md` for exactly how this is scoped — signed in as the
-  app owner, this card also shows a "Download opted-in research data"
-  button that pulls every opted-in user's data, gated server-side on the
+  app owner, this card also shows buttons to download every opted-in
+  user's data as either .json or .xlsx, gated server-side on the
   signed-in account's email rather than anything checkable client-side), a
   friends list (add by email, accept/decline requests), sign-out, and
   export/import/reset for your data.
@@ -135,6 +135,14 @@ vendored `@supabase/supabase-js` client in `vendor/supabase.js`. See
 for the full schema — profiles, weeks, and friendships tables with
 row-level security, so friends only ever see each other's weekly totals on
 the leaderboard, never day-by-day commute/diet detail.
+
+The Account page's owner-only "Download as Excel" button also lazy-loads a
+vendored copy of [SheetJS](https://sheetjs.com) (`vendor/xlsx.js`, the
+~250KB "mini" browser build — no legacy XLS/XLSB support, which this app
+never needs since it only ever writes plain .xlsx files) via a dynamically
+injected `<script>` tag the first time that button is clicked. It's not
+loaded on every page view, since only one account can ever see the button
+that needs it.
 
 ## Running it
 

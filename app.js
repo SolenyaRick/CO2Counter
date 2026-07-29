@@ -1866,22 +1866,16 @@
   function exportData() {
     const payload = { profile, weeks: weeksCache };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "co2-tracker-data.json";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, "co2-tracker-data.json");
   }
 
-  // Owner-only: downloads every opted-in user's research data (see
+  // Owner-only: fetches every opted-in user's research data (see
   // research_export_profiles()/research_export_weeks() in schema.sql).
   // Both RPCs return an empty array for anyone but the app owner - the
-  // button that calls this is also only shown to that account, but the
-  // real enforcement is server-side either way.
-  async function exportResearchData() {
+  // buttons that call this are also only shown to that account, but the
+  // real enforcement is server-side either way. Returns null on error
+  // (already alerted), otherwise { profiles, weeks }.
+  async function fetchResearchData() {
     const [profilesRes, weeksRes] = await Promise.all([
       sbClient.rpc("research_export_profiles"),
       sbClient.rpc("research_export_weeks"),
@@ -1889,18 +1883,75 @@
     if (profilesRes.error || weeksRes.error) {
       console.error("Failed to load research data", profilesRes.error, weeksRes.error);
       alert("Could not load research data — see console for details.");
-      return;
+      return null;
     }
-    const payload = { profiles: profilesRes.data || [], weeks: weeksRes.data || [] };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    return { profiles: profilesRes.data || [], weeks: weeksRes.data || [] };
+  }
+
+  function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "co2-tracker-research-data.json";
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  async function exportResearchData() {
+    const data = await fetchResearchData();
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    downloadBlob(blob, "co2-tracker-research-data.json");
+  }
+
+  // Loads vendor/xlsx.js (SheetJS, ~250KB) on first use rather than on
+  // every page load - it's only ever needed by the one account that can
+  // see the button that calls this, so there's no reason to make every
+  // visitor download it up front.
+  let xlsxLibPromise = null;
+  function loadXlsxLib() {
+    if (window.XLSX) return Promise.resolve();
+    if (!xlsxLibPromise) {
+      xlsxLibPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "vendor/xlsx.js";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load vendor/xlsx.js"));
+        document.head.appendChild(script);
+      });
+    }
+    return xlsxLibPromise;
+  }
+
+  // jsonb columns (commute/diet/confirmed_commute/confirmed_diet/alcohol)
+  // come back as parsed objects from the RPC - stringify them so each cell
+  // in the Weeks sheet is readable text rather than "[object Object]".
+  function flattenWeekRowForXlsx(row) {
+    const flat = { ...row };
+    ["commute", "diet", "confirmed_commute", "confirmed_diet", "alcohol"].forEach((key) => {
+      if (flat[key] && typeof flat[key] === "object") flat[key] = JSON.stringify(flat[key]);
+    });
+    return flat;
+  }
+
+  async function exportResearchDataXlsx() {
+    const data = await fetchResearchData();
+    if (!data) return;
+    try {
+      await loadXlsxLib();
+    } catch (err) {
+      console.error(err);
+      alert("Could not load the Excel export library — see console for details.");
+      return;
+    }
+    const wb = window.XLSX.utils.book_new();
+    const profilesSheet = window.XLSX.utils.json_to_sheet(data.profiles);
+    window.XLSX.utils.book_append_sheet(wb, profilesSheet, "Profiles");
+    const weeksSheet = window.XLSX.utils.json_to_sheet(data.weeks.map(flattenWeekRowForXlsx));
+    window.XLSX.utils.book_append_sheet(wb, weeksSheet, "Weeks");
+    window.XLSX.writeFile(wb, "co2-tracker-research-data.xlsx");
   }
 
   async function importData(file) {
@@ -2278,6 +2329,7 @@
 
     document.getElementById("export-data").addEventListener("click", exportData);
     document.getElementById("export-research-data").addEventListener("click", exportResearchData);
+    document.getElementById("export-research-data-xlsx").addEventListener("click", exportResearchDataXlsx);
     document.getElementById("import-data").addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) importData(file);
