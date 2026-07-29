@@ -87,7 +87,8 @@ with accounts and a friends leaderboard backed by Supabase.
   everyone in the household; clothing purchases per month; then an
   **Other factors** card of optional extras — gas/oil heating kWh/yr,
   extra non-commute car km/week, whether you own a car, number of dogs and
-  cats, and household water usage in m&sup3;/yr) come first, each converted
+  cats, household water usage in m&sup3;/yr, and which bank you mainly hold
+  money with plus a balance) come first, each converted
   to a yearly kg CO2e figure. The optional extras are skippable: leaving
   one blank leaves it out of every total below rather
   than counting it as zero, so an unanswered question never makes your
@@ -97,7 +98,7 @@ with accounts and a friends leaderboard backed by Supabase.
   next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). Every domain tile (food,
-  commute, flying, home energy, goods, and the three optional extras once
+  commute, flying, home energy, goods, and the six optional extras once
   answered) shows its own ▲/▼ delta against the UK average for that same
   category, not just the total. A "How your year compares" card at the
   bottom opens with your estimated total against the 1.5°C-by-2030 climate
@@ -197,11 +198,11 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   this app doesn't track (see the Stats page's "What this doesn't account
   for" card). This core figure comes to roughly 2,400 kg CO2e/yr, well
   below often-cited "average person" figures (8–10 tonnes) because those
-  are scoped much more broadly. If you've answered any of the three
-  optional extras above, the matching representative UK figure (~12,000
-  kWh/yr gas heating, ~50 extra car km/week, car ownership) is added to
-  *both* sides of the comparison, so it's never your fuller total measured
-  against a narrower UK figure.
+  are scoped much more broadly. If you've answered any of the optional
+  extras above (gas heating, non-commute driving, car ownership, pets,
+  water usage, banking), the matching representative UK figure for each
+  one is added to *both* sides of the comparison, so it's never your
+  fuller total measured against a narrower UK figure.
 - **UK percentile** (Stats page): models the population as log-normally
   distributed around the UK average above (median = average, an assumed
   spread) to estimate a percentile — illustrative, not based on real
@@ -245,6 +246,21 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   supply + treatment factor, split evenly across the household the same
   way electricity and gas are. The UK-average comparison assumes ~122
   m&sup3;/yr per household (~140 L/person/day).
+- **Banking** (Stats page, optional): balance held with your bank
+  (current + savings) × that bank's kg CO2e financed per £/yr, from
+  MotherTree's bank carbon emissions league table
+  ([mymothertree.com/bank-league-table](https://www.mymothertree.com/bank-league-table)),
+  which ranks UK banks by tonnes of CO2 financed per £10,000 of customer
+  deposits (reflecting how much of that money goes into fossil-fuel
+  financing) — Barclays and HSBC sit at the high end (~0.22–0.24 kg
+  CO2e/£/yr), most high-street banks in the middle, and Triodos/The
+  Co-operative Bank/Nationwide at the low end (~0.03–0.04 kg CO2e/£/yr).
+  Both the bank and a balance need answering for this to count. The
+  UK-average comparison uses a representative "big five" high-street
+  factor (Barclays, HSBC, Lloyds, NatWest, Santander) and a rough
+  illustrative £5,000 balance — the softest of all the assumptions here,
+  since there's no clean single source for "the average person's bank
+  balance".
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food

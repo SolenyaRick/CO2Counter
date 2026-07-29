@@ -43,6 +43,8 @@ alter table public.profiles add column if not exists owns_car boolean;
 alter table public.profiles add column if not exists num_dogs numeric;
 alter table public.profiles add column if not exists num_cats numeric;
 alter table public.profiles add column if not exists annual_water_m3 numeric;
+alter table public.profiles add column if not exists bank_name text;
+alter table public.profiles add column if not exists bank_balance numeric;
 
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
@@ -292,8 +294,8 @@ grant execute on function public.friend_weekly_average() to authenticated;
 --     LONG_HAUL_FLIGHT_KG, GRID_ELECTRICITY_KG_PER_KWH, CLOTHING_ITEM_KG,
 --     GAS_HEATING_KG_PER_KWH, TRANSPORT_FACTORS.car,
 --     CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR, DOG_KG_PER_YEAR,
---     CAT_KG_PER_YEAR, or WATER_KG_PER_M3 ever change in app.js, update the
---     matching literal here too.
+--     CAT_KG_PER_YEAR, WATER_KG_PER_M3, or BANK_KG_PER_POUND_PER_YEAR ever
+--     change in app.js, update the matching literal here too.
 -- Deliberately returns ONLY these two aggregates plus a headcount - never
 -- any user_id, name, or per-person row - so it's safe to expose to any
 -- signed-in user with no friendship relationship required.
@@ -338,6 +340,27 @@ as $$
             + case when p.owns_car then 700 else 0 end
             + case when p.num_dogs is not null or p.num_cats is not null then coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310 else 0 end
             + case when p.annual_water_m3 is not null then (p.annual_water_m3 * 0.32) / greatest(1, coalesce(p.household_people, 1)) else 0 end
+            + case when p.bank_name is not null and p.bank_balance is not null then
+                p.bank_balance * (case p.bank_name
+                  when 'barclays' then 0.2376
+                  when 'hsbc' then 0.2170
+                  when 'firstDirect' then 0.2170
+                  when 'chase' then 0.1897
+                  when 'santander' then 0.1742
+                  when 'natwest' then 0.1295
+                  when 'rbs' then 0.1295
+                  when 'monzo' then 0.1088
+                  when 'lloyds' then 0.0704
+                  when 'halifax' then 0.0704
+                  when 'metroBank' then 0.0694
+                  when 'starling' then 0.0610
+                  when 'virginMoney' then 0.0517
+                  when 'nationwide' then 0.0432
+                  when 'cooperative' then 0.0328
+                  when 'triodos' then 0.0317
+                  else 0
+                end)
+              else 0 end
           ) / 52.0 as avg_total_kg
     from per_user pu
     join public.profiles p on p.id = pu.user_id

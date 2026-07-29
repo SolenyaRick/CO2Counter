@@ -356,6 +356,39 @@
           supply + treatment factor of ~0.32 kg CO2e/m&sup3;, split evenly across your
           household (same split as home electricity and gas above).
         </p>
+        <label class="field">
+          Which bank do you mainly hold money with?
+          <select id="bank-name">
+            <option value="">Prefer not to say</option>
+            <option value="barclays">Barclays</option>
+            <option value="hsbc">HSBC</option>
+            <option value="firstDirect">First Direct</option>
+            <option value="chase">Chase</option>
+            <option value="santander">Santander</option>
+            <option value="natwest">NatWest</option>
+            <option value="rbs">RBS (Royal Bank of Scotland)</option>
+            <option value="monzo">Monzo</option>
+            <option value="lloyds">Lloyds</option>
+            <option value="halifax">Halifax</option>
+            <option value="metroBank">Metro Bank</option>
+            <option value="starling">Starling</option>
+            <option value="virginMoney">Virgin Money</option>
+            <option value="nationwide">Nationwide</option>
+            <option value="cooperative">The Co-operative Bank</option>
+            <option value="triodos">Triodos</option>
+          </select>
+        </label>
+        <label class="field">
+          Combined current + savings balance held with that bank (&pound;)
+          <input type="number" id="bank-balance" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Uses MotherTree's bank carbon emissions league table, which estimates each UK
+          bank's indirect footprint from financing fossil fuels, per &pound; of customer
+          deposits held. Both the bank and a balance need answering for this to count
+          &mdash; picking a bank without a balance (or vice versa) leaves it out of your
+          total, same as any other optional field here.
+        </p>
       </section>
 
       <section class="card">
@@ -423,6 +456,11 @@
             <span class="stat-label">kg CO2e/yr &middot; Water usage (optional)</span>
             <span class="week-diff" id="yearly-water-diff"></span>
           </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-banking">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Banking (optional)</span>
+            <span class="week-diff" id="yearly-banking-diff"></span>
+          </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="yearly-total">0</span>
             <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
@@ -432,7 +470,7 @@
         <p class="assumptions">
           Commute, food, and alcohol are extrapolated from the average of your fully
           confirmed weeks so far (needs at least one to be non-zero); everything else
-          comes from your answers above. The five optional tiles show
+          comes from your answers above. The six optional tiles show
           &ldquo;&ndash;&rdquo; until you answer them, and are then included in the
           total below &mdash; and in the UK comparison, which only ever includes the
           same optional categories you have (alcohol isn't part of that UK comparison
@@ -464,10 +502,11 @@
           <strong id="uk-average-value">0</strong> kg CO2e/yr. Built the same way as your
           own total &mdash; average UK commute, average week of meat/veggie eating, average
           flights, average household electricity, and (only if you've answered them)
-          average heating, non-commute driving, car ownership, pets, and water usage &mdash; run through
-          the same maths, rather than a generic "average footprint" statistic that covers a
-          lot this app doesn't track (see below). The comparisons below are illustrative
-          ways to picture that number, not precise conversions.
+          average heating, non-commute driving, car ownership, pets, water usage, and
+          banking &mdash; run through the same maths, rather than a generic "average
+          footprint" statistic that covers a lot this app doesn't track (see below). The
+          comparisons below are illustrative ways to picture that number, not precise
+          conversions.
         </p>
         <div class="comparison-grid">
           <div class="comparison-item">
@@ -488,16 +527,16 @@
         <p class="assumptions">
           This app tracks commuting, food, alcohol, flights, home electricity,
           clothing purchases, and (optionally, above) gas/oil heating, non-commute
-          car driving, car ownership, pets, and water usage &mdash; a real personal
-          footprint includes a lot more, so treat every total here as a partial,
-          illustrative estimate, not your actual footprint:
+          car driving, car ownership, pets, water usage, and banking &mdash; a real
+          personal footprint includes a lot more, so treat every total here as a
+          partial, illustrative estimate, not your actual footprint:
         </p>
         <ul class="unaccounted-list">
           <li>Non-car, non-commute travel: taxis/rideshare, buses, ferries, trains beyond your commute, cruises</li>
           <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, snacks, food miles/packaging</li>
           <li>Purchases beyond clothing: electronics, furniture, appliances, subscriptions, streaming/data use</li>
           <li>Household waste</li>
-          <li>Banking and investments &mdash; which bank you hold savings with can carry a surprisingly large indirect footprint via fossil fuel financing (see e.g. MotherTree's bank league table), but we don't yet have reliable per-bank figures to model this</li>
+          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint, but aren't modeled here</li>
           <li>Your share of public services, infrastructure, and government spending &mdash; often a substantial slice of "full" consumption-based footprint figures, and essentially impossible to self-report</li>
         </ul>
         <p class="assumptions">

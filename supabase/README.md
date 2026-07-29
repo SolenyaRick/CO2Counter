@@ -95,10 +95,19 @@ constants directly in SQL - if any of those ever change in `app.js`
 literals in this function too, or the two "everyone on the app" figures
 will quietly drift out of sync with the rest of the app.
 
-The most recent run adds an `annual_water_m3` column to `profiles` for the
+A later run adds an `annual_water_m3` column to `profiles` for the
 Stats page's water-usage optional extra (same nullable-with-no-default
 pattern as the other optional extras), and includes it in
 `app_wide_weekly_average()`'s duplicated formula above.
+
+The most recent run adds `bank_name` and `bank_balance` columns to
+`profiles` for the Stats page's banking optional extra (same
+nullable-with-no-default pattern - both need answering for it to count),
+and includes a per-bank lookup (mirroring `BANK_KG_PER_POUND_PER_YEAR` in
+`app.js`, sourced from MotherTree's bank carbon emissions league table) in
+`app_wide_weekly_average()`'s duplicated formula above. If a new bank is
+ever added to that constant in `app.js`, add a matching `when` branch to
+the `case p.bank_name` expression in this function too.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
