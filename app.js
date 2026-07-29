@@ -298,6 +298,12 @@
     annualWaterM3: null,
     bankName: null,
     bankBalance: null,
+    // Off by default - nothing is shared until the user actively opts in.
+    // See research_profiles / research_weeks in schema.sql for exactly
+    // what this exposes (everything on this page except banking) and to
+    // whom (the app owner only, via the Supabase SQL Editor - never
+    // readable through the app itself).
+    researchOptIn: false,
   };
 
   function blankWeek() {
@@ -534,6 +540,7 @@
         annualWaterM3: data.annual_water_m3 ?? null,
         bankName: data.bank_name ?? null,
         bankBalance: data.bank_balance ?? null,
+        researchOptIn: data.research_opt_in ?? false,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -561,6 +568,7 @@
       annual_water_m3: profile.annualWaterM3,
       bank_name: profile.bankName,
       bank_balance: profile.bankBalance,
+      research_opt_in: profile.researchOptIn,
     };
   }
 
@@ -1675,6 +1683,7 @@
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
     document.getElementById("profile-goal").value = profile.weeklyGoalKg;
     document.getElementById("profile-food-waste").value = profile.foodWaste;
+    document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
     renderFriendsUI();
   }
@@ -2210,6 +2219,11 @@
       profile.ownsCar = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;
       persistProfile();
       renderStatsPage();
+    });
+
+    document.getElementById("research-opt-in").addEventListener("change", (e) => {
+      profile.researchOptIn = e.target.checked;
+      persistProfile();
     });
 
     document.getElementById("add-friend-form").addEventListener("submit", (e) => {

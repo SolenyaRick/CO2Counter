@@ -1202,6 +1202,18 @@ input, select {
   margin-bottom: 14px;
 }
 
+.field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

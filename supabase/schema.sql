@@ -46,6 +46,12 @@ alter table public.profiles add column if not exists annual_water_m3 numeric;
 alter table public.profiles add column if not exists bank_name text;
 alter table public.profiles add column if not exists bank_balance numeric;
 
+-- Research opt-in (Account page): off by default, unlike every other column
+-- on this table - nothing is shared until the user actively turns it on.
+-- See the research_profiles / research_weeks views below for what opting in
+-- actually exposes, and to whom.
+alter table public.profiles add column if not exists research_opt_in boolean not null default false;
+
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
 -- total_kg is computed client-side (same emission-factor logic as the rest
@@ -374,3 +380,68 @@ $$;
 
 revoke all on function public.app_wide_weekly_average() from public;
 grant execute on function public.app_wide_weekly_average() to authenticated;
+
+-- ==================== research opt-in views ====================
+
+-- For calibrating the UK_AVERAGE_ASSUMPTIONS / UK-average methodology in
+-- app.js against real usage data, once enough people have opted in (see
+-- research_opt_in on profiles, off by default). Two views, each already
+-- filtered to opted-in users only:
+--   research_profiles - one row per opted-in user: the yearly-estimate
+--     inputs from the Stats page (commute distance, household size, flights,
+--     home energy, clothing, gas heating, non-commute driving, car
+--     ownership, pets, water). Deliberately excludes id, display_name,
+--     weekly_goal_kg, and both bank_name/bank_balance - banking is excluded
+--     per the opt-in's own description ("all anonymous data bar banking"),
+--     and id/display_name are excluded so a row can't be tied back to a
+--     specific account from this view alone.
+--   research_weeks - one row per opted-in user per week: the actual
+--     day-by-day commute/diet choices and alcohol figures behind their
+--     weekly totals, useful for checking the real distribution of commute
+--     modes and meat/veggie/vegan choices against the assumptions in
+--     UK_AVERAGE_ASSUMPTIONS. Also excludes user_id/display_name.
+--
+-- Neither view is granted to `authenticated` or `anon` - the app itself
+-- never queries them, and a signed-in user has no way to read them through
+-- the client. They're for the app owner only, via the Supabase SQL Editor
+-- (which connects with full database access regardless of grants/RLS) -
+-- e.g. `select * from public.research_profiles;`. This is "anonymous" in
+-- the sense that nothing here is exposed to other users or to the client
+-- app, and no name/email/id travels with the row - but since this is the
+-- app owner's own database, cross-referencing auth.users directly would
+-- still theoretically be possible; these views just don't do that
+-- correlation themselves.
+create or replace view public.research_profiles as
+select
+  commute_distance_km,
+  food_waste_bracket,
+  short_haul_flights_per_year,
+  long_haul_flights_per_year,
+  household_people,
+  household_kwh_per_month,
+  clothes_per_month,
+  annual_gas_kwh,
+  weekly_noncommute_car_km,
+  owns_car,
+  num_dogs,
+  num_cats,
+  annual_water_m3
+from public.profiles
+where research_opt_in = true;
+
+create or replace view public.research_weeks as
+select
+  w.week_key,
+  w.commute,
+  w.diet,
+  w.confirmed_commute,
+  w.confirmed_diet,
+  w.alcohol,
+  w.commute_food_kg,
+  w.total_kg
+from public.weeks w
+join public.profiles p on p.id = w.user_id
+where p.research_opt_in = true;
+
+revoke all on public.research_profiles from public, authenticated, anon;
+revoke all on public.research_weeks from public, authenticated, anon;

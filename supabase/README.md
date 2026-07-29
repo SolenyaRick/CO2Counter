@@ -100,7 +100,7 @@ Stats page's water-usage optional extra (same nullable-with-no-default
 pattern as the other optional extras), and includes it in
 `app_wide_weekly_average()`'s duplicated formula above.
 
-The most recent run adds `bank_name` and `bank_balance` columns to
+A later run adds `bank_name` and `bank_balance` columns to
 `profiles` for the Stats page's banking optional extra (same
 nullable-with-no-default pattern - both need answering for it to count),
 and includes a per-bank lookup (mirroring `BANK_KG_PER_POUND_PER_YEAR` in
@@ -108,6 +108,23 @@ and includes a per-bank lookup (mirroring `BANK_KG_PER_POUND_PER_YEAR` in
 `app_wide_weekly_average()`'s duplicated formula above. If a new bank is
 ever added to that constant in `app.js`, add a matching `when` branch to
 the `case p.bank_name` expression in this function too.
+
+The most recent run adds a `research_opt_in` boolean column to `profiles`
+(`false` by default, unlike every other column on this table - nothing is
+shared until a user actively turns it on from the Account page) and two
+views, `research_profiles` and `research_weeks`, which expose everything
+covered by that opt-in - the Stats page's yearly-estimate inputs, and each
+opted-in week's actual day-by-day commute/diet/alcohol figures - for
+opted-in users only, with banking and any name/id/email always excluded.
+Neither view is granted to the `authenticated` or `anon` roles Supabase's
+client library uses, so the app itself has no way to read them and neither
+does any other signed-in user - they're for the app owner only, queried
+directly in the Supabase SQL Editor (`select * from
+public.research_profiles;` / `research_weeks`), which connects with full
+database access regardless of grants. This is meant for calibrating the
+`UK_AVERAGE_ASSUMPTIONS` constants in `app.js` against real usage once
+enough people opt in, rather than the rough bottom-up estimates they
+currently hold.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

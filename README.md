@@ -114,7 +114,12 @@ with accounts and a friends leaderboard backed by Supabase.
   world average week", the roughest of the three since there's no global
   equivalent of the UK's national travel/diet surveys to build it from), a
   food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
-  everywhere to account for produced-but-wasted food), a friends list (add
+  everywhere to account for produced-but-wasted food), a "Help improve UK
+  averages" opt-in (off by default — if turned on, everything on the
+  Account/Stats pages except your banking answers becomes visible to the
+  app developer for calibrating the UK-average assumptions against real
+  data; your name/email/account are never included, see
+  `supabase/README.md` for exactly how this is scoped), a friends list (add
   by email, accept/decline requests), sign-out, and export/import/reset for
   your data.
 
