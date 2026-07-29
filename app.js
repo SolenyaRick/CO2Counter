@@ -1269,11 +1269,17 @@
     chart.innerHTML = "";
 
     const goal = Math.max(0.0001, currentGoal());
-    // Alcohol isn't tied to a specific day, so it's counted as already
-    // "spent" from the very start of the week rather than accruing on any
-    // one day - keeps this cumulative total consistent with weekTotals().
-    const cumulative = [alcoholKg];
-    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d));
+    // Alcohol isn't tied to a specific day, so it's spread evenly across
+    // the week (1/7th per day) rather than counted as already "spent" the
+    // moment the week starts - the previous version front-loaded the
+    // WHOLE week's alcohol onto day 0, before Monday had even happened,
+    // making the pace line look missed from minute one regardless of
+    // actual Mon/Tue choices. Spreading it out means day 0 still starts
+    // exactly even with the predicted line (as it should, before any day
+    // has elapsed), and the full alcoholKg has still fully accrued by day
+    // 7 either way, so the final total still matches weekTotals().
+    const cumulative = [0];
+    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d + alcoholKg / 7));
     const remaining = cumulative.map((c) => goal - c);
 
     const predicted = [];

@@ -192,9 +192,12 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 - **Alcohol** (This Week page, per week, not per day): ~0.5 kg CO2e per
   beer/can, ~0.3 kg CO2e per glass of wine (~175ml), ~0.15 kg CO2e per 25ml
   shot of spirits at 40% ABV (scaled linearly for other strengths) — rough
-  averages covering production, packaging, and transport. Counted from the
-  very start of the week in the budget-pace chart, since it isn't logged
-  against a specific day.
+  averages covering production, packaging, and transport. Spread evenly
+  (1/7th per day) across the budget-pace chart, since it isn't logged
+  against a specific day — this used to be front-loaded entirely onto day
+  0, before Monday had even happened, which made the pace line look
+  missed from the very start of the week regardless of your actual
+  Monday/Tuesday choices.
 - **Flying** (Stats page, per return trip): ~250 kg CO2e short-haul within
   Europe, ~1,600 kg CO2e long-haul international.
 - **Home energy** (Stats page): household kWh/month × 12 × ~0.2 kg CO2e/kWh
