@@ -144,6 +144,17 @@
 
   function weekKeyFor(d) { return dateKey(weekStart(d)); }
 
+  // Monday = 1 ... Sunday = 7.
+  function todayIndexInWeek() {
+    const today = new Date();
+    const days = Math.round((today - weekStart(today)) / (24 * 60 * 60 * 1000));
+    return days + 1;
+  }
+
+  function todayDayKey() {
+    return DAYS[todayIndexInWeek() - 1].key;
+  }
+
   function weekLabel(weekKey) {
     const monday = new Date(`${weekKey}T00:00:00`);
     const sunday = new Date(monday);
@@ -636,13 +647,15 @@
     const weekData = getWeek(selectedWeekKey);
     const tbody = document.querySelector("#commute-table tbody");
     tbody.innerHTML = "";
+    const todayKey = selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null;
     DAYS.forEach((day) => {
       const tr = document.createElement("tr");
+      if (day.key === todayKey) tr.classList.add("is-today");
 
       const dayTd = document.createElement("td");
       const badge = document.createElement("span");
       badge.className = "day-badge";
-      badge.title = day.full;
+      badge.title = day.key === todayKey ? `${day.full} (today)` : day.full;
       badge.textContent = day.short;
       dayTd.appendChild(badge);
       tr.appendChild(dayTd);
@@ -692,13 +705,15 @@
     const weekData = getWeek(selectedWeekKey);
     const tbody = document.querySelector("#diet-table tbody");
     tbody.innerHTML = "";
+    const todayKey = selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null;
     DAYS.forEach((day) => {
       const tr = document.createElement("tr");
+      if (day.key === todayKey) tr.classList.add("is-today");
 
       const dayTd = document.createElement("td");
       const badge = document.createElement("span");
       badge.className = "day-badge";
-      badge.title = day.full;
+      badge.title = day.key === todayKey ? `${day.full} (today)` : day.full;
       badge.textContent = day.short;
       dayTd.appendChild(badge);
       tr.appendChild(dayTd);
@@ -912,9 +927,20 @@
   // ---------- Page 2: Weeks grid ----------
   function currentGoal() { return profile.weeklyGoalKg || DEFAULT_PROFILE.weeklyGoalKg; }
 
-  function statusClass(total, started) {
+  // The week that's still in progress hasn't had a chance to earn a full
+  // week's worth of CO2e yet, so comparing it against the full weekly goal
+  // would make "under goal" trivially true on day 1. Prorate the goal for
+  // the current week only, based on how much of the week has elapsed so
+  // far (Monday = 1/7, ... Sunday = 7/7); past/completed weeks still use
+  // the full goal.
+  function goalForWeek(weekKey) {
+    const fullGoal = currentGoal();
+    if (weekKey !== CURRENT_WEEK_KEY) return fullGoal;
+    return fullGoal * (todayIndexInWeek() / 7);
+  }
+
+  function statusClass(total, started, goal) {
     if (!started) return "status-empty";
-    const goal = currentGoal();
     if (total <= goal) return "status-good";
     if (total <= goal * 1.3) return "status-warn";
     return "status-high";
@@ -923,19 +949,20 @@
   function renderWeeksGrid() {
     const grid = document.getElementById("weeks-grid");
     grid.innerHTML = "";
-    const goal = currentGoal();
     for (let i = 0; i < WEEKS_GRID_COUNT; i++) {
       const key = shiftedWeekKey(CURRENT_WEEK_KEY, -i);
       const weekData = weeksCache[key];
       const started = hasAnyConfirmed(weekData);
       const totals = started ? weekTotals(weekData) : null;
+      const goal = goalForWeek(key);
+      const isInProgress = key === CURRENT_WEEK_KEY;
 
       const box = document.createElement("button");
       box.type = "button";
-      box.className = `week-box ${statusClass(totals?.total ?? 0, started)}`;
-      if (key === CURRENT_WEEK_KEY) box.classList.add("is-current");
+      box.className = `week-box ${statusClass(totals?.total ?? 0, started, goal)}`;
+      if (isInProgress) box.classList.add("is-current");
 
-      if (key === CURRENT_WEEK_KEY) {
+      if (isInProgress) {
         const badge = document.createElement("span");
         badge.className = "week-box-badge";
         badge.textContent = "NOW";
@@ -961,9 +988,12 @@
         const diffEl = document.createElement("span");
         diffEl.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;
         diffEl.textContent = `${over ? "▲" : "▼"} ${fmt(Math.abs(diff))}`;
+        const goalDescription = isInProgress
+          ? `your ${fmt(goal)} kg goal so far (day ${todayIndexInWeek()} of 7, prorated from ${fmt(currentGoal())} kg)`
+          : `your ${fmt(goal)} kg goal`;
         diffEl.title = over
-          ? `${fmt(diff)} kg over your ${fmt(goal)} kg goal`
-          : `${fmt(Math.abs(diff))} kg under your ${fmt(goal)} kg goal`;
+          ? `${fmt(diff)} kg over ${goalDescription}`
+          : `${fmt(Math.abs(diff))} kg under ${goalDescription}`;
         bottomRow.appendChild(diffEl);
       }
 

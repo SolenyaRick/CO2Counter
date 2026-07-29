@@ -14,14 +14,18 @@ with accounts and a friends leaderboard backed by Supabase.
   saved as a draft immediately, but only counts toward the weekly totals,
   chart, and leaderboard once you press that day's ✓ confirm button (which
   plays a small pop animation) — changing a confirmed day's pick un-confirms
-  it again. Also shows a "This week, in context" card that converts your
+  it again. Today's row is highlighted (only when viewing "This week", not
+  "Last week"). Also shows a "This week, in context" card that converts your
   confirmed total into an equivalent car-km distance (DEFRA-style car
   factor) and how much CO2e you'd have saved if every confirmed meat day had
   been veggie instead, broken down by meat type (e.g. beef vs chicken).
 - **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
   Each box shows that week's total CO2e, color-coded against your goal from
-  the Account page, with an over/under-goal indicator. Tap a box for a
-  day-by-day breakdown.
+  the Account page, with an over/under-goal indicator. For the current,
+  still-in-progress week, the goal itself is prorated to how much of the
+  week has elapsed (e.g. Wednesday = 3/7 of the weekly goal) so "under
+  goal" is meaningful before the week is actually over, rather than
+  trivially true on day one. Tap a box for a day-by-day breakdown.
 - **Leaderboard** — two cards: "This week" ranks you and your accepted
   friends by this week's total CO2e (lowest first) with a callout for
   whoever's winning; "All-time weekly average" ranks everyone by their

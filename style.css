@@ -320,6 +320,15 @@ input, select {
   border-bottom: none;
 }
 
+.tracker-table tr.is-today td {
+  background: var(--accent-light);
+}
+
+.tracker-table tr.is-today .day-badge {
+  background: var(--accent);
+  color: #fff;
+}
+
 .day-col {
   width: 56px;
 }
