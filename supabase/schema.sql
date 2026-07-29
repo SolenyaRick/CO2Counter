@@ -72,6 +72,12 @@ alter table public.weeks add column if not exists confirmed_diet jsonb not null 
 -- is already a real answer, so it counts toward total_kg immediately).
 alter table public.weeks add column if not exists alcohol jsonb not null default '{"beer":0,"wine":0,"spiritsShots":0,"spiritsAbv":40}'::jsonb;
 
+-- commute + food only (i.e. total_kg minus alcohol), computed and stored
+-- client-side same as total_kg, so the "commute + food" figure on the
+-- Leaderboard's "Everyone on the app" card doesn't need to duplicate the
+-- alcohol emission-factor math in SQL either.
+alter table public.weeks add column if not exists commute_food_kg numeric not null default 0;
+
 -- ---------- friendships ----------
 create table if not exists public.friendships (
   id uuid primary key default gen_random_uuid(),
@@ -253,25 +259,69 @@ $$;
 revoke all on function public.friend_weekly_average() from public;
 grant execute on function public.friend_weekly_average() to authenticated;
 
--- App-wide average: the same confirmed-week total_kg average as
--- friend_weekly_average(), but across every account, not just friends -
--- for the Leaderboard page's "Everyone on the app" card. Deliberately
--- returns ONLY an aggregate (one row: an average and a headcount), never
--- any user_id, name, or per-person row, so it's safe to expose to any
+-- App-wide averages across every account, not just friends - for the
+-- Leaderboard page's "Everyone on the app" card. Two figures:
+--   avg_commute_food_kg - just commute + food (commute_food_kg), no
+--     duplicated math needed since it's already stored per week.
+--   avg_total_kg - the fuller figure that matches "Stats page yearly
+--     total / 52" for each user (commute + food + alcohol, plus a
+--     weekly-equivalent share of flights, home energy, buying goods, and
+--     any optional extras they've answered - mirrors weeklyExtrasFor() in
+--     app.js). Computing this needs every eligible user's profile, which
+--     this function can't expose row-by-row without breaking the
+--     "aggregate only" privacy guarantee it exists for - so unlike the
+--     client-side friends version, the emission-factor constants below are
+--     duplicated into SQL. If any of SHORT_HAUL_FLIGHT_KG,
+--     LONG_HAUL_FLIGHT_KG, GRID_ELECTRICITY_KG_PER_KWH, CLOTHING_ITEM_KG,
+--     GAS_HEATING_KG_PER_KWH, TRANSPORT_FACTORS.car,
+--     CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR, DOG_KG_PER_YEAR, or
+--     CAT_KG_PER_YEAR ever change in app.js, update the matching literal
+--     here too.
+-- Deliberately returns ONLY these two aggregates plus a headcount - never
+-- any user_id, name, or per-person row - so it's safe to expose to any
 -- signed-in user with no friendship relationship required.
 create or replace function public.app_wide_weekly_average()
-returns table (avg_weekly_kg numeric, user_count integer)
+returns table (avg_commute_food_kg numeric, avg_total_kg numeric, user_count integer)
 language sql
 security definer
 set search_path = public
 as $$
+  with eligible_weeks as (
+    select w.user_id, w.total_kg, w.commute_food_kg
+    from public.weeks w
+    where
+      public.week_is_fully_confirmed(w.confirmed_commute)
+      and public.week_is_fully_confirmed(w.confirmed_diet)
+  ),
+  per_user as (
+    select
+      user_id,
+      avg(commute_food_kg) as avg_commute_food_kg,
+      avg(total_kg) as avg_commute_food_alcohol_kg
+    from eligible_weeks
+    group by user_id
+  ),
+  per_user_extras as (
+    select
+      pu.avg_commute_food_kg,
+      pu.avg_commute_food_alcohol_kg
+        + (
+            (coalesce(p.short_haul_flights_per_year, 0) * 250 + coalesce(p.long_haul_flights_per_year, 0) * 1600)
+            + (coalesce(p.household_kwh_per_month, 0) * 12 * 0.2) / greatest(1, coalesce(p.household_people, 1))
+            + (coalesce(p.clothes_per_month, 0) * 12 * 10)
+            + case when p.annual_gas_kwh is not null then (p.annual_gas_kwh * 0.18) / greatest(1, coalesce(p.household_people, 1)) else 0 end
+            + case when p.weekly_noncommute_car_km is not null then p.weekly_noncommute_car_km * 0.171 * 52 else 0 end
+            + case when p.owns_car then 700 else 0 end
+            + case when p.num_dogs is not null or p.num_cats is not null then coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310 else 0 end
+          ) / 52.0 as avg_total_kg
+    from per_user pu
+    join public.profiles p on p.id = pu.user_id
+  )
   select
-    coalesce(avg(w.total_kg), 0) as avg_weekly_kg,
-    count(distinct w.user_id)::int as user_count
-  from public.weeks w
-  where
-    public.week_is_fully_confirmed(w.confirmed_commute)
-    and public.week_is_fully_confirmed(w.confirmed_diet);
+    coalesce(avg(avg_commute_food_kg), 0) as avg_commute_food_kg,
+    coalesce(avg(avg_total_kg), 0) as avg_total_kg,
+    count(*)::int as user_count
+  from per_user_extras;
 $$;
 
 revoke all on function public.app_wide_weekly_average() from public;

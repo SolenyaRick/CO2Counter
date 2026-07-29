@@ -719,6 +719,10 @@ input, select {
   padding: 14px 16px;
 }
 
+.app-average-figure + .app-average-figure {
+  margin-top: 10px;
+}
+
 .stat .week-diff {
   display: block;
   margin-top: 4px;

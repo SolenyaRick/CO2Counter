@@ -70,14 +70,30 @@ jsonb column on `weeks` for the This Week page's weekly (not per-day)
 alcohol tracker — not gated by the confirm flow, since every value there
 (including 0) is already a real answer.
 
-The most recent run also adds a `week_is_fully_confirmed()` helper and
-tightens `friend_weekly_average()` / `app_wide_weekly_average()` to only
-count a week toward those averages once *every* day has both commute and
-diet confirmed (previously just one confirmed day was enough), so a week
-where you only logged Monday no longer drags the average down as if it
-were a full week's data. `friend_leaderboard()` (the live "This week"
-ranking) is deliberately left as-is, since it needs to keep working on a
-week that's still in progress.
+A later run adds a `week_is_fully_confirmed()` helper and tightens
+`friend_weekly_average()` / `app_wide_weekly_average()` to only count a
+week toward those averages once *every* day has both commute and diet
+confirmed (previously just one confirmed day was enough), so a week where
+you only logged Monday no longer drags the average down as if it were a
+full week's data. `friend_leaderboard()` (the live "This week" ranking) is
+deliberately left as-is, since it needs to keep working on a week that's
+still in progress.
+
+The latest run adds a `commute_food_kg` column to `weeks` (commute + food
+only, i.e. `total_kg` minus alcohol - stored client-side the same way, so
+no math needs duplicating in SQL for it) and changes
+`app_wide_weekly_average()`'s return shape to two figures instead of one:
+`avg_commute_food_kg` and a fuller `avg_total_kg` that also amortizes each
+eligible user's flights, home energy, buying goods, and any optional
+extras they've answered - the same composition as the Stats page's yearly
+total ÷ 52. Unlike the friends version (which reads each friend's profile
+client-side, where RLS already allows it), this app-wide function can't
+expose per-user profile data without breaking its "aggregate only, no
+per-user data" guarantee, so it duplicates the relevant emission-factor
+constants directly in SQL - if any of those ever change in `app.js`
+(flight/energy/goods/heating/car/pet factors), update the matching
+literals in this function too, or the two "everyone on the app" figures
+will quietly drift out of sync with the rest of the app.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
