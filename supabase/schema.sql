@@ -280,6 +280,13 @@ grant execute on function public.friend_weekly_average() to authenticated;
 -- Deliberately returns ONLY these two aggregates plus a headcount - never
 -- any user_id, name, or per-person row - so it's safe to expose to any
 -- signed-in user with no friendship relationship required.
+--
+-- This function used to return a single avg_weekly_kg column; Postgres
+-- won't let CREATE OR REPLACE change a function's output columns, so the
+-- old version has to be dropped first (safe: nothing else in this schema
+-- depends on it).
+drop function if exists public.app_wide_weekly_average();
+
 create or replace function public.app_wide_weekly_average()
 returns table (avg_commute_food_kg numeric, avg_total_kg numeric, user_count integer)
 language sql

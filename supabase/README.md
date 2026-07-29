@@ -103,6 +103,19 @@ statements before any policy. Just re-run the current file; the tables it
 already managed to create before hitting the error are safe (`create table
 if not exists`), so nothing needs cleaning up first.
 
+**If re-running this gave you
+`ERROR: 42P13: cannot change return type of existing function` /
+`DETAIL: Row type defined by OUT parameters is different.`**: Postgres
+won't let `create or replace function` change a function's output columns
+- only `friend_weekly_average()` and `app_wide_weekly_average()` have ever
+changed shape (both gained columns over time), and the file now drops
+`app_wide_weekly_average()` before recreating it for exactly this reason.
+If you still hit this error, you're most likely on an older copy of this
+file from before that fix — pull the latest version and re-run it; nothing
+needs to be cleaned up by hand. (Verified by installing the old function
+signature in a scratch database and confirming the current file applies
+over it with no errors.)
+
 The `@supabase/supabase-js` client library is vendored at
 `vendor/supabase.js` rather than loaded from a CDN, so the app doesn't
 depend on a third party being up at runtime. To update it later:
