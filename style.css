@@ -616,8 +616,8 @@ input, select {
 }
 
 .alcohol-fill-opt {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -625,20 +625,22 @@ input, select {
   background: none;
   padding: 0;
   cursor: pointer;
-  color: var(--border);
+  color: var(--text-muted);
+  opacity: 0.45;
 }
 
 .alcohol-fill-opt svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
 }
 
 .alcohol-fill-opt:hover {
-  color: var(--text-muted);
+  opacity: 0.75;
 }
 
 .alcohol-fill-opt.active {
   color: var(--accent);
+  opacity: 1;
 }
 
 .alcohol-count {
@@ -1003,6 +1005,12 @@ input, select {
   font-size: 0.65rem;
   color: var(--accent);
   font-weight: 600;
+}
+
+.week-box-badge-full {
+  background: var(--accent-light);
+  border-radius: 999px;
+  padding: 2px 6px;
 }
 
 /* Leaderboard (page 3) */

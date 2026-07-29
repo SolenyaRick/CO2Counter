@@ -70,6 +70,15 @@ column on `weeks` for the This Week page's weekly (not per-day) alcohol
 tracker — not gated by the confirm flow, since every value there
 (including 0) is already a real answer.
 
+The most recent run also adds a `week_is_fully_confirmed()` helper and
+tightens `friend_weekly_average()` / `app_wide_weekly_average()` to only
+count a week toward those averages once *every* day has both commute and
+diet confirmed (previously just one confirmed day was enough), so a week
+where you only logged Monday no longer drags the average down as if it
+were a full week's data. `friend_leaderboard()` (the live "This week"
+ranking) is deliberately left as-is, since it needs to keep working on a
+week that's still in progress.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

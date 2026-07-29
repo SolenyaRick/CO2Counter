@@ -46,17 +46,26 @@ with accounts and a friends leaderboard backed by Supabase.
   still-in-progress week, the goal itself is prorated to how much of the
   week has elapsed (e.g. Wednesday = 3/7 of the weekly goal) so "under
   goal" is meaningful before the week is actually over, rather than
-  trivially true on day one. Tap a box for a day-by-day breakdown.
+  trivially true on day one. A week that has every day confirmed for both
+  commute and food gets a "✓ FULL" badge — this is a stricter bar than just
+  having *some* data (which is all that's needed for the box to show a
+  total at all), and is what counts toward the "confirmed week" averages on
+  the Stats and Leaderboard pages below, so a week where you only logged
+  Monday doesn't drag those averages down as if it were a whole week's
+  worth of data. Tap a box for a day-by-day breakdown.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
   friends by this week's total CO2e (lowest first) with a callout for
-  whoever's winning; "All-time weekly average" ranks everyone by their
-  average CO2e per confirmed week since they started, which also folds in
-  a weekly-equivalent share of each person's flights and home electricity
+  whoever's winning — this one still includes in-progress weeks, same as
+  the Weeks grid; "All-time weekly average" ranks everyone by their average
+  CO2e per *fully* confirmed week (every day, both commute and food — see
+  the Weeks page above) since they started, which also folds in a
+  weekly-equivalent share of each person's flights and home electricity
   (their yearly Stats page figures, divided by 52) so it isn't just
   commute and food; "Everyone on the app" shows one anonymous, aggregate
-  figure — the average confirmed-week total across every account on the
-  app, and how many people it's based on — with no per-user data or names
-  ever exposed (see `app_wide_weekly_average()` in `supabase/schema.sql`).
+  figure — the same fully-confirmed-week average across every account on
+  the app, and how many people it's based on — with no per-user data or
+  names ever exposed (see `app_wide_weekly_average()` in
+  `supabase/schema.sql`).
 - **Stats** — a yearly estimate. Inputs (flights: short-haul European vs
   long-haul international; home energy: household kWh/month split across
   everyone in the household; clothing purchases per month; then an
@@ -66,7 +75,7 @@ with accounts and a friends leaderboard backed by Supabase.
   skippable: leaving one blank leaves it out of every total below rather
   than counting it as zero, so an unanswered question never makes your
   estimate look artificially low. The "Your year, estimated" analysis
-  card below rolls those together with your confirmed weeks' average
+  card below rolls those together with your fully confirmed weeks' average
   commute/food (extrapolated ×52) into an estimated yearly total, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). Every domain tile (food,

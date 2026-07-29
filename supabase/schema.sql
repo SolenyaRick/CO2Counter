@@ -195,10 +195,27 @@ $$;
 revoke all on function public.friend_leaderboard(text) from public;
 grant execute on function public.friend_leaderboard(text) to authenticated;
 
+-- Every day of the week (both commute and diet) confirmed - a stricter bar
+-- than friend_leaderboard()'s "at least one confirmed day", used below for
+-- averages so a week where only Monday got confirmed doesn't drag the
+-- average down as if it were a real full week. NOT used for
+-- friend_leaderboard() itself, which needs to keep working on a live,
+-- still-in-progress "this week".
+create or replace function public.week_is_fully_confirmed(confirmed jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select confirmed @> '{"mon":true,"tue":true,"wed":true,"thu":true,"fri":true,"sat":true,"sun":true}'::jsonb;
+$$;
+
+revoke all on function public.week_is_fully_confirmed(jsonb) from public;
+grant execute on function public.week_is_fully_confirmed(jsonb) to authenticated;
+
 -- All-time weekly average: self + accepted friends' average confirmed-week
--- total_kg (commute + food only - weeks with zero confirmed days are
--- excluded from the average the same way friend_leaderboard() excludes
--- them from that week's ranking). Flights and home electricity are yearly,
+-- total_kg (commute + food only - weeks that aren't fully confirmed for
+-- every day are excluded from the average, see week_is_fully_confirmed()
+-- above). Flights and home electricity are yearly,
 -- not weekly, figures, so the app amortizes each person's yearly totals
 -- into a weekly-equivalent client-side (see averageConfirmedWeekly() /
 -- SHORT_HAUL_FLIGHT_KG etc. in app.js) and adds it on top of the average
@@ -218,10 +235,8 @@ as $$
     (p.id = auth.uid()) as is_self
   from public.profiles p
   left join public.weeks w on w.user_id = p.id
-    and (
-      exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
-      or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true')
-    )
+    and public.week_is_fully_confirmed(w.confirmed_commute)
+    and public.week_is_fully_confirmed(w.confirmed_diet)
   where
     p.id = auth.uid()
     or exists (
@@ -253,8 +268,8 @@ as $$
     count(distinct w.user_id)::int as user_count
   from public.weeks w
   where
-    exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
-    or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true');
+    public.week_is_fully_confirmed(w.confirmed_commute)
+    and public.week_is_fully_confirmed(w.confirmed_diet);
 $$;
 
 revoke all on function public.app_wide_weekly_average() from public;

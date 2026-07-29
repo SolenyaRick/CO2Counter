@@ -118,7 +118,7 @@
   const BEER_KG_PER_DRINK = 0.5; // per pint/can
   const WINE_KG_PER_GLASS = 0.3; // per ~175ml glass
   const SPIRITS_KG_PER_SHOT_AT_40PCT = 0.15; // per 25ml shot at 40% ABV, scales with ABV
-  const ALCOHOL_FILL_MAX = 10; // length of the beer/wine "fill up" icon rows
+  const ALCOHOL_FILL_MAX = 8; // length of the beer/wine "fill up" icon rows
 
   const BEER_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
     + '<rect x="4.5" y="5.5" width="13" height="3" rx="1.5"/>'
@@ -334,6 +334,19 @@
     const commuted = Object.values(weekData.confirmedCommute || {}).some(Boolean);
     const ate = Object.values(weekData.confirmedDiet || {}).some(Boolean);
     return commuted || ate;
+  }
+
+  // A stricter bar than hasAnyConfirmed: every day has BOTH commute and diet
+  // confirmed, i.e. the whole week was actually logged, not just a day or
+  // two. Used for "confirmed week" figures that average across weeks (Stats
+  // page, Leaderboard's all-time average) so a week where only Monday got
+  // confirmed doesn't drag the average down as if it were a real full week.
+  // Deliberately NOT used for the Weeks grid's in-progress coloring or the
+  // live "This week" leaderboard, which both need to work on a week that's
+  // still only partially through.
+  function isFullyConfirmed(weekData) {
+    if (!weekData) return false;
+    return DAYS.every((day) => weekData.confirmedCommute?.[day.key] && weekData.confirmedDiet?.[day.key]);
   }
 
   // ---------- Footprint math ----------
@@ -1306,6 +1319,12 @@
         badge.className = "week-box-badge";
         badge.textContent = "NOW";
         box.appendChild(badge);
+      } else if (isFullyConfirmed(weekData)) {
+        const badge = document.createElement("span");
+        badge.className = "week-box-badge week-box-badge-full";
+        badge.textContent = "✓ FULL";
+        badge.title = "Every day this week has both commute and food confirmed";
+        box.appendChild(badge);
       }
 
       const label = document.createElement("span");
@@ -1521,7 +1540,7 @@
 
   // ---------- Page: Stats (yearly estimate) ----------
   function averageConfirmedWeekly(kind) {
-    const weeks = Object.values(weeksCache).filter(hasAnyConfirmed);
+    const weeks = Object.values(weeksCache).filter(isFullyConfirmed);
     if (weeks.length === 0) return 0;
     const sum = weeks.reduce((acc, weekData) => acc + weekTotals(weekData)[kind], 0);
     return sum / weeks.length;
