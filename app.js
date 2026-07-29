@@ -920,7 +920,15 @@
     const pointCount = isCurrentWeek ? Math.min(todayIndexInWeek(), 7) : 7;
     const actualPoints = remaining.slice(0, pointCount + 1);
 
-    const W = 300, H = 160, PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
+    // Match the viewBox to the chart's actual rendered pixel width so 1 SVG
+    // unit = 1 real pixel in both axes - otherwise a fixed viewBox stretched
+    // to fit varying card widths distorts strokes, dots, and text
+    // horizontally (preserveAspectRatio="none" scales x/y independently).
+    // Falls back to 300 if the chart is currently hidden (width 0), e.g.
+    // when a change on another tab re-renders it in the background; it's
+    // recomputed correctly next time the week tab is actually shown.
+    const W = chart.getBoundingClientRect().width || 300;
+    const H = 160, PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
     const plotW = W - PAD_X * 2;
     const plotH = H - PAD_TOP - PAD_BOTTOM;
 
@@ -944,7 +952,6 @@
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("preserveAspectRatio", "none");
     svg.setAttribute("class", `budget-chart-svg ${onTrack ? "on-track" : "over-track"}`);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `Budget pace: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
