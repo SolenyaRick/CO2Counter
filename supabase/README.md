@@ -55,7 +55,8 @@ button — if you'd already entered test data before this column existed,
 those days will show as unconfirmed/0 kg until confirmed again, nothing is
 lost), plus flight/home-energy/clothing columns for the Stats page and a
 `food_waste_bracket` column for the Account page's food-waste setting, all
-on `profiles`.
+on `profiles`. The latest run also adds a `friend_weekly_average()`
+function, used by the Leaderboard page's "All-time weekly average" card.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

@@ -751,6 +751,21 @@ input, select {
   font-variant-numeric: tabular-nums;
 }
 
+.leaderboard-winner {
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.leaderboard-sub-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 .empty-note {
   color: var(--text-muted);
   font-size: 0.9rem;

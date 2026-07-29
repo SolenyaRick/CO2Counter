@@ -171,12 +171,23 @@
     <!-- PAGE 3: Leaderboard -->
     <section class="view" id="view-leaderboard" hidden>
       <section class="card">
-        <h2 id="leaderboard-heading">Leaderboard</h2>
+        <h2 id="leaderboard-heading">This week</h2>
         <p class="assumptions">
           You and your accepted friends, ranked by this week's total CO2e, lowest first.
           Add friends from the Account page.
         </p>
+        <p class="leaderboard-winner" id="leaderboard-winner" hidden></p>
         <ol class="leaderboard-list" id="leaderboard-list"><!-- rows injected by app.js --></ol>
+      </section>
+
+      <section class="card">
+        <h2>All-time weekly average</h2>
+        <p class="assumptions">
+          Average CO2e per week since each person started confirming weeks, lowest first.
+          Includes a weekly-equivalent share of flights and home electricity (yearly
+          figures from the Stats page, divided by 52), so it isn't just commute and food.
+        </p>
+        <ol class="leaderboard-list" id="leaderboard-average-list"><!-- rows injected by app.js --></ol>
       </section>
     </section>
 

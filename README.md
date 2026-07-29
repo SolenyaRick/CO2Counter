@@ -22,16 +22,22 @@ with accounts and a friends leaderboard backed by Supabase.
   Each box shows that week's total CO2e, color-coded against your goal from
   the Account page, with an over/under-goal indicator. Tap a box for a
   day-by-day breakdown.
-- **Leaderboard** — you and your accepted friends, ranked by this week's
-  total CO2e, lowest first.
+- **Leaderboard** — two cards: "This week" ranks you and your accepted
+  friends by this week's total CO2e (lowest first) with a callout for
+  whoever's winning; "All-time weekly average" ranks everyone by their
+  average CO2e per confirmed week since they started, which also folds in
+  a weekly-equivalent share of each person's flights and home electricity
+  (their yearly Stats page figures, divided by 52) so it isn't just
+  commute and food.
 - **Stats** — a yearly estimate. Inputs (flights: short-haul European vs
   long-haul international; home energy: household kWh/month split across
   everyone in the household; clothing purchases per month) come first, each
   converted to a yearly kg CO2e figure; the "Your year, estimated" analysis
   card below rolls those together with your confirmed weeks' average
   commute/food (extrapolated ×52) into an estimated yearly total, next to a
-  rough percentile ("lower than ~X% of people in the UK"). A "How your year
-  compares" card at the bottom shows the UK average alongside your total
+  rough percentile ("lower than ~X%" / "higher than ~X% of people in the
+  UK", worded so it never reads backwards). A "How your year compares"
+  card at the bottom shows the UK average alongside your total
   converted into car miles and mature-trees-of-CO2-absorption equivalents,
   each with a delta against the UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal, a

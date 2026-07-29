@@ -171,6 +171,7 @@
   let profile = { ...DEFAULT_PROFILE };
   let weeksCache = {}; // week_key -> { commute, diet, confirmedCommute, confirmedDiet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
+  let friendExtrasById = {}; // otherId -> { shortHaulFlights, longHaulFlights, householdKwhPerMonth, householdPeople }
   let pendingMeatDayKey = null;
   // Which week the This Week page is currently showing/editing.
   let selectedWeekKey = CURRENT_WEEK_KEY;
@@ -448,10 +449,20 @@
 
     const otherIds = [...new Set(rows.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
     let namesById = {};
+    friendExtrasById = {};
     if (otherIds.length > 0) {
-      const { data: profs } = await sbClient.from("profiles").select("id, display_name").in("id", otherIds);
+      const { data: profs } = await sbClient
+        .from("profiles")
+        .select("id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, household_kwh_per_month, household_people")
+        .in("id", otherIds);
       (profs || []).forEach((p) => {
         namesById[p.id] = p.display_name || "(no name set)";
+        friendExtrasById[p.id] = {
+          shortHaulFlights: p.short_haul_flights_per_year ?? 0,
+          longHaulFlights: p.long_haul_flights_per_year ?? 0,
+          householdKwhPerMonth: p.household_kwh_per_month ?? 0,
+          householdPeople: p.household_people ?? 1,
+        };
       });
     }
 
@@ -518,6 +529,7 @@
     await loadFriends();
     renderFriendsUI();
     renderLeaderboard();
+    renderWeeklyAverageLeaderboard();
   }
 
   async function removeFriendship(id) {
@@ -525,6 +537,7 @@
     await loadFriends();
     renderFriendsUI();
     renderLeaderboard();
+    renderWeeklyAverageLeaderboard();
   }
 
   async function addFriendByEmail(email) {
@@ -594,7 +607,7 @@
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
     if (tab === "weeks") renderWeeksGrid();
-    if (tab === "leaderboard") renderLeaderboard();
+    if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
@@ -1000,12 +1013,54 @@
   }
 
   // ---------- Page 3: Leaderboard ----------
+  // Flights and home electricity are yearly figures (Stats page inputs),
+  // not weekly - amortized to a weekly-equivalent here so the all-time
+  // weekly average isn't just commute and food. Same math as renderStatsPage(),
+  // just per-week instead of per-year (divided by 52 instead of multiplied).
+  function weeklyExtrasFor(inputs) {
+    const yearlyFlying = (inputs.shortHaulFlights || 0) * SHORT_HAUL_FLIGHT_KG + (inputs.longHaulFlights || 0) * LONG_HAUL_FLIGHT_KG;
+    const yearlyHomeEnergyTotal = (inputs.householdKwhPerMonth || 0) * 12 * GRID_ELECTRICITY_KG_PER_KWH;
+    const yearlyHomeEnergy = yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1);
+    return (yearlyFlying + yearlyHomeEnergy) / 52;
+  }
+
+  function renderLeaderboardRow(list, rank, label, sub, kg, isSelf) {
+    const li = document.createElement("li");
+    li.className = "leaderboard-row" + (isSelf ? " is-current" : "");
+
+    const rankEl = document.createElement("span");
+    rankEl.className = "leaderboard-rank";
+    rankEl.textContent = rank;
+
+    const info = document.createElement("span");
+    info.className = "leaderboard-info";
+    const nameEl = document.createElement("div");
+    nameEl.className = "leaderboard-week-label";
+    nameEl.textContent = label;
+    const subEl = document.createElement("div");
+    subEl.className = "leaderboard-sub";
+    subEl.textContent = sub;
+    info.appendChild(nameEl);
+    info.appendChild(subEl);
+
+    const total = document.createElement("span");
+    total.className = "leaderboard-total";
+    total.textContent = `${fmt(kg)} kg`;
+
+    li.appendChild(rankEl);
+    li.appendChild(info);
+    li.appendChild(total);
+    list.appendChild(li);
+  }
+
   async function renderLeaderboard() {
     const list = document.getElementById("leaderboard-list");
+    const winnerEl = document.getElementById("leaderboard-winner");
     if (!currentUser) return;
 
     const { data, error } = await sbClient.rpc("friend_leaderboard", { target_week_key: CURRENT_WEEK_KEY });
     list.innerHTML = "";
+    winnerEl.hidden = true;
 
     if (error) {
       list.innerHTML = '<p class="empty-note">Could not load the leaderboard right now.</p>';
@@ -1016,34 +1071,60 @@
       return;
     }
 
+    if (data.length > 1) {
+      const winner = data[0];
+      const winnerName = winner.is_self ? "You" : winner.display_name || "A friend";
+      winnerEl.textContent = `\u{1F3C6} ${winnerName} ${winner.is_self ? "are" : "is"} winning this week with ${fmt(winner.total_kg)} kg CO2e.`;
+      winnerEl.hidden = false;
+    }
+
     const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
     data.forEach((entry, i) => {
-      const li = document.createElement("li");
-      li.className = "leaderboard-row" + (entry.is_self ? " is-current" : "");
+      renderLeaderboardRow(
+        list,
+        medals[i] || `#${i + 1}`,
+        entry.is_self ? "You" : entry.display_name || "Friend",
+        weekLabel(CURRENT_WEEK_KEY),
+        entry.total_kg,
+        entry.is_self
+      );
+    });
+  }
 
-      const rank = document.createElement("span");
-      rank.className = "leaderboard-rank";
-      rank.textContent = medals[i] || `#${i + 1}`;
+  async function renderWeeklyAverageLeaderboard() {
+    const list = document.getElementById("leaderboard-average-list");
+    if (!currentUser) return;
 
-      const info = document.createElement("span");
-      info.className = "leaderboard-info";
-      const nameEl = document.createElement("div");
-      nameEl.className = "leaderboard-week-label";
-      nameEl.textContent = entry.is_self ? "You" : entry.display_name || "Friend";
-      const sub = document.createElement("div");
-      sub.className = "leaderboard-sub";
-      sub.textContent = weekLabel(CURRENT_WEEK_KEY);
-      info.appendChild(nameEl);
-      info.appendChild(sub);
+    const { data, error } = await sbClient.rpc("friend_weekly_average");
+    list.innerHTML = "";
 
-      const total = document.createElement("span");
-      total.className = "leaderboard-total";
-      total.textContent = `${fmt(entry.total_kg)} kg`;
+    if (error) {
+      list.innerHTML = '<p class="empty-note">Could not load this right now.</p>';
+      return;
+    }
+    if (!data || data.length === 0) {
+      list.innerHTML = '<p class="empty-note">Confirm a week, then add friends from the Account page to compare.</p>';
+      return;
+    }
 
-      li.appendChild(rank);
-      li.appendChild(info);
-      li.appendChild(total);
-      list.appendChild(li);
+    const withExtras = data.map((entry) => {
+      const extras = entry.is_self ? profile : friendExtrasById[entry.user_id];
+      const weeklyExtras = extras ? weeklyExtrasFor(extras) : 0;
+      return { ...entry, avgWithExtras: (entry.avg_weekly_kg || 0) + weeklyExtras };
+    });
+    withExtras.sort((a, b) => a.avgWithExtras - b.avgWithExtras);
+
+    const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+    withExtras.forEach((entry, i) => {
+      const weeksLabel = `${entry.weeks_confirmed} confirmed week${entry.weeks_confirmed === 1 ? "" : "s"}`;
+      renderLeaderboardRow(
+        list,
+        medals[i] || `#${i + 1}`,
+        entry.is_self ? "You" : entry.display_name || "Friend",
+        weeksLabel,
+        entry.avgWithExtras,
+        entry.is_self
+      );
     });
   }
 
@@ -1098,9 +1179,15 @@
 
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal);
-    percentileEl.textContent = betterThanPct === null
-      ? ""
-      : `~lower than ${Math.round(betterThanPct)}% of people in the UK`;
+    if (betterThanPct === null) {
+      percentileEl.textContent = "";
+    } else if (betterThanPct >= 50) {
+      // Phrase as "lower than X%" only when X is a reassuringly big majority -
+      // "lower than 5%" reads backwards (it actually means a high emitter).
+      percentileEl.textContent = `~lower than ${Math.round(betterThanPct)}% of people in the UK`;
+    } else {
+      percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
+    }
 
     renderYearComparison(yearlyTotal);
   }

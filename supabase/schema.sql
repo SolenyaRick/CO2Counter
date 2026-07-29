@@ -182,3 +182,44 @@ $$;
 
 revoke all on function public.friend_leaderboard(text) from public;
 grant execute on function public.friend_leaderboard(text) to authenticated;
+
+-- All-time weekly average: self + accepted friends' average confirmed-week
+-- total_kg (commute + food only - weeks with zero confirmed days are
+-- excluded from the average the same way friend_leaderboard() excludes
+-- them from that week's ranking). Flights and home electricity are yearly,
+-- not weekly, figures, so the app amortizes each person's yearly totals
+-- into a weekly-equivalent client-side (see averageConfirmedWeekly() /
+-- SHORT_HAUL_FLIGHT_KG etc. in app.js) and adds it on top of the average
+-- this function returns, using the flight/home-energy profiles columns
+-- friends can already read via the "profiles: friends can select" policy.
+create or replace function public.friend_weekly_average()
+returns table (user_id uuid, display_name text, avg_weekly_kg numeric, weeks_confirmed integer, is_self boolean)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    p.id as user_id,
+    p.display_name,
+    coalesce(avg(w.total_kg), 0) as avg_weekly_kg,
+    count(w.*)::int as weeks_confirmed,
+    (p.id = auth.uid()) as is_self
+  from public.profiles p
+  left join public.weeks w on w.user_id = p.id
+    and (
+      exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
+      or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true')
+    )
+  where
+    p.id = auth.uid()
+    or exists (
+      select 1 from public.friendships f
+      where f.status = 'accepted'
+        and ((f.requester_id = auth.uid() and f.addressee_id = p.id)
+          or (f.addressee_id = auth.uid() and f.requester_id = p.id))
+    )
+  group by p.id, p.display_name;
+$$;
+
+revoke all on function public.friend_weekly_average() from public;
+grant execute on function public.friend_weekly_average() to authenticated;
