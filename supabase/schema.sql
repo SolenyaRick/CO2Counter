@@ -34,6 +34,13 @@ alter table public.profiles drop constraint if exists profiles_food_waste_bracke
 alter table public.profiles add constraint profiles_food_waste_bracket_check
   check (food_waste_bracket in ('low', 'some', 'high', 'severe'));
 
+-- Optional Stats-page extras. Deliberately left nullable with NO default -
+-- unlike the columns above, null here means "not answered" and the app
+-- excludes it from every total rather than treating it as 0.
+alter table public.profiles add column if not exists annual_gas_kwh numeric;
+alter table public.profiles add column if not exists weekly_noncommute_car_km numeric;
+alter table public.profiles add column if not exists owns_car boolean;
+
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
 -- total_kg is computed client-side (same emission-factor logic as the rest
@@ -223,3 +230,27 @@ $$;
 
 revoke all on function public.friend_weekly_average() from public;
 grant execute on function public.friend_weekly_average() to authenticated;
+
+-- App-wide average: the same confirmed-week total_kg average as
+-- friend_weekly_average(), but across every account, not just friends -
+-- for the Leaderboard page's "Everyone on the app" card. Deliberately
+-- returns ONLY an aggregate (one row: an average and a headcount), never
+-- any user_id, name, or per-person row, so it's safe to expose to any
+-- signed-in user with no friendship relationship required.
+create or replace function public.app_wide_weekly_average()
+returns table (avg_weekly_kg numeric, user_count integer)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    coalesce(avg(w.total_kg), 0) as avg_weekly_kg,
+    count(distinct w.user_id)::int as user_count
+  from public.weeks w
+  where
+    exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
+    or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true');
+$$;
+
+revoke all on function public.app_wide_weekly_average() from public;
+grant execute on function public.app_wide_weekly_average() to authenticated;

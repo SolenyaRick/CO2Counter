@@ -61,6 +61,13 @@
   const GRID_ELECTRICITY_KG_PER_KWH = 0.2; // rough average grid electricity factor
   const CLOTHING_ITEM_KG = 10; // rough blended average per clothing item
 
+  // Optional Stats-page extras (see DEFAULT_PROFILE). Each is null unless the
+  // user actively answers it, and is left OUT of every total when null -
+  // never coerced to 0 - so someone who skips a question isn't silently
+  // scored as if that category doesn't apply to them.
+  const GAS_HEATING_KG_PER_KWH = 0.18; // rough blended gas/oil heating factor
+  const CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR = 700; // rough embodied build footprint, amortized over an ~14yr average car lifetime
+
   const KM_PER_MILE = 1.60934;
   const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
 
@@ -88,9 +95,19 @@
     householdKwhPerYear: 2900, // rough average UK household electricity use
     householdPeople: 2.4, // rough average UK household size
     clothesPerMonth: 3,
+    // Representative values for the optional extras below - only folded into
+    // the UK reference figure when the current user has answered that same
+    // question themselves (see includeOptional in computeUkAverageYearlyKg),
+    // so the comparison never mixes "your 5 tracked categories" against "the
+    // UK's 8 tracked categories".
+    annualGasKwh: 12000, // rough typical UK gas-heated household usage/yr
+    weeklyNonCommuteCarKm: 50, // rough extra (non-commute) driving per week
   };
 
-  function computeUkAverageYearlyKg() {
+  // includeOptional: { gasHeating, nonCommuteCar, carOwnership } booleans -
+  // pass whichever optional categories the person being compared against has
+  // actually answered, so both sides of the comparison cover the same ground.
+  function computeUkAverageYearlyKg(includeOptional = {}) {
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
 
@@ -108,10 +125,12 @@
     const homeEnergyYearly = (a.householdKwhPerYear * GRID_ELECTRICITY_KG_PER_KWH) / a.householdPeople;
     const goodsYearly = a.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
-    return commuteYearly + foodYearly + flyingYearly + homeEnergyYearly + goodsYearly;
+    let total = commuteYearly + foodYearly + flyingYearly + homeEnergyYearly + goodsYearly;
+    if (includeOptional.gasHeating) total += (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople;
+    if (includeOptional.nonCommuteCar) total += a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52;
+    if (includeOptional.carOwnership) total += CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR;
+    return total;
   }
-
-  const UK_AVERAGE_YEARLY_KG = computeUkAverageYearlyKg();
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -123,6 +142,11 @@
     householdPeople: 1,
     householdKwhPerMonth: 0,
     clothesPerMonth: 0,
+    // Optional extras: null means "not answered", and stays out of every
+    // total (never coerced to 0) until the person actually answers.
+    annualGasKwh: null,
+    weeklyNonCommuteCarKm: null,
+    ownsCar: null,
   };
 
   function blankWeek() {
@@ -305,12 +329,14 @@
   }
 
   // Rough illustrative percentile: models UK personal footprints as
-  // log-normal around UK_AVERAGE_YEARLY_KG (used as the median), with an
-  // assumed spread - not based on real ONS/population distribution data.
-  function ukPercentileBetterThan(yourYearlyKg) {
+  // log-normal around a UK average (used as the median, computed for the
+  // same set of optional categories as yourYearlyKg - see
+  // computeUkAverageYearlyKg), with an assumed spread - not based on real
+  // ONS/population distribution data.
+  function ukPercentileBetterThan(yourYearlyKg, ukAverageYearlyKg) {
     if (!yourYearlyKg || yourYearlyKg <= 0) return null;
     const sigma = 0.5;
-    const z = (Math.log(yourYearlyKg) - Math.log(UK_AVERAGE_YEARLY_KG)) / sigma;
+    const z = (Math.log(yourYearlyKg) - Math.log(ukAverageYearlyKg)) / sigma;
     return (1 - normalCdf(z)) * 100;
   }
 
@@ -328,6 +354,9 @@
         householdPeople: data.household_people ?? DEFAULT_PROFILE.householdPeople,
         householdKwhPerMonth: data.household_kwh_per_month ?? DEFAULT_PROFILE.householdKwhPerMonth,
         clothesPerMonth: data.clothes_per_month ?? DEFAULT_PROFILE.clothesPerMonth,
+        annualGasKwh: data.annual_gas_kwh ?? null,
+        weeklyNonCommuteCarKm: data.weekly_noncommute_car_km ?? null,
+        ownsCar: data.owns_car ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -347,6 +376,9 @@
       household_people: profile.householdPeople,
       household_kwh_per_month: profile.householdKwhPerMonth,
       clothes_per_month: profile.clothesPerMonth,
+      annual_gas_kwh: profile.annualGasKwh,
+      weekly_noncommute_car_km: profile.weeklyNonCommuteCarKm,
+      owns_car: profile.ownsCar,
     };
   }
 
@@ -625,7 +657,7 @@
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
     if (tab === "weeks") renderWeeksGrid();
-    if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); }
+    if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
@@ -1278,6 +1310,18 @@
     });
   }
 
+  // Anonymous aggregate across every account, not just friends - see
+  // app_wide_weekly_average() in schema.sql for why this is safe to show
+  // without a friendship relationship (it's a single aggregate row, never
+  // per-user data).
+  async function renderAppWideAverage() {
+    if (!currentUser) return;
+    const { data, error } = await sbClient.rpc("app_wide_weekly_average");
+    if (error || !data || !data[0]) return;
+    document.getElementById("app-average-value").textContent = fmt(data[0].avg_weekly_kg || 0);
+    document.getElementById("app-average-count").textContent = data[0].user_count || 0;
+  }
+
   // ---------- Page 4: Account ----------
   function renderAccountPage() {
     document.getElementById("profile-name").value = profile.name || "";
@@ -1296,12 +1340,18 @@
     return sum / weeks.length;
   }
 
+  // null/blank -> "" (so the input shows empty, not "0"); a real 0 still shows as 0.
+  function optionalInputValue(v) { return v === null || v === undefined ? "" : v; }
+
   function renderStatsPage() {
     document.getElementById("flights-short-haul").value = profile.shortHaulFlights;
     document.getElementById("flights-long-haul").value = profile.longHaulFlights;
     document.getElementById("household-people").value = profile.householdPeople;
     document.getElementById("household-kwh").value = profile.householdKwhPerMonth;
     document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
+    document.getElementById("gas-heating-kwh").value = optionalInputValue(profile.annualGasKwh);
+    document.getElementById("noncommute-car-km").value = optionalInputValue(profile.weeklyNonCommuteCarKm);
+    document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
 
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
@@ -1316,7 +1366,22 @@
 
     const yearlyGoods = profile.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
-    const yearlyTotal = yearlyFood + yearlyCommute + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
+    let yearlyTotal = yearlyFood + yearlyCommute + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
+
+    // Optional extras: only added (and only shown) when actually answered -
+    // a blank/unanswered one is left out of the total entirely, not treated
+    // as 0, so skipping a question never quietly lowers your estimate.
+    const includeOptional = {
+      gasHeating: profile.annualGasKwh !== null && profile.annualGasKwh !== undefined,
+      nonCommuteCar: profile.weeklyNonCommuteCarKm !== null && profile.weeklyNonCommuteCarKm !== undefined,
+      carOwnership: profile.ownsCar !== null && profile.ownsCar !== undefined,
+    };
+    const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
+    const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
+    const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
+    if (yearlyGasHeating !== null) yearlyTotal += yearlyGasHeating;
+    if (yearlyNonCommuteCar !== null) yearlyTotal += yearlyNonCommuteCar;
+    if (yearlyCarOwnership !== null) yearlyTotal += yearlyCarOwnership;
 
     document.getElementById("yearly-avg-food").textContent = fmt(avgFood);
     document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
@@ -1325,10 +1390,15 @@
     document.getElementById("yearly-flying").textContent = Math.round(yearlyFlying).toLocaleString();
     document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
     document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
+    document.getElementById("yearly-gas-heating").textContent = yearlyGasHeating === null ? "–" : Math.round(yearlyGasHeating).toLocaleString();
+    document.getElementById("yearly-noncommute-car").textContent = yearlyNonCommuteCar === null ? "–" : Math.round(yearlyNonCommuteCar).toLocaleString();
+    document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
 
+    const ukAverageYearlyKg = computeUkAverageYearlyKg(includeOptional);
+
     const percentileEl = document.getElementById("yearly-percentile");
-    const betterThanPct = ukPercentileBetterThan(yearlyTotal);
+    const betterThanPct = ukPercentileBetterThan(yearlyTotal, ukAverageYearlyKg);
     if (betterThanPct === null) {
       percentileEl.textContent = "";
     } else if (betterThanPct >= 50) {
@@ -1339,17 +1409,17 @@
       percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
     }
 
-    renderYearComparison(yearlyTotal);
+    renderYearComparison(yearlyTotal, ukAverageYearlyKg);
   }
 
-  function renderYearComparison(yearlyTotal) {
+  function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
     const carKgPerMile = TRANSPORT_FACTORS.car * KM_PER_MILE;
     const yourCarMiles = yearlyTotal / carKgPerMile;
-    const ukCarMiles = UK_AVERAGE_YEARLY_KG / carKgPerMile;
+    const ukCarMiles = ukAverageYearlyKg / carKgPerMile;
     const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
-    const ukTrees = UK_AVERAGE_YEARLY_KG / TREE_KG_PER_YEAR;
+    const ukTrees = ukAverageYearlyKg / TREE_KG_PER_YEAR;
 
-    document.getElementById("uk-average-value").textContent = Math.round(UK_AVERAGE_YEARLY_KG).toLocaleString();
+    document.getElementById("uk-average-value").textContent = Math.round(ukAverageYearlyKg).toLocaleString();
     document.getElementById("compare-car-miles").textContent = Math.round(yourCarMiles).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
 
@@ -1689,6 +1759,26 @@
     bindNumberField("household-people", (v) => { profile.householdPeople = v; }, { min: 1 });
     bindNumberField("household-kwh", (v) => { profile.householdKwhPerMonth = v; });
     bindNumberField("clothes-per-month", (v) => { profile.clothesPerMonth = v; });
+
+    // Optional extras: unlike bindNumberField above, a blank input maps to
+    // null (excluded from every total) rather than being coerced to 0.
+    function bindOptionalNumberField(id, applyToProfile) {
+      document.getElementById(id).addEventListener("input", (e) => {
+        const raw = e.target.value;
+        const val = parseFloat(raw);
+        applyToProfile(raw.trim() === "" || !Number.isFinite(val) || val < 0 ? null : val);
+        persistProfile();
+        renderStatsPage();
+      });
+    }
+    bindOptionalNumberField("gas-heating-kwh", (v) => { profile.annualGasKwh = v; });
+    bindOptionalNumberField("noncommute-car-km", (v) => { profile.weeklyNonCommuteCarKm = v; });
+
+    document.getElementById("owns-car").addEventListener("change", (e) => {
+      profile.ownsCar = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;
+      persistProfile();
+      renderStatsPage();
+    });
 
     document.getElementById("add-friend-form").addEventListener("submit", (e) => {
       e.preventDefault();

@@ -36,22 +36,32 @@ with accounts and a friends leaderboard backed by Supabase.
   week has elapsed (e.g. Wednesday = 3/7 of the weekly goal) so "under
   goal" is meaningful before the week is actually over, rather than
   trivially true on day one. Tap a box for a day-by-day breakdown.
-- **Leaderboard** — two cards: "This week" ranks you and your accepted
+- **Leaderboard** — three cards: "This week" ranks you and your accepted
   friends by this week's total CO2e (lowest first) with a callout for
   whoever's winning; "All-time weekly average" ranks everyone by their
   average CO2e per confirmed week since they started, which also folds in
   a weekly-equivalent share of each person's flights and home electricity
   (their yearly Stats page figures, divided by 52) so it isn't just
-  commute and food.
+  commute and food; "Everyone on the app" shows one anonymous, aggregate
+  figure — the average confirmed-week total across every account on the
+  app, and how many people it's based on — with no per-user data or names
+  ever exposed (see `app_wide_weekly_average()` in `supabase/schema.sql`).
 - **Stats** — a yearly estimate. Inputs (flights: short-haul European vs
   long-haul international; home energy: household kWh/month split across
-  everyone in the household; clothing purchases per month) come first, each
-  converted to a yearly kg CO2e figure; the "Your year, estimated" analysis
+  everyone in the household; clothing purchases per month; then an
+  **Other factors** card of optional extras — gas/oil heating kWh/yr,
+  extra non-commute car km/week, and whether you own a car) come first,
+  each converted to a yearly kg CO2e figure. The optional extras are
+  skippable: leaving one blank leaves it out of every total below rather
+  than counting it as zero, so an unanswered question never makes your
+  estimate look artificially low. The "Your year, estimated" analysis
   card below rolls those together with your confirmed weeks' average
   commute/food (extrapolated ×52) into an estimated yearly total, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). A "How your year compares"
-  card at the bottom shows the UK average alongside your total
+  card at the bottom shows a UK average — built from the same core
+  categories plus whichever optional extras you've personally answered, so
+  the comparison is always apples-to-apples — alongside your total
   converted into car miles and mature-trees-of-CO2-absorption equivalents,
   each with a delta against the UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal, a
@@ -110,6 +120,15 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   (rough grid average), divided evenly across everyone in the household.
 - **Buying goods** (Stats page): ~10 kg CO2e per clothing item bought, a
   rough blended average across garment types.
+- **Gas/oil heating** (Stats page, optional): household kWh/year × ~0.18 kg
+  CO2e/kWh (rough blended gas/oil factor), split evenly across the
+  household the same way electricity is.
+- **Non-commute driving** (Stats page, optional): extra car km/week beyond
+  your logged commute × 52, using the same ~0.171 kg CO2e/km car factor.
+- **Car ownership** (Stats page, optional yes/no): if yes, a flat ~700 kg
+  CO2e/yr for the car's own manufacturing footprint, amortized over an
+  average ~14-year car lifetime — separate from the fuel/charging for
+  trips logged elsewhere.
 - **UK average reference** (Stats page): computed bottom-up the same way as
   your own total, from representative average UK inputs run through the
   same formulas — a 10 km one-way commute by car, a representative average
@@ -118,9 +137,13 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   electricity split across ~2.4 people, and 3 clothing items/month — rather
   than a generic "average footprint" statistic, which would cover a lot
   this app doesn't track (see the Stats page's "What this doesn't account
-  for" card). This comes to roughly 2,400 kg CO2e/yr for just these
-  categories, well below often-cited "average person" figures (8–10 tonnes)
-  because those are scoped much more broadly.
+  for" card). This core figure comes to roughly 2,400 kg CO2e/yr, well
+  below often-cited "average person" figures (8–10 tonnes) because those
+  are scoped much more broadly. If you've answered any of the three
+  optional extras above, the matching representative UK figure (~12,000
+  kWh/yr gas heating, ~50 extra car km/week, car ownership) is added to
+  *both* sides of the comparison, so it's never your fuller total measured
+  against a narrower UK figure.
 - **UK percentile** (Stats page): models the population as log-normally
   distributed around the UK average above (median = average, an assumed
   spread) to estimate a percentile — illustrative, not based on real

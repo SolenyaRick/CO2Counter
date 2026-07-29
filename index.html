@@ -179,6 +179,19 @@
         </p>
         <ol class="leaderboard-list" id="leaderboard-average-list"><!-- rows injected by app.js --></ol>
       </section>
+
+      <section class="card">
+        <h2>Everyone on the app</h2>
+        <p class="assumptions">
+          An anonymous, aggregate figure across every account that's confirmed at least
+          one week &mdash; never anyone's individual data or name, just the overall
+          average and how many people it's based on.
+        </p>
+        <div class="app-average-figure">
+          <span class="stat-value" id="app-average-value">0.0</span>
+          <span class="stat-label">kg CO2e &middot; average confirmed week, across <span id="app-average-count">0</span> people</span>
+        </div>
+      </section>
     </section>
 
     <!-- PAGE 4: Stats (yearly estimate) -->
@@ -230,6 +243,45 @@
       </section>
 
       <section class="card">
+        <h2>Other factors <span class="optional-badge">Optional</span></h2>
+        <p class="assumptions">
+          None of these are required. Leave any of them blank and it's simply left out
+          of your total below &mdash; not counted as zero &mdash; so skipping a question
+          never makes your estimate look better than it is.
+        </p>
+        <label class="field">
+          Gas/oil heating &amp; hot water (household kWh per year)
+          <input type="number" id="gas-heating-kwh" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Uses a rough blended gas/oil factor of ~0.18 kg CO2e/kWh, split evenly across
+          your household (same split as home electricity above). Check a recent annual
+          bill if unsure.
+        </p>
+        <label class="field">
+          Non-commute driving (extra car km per week)
+          <input type="number" id="noncommute-car-km" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Errands, road trips, and other driving beyond the commute you log on the This
+          Week page &mdash; uses the same ~0.171 kg CO2e/km car factor.
+        </p>
+        <label class="field">
+          Do you own or regularly drive a car?
+          <select id="owns-car">
+            <option value="">Prefer not to say</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <p class="assumptions">
+          If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
+          footprint, amortized over an average ~14-year car lifetime &mdash; separate
+          from the fuel/charging for trips you log elsewhere in the app.
+        </p>
+      </section>
+
+      <section class="card">
         <h2>Your year, estimated</h2>
         <div class="summary-totals" id="yearly-summary-totals">
           <div class="stat">
@@ -260,6 +312,18 @@
             <span class="stat-value" id="yearly-goods">0</span>
             <span class="stat-label">kg CO2e/yr &middot; Buying goods</span>
           </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-gas-heating">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Gas/oil heating (optional)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-noncommute-car">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Non-commute driving (optional)</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-car-ownership">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Car manufacturing (optional)</span>
+          </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="yearly-total">0</span>
             <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
@@ -269,20 +333,24 @@
         <p class="assumptions">
           Commute and food are extrapolated from the average of your confirmed weeks so
           far (needs at least one confirmed week to be non-zero); everything else comes
-          from your answers above. All figures are rough, illustrative estimates.
+          from your answers above. The three optional tiles show &ldquo;&ndash;&rdquo;
+          until you answer them, and are then included in the total below &mdash; and in
+          the UK comparison, which only ever includes the same optional categories you
+          have. All figures are rough, illustrative estimates.
         </p>
       </section>
 
       <section class="card">
         <h2>How your year compares</h2>
         <p class="assumptions">
-          UK average for the same categories this app tracks: roughly
+          UK average for the same categories your total above includes: roughly
           <strong id="uk-average-value">0</strong> kg CO2e/yr. Built the same way as your
           own total &mdash; average UK commute, average week of meat/veggie eating, average
-          flights, and average household electricity, run through the same maths &mdash;
-          rather than a generic "average footprint" statistic that covers a lot this app
-          doesn't track (see below). The comparisons below are illustrative ways to
-          picture that number, not precise conversions.
+          flights, average household electricity, and (only if you've answered them)
+          average heating, non-commute driving, and car ownership &mdash; run through the
+          same maths, rather than a generic "average footprint" statistic that covers a
+          lot this app doesn't track (see below). The comparisons below are illustrative
+          ways to picture that number, not precise conversions.
         </p>
         <div class="comparison-grid">
           <div class="comparison-item">
@@ -301,16 +369,16 @@
       <section class="card">
         <h2>What this doesn't account for</h2>
         <p class="assumptions">
-          This app only tracks commuting, food, flights, home electricity, and clothing
-          purchases &mdash; a real personal footprint includes a lot more, so treat every
-          total here as a partial, illustrative estimate, not your actual footprint:
+          This app tracks commuting, food, flights, home electricity, clothing
+          purchases, and (optionally, above) gas/oil heating, non-commute car driving,
+          and car ownership &mdash; a real personal footprint includes a lot more, so
+          treat every total here as a partial, illustrative estimate, not your actual
+          footprint:
         </p>
         <ul class="unaccounted-list">
-          <li>Gas/oil home heating and hot water (only electricity is counted here, and for many UK homes heating is the bigger share of home energy)</li>
-          <li>Non-commute driving and other travel: errands, road trips, taxis/rideshare, buses, ferries, trains beyond commuting, cruises</li>
+          <li>Non-car, non-commute travel: taxis/rideshare, buses, ferries, trains beyond your commute, cruises</li>
           <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, alcohol, snacks, eating out vs. cooking, food miles/packaging</li>
           <li>Purchases beyond clothing: electronics, furniture, appliances, subscriptions, streaming/data use</li>
-          <li>Owning a car (its manufacture, not just the fuel/charging for trips you log)</li>
           <li>Household waste and water usage</li>
           <li>Pets</li>
           <li>Your share of public services, infrastructure, and government spending &mdash; often a substantial slice of "full" consumption-based footprint figures, and essentially impossible to self-report</li>
