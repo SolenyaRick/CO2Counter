@@ -431,31 +431,126 @@ input, select {
   cursor: default;
 }
 
-.mode-select, .diet-select {
+.mode-select {
   width: 100%;
   max-width: 220px;
 }
 
-.diet-cell {
+.diet-day-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.diet-day-row:first-child {
+  padding-top: 0;
+}
+
+.diet-day-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.diet-day-row.is-today {
+  background: var(--accent-light);
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0 -10px;
+}
+
+.diet-day-row.is-today .day-badge {
+  background: var(--accent);
+  color: #fff;
+}
+
+.diet-day-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.diet-day-head .row-footprint {
+  margin-left: auto;
+}
+
+.diet-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diet-type-row, .portion-row {
+  display: flex;
   flex-wrap: wrap;
+  gap: 4px;
 }
 
-.meat-detail {
-  font-size: 0.82rem;
+.diet-opt {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
   color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
 }
 
-.meat-edit-link {
-  font-size: 0.8rem;
-  color: var(--accent);
-  background: none;
-  border: none;
-  padding: 0;
+.diet-opt.meat-opt {
+  font-size: 1.1rem;
+}
+
+.diet-opt:hover {
+  border-color: var(--accent);
+}
+
+.diet-opt.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.portion-row {
+  margin-left: 4px;
+}
+
+.portion-opt {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
   cursor: pointer;
-  text-decoration: underline;
+  padding: 0;
+}
+
+.portion-opt:hover {
+  border-color: var(--accent);
+}
+
+.portion-opt.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.diet-summary {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: 4px;
 }
 
 .row-footprint {

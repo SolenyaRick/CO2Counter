@@ -35,9 +35,14 @@
   // Rough average emission factors, kg CO2e per kg of product.
   const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 27, lamb: 25, other: 10 };
   const MEAT_LABELS = { chicken: "Chicken / poultry", fish: "Fish / seafood", pork: "Pork", beef: "Beef", lamb: "Lamb", other: "Other" };
+  const MEAT_ICONS = { chicken: "🐔", fish: "🐟", pork: "🐷", beef: "🐄", lamb: "🐑" };
+  // Order the meat picker buttons appear in; "other" has no icon button (kept
+  // only so older saved entries with that value still compute correctly).
+  const MEAT_ICON_ORDER = ["chicken", "pork", "beef", "fish", "lamb"];
 
   const PORTION_KG = { small: 0.1, medium: 0.15, large: 0.25 };
   const PORTION_LABELS = { small: "Small (~100g)", medium: "Medium (~150g)", large: "Large (~250g+)" };
+  const PORTION_SHORT_LABELS = { small: "S", medium: "M", large: "L" };
 
   const FOOD_DAY_FACTORS = { veggie: 1.5, vegan: 0.9 };
   // The rest of a meat day's food (breakfast, sides, etc.) is valued the same as a
@@ -186,7 +191,6 @@
   let weeksCache = {}; // week_key -> { commute, diet, confirmedCommute, confirmedDiet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
   let friendExtrasById = {}; // otherId -> { shortHaulFlights, longHaulFlights, householdKwhPerMonth, householdPeople }
-  let pendingMeatDayKey = null;
   // Which week the This Week page is currently showing/editing.
   let selectedWeekKey = CURRENT_WEEK_KEY;
 
@@ -704,122 +708,107 @@
     return `${MEAT_LABELS[entry.meat] ?? "Meat"} – ${PORTION_LABELS[entry.portion] ?? ""}`;
   }
 
+  function setDietEntry(weekData, dayKey, entry, confirmBtn) {
+    weekData.diet[dayKey] = entry;
+    weekData.confirmedDiet[dayKey] = false;
+    confirmBtn.classList.remove("confirmed", "pop");
+    persistWeek(selectedWeekKey);
+    buildDietTable();
+    renderFootprints();
+  }
+
   function buildDietTable() {
     const weekData = getWeek(selectedWeekKey);
-    const tbody = document.querySelector("#diet-table tbody");
-    tbody.innerHTML = "";
+    const container = document.getElementById("diet-table");
+    container.innerHTML = "";
     const todayKey = selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null;
     DAYS.forEach((day) => {
-      const tr = document.createElement("tr");
-      if (day.key === todayKey) tr.classList.add("is-today");
+      const row = document.createElement("div");
+      row.className = "diet-day-row";
+      if (day.key === todayKey) row.classList.add("is-today");
 
-      const dayTd = document.createElement("td");
+      const head = document.createElement("div");
+      head.className = "diet-day-head";
+
       const badge = document.createElement("span");
       badge.className = "day-badge";
       badge.title = day.key === todayKey ? `${day.full} (today)` : day.full;
       badge.textContent = day.short;
-      dayTd.appendChild(badge);
-      tr.appendChild(dayTd);
+      head.appendChild(badge);
 
-      const dietTd = document.createElement("td");
       const cell = document.createElement("div");
       cell.className = "diet-cell";
-
-      const select = document.createElement("select");
-      select.className = "diet-select";
-      select.setAttribute("aria-label", `Diet for ${day.full}`);
-      [
-        { value: "", label: "Select..." },
-        { value: "meat", label: "Meat" },
-        { value: "veggie", label: "Veggie" },
-        { value: "vegan", label: "Vegan" },
-      ].forEach(({ value, label }) => {
-        const opt = document.createElement("option");
-        opt.value = value;
-        opt.textContent = label;
-        select.appendChild(opt);
-      });
-      select.value = weekData.diet[day.key]?.type || "";
-
-      const detail = document.createElement("span");
-      detail.className = "meat-detail";
-
-      const editLink = document.createElement("button");
-      editLink.type = "button";
-      editLink.className = "meat-edit-link";
-      editLink.textContent = "edit";
-      editLink.style.display = "none";
-      editLink.addEventListener("click", () => openMeatModal(day.key));
-
-      function refreshMeatUI() {
-        const entry = weekData.diet[day.key];
-        if (entry && entry.type === "meat") {
-          detail.textContent = dietSummaryText(entry);
-          editLink.style.display = "inline";
-        } else {
-          detail.textContent = "";
-          editLink.style.display = "none";
-        }
-      }
-      refreshMeatUI();
+      const entry = weekData.diet[day.key];
 
       const confirmBtn = createConfirmButton(weekData, "diet", day.key);
 
-      select.addEventListener("change", () => {
-        const value = select.value;
-        weekData.confirmedDiet[day.key] = false;
-        confirmBtn.classList.remove("confirmed", "pop");
-        if (value === "meat") {
-          const existing = weekData.diet[day.key];
-          weekData.diet[day.key] = {
-            type: "meat",
-            meat: existing?.meat || "chicken",
-            portion: existing?.portion || "medium",
-          };
-          persistWeek(selectedWeekKey);
-          refreshMeatUI();
-          renderFootprints();
-          openMeatModal(day.key);
-        } else {
-          weekData.diet[day.key] = { type: value };
-          persistWeek(selectedWeekKey);
-          refreshMeatUI();
-          renderFootprints();
-        }
+      const typeRow = document.createElement("div");
+      typeRow.className = "diet-type-row";
+      typeRow.setAttribute("role", "group");
+      typeRow.setAttribute("aria-label", `Diet for ${day.full}`);
+
+      function makeOption(type, meat, label, title) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "diet-opt" + (meat ? " meat-opt" : "");
+        btn.textContent = label;
+        btn.title = title;
+        btn.setAttribute("aria-label", title);
+        const isActive = entry?.type === type && (!meat || entry.meat === meat);
+        btn.classList.toggle("active", isActive);
+        btn.addEventListener("click", () => {
+          if (type === "meat") {
+            setDietEntry(weekData, day.key, { type: "meat", meat, portion: entry?.meat === meat ? entry.portion : "medium" }, confirmBtn);
+          } else {
+            setDietEntry(weekData, day.key, { type }, confirmBtn);
+          }
+        });
+        return btn;
+      }
+
+      typeRow.appendChild(makeOption("vegan", null, "Ve", "Vegan"));
+      typeRow.appendChild(makeOption("veggie", null, "Vg", "Veggie"));
+      MEAT_ICON_ORDER.forEach((meat) => {
+        typeRow.appendChild(makeOption("meat", meat, MEAT_ICONS[meat], MEAT_LABELS[meat]));
       });
+      cell.appendChild(typeRow);
 
-      cell.appendChild(select);
-      cell.appendChild(detail);
-      cell.appendChild(editLink);
-      dietTd.appendChild(cell);
-      tr.appendChild(dietTd);
+      if (entry?.type === "meat") {
+        const portionRow = document.createElement("div");
+        portionRow.className = "portion-row";
+        portionRow.setAttribute("role", "group");
+        portionRow.setAttribute("aria-label", `Portion size for ${day.full}`);
+        ["small", "medium", "large"].forEach((portion) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "portion-opt";
+          btn.textContent = PORTION_SHORT_LABELS[portion];
+          btn.title = PORTION_LABELS[portion];
+          btn.setAttribute("aria-label", PORTION_LABELS[portion]);
+          btn.classList.toggle("active", entry.portion === portion);
+          btn.addEventListener("click", () => {
+            setDietEntry(weekData, day.key, { ...entry, portion }, confirmBtn);
+          });
+          portionRow.appendChild(btn);
+        });
+        cell.appendChild(portionRow);
 
-      const footTd = document.createElement("td");
-      footTd.className = "row-footprint";
-      footTd.dataset.foodFootprint = day.key;
-      tr.appendChild(footTd);
+        const summary = document.createElement("span");
+        summary.className = "diet-summary";
+        summary.textContent = dietSummaryText(entry);
+        cell.appendChild(summary);
+      }
 
-      const confirmTd = document.createElement("td");
-      confirmTd.className = "day-confirm-cell";
-      confirmTd.appendChild(confirmBtn);
-      tr.appendChild(confirmTd);
+      const footprint = document.createElement("span");
+      footprint.className = "row-footprint";
+      footprint.dataset.foodFootprint = day.key;
+      head.appendChild(footprint);
+      head.appendChild(confirmBtn);
 
-      tbody.appendChild(tr);
+      row.appendChild(head);
+      row.appendChild(cell);
+      container.appendChild(row);
     });
-  }
-
-  function openMeatModal(dayKey) {
-    const weekData = getWeek(selectedWeekKey);
-    pendingMeatDayKey = dayKey;
-    const entry = weekData.diet[dayKey];
-    document.getElementById("meat-type").value = entry?.meat || "chicken";
-    document.getElementById("meat-portion").value = entry?.portion || "medium";
-    document.getElementById("meat-modal-backdrop").classList.add("open");
-  }
-
-  function closeMeatModal() {
-    document.getElementById("meat-modal-backdrop").classList.remove("open");
-    pendingMeatDayKey = null;
   }
 
   function weekPickerHeading(weekKey) {
@@ -1651,23 +1640,6 @@
     window.addEventListener("hashchange", () => showTab(currentTab()));
 
     document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
-
-    document.getElementById("meat-save").addEventListener("click", () => {
-      if (!pendingMeatDayKey) return;
-      const weekData = getWeek(selectedWeekKey);
-      const meat = document.getElementById("meat-type").value;
-      const portion = document.getElementById("meat-portion").value;
-      weekData.diet[pendingMeatDayKey] = { type: "meat", meat, portion };
-      weekData.confirmedDiet[pendingMeatDayKey] = false;
-      persistWeek(selectedWeekKey);
-      closeMeatModal();
-      buildDietTable();
-      renderFootprints();
-    });
-    document.getElementById("meat-cancel").addEventListener("click", closeMeatModal);
-    document.getElementById("meat-modal-backdrop").addEventListener("click", (e) => {
-      if (e.target.id === "meat-modal-backdrop") closeMeatModal();
-    });
 
     document.getElementById("week-detail-close").addEventListener("click", closeWeekDetail);
     document.getElementById("week-detail-backdrop").addEventListener("click", (e) => {

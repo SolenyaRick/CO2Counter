@@ -9,9 +9,11 @@ with accounts and a friends leaderboard backed by Supabase.
   flow), gating the rest of the app.
 - **This Week** — the inputs, toggleable between "This week" and "Last week".
   For each day (M–S) pick how you got to work (Walk, Cycle, Train, Car, or
-  Didn't travel) and what you ate (Meat, Veggie, Vegan). Choosing Meat opens
-  a dialog to pick the type of meat and roughly how much of it. A pick is
-  saved as a draft immediately, but only counts toward the weekly totals,
+  Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
+  (veggie), then an icon per meat type (chicken, pork, beef, fish, lamb).
+  Tapping a meat icon reveals a Small/Medium/Large portion picker right
+  below it. A pick is saved as a draft immediately, but only counts toward
+  the weekly totals,
   chart, and leaderboard once you press that day's ✓ confirm button (which
   plays a small pop animation) — changing a confirmed day's pick un-confirms
   it again. Today's row is highlighted (only when viewing "This week", not

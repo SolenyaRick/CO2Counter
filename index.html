@@ -100,18 +100,8 @@
       </section>
 
       <section class="card">
-        <table class="tracker-table" id="diet-table">
-          <caption class="table-caption">What did you eat this week?</caption>
-          <thead>
-            <tr>
-              <th class="day-col">Day</th>
-              <th>Diet</th>
-              <th class="footprint-col">Est. CO2e</th>
-              <th class="confirm-col"><span class="sr-only">Confirm</span></th>
-            </tr>
-          </thead>
-          <tbody><!-- rows injected by app.js --></tbody>
-        </table>
+        <h2 class="table-caption">What did you eat this week?</h2>
+        <div class="diet-days" id="diet-table"><!-- rows injected by app.js --></div>
       </section>
 
       <section class="card summary-card">
@@ -411,35 +401,6 @@
         </p>
       </section>
     </section>
-  </div>
-
-  <div class="modal-backdrop" id="meat-modal-backdrop">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="meat-modal-title">
-      <h3 id="meat-modal-title">What kind of meat, and how much?</h3>
-      <label class="field">
-        Type of meat
-        <select id="meat-type">
-          <option value="chicken">Chicken / poultry</option>
-          <option value="fish">Fish / seafood</option>
-          <option value="pork">Pork</option>
-          <option value="beef">Beef</option>
-          <option value="lamb">Lamb</option>
-          <option value="other">Other</option>
-        </select>
-      </label>
-      <label class="field">
-        Roughly how much
-        <select id="meat-portion">
-          <option value="small">Small (~100g)</option>
-          <option value="medium" selected>Medium (~150g)</option>
-          <option value="large">Large (~250g+)</option>
-        </select>
-      </label>
-      <div class="modal-actions">
-        <button id="meat-cancel" class="btn-secondary">Cancel</button>
-        <button id="meat-save" class="btn-primary">Save</button>
-      </div>
-    </div>
   </div>
 
   <div class="modal-backdrop" id="week-detail-backdrop">
