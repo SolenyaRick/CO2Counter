@@ -924,11 +924,15 @@
     // unit = 1 real pixel in both axes - otherwise a fixed viewBox stretched
     // to fit varying card widths distorts strokes, dots, and text
     // horizontally (preserveAspectRatio="none" scales x/y independently).
-    // Falls back to 300 if the chart is currently hidden (width 0), e.g.
+    // Falls back to 340 if the chart is currently hidden (width 0), e.g.
     // when a change on another tab re-renders it in the background; it's
     // recomputed correctly next time the week tab is actually shown.
-    const W = chart.getBoundingClientRect().width || 300;
-    const H = 160, PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
+    // Height scales with width (instead of a fixed 160px) so the chart
+    // doesn't go flat and thin on wide screens - clamped so it doesn't get
+    // absurdly tall either.
+    const W = chart.getBoundingClientRect().width || 340;
+    const H = Math.max(140, Math.min(230, W / 2.3));
+    const PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
     const plotW = W - PAD_X * 2;
     const plotH = H - PAD_TOP - PAD_BOTTOM;
 
@@ -952,6 +956,7 @@
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.style.height = `${H}px`;
     svg.setAttribute("class", `budget-chart-svg ${onTrack ? "on-track" : "over-track"}`);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `Budget pace: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
@@ -1018,11 +1023,15 @@
       svg.appendChild(zeroLabel);
     }
 
+    // Each day's tick sits at the boundary point representing "as of the end
+    // of that day" (j = i + 1) - the same x each day's line vertex and, for
+    // today, the actual-value dot are drawn at - so the label lines up
+    // directly under its data point instead of under the middle of a column.
     DAYS.forEach((day, i) => {
       const isToday = isCurrentWeek && i + 1 === todayIndexInWeek();
       const label = document.createElementNS(svgNS, "text");
       label.textContent = day.short;
-      label.setAttribute("x", xAt(i + 0.5).toFixed(1));
+      label.setAttribute("x", xAt(i + 1).toFixed(1));
       label.setAttribute("y", H - 6);
       label.setAttribute("text-anchor", "middle");
       label.setAttribute("class", "budget-day-label" + (isToday ? " is-today" : ""));
