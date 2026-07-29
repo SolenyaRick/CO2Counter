@@ -171,9 +171,11 @@ coarse km figure that doesn't identify anyone on its own, and this view
 still can't be joined back to `research_profiles` (no shared key). It
 exists so the Excel export can compute an actual kg CO2e figure per
 commute mode, not just a count. The export now has two more sheets,
-"Meal Breakdown" and "Commute Breakdown", collating every *confirmed*
-day (matching how every other average in this app treats confirmation)
-across every opted-in week into "how many of each per week, on
+"Meal Breakdown" and "Commute Breakdown", collating every day of every
+*fully* confirmed opted-in week (every day, both commute and diet -
+same bar as `week_is_fully_confirmed()`/`isFullyConfirmed()` elsewhere
+in this app; a week where only a day or two got confirmed is excluded
+entirely, not partially counted) into "how many of each per week, on
 average" plus the kg CO2e that represents - e.g. "Beef: 1.0/week, 9.8kg
 CO2e/week". Meal kg uses the same baseline meat/portion formula as
 `foodFootprint()` in `app.js`, but without a per-user food-waste or

@@ -1993,19 +1993,33 @@
     return entry.type;
   }
 
-  // Collates every confirmed diet/commute day across every opted-in week in
-  // the export - "however many weeks back" there are - into "how many of
-  // each per week, on average" plus the kg CO2e that represents. Only
-  // confirmed days count, matching how every other average in this app
-  // treats confirmation. weekCount is the number of week-rows in the
-  // export (i.e. how many weeks of data this is collated from), used as
+  // Same rule as isFullyConfirmed() (Stats/Leaderboard "confirmed week"
+  // averages), just against the snake_case row shape research_weeks
+  // returns instead of the app's own camelCase weekData - every day, both
+  // commute and diet, confirmed. A week where only a couple of days got
+  // confirmed shouldn't count toward "how many of each per week" any more
+  // than it counts toward any other average in this app.
+  function isWeekRowFullyConfirmed(row) {
+    const confirmedCommute = row.confirmed_commute || {};
+    const confirmedDiet = row.confirmed_diet || {};
+    return DAYS.every((day) => confirmedCommute[day.key] && confirmedDiet[day.key]);
+  }
+
+  // Collates every day of every FULLY confirmed opted-in week in the
+  // export - "however many weeks back" there are - into "how many of
+  // each per week, on average" plus the kg CO2e that represents. Partial
+  // weeks are excluded entirely (see isWeekRowFullyConfirmed above), not
+  // just their unconfirmed days, so a week logged for one day doesn't
+  // pull the "per week" average down as if it were a full week. weekCount
+  // is the number of fully confirmed weeks this is collated from, used as
   // the per-week denominator for both breakdowns.
   function summarizeMealsAndCommute(weeksRaw) {
-    const weekCount = weeksRaw.length;
+    const fullWeeks = weeksRaw.filter(isWeekRowFullyConfirmed);
+    const weekCount = fullWeeks.length;
     const meals = new Map(); // label -> { days, kg }
     const commutes = new Map(); // label -> { days, kg }
 
-    weeksRaw.forEach((w) => {
+    fullWeeks.forEach((w) => {
       const diet = w.diet || {};
       const confirmedDiet = w.confirmed_diet || {};
       Object.keys(confirmedDiet).forEach((day) => {
@@ -2074,11 +2088,11 @@
 
     const { weekCount, mealRows, commuteRows } = summarizeMealsAndCommute(data.weeks);
     const mealsSheet = window.XLSX.utils.json_to_sheet(
-      mealRows.length ? mealRows : [{ "Meal type": `No confirmed diet days across ${weekCount} week(s)` }]
+      mealRows.length ? mealRows : [{ "Meal type": `No fully confirmed weeks (${weekCount} found)` }]
     );
     window.XLSX.utils.book_append_sheet(wb, mealsSheet, "Meal Breakdown");
     const commuteSheet = window.XLSX.utils.json_to_sheet(
-      commuteRows.length ? commuteRows : [{ "Commute mode": `No confirmed commute days across ${weekCount} week(s)` }]
+      commuteRows.length ? commuteRows : [{ "Commute mode": `No fully confirmed weeks (${weekCount} found)` }]
     );
     window.XLSX.utils.book_append_sheet(wb, commuteSheet, "Commute Breakdown");
 
