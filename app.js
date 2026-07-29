@@ -97,7 +97,7 @@
     clothesPerMonth: 3,
     // Representative values for the optional extras below - only folded into
     // the UK reference figure when the current user has answered that same
-    // question themselves (see includeOptional in computeUkAverageYearlyKg),
+    // question themselves (see includeOptional in computeUkAverageBreakdown),
     // so the comparison never mixes "your 5 tracked categories" against "the
     // UK's 8 tracked categories".
     annualGasKwh: 12000, // rough typical UK gas-heated household usage/yr
@@ -107,11 +107,13 @@
   // includeOptional: { gasHeating, nonCommuteCar, carOwnership } booleans -
   // pass whichever optional categories the person being compared against has
   // actually answered, so both sides of the comparison cover the same ground.
-  function computeUkAverageYearlyKg(includeOptional = {}) {
+  // Returns a per-category breakdown (not just a total) so each domain on
+  // the Stats page can show its own "vs UK average" delta.
+  function computeUkAverageBreakdown(includeOptional = {}) {
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
 
-    const commuteYearly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * 52;
+    const commute = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * 52;
 
     const meatWeekly = a.weeklyMeatDays.reduce((sum, day) => {
       const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
@@ -119,17 +121,18 @@
       return sum + (meatFactor * portionKg + MEAT_SIDES_BASELINE) * wasteMult;
     }, 0);
     const veggieWeekly = a.weeklyVeggieDays * FOOD_DAY_FACTORS.veggie * wasteMult;
-    const foodYearly = (meatWeekly + veggieWeekly) * 52;
+    const food = (meatWeekly + veggieWeekly) * 52;
 
-    const flyingYearly = a.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + a.longHaulFlights * LONG_HAUL_FLIGHT_KG;
-    const homeEnergyYearly = (a.householdKwhPerYear * GRID_ELECTRICITY_KG_PER_KWH) / a.householdPeople;
-    const goodsYearly = a.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
+    const flying = a.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + a.longHaulFlights * LONG_HAUL_FLIGHT_KG;
+    const homeEnergy = (a.householdKwhPerYear * GRID_ELECTRICITY_KG_PER_KWH) / a.householdPeople;
+    const goods = a.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
-    let total = commuteYearly + foodYearly + flyingYearly + homeEnergyYearly + goodsYearly;
-    if (includeOptional.gasHeating) total += (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople;
-    if (includeOptional.nonCommuteCar) total += a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52;
-    if (includeOptional.carOwnership) total += CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR;
-    return total;
+    const gasHeating = includeOptional.gasHeating ? (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople : null;
+    const nonCommuteCar = includeOptional.nonCommuteCar ? a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
+    const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
+
+    const total = commute + food + flying + homeEnergy + goods + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0);
+    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, total };
   }
 
   const DEFAULT_PROFILE = {
@@ -331,7 +334,7 @@
   // Rough illustrative percentile: models UK personal footprints as
   // log-normal around a UK average (used as the median, computed for the
   // same set of optional categories as yourYearlyKg - see
-  // computeUkAverageYearlyKg), with an assumed spread - not based on real
+  // computeUkAverageBreakdown), with an assumed spread - not based on real
   // ONS/population distribution data.
   function ukPercentileBetterThan(yourYearlyKg, ukAverageYearlyKg) {
     if (!yourYearlyKg || yourYearlyKg <= 0) return null;
@@ -1395,10 +1398,21 @@
     document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
 
-    const ukAverageYearlyKg = computeUkAverageYearlyKg(includeOptional);
+    const uk = computeUkAverageBreakdown(includeOptional);
+
+    // Per-domain "vs UK average" delta under each tile - skipped for the
+    // three optional categories when unanswered (nothing to compare yet).
+    setComparisonDiff("yearly-food-diff", yearlyFood, uk.food, "kg");
+    setComparisonDiff("yearly-commute-diff", yearlyCommute, uk.commute, "kg");
+    setComparisonDiff("yearly-flying-diff", yearlyFlying, uk.flying, "kg");
+    setComparisonDiff("yearly-home-energy-diff", yearlyHomeEnergy, uk.homeEnergy, "kg");
+    setComparisonDiff("yearly-goods-diff", yearlyGoods, uk.goods, "kg");
+    setComparisonDiff("yearly-gas-heating-diff", yearlyGasHeating, uk.gasHeating, "kg");
+    setComparisonDiff("yearly-noncommute-car-diff", yearlyNonCommuteCar, uk.nonCommuteCar, "kg");
+    setComparisonDiff("yearly-car-ownership-diff", yearlyCarOwnership, uk.carOwnership, "kg");
 
     const percentileEl = document.getElementById("yearly-percentile");
-    const betterThanPct = ukPercentileBetterThan(yearlyTotal, ukAverageYearlyKg);
+    const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);
     if (betterThanPct === null) {
       percentileEl.textContent = "";
     } else if (betterThanPct >= 50) {
@@ -1409,7 +1423,7 @@
       percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
     }
 
-    renderYearComparison(yearlyTotal, ukAverageYearlyKg);
+    renderYearComparison(yearlyTotal, uk.total);
   }
 
   function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
@@ -1429,6 +1443,15 @@
 
   function setComparisonDiff(elementId, yourValue, ukValue, unit) {
     const el = document.getElementById(elementId);
+    if (!el) return;
+    // Optional categories pass null on both sides when unanswered - nothing
+    // to compare yet, so leave the delta blank rather than showing "0 vs
+    // UK average" (which would misleadingly look like a real answer of 0).
+    if (yourValue === null || yourValue === undefined || ukValue === null || ukValue === undefined) {
+      el.textContent = "";
+      el.className = "week-diff";
+      return;
+    }
     const diff = yourValue - ukValue;
     const over = diff > 0;
     el.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;

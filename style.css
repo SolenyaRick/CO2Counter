@@ -602,6 +602,11 @@ input, select {
   padding: 14px 16px;
 }
 
+.stat .week-diff {
+  display: block;
+  margin-top: 4px;
+}
+
 .stat-percentile {
   display: block;
   margin-top: 4px;

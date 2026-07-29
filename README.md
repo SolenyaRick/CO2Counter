@@ -58,7 +58,10 @@ with accounts and a friends leaderboard backed by Supabase.
   card below rolls those together with your confirmed weeks' average
   commute/food (extrapolated ×52) into an estimated yearly total, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
-  UK", worded so it never reads backwards). A "How your year compares"
+  UK", worded so it never reads backwards). Every domain tile (food,
+  commute, flying, home energy, goods, and the three optional extras once
+  answered) shows its own ▲/▼ delta against the UK average for that same
+  category, not just the total. A "How your year compares"
   card at the bottom shows a UK average — built from the same core
   categories plus whichever optional extras you've personally answered, so
   the comparison is always apples-to-apples — alongside your total
