@@ -346,6 +346,16 @@
           CO2e/yr per cat &mdash; mostly driven by their (often meat-heavy) diet.
           Answering either one counts the other as 0 if left blank.
         </p>
+        <label class="field">
+          Household water usage (m&sup3; per year)
+          <input type="number" id="annual-water-m3" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Check a recent water bill for this figure (usually shown in m&sup3;, sometimes
+          called "cubic metres" or "units"). Uses a rough DEFRA-style combined
+          supply + treatment factor of ~0.32 kg CO2e/m&sup3;, split evenly across your
+          household (same split as home electricity and gas above).
+        </p>
       </section>
 
       <section class="card">
@@ -408,6 +418,11 @@
             <span class="stat-label">kg CO2e/yr &middot; Pets (optional)</span>
             <span class="week-diff" id="yearly-pets-diff"></span>
           </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-water">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Water usage (optional)</span>
+            <span class="week-diff" id="yearly-water-diff"></span>
+          </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="yearly-total">0</span>
             <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
@@ -417,7 +432,7 @@
         <p class="assumptions">
           Commute, food, and alcohol are extrapolated from the average of your fully
           confirmed weeks so far (needs at least one to be non-zero); everything else
-          comes from your answers above. The four optional tiles show
+          comes from your answers above. The five optional tiles show
           &ldquo;&ndash;&rdquo; until you answer them, and are then included in the
           total below &mdash; and in the UK comparison, which only ever includes the
           same optional categories you have (alcohol isn't part of that UK comparison
@@ -449,7 +464,7 @@
           <strong id="uk-average-value">0</strong> kg CO2e/yr. Built the same way as your
           own total &mdash; average UK commute, average week of meat/veggie eating, average
           flights, average household electricity, and (only if you've answered them)
-          average heating, non-commute driving, car ownership, and pets &mdash; run through
+          average heating, non-commute driving, car ownership, pets, and water usage &mdash; run through
           the same maths, rather than a generic "average footprint" statistic that covers a
           lot this app doesn't track (see below). The comparisons below are illustrative
           ways to picture that number, not precise conversions.
@@ -471,17 +486,18 @@
       <section class="card">
         <h2>What this doesn't account for</h2>
         <p class="assumptions">
-          This app tracks commuting, food, flights, home electricity, clothing
-          purchases, and (optionally, above) gas/oil heating, non-commute car driving,
-          car ownership, and pets &mdash; a real personal footprint includes a lot
-          more, so treat every total here as a partial, illustrative estimate, not
-          your actual footprint:
+          This app tracks commuting, food, alcohol, flights, home electricity,
+          clothing purchases, and (optionally, above) gas/oil heating, non-commute
+          car driving, car ownership, pets, and water usage &mdash; a real personal
+          footprint includes a lot more, so treat every total here as a partial,
+          illustrative estimate, not your actual footprint:
         </p>
         <ul class="unaccounted-list">
           <li>Non-car, non-commute travel: taxis/rideshare, buses, ferries, trains beyond your commute, cruises</li>
-          <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, alcohol, snacks, eating out vs. cooking, food miles/packaging</li>
+          <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, snacks, food miles/packaging</li>
           <li>Purchases beyond clothing: electronics, furniture, appliances, subscriptions, streaming/data use</li>
-          <li>Household waste and water usage</li>
+          <li>Household waste</li>
+          <li>Banking and investments &mdash; which bank you hold savings with can carry a surprisingly large indirect footprint via fossil fuel financing (see e.g. MotherTree's bank league table), but we don't yet have reliable per-bank figures to model this</li>
           <li>Your share of public services, infrastructure, and government spending &mdash; often a substantial slice of "full" consumption-based footprint figures, and essentially impossible to self-report</li>
         </ul>
         <p class="assumptions">

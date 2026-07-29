@@ -42,6 +42,7 @@ alter table public.profiles add column if not exists weekly_noncommute_car_km nu
 alter table public.profiles add column if not exists owns_car boolean;
 alter table public.profiles add column if not exists num_dogs numeric;
 alter table public.profiles add column if not exists num_cats numeric;
+alter table public.profiles add column if not exists annual_water_m3 numeric;
 
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
@@ -290,9 +291,9 @@ grant execute on function public.friend_weekly_average() to authenticated;
 --     duplicated into SQL. If any of SHORT_HAUL_FLIGHT_KG,
 --     LONG_HAUL_FLIGHT_KG, GRID_ELECTRICITY_KG_PER_KWH, CLOTHING_ITEM_KG,
 --     GAS_HEATING_KG_PER_KWH, TRANSPORT_FACTORS.car,
---     CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR, DOG_KG_PER_YEAR, or
---     CAT_KG_PER_YEAR ever change in app.js, update the matching literal
---     here too.
+--     CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR, DOG_KG_PER_YEAR,
+--     CAT_KG_PER_YEAR, or WATER_KG_PER_M3 ever change in app.js, update the
+--     matching literal here too.
 -- Deliberately returns ONLY these two aggregates plus a headcount - never
 -- any user_id, name, or per-person row - so it's safe to expose to any
 -- signed-in user with no friendship relationship required.
@@ -336,6 +337,7 @@ as $$
             + case when p.weekly_noncommute_car_km is not null then p.weekly_noncommute_car_km * 0.171 * 52 else 0 end
             + case when p.owns_car then 700 else 0 end
             + case when p.num_dogs is not null or p.num_cats is not null then coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310 else 0 end
+            + case when p.annual_water_m3 is not null then (p.annual_water_m3 * 0.32) / greatest(1, coalesce(p.household_people, 1)) else 0 end
           ) / 52.0 as avg_total_kg
     from per_user pu
     join public.profiles p on p.id = pu.user_id

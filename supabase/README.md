@@ -91,9 +91,14 @@ client-side, where RLS already allows it), this app-wide function can't
 expose per-user profile data without breaking its "aggregate only, no
 per-user data" guarantee, so it duplicates the relevant emission-factor
 constants directly in SQL - if any of those ever change in `app.js`
-(flight/energy/goods/heating/car/pet factors), update the matching
+(flight/energy/goods/heating/car/pet/water factors), update the matching
 literals in this function too, or the two "everyone on the app" figures
 will quietly drift out of sync with the rest of the app.
+
+The most recent run adds an `annual_water_m3` column to `profiles` for the
+Stats page's water-usage optional extra (same nullable-with-no-default
+pattern as the other optional extras), and includes it in
+`app_wide_weekly_average()`'s duplicated formula above.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

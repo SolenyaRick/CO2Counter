@@ -112,6 +112,7 @@
   const CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR = 700; // rough embodied build footprint, amortized over an ~14yr average car lifetime
   const DOG_KG_PER_YEAR = 770; // rough average dog footprint/yr (mostly diet-driven)
   const CAT_KG_PER_YEAR = 310; // rough average cat footprint/yr
+  const WATER_KG_PER_M3 = 0.32; // rough DEFRA-style combined supply + treatment factor
 
   const KM_PER_MILE = 1.60934;
   const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
@@ -149,13 +150,14 @@
     weeklyNonCommuteCarKm: 50, // rough extra (non-commute) driving per week
     numDogs: 0.2, // rough UK dogs-per-person (~13M dogs / ~67M population)
     numCats: 0.15, // rough UK cats-per-person (~11M cats / ~67M population)
+    annualWaterM3: 122, // rough UK household water use/yr (~140 L/person/day * 2.4 people)
   };
 
-  // includeOptional: { gasHeating, nonCommuteCar, carOwnership, pets } booleans -
-  // pass whichever optional categories the person being compared against has
-  // actually answered, so both sides of the comparison cover the same ground.
-  // Returns a per-category breakdown (not just a total) so each domain on
-  // the Stats page can show its own "vs UK average" delta.
+  // includeOptional: { gasHeating, nonCommuteCar, carOwnership, pets, water }
+  // booleans - pass whichever optional categories the person being compared
+  // against has actually answered, so both sides of the comparison cover
+  // the same ground. Returns a per-category breakdown (not just a total)
+  // so each domain on the Stats page can show its own "vs UK average" delta.
   function computeUkAverageBreakdown(includeOptional = {}) {
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
@@ -180,10 +182,11 @@
     const nonCommuteCar = includeOptional.nonCommuteCar ? a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
     const pets = includeOptional.pets ? a.numDogs * DOG_KG_PER_YEAR + a.numCats * CAT_KG_PER_YEAR : null;
+    const water = includeOptional.water ? (a.annualWaterM3 * WATER_KG_PER_M3) / a.householdPeople : null;
 
     const total = commute + food + flying + homeEnergy + goods
-      + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0) + (pets || 0);
-    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, total, commuteWeekly, foodWeekly };
+      + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0) + (pets || 0) + (water || 0);
+    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, water, total, commuteWeekly, foodWeekly };
   }
 
   // Weekly UK-average reference for the This Week page's "Compared to an
@@ -260,6 +263,7 @@
     ownsCar: null,
     numDogs: null,
     numCats: null,
+    annualWaterM3: null,
   };
 
   function blankWeek() {
@@ -493,6 +497,7 @@
         ownsCar: data.owns_car ?? null,
         numDogs: data.num_dogs ?? null,
         numCats: data.num_cats ?? null,
+        annualWaterM3: data.annual_water_m3 ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -517,6 +522,7 @@
       owns_car: profile.ownsCar,
       num_dogs: profile.numDogs,
       num_cats: profile.numCats,
+      annual_water_m3: profile.annualWaterM3,
     };
   }
 
@@ -648,7 +654,7 @@
         .select(
           "id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, " +
           "household_kwh_per_month, household_people, clothes_per_month, " +
-          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, num_dogs, num_cats"
+          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, num_dogs, num_cats, annual_water_m3"
         )
         .in("id", otherIds);
       (profs || []).forEach((p) => {
@@ -664,6 +670,7 @@
           ownsCar: p.owns_car ?? null,
           numDogs: p.num_dogs ?? null,
           numCats: p.num_cats ?? null,
+          annualWaterM3: p.annual_water_m3 ?? null,
         };
       });
     }
@@ -1492,6 +1499,9 @@
     if ((inputs.numDogs !== null && inputs.numDogs !== undefined) || (inputs.numCats !== null && inputs.numCats !== undefined)) {
       yearlyOptional += (inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR;
     }
+    if (inputs.annualWaterM3 !== null && inputs.annualWaterM3 !== undefined) {
+      yearlyOptional += (inputs.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, inputs.householdPeople || 1);
+    }
 
     return (yearlyFlying + yearlyHomeEnergy + yearlyGoods + yearlyOptional) / 52;
   }
@@ -1646,6 +1656,7 @@
     document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
     document.getElementById("num-dogs").value = optionalInputValue(profile.numDogs);
     document.getElementById("num-cats").value = optionalInputValue(profile.numCats);
+    document.getElementById("annual-water-m3").value = optionalInputValue(profile.annualWaterM3);
 
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
@@ -1672,15 +1683,18 @@
       nonCommuteCar: profile.weeklyNonCommuteCarKm !== null && profile.weeklyNonCommuteCarKm !== undefined,
       carOwnership: profile.ownsCar !== null && profile.ownsCar !== undefined,
       pets: (profile.numDogs !== null && profile.numDogs !== undefined) || (profile.numCats !== null && profile.numCats !== undefined),
+      water: profile.annualWaterM3 !== null && profile.annualWaterM3 !== undefined,
     };
     const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
     const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
     const yearlyPets = includeOptional.pets ? (profile.numDogs || 0) * DOG_KG_PER_YEAR + (profile.numCats || 0) * CAT_KG_PER_YEAR : null;
+    const yearlyWater = includeOptional.water ? (profile.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, profile.householdPeople || 1) : null;
     if (yearlyGasHeating !== null) yearlyTotal += yearlyGasHeating;
     if (yearlyNonCommuteCar !== null) yearlyTotal += yearlyNonCommuteCar;
     if (yearlyCarOwnership !== null) yearlyTotal += yearlyCarOwnership;
     if (yearlyPets !== null) yearlyTotal += yearlyPets;
+    if (yearlyWater !== null) yearlyTotal += yearlyWater;
 
     document.getElementById("yearly-avg-food").textContent = fmt(avgFood);
     document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
@@ -1694,6 +1708,7 @@
     document.getElementById("yearly-noncommute-car").textContent = yearlyNonCommuteCar === null ? "–" : Math.round(yearlyNonCommuteCar).toLocaleString();
     document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
     document.getElementById("yearly-pets").textContent = yearlyPets === null ? "–" : Math.round(yearlyPets).toLocaleString();
+    document.getElementById("yearly-water").textContent = yearlyWater === null ? "–" : Math.round(yearlyWater).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
 
     const uk = computeUkAverageBreakdown(includeOptional);
@@ -1709,6 +1724,7 @@
     setComparisonDiff("yearly-noncommute-car-diff", yearlyNonCommuteCar, uk.nonCommuteCar, "kg");
     setComparisonDiff("yearly-car-ownership-diff", yearlyCarOwnership, uk.carOwnership, "kg");
     setComparisonDiff("yearly-pets-diff", yearlyPets, uk.pets, "kg");
+    setComparisonDiff("yearly-water-diff", yearlyWater, uk.water, "kg");
 
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);
@@ -2129,6 +2145,7 @@
     bindOptionalNumberField("noncommute-car-km", (v) => { profile.weeklyNonCommuteCarKm = v; });
     bindOptionalNumberField("num-dogs", (v) => { profile.numDogs = v; });
     bindOptionalNumberField("num-cats", (v) => { profile.numCats = v; });
+    bindOptionalNumberField("annual-water-m3", (v) => { profile.annualWaterM3 = v; });
 
     document.getElementById("owns-car").addEventListener("change", (e) => {
       profile.ownsCar = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;

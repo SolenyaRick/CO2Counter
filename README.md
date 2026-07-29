@@ -86,10 +86,10 @@ with accounts and a friends leaderboard backed by Supabase.
   long-haul international; home energy: household kWh/month split across
   everyone in the household; clothing purchases per month; then an
   **Other factors** card of optional extras — gas/oil heating kWh/yr,
-  extra non-commute car km/week, whether you own a car, and number of dogs
-  and cats) come first, each converted to a yearly kg CO2e figure. The
-  optional extras are skippable: leaving one blank leaves it out of every
-  total below rather
+  extra non-commute car km/week, whether you own a car, number of dogs and
+  cats, and household water usage in m&sup3;/yr) come first, each converted
+  to a yearly kg CO2e figure. The optional extras are skippable: leaving
+  one blank leaves it out of every total below rather
   than counting it as zero, so an unanswered question never makes your
   estimate look artificially low. The "Your year, estimated" analysis
   card below rolls those together with your fully confirmed weeks' average
@@ -240,6 +240,11 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   per cat, mostly driven by their (often meat-heavy) diet. The UK-average
   comparison assumes ~0.2 dogs and ~0.15 cats per person, a rough estimate
   from UK pet-population figures.
+- **Water usage** (Stats page, optional): household m&sup3;/yr (from a
+  water bill) &times; ~0.32 kg CO2e/m&sup3;, a rough DEFRA-style combined
+  supply + treatment factor, split evenly across the household the same
+  way electricity and gas are. The UK-average comparison assumes ~122
+  m&sup3;/yr per household (~140 L/person/day).
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
