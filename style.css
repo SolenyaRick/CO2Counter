@@ -688,6 +688,30 @@ input, select {
   border-color: var(--accent);
 }
 
+.avg-week-savings {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.avg-week-savings.avg-week-good {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.avg-week-savings.avg-week-good .stat-value {
+  color: var(--accent);
+}
+
+.avg-week-savings.avg-week-bad {
+  border-color: var(--danger);
+}
+
+.avg-week-savings.avg-week-bad .stat-value {
+  color: var(--danger);
+}
+
 .app-average-figure {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -923,6 +947,18 @@ input, select {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
+}
+
+.goal-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -8px 0 10px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
 }
 
 /* Weeks grid (page 2) */

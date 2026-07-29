@@ -156,7 +156,8 @@
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
 
-    const commute = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * 52;
+    const commuteWeekly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2;
+    const commute = commuteWeekly * 52;
 
     const meatWeekly = a.weeklyMeatDays.reduce((sum, day) => {
       const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
@@ -164,7 +165,8 @@
       return sum + (meatFactor * portionKg + MEAT_SIDES_BASELINE) * wasteMult;
     }, 0);
     const veggieWeekly = a.weeklyVeggieDays * FOOD_DAY_FACTORS.veggie * wasteMult;
-    const food = (meatWeekly + veggieWeekly) * 52;
+    const foodWeekly = meatWeekly + veggieWeekly;
+    const food = foodWeekly * 52;
 
     const flying = a.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + a.longHaulFlights * LONG_HAUL_FLIGHT_KG;
     const homeEnergy = (a.householdKwhPerYear * GRID_ELECTRICITY_KG_PER_KWH) / a.householdPeople;
@@ -175,8 +177,25 @@
     const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
 
     const total = commute + food + flying + homeEnergy + goods + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0);
-    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, total };
+    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, total, commuteWeekly, foodWeekly };
   }
+
+  // Weekly UK-average reference for the This Week page's "Compared to an
+  // average week" card - just commute + food, since those are the only
+  // categories that make up a *weekly* total in this app (flights/home
+  // energy/goods are yearly Stats-page figures, not part of a given week).
+  const UK_AVERAGE_WEEKLY_KG = (() => {
+    const uk = computeUkAverageBreakdown({});
+    return uk.commuteWeekly + uk.foodWeekly;
+  })();
+
+  // MyEmission (a comprehensive carbon-tracking app) states a 6.3 kg CO2e/day
+  // personal budget as roughly a fair-share target to help keep warming
+  // under 1.5C by 2030. That covers a person's WHOLE lifestyle (mobility,
+  // energy, food, shopping, leisure) - not just commute and food - so using
+  // it as a weekly goal here is stricter than intended; see the Account
+  // page copy for that caveat.
+  const PARIS_1_5C_WEEKLY_KG = 6.3 * 7;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -984,7 +1003,32 @@
 
     renderAlcoholSection(weekData);
     renderComparisonCard(weekData, totals);
+    renderAverageWeekCard(selectedWeekKey, totals);
     renderChart(totals.daily, selectedWeekKey, totals.alcohol);
+  }
+
+  // "Compared to an average week" card: a savings-framed comparison against
+  // a UK-average week (commute + food, same bottom-up figures as the Stats
+  // page), prorated to how far through the week it is - so it's meaningful
+  // Wednesday, not just Sunday, and doesn't require logging every category
+  // to be useful (unlike a full manual carbon calculator).
+  function renderAverageWeekCard(weekKey, totals) {
+    const avgWeek = proratedUkAverageForWeek(weekKey);
+    document.getElementById("avg-week-value").textContent = fmt(UK_AVERAGE_WEEKLY_KG);
+
+    const saved = avgWeek - totals.total;
+    const valueEl = document.getElementById("avg-week-savings-value");
+    const labelEl = document.getElementById("avg-week-savings-label");
+    const boxEl = document.getElementById("avg-week-savings-box");
+
+    valueEl.textContent = fmt(Math.abs(saved));
+    boxEl.classList.toggle("avg-week-good", saved >= 0);
+    boxEl.classList.toggle("avg-week-bad", saved < 0);
+
+    const soFar = weekKey === CURRENT_WEEK_KEY ? " so far" : "";
+    labelEl.textContent = saved >= 0
+      ? `kg CO2e saved vs an average week${soFar}`
+      : `kg CO2e over an average week${soFar}`;
   }
 
   function setAlcoholField(weekData, applyFn) {
@@ -1240,6 +1284,14 @@
     const fullGoal = currentGoal();
     if (weekKey !== CURRENT_WEEK_KEY) return fullGoal;
     return fullGoal * (todayIndexInWeek() / 7);
+  }
+
+  // Same day-of-week proration as goalForWeek(), but against the UK average
+  // week rather than your personal goal - so "saved vs an average week" is
+  // meaningful mid-week rather than trivially true on a Monday.
+  function proratedUkAverageForWeek(weekKey) {
+    if (weekKey !== CURRENT_WEEK_KEY) return UK_AVERAGE_WEEKLY_KG;
+    return UK_AVERAGE_WEEKLY_KG * (todayIndexInWeek() / 7);
   }
 
   function statusClass(total, started, goal) {
@@ -1928,6 +1980,13 @@
       profile.weeklyGoalKg = Number.isFinite(val) && val >= 0 ? val : 0;
       persistProfile();
     });
+    function setGoalPreset(kg) {
+      profile.weeklyGoalKg = Math.round(kg * 10) / 10;
+      document.getElementById("profile-goal").value = profile.weeklyGoalKg;
+      persistProfile();
+    }
+    document.getElementById("goal-preset-uk").addEventListener("click", () => setGoalPreset(UK_AVERAGE_WEEKLY_KG));
+    document.getElementById("goal-preset-15c").addEventListener("click", () => setGoalPreset(PARIS_1_5C_WEEKLY_KG));
     document.getElementById("profile-food-waste").addEventListener("change", (e) => {
       profile.foodWaste = e.target.value;
       persistProfile();

@@ -75,6 +75,20 @@
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week">
       <section class="card">
+        <h2>Compared to an average week</h2>
+        <p class="assumptions">
+          An average UK week (commute + food only, the same bottom-up figures used
+          on the Stats page) comes to about <strong id="avg-week-value">0</strong> kg
+          CO2e. You don't need to log every category for this to be useful &mdash;
+          here's how this week is looking against that so far.
+        </p>
+        <div class="avg-week-savings" id="avg-week-savings-box">
+          <span class="stat-value" id="avg-week-savings-value">0.0</span>
+          <span class="stat-label" id="avg-week-savings-label">kg CO2e saved vs an average week</span>
+        </div>
+      </section>
+
+      <section class="card">
         <div class="week-picker" id="week-picker" role="tablist" aria-label="Which week to log">
           <button type="button" class="week-picker-btn" data-week="current">This week</button>
           <button type="button" class="week-picker-btn" data-week="last">Last week</button>
@@ -459,6 +473,22 @@
           Weekly CO2e goal (kg)
           <input type="number" id="profile-goal" min="0" step="1" />
         </label>
+        <div class="goal-presets">
+          <button type="button" class="btn-secondary btn-small" id="goal-preset-uk">Match UK average week</button>
+          <button type="button" class="btn-secondary btn-small" id="goal-preset-15c">1.5&deg;C by 2030 target</button>
+        </div>
+        <p class="assumptions">
+          "Match UK average week" sets your goal to the same commute + food UK
+          average shown on the Stats page (only those two, since that's what
+          this goal tracks). "1.5&deg;C by 2030 target" sets it to 44.1 kg CO2e/week
+          &mdash; the MyEmission app cites a 6.3 kg CO2e/day personal budget as
+          roughly a fair-share target for keeping warming under 1.5&deg;C by 2030.
+          That figure covers a person's <em>whole</em> lifestyle (mobility, energy,
+          food, shopping, leisure), not just commute and food, so using it as your
+          goal here is stricter than intended &mdash; it leaves no room for flights,
+          home energy, or goods, which this app tracks yearly on the Stats page
+          instead.
+        </p>
         <label class="field">
           How much food do you waste?
           <select id="profile-food-waste">

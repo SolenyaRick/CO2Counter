@@ -7,8 +7,16 @@ with accounts and a friends leaderboard backed by Supabase.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
-- **This Week** — the inputs, toggleable between "This week" and "Last week".
-  For each day (M–S) pick how you got to work (Walk, Cycle, Train, Car, or
+- **This Week** — starts with a "Compared to an average week" card: a UK
+  average week (commute + food only, the same bottom-up figures as the
+  Stats page) shown alongside a savings-framed comparison against your
+  week so far — "X kg CO2e saved vs an average week" (green) or "X kg
+  over" (red), prorated to how far through the week it is the same way the
+  Weeks-grid goal is. The point is you don't need to log every category for
+  this to be meaningful, unlike apps that require comprehensive manual
+  tracking before they'll show you anything. Below that, the inputs,
+  toggleable between "This week" and "Last week". For each day (M–S) pick
+  how you got to work (Walk, Cycle, Train, Car, or
   Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
   (veggie), then a meat-type emoji per option (🍗 🥓 🥩 🐟 🍖) — the cut/product
   rather than a live animal, so they're easy to tell apart at a glance and
@@ -89,11 +97,13 @@ with accounts and a friends leaderboard backed by Supabase.
   the comparison is always apples-to-apples — alongside your total
   converted into car miles and mature-trees-of-CO2-absorption equivalents,
   each with a delta against the UK average.
-- **Account** — display name, one-way commute distance, weekly CO2e goal, a
-  food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
-  everywhere to account for produced-but-wasted food), a friends list (add
-  by email, accept/decline requests), sign-out, and export/import/reset for
-  your data.
+- **Account** — display name, one-way commute distance, weekly CO2e goal
+  (with two quick-set presets — "Match UK average week" and "1.5°C by 2030
+  target", see below — alongside typing your own number), a food-waste
+  setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures everywhere
+  to account for produced-but-wasted food), a friends list (add by email,
+  accept/decline requests), sign-out, and export/import/reset for your
+  data.
 
 ## Architecture
 
@@ -188,6 +198,16 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   reuses the same car factor as commuting (~0.171 kg CO2e/km, converted to
   miles); the trees comparison uses ~22 kg CO2e absorbed per mature tree
   per year.
+- **UK average week** (This Week page, and the "Match UK average week" goal
+  preset): the same commute + food UK-average assumptions as above, without
+  the ×52, since this is what a single average week (not year) comes to —
+  roughly 22.8 kg CO2e.
+- **1.5°C by 2030 target** (Account page goal preset): 44.1 kg CO2e/week
+  (6.3 kg/day × 7), the personal daily carbon budget the MyEmission app
+  cites as roughly a fair-share target for keeping warming under 1.5°C by
+  2030. That figure is for a whole lifestyle (mobility, energy, food,
+  shopping, leisure) — using it as a goal here, where only commute, food,
+  and alcohol count toward the weekly total, is stricter than intended.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food
