@@ -32,8 +32,9 @@
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
 
-  // Rough average emission factors, kg CO2e per kg of product.
-  const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 27, lamb: 25, other: 10 };
+  // Rough average emission factors, kg CO2e per kg of product. Beef ~36 and
+  // chicken ~6 per commonly cited figures (beef is roughly 4-6x chicken).
+  const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 36, lamb: 25, other: 10 };
   const MEAT_LABELS = { chicken: "Chicken / poultry", fish: "Fish / seafood", pork: "Pork", beef: "Beef", lamb: "Lamb", other: "Other" };
   // Emoji of the cooked cut/product rather than a live animal - reads as
   // "less lifelike" than an animal-face emoji (or the hand-drawn animal

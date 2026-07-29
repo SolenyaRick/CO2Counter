@@ -158,10 +158,10 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 - **Food** (kg CO2e per day): Vegan ~0.9, Veggie ~1.5. A Meat day is the
   same ~1.5 kg baseline for the rest of that day's food (it isn't any more
   carbon-efficient just because the main is meat), plus the chosen meat
-  type's average footprint per kg (beef and lamb much higher than chicken
-  or fish) times the chosen portion size. So a meat day is always at least
-  as high as a veggie day, e.g. a medium chicken portion comes to ~2.4 kg,
-  a medium beef portion to ~5.6 kg.
+  type's average footprint per kg (beef ~36 kg CO2e/kg and lamb ~25 much
+  higher than chicken ~6 or fish ~5) times the chosen portion size. So a
+  meat day is always at least as high as a veggie day, e.g. a medium
+  chicken portion comes to ~2.4 kg, a medium beef portion to ~6.9 kg.
 - **Food waste** (Account page setting): scales every food figure by
   1/(1-waste%), using each bracket's midpoint — 0–3% → ×1.02, 3–10% → ×1.07,
   10–30% → ×1.25, 30%+ → ×1.67 (assuming 40%). Wasted food still carries the
@@ -201,7 +201,7 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   electricity split across ~2.4 people, and 3 clothing items/month — rather
   than a generic "average footprint" statistic, which would cover a lot
   this app doesn't track (see the Stats page's "What this doesn't account
-  for" card). This core figure comes to roughly 2,400 kg CO2e/yr, well
+  for" card). This core figure comes to roughly 2,430 kg CO2e/yr, well
   below often-cited "average person" figures (8–10 tonnes) because those
   are scoped much more broadly. If you've answered any of the optional
   extras above (gas heating, non-commute driving, car ownership, pets,
@@ -219,7 +219,7 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 - **UK average week** (This Week page, and the "Match UK average week" goal
   preset): the same commute + food UK-average assumptions as above, without
   the ×52, since this is what a single average week (not year) comes to —
-  roughly 22.8 kg CO2e.
+  roughly 24.3 kg CO2e.
 - **1.5°C by 2030 target — comprehensive** (Stats page, "How your year
   compares"): 2,300 kg CO2e/yr (6.3 kg/day × 365), the personal daily
   carbon budget the MyEmission app cites as roughly a fair-share target for
@@ -230,7 +230,7 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   weekly figure, which would make this target look roughly double a "UK
   average" for no reason other than mismatched scope.
 - **1.5°C by 2030 target — food + commute only** (Account page goal
-  preset): ~11.3 kg CO2e/week. There's no officially published
+  preset): ~12.0 kg CO2e/week. There's no officially published
   category-level split of the comprehensive target above, so this is our
   own estimate: applying published 2030 reduction requirements for
   developed countries (nutrition −47%, mobility −72%, per Hot or Cool
