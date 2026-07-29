@@ -147,7 +147,10 @@
   // Monday = 1 ... Sunday = 7.
   function todayIndexInWeek() {
     const today = new Date();
-    const days = Math.round((today - weekStart(today)) / (24 * 60 * 60 * 1000));
+    // floor, not round: any time during Wednesday (00:00-23:59) is 2.x full
+    // days after Monday 00:00, and must stay day-index 3 (Wed) all day, not
+    // round up to 4 (Thu) once past midday.
+    const days = Math.floor((today - weekStart(today)) / (24 * 60 * 60 * 1000));
     return days + 1;
   }
 
