@@ -445,3 +445,42 @@ where p.research_opt_in = true;
 
 revoke all on public.research_profiles from public, authenticated, anon;
 revoke all on public.research_weeks from public, authenticated, anon;
+
+-- In-app access to the two views above, for the Account page's "Download
+-- opted-in research data" button (only shown there when signed in as the
+-- app owner) - an alternative to querying the views directly in the SQL
+-- Editor. Unlike the views, these ARE granted to `authenticated` so the
+-- client can call them via RPC, but each one only ever returns rows when
+-- the caller's own auth.users email matches the hardcoded owner email
+-- below - anyone else gets an empty result, not an error, so the
+-- function's existence doesn't itself reveal anything. If the app owner's
+-- account email ever changes, update the literal in both functions.
+drop function if exists public.research_export_profiles();
+
+create or replace function public.research_export_profiles()
+returns setof public.research_profiles
+language sql
+security definer
+set search_path = public
+as $$
+  select rp.* from public.research_profiles rp
+  where (select email from auth.users where id = auth.uid()) = 'jack.s.brown@outlook.com';
+$$;
+
+revoke all on function public.research_export_profiles() from public;
+grant execute on function public.research_export_profiles() to authenticated;
+
+drop function if exists public.research_export_weeks();
+
+create or replace function public.research_export_weeks()
+returns setof public.research_weeks
+language sql
+security definer
+set search_path = public
+as $$
+  select rw.* from public.research_weeks rw
+  where (select email from auth.users where id = auth.uid()) = 'jack.s.brown@outlook.com';
+$$;
+
+revoke all on function public.research_export_weeks() from public;
+grant execute on function public.research_export_weeks() to authenticated;

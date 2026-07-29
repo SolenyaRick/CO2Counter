@@ -5,6 +5,13 @@
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiZ2Z5bGZuYnR4emJ3Z2lsa3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTg1MjUsImV4cCI6MjEwMDY3NDUyNX0.S-c144dilgUwf8saEjuIQMAp4q-B86R2TRkLV6l9Ym0";
 
+  // Only used to decide whether to show the Account page's research-data
+  // export button - the real access control is server-side (see
+  // research_export_profiles()/research_export_weeks() in schema.sql, which
+  // check the signed-in user's email themselves and return nothing to
+  // anyone else). Showing/hiding the button here is just UX, not security.
+  const OWNER_EMAIL = "jack.s.brown@outlook.com";
+
   // If vendor/supabase.js failed to load for any reason, don't let that crash
   // the whole script — surface it on the login screen instead.
   let sbClient = null;
@@ -233,24 +240,28 @@
     return uk.commuteWeekly + uk.foodWeekly;
   })();
 
-  // MyEmission (a comprehensive carbon-tracking app) states a 6.3 kg CO2e/day
-  // personal budget as roughly a fair-share target to help keep warming
-  // under 1.5C by 2030. That covers a person's WHOLE lifestyle (mobility,
-  // energy, food, shopping, leisure) - so it's compared against the Stats
-  // page's fuller yearly total (which covers 5-8 categories), not the This
-  // Week page's commute+food-only weekly figure, which would make this
-  // target look roughly double a narrower "UK average" for no real reason
-  // other than mismatched scope.
-  const PARIS_1_5C_YEARLY_KG = 6.3 * 365;
+  // The Hot or Cool Institute's "1.5-Degree Lifestyles" research (2021) sets
+  // a 2,500 kg CO2e/yr per-capita consumption-footprint target for 2030 as
+  // roughly a fair-share pathway to keep warming under 1.5C (dropping
+  // further for 2040/2050). That covers a person's WHOLE lifestyle
+  // (mobility, energy, food, shopping, leisure) - so it's compared against
+  // the Stats page's fuller yearly total (which covers 5-8 categories), not
+  // the This Week page's commute+food-only weekly figure, which would make
+  // this target look artificially easy to beat for no real reason other
+  // than mismatched scope. This used to cite MyEmission (a carbon-tracking
+  // app)'s 6.3 kg/day figure instead - switched to Hot or Cool's own
+  // headline number since this app already draws on the same study below
+  // for the food/commute reduction percentages, so the whole 1.5C section
+  // now cites one consistent source rather than two.
+  const PARIS_1_5C_YEARLY_KG = 2500;
 
   // A food+commute-only slice of the 1.5C target, for the weekly goal
   // preset (which only tracks those two categories, plus alcohol). There's
-  // no official published category-level split of the 2.5-tonne/yr target,
-  // so this isn't MyEmission's number - it's our own estimate, applying
-  // published 2030 reduction requirements for developed countries (Hot or
-  // Cool Institute's "1.5-Degree Lifestyles" research: nutrition footprints
-  // need to fall ~47%, mobility ~72%, by 2030) to our own UK-average
-  // commute/food baseline above.
+  // no official published category-level split of the 2,500 kg/yr target
+  // above, so this isn't Hot or Cool's own number - it's our own estimate,
+  // applying published 2030 reduction requirements for developed countries
+  // (the same research: nutrition footprints need to fall ~47%, mobility
+  // ~72%, by 2030) to our own UK-average commute/food baseline above.
   const PARIS_1_5C_FOOD_COMMUTE_WEEKLY_KG = (() => {
     const uk = computeUkAverageBreakdown({});
     return uk.foodWeekly * (1 - 0.47) + uk.commuteWeekly * (1 - 0.72);
@@ -1688,6 +1699,8 @@
     document.getElementById("profile-food-waste").value = profile.foodWaste;
     document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
+    document.getElementById("owner-research-export").hidden =
+      (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
     renderFriendsUI();
   }
 
@@ -1857,6 +1870,33 @@
     const a = document.createElement("a");
     a.href = url;
     a.download = "co2-tracker-data.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Owner-only: downloads every opted-in user's research data (see
+  // research_export_profiles()/research_export_weeks() in schema.sql).
+  // Both RPCs return an empty array for anyone but the app owner - the
+  // button that calls this is also only shown to that account, but the
+  // real enforcement is server-side either way.
+  async function exportResearchData() {
+    const [profilesRes, weeksRes] = await Promise.all([
+      sbClient.rpc("research_export_profiles"),
+      sbClient.rpc("research_export_weeks"),
+    ]);
+    if (profilesRes.error || weeksRes.error) {
+      console.error("Failed to load research data", profilesRes.error, weeksRes.error);
+      alert("Could not load research data — see console for details.");
+      return;
+    }
+    const payload = { profiles: profilesRes.data || [], weeks: weeksRes.data || [] };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "co2-tracker-research-data.json";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -2237,6 +2277,7 @@
     });
 
     document.getElementById("export-data").addEventListener("click", exportData);
+    document.getElementById("export-research-data").addEventListener("click", exportResearchData);
     document.getElementById("import-data").addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (file) importData(file);

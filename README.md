@@ -119,9 +119,12 @@ with accounts and a friends leaderboard backed by Supabase.
   Account/Stats pages except your banking answers becomes visible to the
   app developer for calibrating the UK-average assumptions against real
   data; your name/email/account are never included, see
-  `supabase/README.md` for exactly how this is scoped), a friends list (add
-  by email, accept/decline requests), sign-out, and export/import/reset for
-  your data.
+  `supabase/README.md` for exactly how this is scoped — signed in as the
+  app owner, this card also shows a "Download opted-in research data"
+  button that pulls every opted-in user's data, gated server-side on the
+  signed-in account's email rather than anything checkable client-side), a
+  friends list (add by email, accept/decline requests), sign-out, and
+  export/import/reset for your data.
 
 ## Architecture
 
@@ -222,14 +225,17 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   the ×52, since this is what a single average week (not year) comes to —
   roughly 32.5 kg CO2e.
 - **1.5°C by 2030 target — comprehensive** (Stats page, "How your year
-  compares"): 2,300 kg CO2e/yr (6.3 kg/day × 365), the personal daily
-  carbon budget the MyEmission app cites as roughly a fair-share target for
-  keeping warming under 1.5°C by 2030. This covers a *whole* lifestyle
-  (mobility, energy, food, shopping, leisure) — not just what this app
-  tracks — so it's compared against the Stats page's fuller yearly total
-  (5–8 categories), not the This Week page's narrower commute+food-only
-  weekly figure, which would make this target look roughly double a "UK
-  average" for no reason other than mismatched scope.
+  compares"): 2,500 kg CO2e/yr per capita, the Hot or Cool Institute's
+  "1.5-Degree Lifestyles" research target (dropping further for 2040/2050)
+  as roughly a fair-share pathway for keeping warming under 1.5°C. This
+  covers a *whole* lifestyle (mobility, energy, food, shopping, leisure) —
+  not just what this app tracks — so it's compared against the Stats
+  page's fuller yearly total (5–8 categories), not the This Week page's
+  narrower commute+food-only weekly figure, which would make this target
+  look artificially easy to beat for no reason other than mismatched
+  scope. (This previously cited the MyEmission app's 6.3 kg CO2e/day
+  figure instead — switched to Hot or Cool's own headline number so this
+  and the food+commute preset below cite one consistent source.)
 - **1.5°C by 2030 target — food + commute only** (Account page goal
   preset): ~16.4 kg CO2e/week. There's no officially published
   category-level split of the comprehensive target above, so this is our

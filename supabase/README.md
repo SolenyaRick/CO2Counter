@@ -109,7 +109,7 @@ and includes a per-bank lookup (mirroring `BANK_KG_PER_POUND_PER_YEAR` in
 ever added to that constant in `app.js`, add a matching `when` branch to
 the `case p.bank_name` expression in this function too.
 
-The most recent run adds a `research_opt_in` boolean column to `profiles`
+A later run adds a `research_opt_in` boolean column to `profiles`
 (`false` by default, unlike every other column on this table - nothing is
 shared until a user actively turns it on from the Account page) and two
 views, `research_profiles` and `research_weeks`, which expose everything
@@ -125,6 +125,23 @@ database access regardless of grants. This is meant for calibrating the
 `UK_AVERAGE_ASSUMPTIONS` constants in `app.js` against real usage once
 enough people opt in, rather than the rough bottom-up estimates they
 currently hold.
+
+The most recent run adds two functions, `research_export_profiles()` and
+`research_export_weeks()`, as an in-app alternative to querying the two
+views above directly - they back the Account page's "Download opted-in
+research data" button (see `OWNER_EMAIL` in `app.js`, which only shows
+that button when signed in as the owner). Unlike the views, both
+functions ARE granted to `authenticated` so the client can call them via
+RPC, but each one only returns rows when
+`(select email from auth.users where id = auth.uid())` matches the
+hardcoded owner email inside the function - anyone else calling either
+RPC gets an empty array back, not an error, so the app can safely call
+them from any signed-in session (the button being hidden for non-owners
+is just UX; this server-side check is the actual access control).
+Verified against a real Postgres instance that calling as the owner's id
+returns the opted-in rows and calling as any other id returns none. If
+the app owner's account email ever changes, update the literal in both
+functions (and `OWNER_EMAIL` in `app.js`).
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
