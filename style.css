@@ -504,8 +504,8 @@ input, select {
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -517,8 +517,9 @@ input, select {
   padding: 0;
 }
 
-.diet-opt.meat-opt {
-  font-size: 1.1rem;
+.diet-opt.meat-opt svg {
+  width: 23px;
+  height: 23px;
 }
 
 .diet-opt:hover {
@@ -562,10 +563,101 @@ input, select {
   color: var(--accent);
 }
 
+.eat-row {
+  display: flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.eat-opt {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  height: 22px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.eat-opt:hover {
+  border-color: var(--accent);
+}
+
+.eat-opt.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .diet-summary {
   font-size: 0.78rem;
   color: var(--text-muted);
   margin-left: 4px;
+}
+
+.alcohol-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.alcohol-fill {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.alcohol-fill-opt {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--border);
+}
+
+.alcohol-fill-opt svg {
+  width: 20px;
+  height: 20px;
+}
+
+.alcohol-fill-opt:hover {
+  color: var(--text-muted);
+}
+
+.alcohol-fill-opt.active {
+  color: var(--accent);
+}
+
+.alcohol-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.alcohol-other {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.alcohol-other .field {
+  flex: 1;
+  min-width: 140px;
 }
 
 .row-footprint {

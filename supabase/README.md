@@ -65,7 +65,10 @@ it as 0); and an `app_wide_weekly_average()` function, used by the
 Leaderboard page's "Everyone on the app" card. That function returns only
 a single aggregate row (an average and a headcount) across every account,
 never any per-user id, name, or row, so it's safe to expose to any
-signed-in user without requiring a friendship.
+signed-in user without requiring a friendship; and an `alcohol` jsonb
+column on `weeks` for the This Week page's weekly (not per-day) alcohol
+tracker — not gated by the confirm flow, since every value there
+(including 0) is already a real answer.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

@@ -65,6 +65,11 @@ create table if not exists public.weeks (
 alter table public.weeks add column if not exists confirmed_commute jsonb not null default '{}'::jsonb;
 alter table public.weeks add column if not exists confirmed_diet jsonb not null default '{}'::jsonb;
 
+-- Alcohol: a single whole-week figure (not tied to a specific day, and not
+-- gated by the per-day confirm flow above - every value here, including 0,
+-- is already a real answer, so it counts toward total_kg immediately).
+alter table public.weeks add column if not exists alcohol jsonb not null default '{"beer":0,"wine":0,"spiritsShots":0,"spiritsAbv":40}'::jsonb;
+
 -- ---------- friendships ----------
 create table if not exists public.friendships (
   id uuid primary key default gen_random_uuid(),

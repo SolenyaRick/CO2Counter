@@ -104,6 +104,38 @@
         <div class="diet-days" id="diet-table"><!-- rows injected by app.js --></div>
       </section>
 
+      <section class="card">
+        <h2>Alcohol this week</h2>
+        <p class="assumptions">
+          For the whole week, not a specific day &mdash; tap a beer/glass to set the
+          count (tap it again to clear). Entirely optional.
+        </p>
+        <div class="alcohol-row">
+          <div class="alcohol-fill" id="alcohol-beer-fill"><!-- icons injected by app.js --></div>
+          <span class="alcohol-count" id="alcohol-beer-count">0 beers</span>
+        </div>
+        <div class="alcohol-row">
+          <div class="alcohol-fill" id="alcohol-wine-fill"><!-- icons injected by app.js --></div>
+          <span class="alcohol-count" id="alcohol-wine-count">0 glasses</span>
+        </div>
+        <div class="alcohol-other">
+          <label class="field">
+            Other alcohol (spirits) &mdash; % ABV
+            <input type="number" id="alcohol-spirits-abv" min="0" max="100" step="1" />
+          </label>
+          <label class="field">
+            Shots this week
+            <input type="number" id="alcohol-spirits-shots" min="0" step="1" />
+          </label>
+          <span class="alcohol-count" id="alcohol-spirits-total">0.0 kg CO2e</span>
+        </div>
+        <p class="assumptions">
+          Rough averages: ~0.5 kg CO2e per beer, ~0.3 kg CO2e per glass of wine, ~0.15 kg
+          CO2e per 25ml shot at 40% ABV (scaled for other strengths) &mdash; covering
+          production, packaging, and transport.
+        </p>
+      </section>
+
       <section class="card summary-card">
         <h2>Weekly summary</h2>
         <div class="summary-totals">
@@ -114,6 +146,10 @@
           <div class="stat">
             <span class="stat-value" id="total-food">0</span>
             <span class="stat-label">kg CO2e &middot; Food</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="total-alcohol">0</span>
+            <span class="stat-label">kg CO2e &middot; Alcohol</span>
           </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="total-week">0</span>

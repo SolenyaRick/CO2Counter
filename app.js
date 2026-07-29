@@ -35,7 +35,59 @@
   // Rough average emission factors, kg CO2e per kg of product.
   const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 27, lamb: 25, other: 10 };
   const MEAT_LABELS = { chicken: "Chicken / poultry", fish: "Fish / seafood", pork: "Pork", beef: "Beef", lamb: "Lamb", other: "Other" };
-  const MEAT_ICONS = { chicken: "🐔", fish: "🐟", pork: "🐷", beef: "🐄", lamb: "🐑" };
+  // Flat single-color silhouettes (currentColor) rather than emoji, so they
+  // pick up the button's active/inactive color and render consistently
+  // across platforms instead of depending on the OS emoji font.
+  const MEAT_ICON_SVGS = {
+    chicken: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<polygon points="3,14 0.5,8.5 5.5,13.3"/>'
+      + '<ellipse cx="9.5" cy="16" rx="6.3" ry="4.7"/>'
+      + '<circle cx="16.5" cy="9.5" r="3.1"/>'
+      + '<polygon points="19.4,8.8 23,9.5 19.4,10.2"/>'
+      + '<polygon points="14.3,7.2 15,4.7 15.7,7"/>'
+      + '<polygon points="15.6,6.8 16.3,4 17,6.8"/>'
+      + '<polygon points="16.9,7 17.6,4.9 18.2,7.3"/>'
+      + '<rect x="7.5" y="20" width="1.2" height="2.8" rx="0.5"/>'
+      + '<rect x="11" y="20" width="1.2" height="2.8" rx="0.5"/>'
+      + '</svg>',
+    pork: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<ellipse cx="11" cy="13" rx="8" ry="6"/>'
+      + '<polygon points="6,7.5 4,3.5 9,6.5"/>'
+      + '<rect x="18" y="10.5" width="5" height="4.5" rx="2"/>'
+      + '<circle cx="20" cy="12.7" r="0.55"/>'
+      + '<circle cx="21.7" cy="12.7" r="0.55"/>'
+      + '<rect x="6" y="18.5" width="1.6" height="3" rx="0.6"/>'
+      + '<rect x="9.5" y="18.8" width="1.6" height="3" rx="0.6"/>'
+      + '<rect x="13" y="18.8" width="1.6" height="3" rx="0.6"/>'
+      + '<rect x="16" y="18.2" width="1.6" height="3" rx="0.6"/>'
+      + '</svg>',
+    beef: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<polygon points="8,7 7,3.2 9.5,6"/>'
+      + '<polygon points="16,7 17,3.2 14.5,6"/>'
+      + '<ellipse cx="3.6" cy="11.5" rx="3" ry="2.1" transform="rotate(-25 3.6 11.5)"/>'
+      + '<ellipse cx="20.4" cy="11.5" rx="3" ry="2.1" transform="rotate(25 20.4 11.5)"/>'
+      + '<rect x="5" y="6.5" width="14" height="11.5" rx="4"/>'
+      + '<rect x="8" y="15.5" width="8" height="5" rx="2.3"/>'
+      + '<circle cx="10.3" cy="18" r="0.7"/>'
+      + '<circle cx="13.7" cy="18" r="0.7"/>'
+      + '</svg>',
+    fish: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<path d="M2 12c3.5-5.5 11-8.5 17-8.5-2.2 2.8-3 5.6-3 8.5s.8 5.7 3 8.5c-6 0-13.5-3-17-8.5z"/>'
+      + '<polygon points="19,7 23,4.5 21.5,12 23,19.5 19,17"/>'
+      + '</svg>',
+    lamb: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+      + '<circle cx="8" cy="11" r="4"/>'
+      + '<circle cx="12.5" cy="9" r="4.4"/>'
+      + '<circle cx="16.5" cy="11.5" r="4"/>'
+      + '<circle cx="9.5" cy="14.5" r="4.2"/>'
+      + '<circle cx="14.5" cy="14.7" r="4.2"/>'
+      + '<circle cx="20.5" cy="13.8" r="3"/>'
+      + '<ellipse cx="22.7" cy="12.5" rx="1.3" ry="1.8" transform="rotate(30 22.7 12.5)"/>'
+      + '<rect x="8.5" y="19.5" width="1.5" height="3" rx="0.6"/>'
+      + '<rect x="12" y="19.8" width="1.5" height="3" rx="0.6"/>'
+      + '<rect x="15.5" y="19.5" width="1.5" height="3" rx="0.6"/>'
+      + '</svg>',
+  };
   // Order the meat picker buttons appear in; "other" has no icon button (kept
   // only so older saved entries with that value still compute correctly).
   const MEAT_ICON_ORDER = ["chicken", "pork", "beef", "fish", "lamb"];
@@ -48,6 +100,45 @@
   // The rest of a meat day's food (breakfast, sides, etc.) is valued the same as a
   // vegetarian day, since it isn't any more carbon-efficient — the meat is added on top.
   const MEAT_SIDES_BASELINE = FOOD_DAY_FACTORS.veggie;
+
+  // Eating out vs. cooking at home, for dinner only. Rough multiplier on
+  // just the dinner slice of a day's food footprint, reflecting a
+  // restaurant/takeaway's extra energy use, larger portions, and food
+  // waste on top of the same ingredients cooked at home. On a meat day,
+  // "dinner" is exactly the meat portion (see foodFootprint) since that's
+  // already modeled as the day's one meat meal; on a veggie/vegan day,
+  // where there's no such split, half the flat day figure is treated as
+  // a stand-in for dinner.
+  const EATING_OUT_MULTIPLIER = 1.5;
+  const VEGGIE_DINNER_SHARE = 0.5;
+
+  // Alcohol - a whole-week figure (not tied to a specific day), so it lives
+  // in its own card rather than the day-by-day tables. Rough averages
+  // covering production, packaging, and transport.
+  const BEER_KG_PER_DRINK = 0.5; // per pint/can
+  const WINE_KG_PER_GLASS = 0.3; // per ~175ml glass
+  const SPIRITS_KG_PER_SHOT_AT_40PCT = 0.15; // per 25ml shot at 40% ABV, scales with ABV
+  const ALCOHOL_FILL_MAX = 10; // length of the beer/wine "fill up" icon rows
+
+  const BEER_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+    + '<rect x="4.5" y="5.5" width="13" height="3" rx="1.5"/>'
+    + '<rect x="5" y="8" width="12" height="13" rx="1.5"/>'
+    + '<path fill-rule="evenodd" d="M20 10.8a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 1 1 0-6.8Zm0 1.7a1.7 1.7 0 1 0 0 3.4 1.7 1.7 0 1 0 0-3.4Z"/>'
+    + '</svg>';
+  const WINE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+    + '<path d="M6.5 4 C6.5 9 8 12.5 12 13 C16 12.5 17.5 9 17.5 4 Z"/>'
+    + '<rect x="11.3" y="13" width="1.4" height="6"/>'
+    + '<rect x="8.5" y="19" width="7" height="1.6" rx="0.8"/>'
+    + '</svg>';
+
+  function alcoholFootprint(weekData) {
+    const a = weekData.alcohol || {};
+    const beer = (a.beer || 0) * BEER_KG_PER_DRINK;
+    const wine = (a.wine || 0) * WINE_KG_PER_GLASS;
+    const abv = a.spiritsAbv || 40;
+    const spirits = (a.spiritsShots || 0) * SPIRITS_KG_PER_SHOT_AT_40PCT * (abv / 40);
+    return beer + wine + spirits;
+  }
 
   // Wasted food still carries the emissions it took to produce. Modeled as
   // "you have to buy/produce 1/(1-waste%) times what you actually eat", using
@@ -158,6 +249,7 @@
       diet: Object.fromEntries(DAYS.map((d) => [d.key, { type: "" }])),
       confirmedCommute: Object.fromEntries(DAYS.map((d) => [d.key, false])),
       confirmedDiet: Object.fromEntries(DAYS.map((d) => [d.key, false])),
+      alcohol: { beer: 0, wine: 0, spiritsShots: 0, spiritsAbv: 40 },
     };
   }
 
@@ -258,13 +350,17 @@
   function foodFootprint(weekData, dayKey) {
     const entry = weekData.diet[dayKey];
     if (!entry || !entry.type) return 0;
+    const eatOutMult = entry.eatOut ? EATING_OUT_MULTIPLIER : 1;
     let base;
-    if (entry.type === "vegan") base = FOOD_DAY_FACTORS.vegan;
-    else if (entry.type === "veggie") base = FOOD_DAY_FACTORS.veggie;
-    else if (entry.type === "meat") {
+    if (entry.type === "vegan" || entry.type === "veggie") {
+      const dayTotal = entry.type === "vegan" ? FOOD_DAY_FACTORS.vegan : FOOD_DAY_FACTORS.veggie;
+      const dinner = dayTotal * VEGGIE_DINNER_SHARE;
+      const restOfDay = dayTotal - dinner;
+      base = restOfDay + dinner * eatOutMult;
+    } else if (entry.type === "meat") {
       const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
       const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
-      base = meatFactor * portionKg + MEAT_SIDES_BASELINE;
+      base = MEAT_SIDES_BASELINE + meatFactor * portionKg * eatOutMult;
     } else {
       return 0;
     }
@@ -272,12 +368,14 @@
   }
 
   // How much extra a meat choice adds on top of an equivalent veggie day —
-  // exactly the meat portion's own footprint, since the baseline for the
-  // rest of the day is valued the same either way.
+  // the meat portion's own footprint (scaled up the same way by eating out,
+  // since a meat dinner out costs proportionally more than a veggie one
+  // out too), on top of a rest-of-day baseline valued the same either way.
   function meatExtra(entry) {
     const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
     const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
-    return meatFactor * portionKg * wasteMultiplier();
+    const eatOutMult = entry.eatOut ? EATING_OUT_MULTIPLIER : 1;
+    return meatFactor * portionKg * eatOutMult * wasteMultiplier();
   }
 
   // Confirmed days count toward totals/chart/leaderboard; picked-but-unconfirmed
@@ -315,7 +413,8 @@
       food += f;
       daily.push(c + f);
     });
-    return { commute, food, total: commute + food, daily };
+    const alcohol = alcoholFootprint(weekData);
+    return { commute, food, alcohol, total: commute + food + alcohol, daily };
   }
 
   function fmt(n) { return n.toFixed(1); }
@@ -429,6 +528,8 @@
         // Fall back to all-false for rows saved before these columns existed.
         confirmedCommute: { ...blank.confirmedCommute, ...(row.confirmed_commute || {}) },
         confirmedDiet: { ...blank.confirmedDiet, ...(row.confirmed_diet || {}) },
+        // Fall back to all-zero for rows saved before this column existed.
+        alcohol: { ...blank.alcohol, ...(row.alcohol || {}) },
         total_kg: row.total_kg,
       };
     });
@@ -467,6 +568,7 @@
         diet: weekData.diet,
         confirmed_commute: weekData.confirmedCommute,
         confirmed_diet: weekData.confirmedDiet,
+        alcohol: weekData.alcohol,
         total_kg: totals.total,
         updated_at: new Date().toISOString(),
       },
@@ -739,8 +841,11 @@
   }
 
   function dietSummaryText(entry) {
-    if (!entry || entry.type !== "meat") return "";
-    return `${MEAT_LABELS[entry.meat] ?? "Meat"} – ${PORTION_LABELS[entry.portion] ?? ""}`;
+    if (!entry || !entry.type) return "";
+    const parts = [];
+    if (entry.type === "meat") parts.push(`${MEAT_LABELS[entry.meat] ?? "Meat"} – ${PORTION_LABELS[entry.portion] ?? ""}`);
+    if (entry.eatOut) parts.push("Eating out (dinner)");
+    return parts.join(" · ");
   }
 
   function setDietEntry(weekData, dayKey, entry, confirmBtn) {
@@ -786,16 +891,18 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "diet-opt" + (meat ? " meat-opt" : "");
-        btn.textContent = label;
+        if (meat) btn.innerHTML = MEAT_ICON_SVGS[meat] || "";
+        else btn.textContent = label;
         btn.title = title;
         btn.setAttribute("aria-label", title);
         const isActive = entry?.type === type && (!meat || entry.meat === meat);
         btn.classList.toggle("active", isActive);
         btn.addEventListener("click", () => {
+          const eatOut = entry?.eatOut || false;
           if (type === "meat") {
-            setDietEntry(weekData, day.key, { type: "meat", meat, portion: entry?.meat === meat ? entry.portion : "medium" }, confirmBtn);
+            setDietEntry(weekData, day.key, { type: "meat", meat, portion: entry?.meat === meat ? entry.portion : "medium", eatOut }, confirmBtn);
           } else {
-            setDietEntry(weekData, day.key, { type }, confirmBtn);
+            setDietEntry(weekData, day.key, { type, eatOut }, confirmBtn);
           }
         });
         return btn;
@@ -804,7 +911,7 @@
       typeRow.appendChild(makeOption("vegan", null, "Ve", "Vegan"));
       typeRow.appendChild(makeOption("veggie", null, "Vg", "Veggie"));
       MEAT_ICON_ORDER.forEach((meat) => {
-        typeRow.appendChild(makeOption("meat", meat, MEAT_ICONS[meat], MEAT_LABELS[meat]));
+        typeRow.appendChild(makeOption("meat", meat, null, MEAT_LABELS[meat]));
       });
       cell.appendChild(typeRow);
 
@@ -827,11 +934,37 @@
           portionRow.appendChild(btn);
         });
         cell.appendChild(portionRow);
+      }
 
-        const summary = document.createElement("span");
-        summary.className = "diet-summary";
-        summary.textContent = dietSummaryText(entry);
-        cell.appendChild(summary);
+      if (entry?.type) {
+        const eatRow = document.createElement("div");
+        eatRow.className = "eat-row";
+        eatRow.setAttribute("role", "group");
+        eatRow.setAttribute("aria-label", `Eating in or out for dinner, ${day.full}`);
+        [
+          { value: false, label: "In" },
+          { value: true, label: "Out" },
+        ].forEach(({ value, label }) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "eat-opt";
+          btn.textContent = label;
+          btn.title = value ? "Eating out for dinner" : "Eating in for dinner";
+          btn.classList.toggle("active", Boolean(entry.eatOut) === value);
+          btn.addEventListener("click", () => {
+            setDietEntry(weekData, day.key, { ...entry, eatOut: value }, confirmBtn);
+          });
+          eatRow.appendChild(btn);
+        });
+        cell.appendChild(eatRow);
+
+        const summaryText = dietSummaryText(entry);
+        if (summaryText) {
+          const summary = document.createElement("span");
+          summary.className = "diet-summary";
+          summary.textContent = summaryText;
+          cell.appendChild(summary);
+        }
       }
 
       const footprint = document.createElement("span");
@@ -875,6 +1008,7 @@
 
     document.getElementById("total-commute").textContent = fmt(totals.commute);
     document.getElementById("total-food").textContent = fmt(totals.food);
+    document.getElementById("total-alcohol").textContent = fmt(totals.alcohol);
     document.getElementById("total-week").textContent = fmt(totals.total);
     document.getElementById("week-range-heading").firstChild.textContent =
       `${weekPickerHeading(selectedWeekKey)} (${weekLabel(selectedWeekKey)}) `;
@@ -884,8 +1018,55 @@
       btn.classList.toggle("active", isCurrent ? selectedWeekKey === CURRENT_WEEK_KEY : selectedWeekKey === LAST_WEEK_KEY);
     });
 
+    renderAlcoholSection(weekData);
     renderComparisonCard(weekData, totals);
-    renderChart(totals.daily, selectedWeekKey);
+    renderChart(totals.daily, selectedWeekKey, totals.alcohol);
+  }
+
+  function setAlcoholField(weekData, applyFn) {
+    applyFn(weekData.alcohol);
+    persistWeek(selectedWeekKey);
+    renderFootprints();
+  }
+
+  function buildFillRow(containerId, count, iconSvg, unitLabel, onSet) {
+    const row = document.getElementById(containerId);
+    row.innerHTML = "";
+    for (let i = 1; i <= ALCOHOL_FILL_MAX; i++) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "alcohol-fill-opt" + (i <= count ? " active" : "");
+      btn.innerHTML = iconSvg;
+      btn.title = `${i} ${unitLabel}${i === 1 ? "" : "s"}`;
+      btn.setAttribute("aria-label", btn.title);
+      btn.addEventListener("click", () => {
+        // Clicking the icon that's already the current count clears it back
+        // to 0 (a quick way to undo), otherwise it sets the count to that icon's position.
+        onSet(i === count ? 0 : i);
+      });
+      row.appendChild(btn);
+    }
+  }
+
+  function renderAlcoholSection(weekData) {
+    const a = weekData.alcohol || { beer: 0, wine: 0, spiritsShots: 0, spiritsAbv: 40 };
+
+    buildFillRow("alcohol-beer-fill", a.beer || 0, BEER_ICON_SVG, "beer", (count) => {
+      setAlcoholField(weekData, (alc) => { alc.beer = count; });
+    });
+    buildFillRow("alcohol-wine-fill", a.wine || 0, WINE_ICON_SVG, "glass", (count) => {
+      setAlcoholField(weekData, (alc) => { alc.wine = count; });
+    });
+
+    document.getElementById("alcohol-beer-count").textContent =
+      `${a.beer || 0} beer${a.beer === 1 ? "" : "s"} · ${fmt((a.beer || 0) * BEER_KG_PER_DRINK)} kg`;
+    document.getElementById("alcohol-wine-count").textContent =
+      `${a.wine || 0} glass${a.wine === 1 ? "" : "es"} · ${fmt((a.wine || 0) * WINE_KG_PER_GLASS)} kg`;
+
+    document.getElementById("alcohol-spirits-abv").value = a.spiritsAbv ?? 40;
+    document.getElementById("alcohol-spirits-shots").value = a.spiritsShots ?? 0;
+    const spiritsKg = (a.spiritsShots || 0) * SPIRITS_KG_PER_SHOT_AT_40PCT * ((a.spiritsAbv || 40) / 40);
+    document.getElementById("alcohol-spirits-total").textContent = `${fmt(spiritsKg)} kg CO2e`;
   }
 
   function renderComparisonCard(weekData, totals) {
@@ -928,12 +1109,15 @@
   // the goal allows for how far through the week it is; staying above it
   // means you're on pace or ahead. For the current week, the actual line
   // only draws up to today - it doesn't project forward.
-  function renderChart(dailyTotals, weekKey) {
+  function renderChart(dailyTotals, weekKey, alcoholKg = 0) {
     const chart = document.getElementById("daily-chart");
     chart.innerHTML = "";
 
     const goal = Math.max(0.0001, currentGoal());
-    const cumulative = [0];
+    // Alcohol isn't tied to a specific day, so it's counted as already
+    // "spent" from the very start of the week rather than accruing on any
+    // one day - keeps this cumulative total consistent with weekTotals().
+    const cumulative = [alcoholKg];
     dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d));
     const remaining = cumulative.map((c) => goal - c);
 
@@ -1746,6 +1930,17 @@
         selectedWeekKey = btn.dataset.week === "current" ? CURRENT_WEEK_KEY : LAST_WEEK_KEY;
         renderWeekPage();
       });
+    });
+
+    document.getElementById("alcohol-spirits-abv").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      const weekData = getWeek(selectedWeekKey);
+      setAlcoholField(weekData, (alc) => { alc.spiritsAbv = Number.isFinite(val) && val >= 0 ? val : 0; });
+    });
+    document.getElementById("alcohol-spirits-shots").addEventListener("input", (e) => {
+      const val = parseFloat(e.target.value);
+      const weekData = getWeek(selectedWeekKey);
+      setAlcoholField(weekData, (alc) => { alc.spiritsShots = Number.isFinite(val) && val >= 0 ? val : 0; });
     });
 
     document.getElementById("profile-name").addEventListener("input", (e) => {
