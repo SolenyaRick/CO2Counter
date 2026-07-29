@@ -18,7 +18,15 @@ with accounts and a friends leaderboard backed by Supabase.
   "Last week"). Also shows a "This week, in context" card that converts your
   confirmed total into an equivalent car-km distance (DEFRA-style car
   factor) and how much CO2e you'd have saved if every confirmed meat day had
-  been veggie instead, broken down by meat type (e.g. beef vs chicken).
+  been veggie instead, broken down by meat type (e.g. beef vs chicken). The
+  weekly summary chart is a Monzo Trends-style "budget pace" line chart: a
+  dashed target line burns straight down from your weekly goal to 0 across
+  Mon–Sun, plotted against a solid line for your actual remaining budget
+  (goal minus confirmed CO2e so far). The line (and the area under it) turns
+  from green to red if you dip below the dashed pace line — i.e. you're
+  using CO2e faster than the week allows for — even if you haven't blown
+  the full weekly goal yet. For the current week the actual line only draws
+  up to today; it doesn't project the rest of the week for you.
 - **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
   Each box shows that week's total CO2e, color-coded against your goal from
   the Account page, with an over/under-goal indicator. For the current,

@@ -571,37 +571,118 @@ input, select {
   color: var(--text-muted);
 }
 
-.chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  height: 120px;
-  margin-bottom: 16px;
-  padding-top: 8px;
-  border-bottom: 1px solid var(--border);
+.budget-chart {
+  padding-top: 4px;
 }
 
-.chart-bar-wrap {
-  flex: 1;
+.budget-chart-svg {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+.budget-predicted-line {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 3;
+}
+
+.budget-actual-line {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke: var(--accent);
+}
+
+.budget-chart-svg.over-track .budget-actual-line {
+  stroke: var(--danger);
+}
+
+.budget-actual-dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 1.2;
+}
+
+.budget-chart-svg.over-track .budget-actual-dot {
+  fill: var(--danger);
+}
+
+.budget-area {
+  fill: url(#budget-area-fill);
+}
+
+.budget-fill-stop-start {
+  stop-color: var(--accent);
+  stop-opacity: 0.28;
+}
+
+.budget-fill-stop-end {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+
+.budget-chart-svg.over-track .budget-fill-stop-start {
+  stop-color: var(--danger);
+  stop-opacity: 0.22;
+}
+
+.budget-chart-svg.over-track .budget-fill-stop-end {
+  stop-color: var(--danger);
+  stop-opacity: 0;
+}
+
+.budget-zero-line {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.budget-day-label, .budget-axis-label {
+  font-size: 7px;
+  fill: var(--text-muted);
+}
+
+.budget-day-label.is-today {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+.budget-chart-legend {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 6px 0 16px;
+}
+
+.legend-item {
+  display: flex;
   align-items: center;
-  height: 100%;
-  justify-content: flex-end;
   gap: 6px;
 }
 
-.chart-bar {
-  width: 100%;
-  max-width: 28px;
-  background: var(--accent);
-  border-radius: 4px 4px 0 0;
-  min-height: 2px;
+.legend-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
 }
 
-.chart-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+.legend-swatch-target {
+  background-image: linear-gradient(to right, var(--text-muted) 50%, transparent 50%);
+  background-size: 6px 3px;
+}
+
+.legend-swatch-actual.on-track {
+  background: var(--accent);
+}
+
+.legend-swatch-actual.over-track {
+  background: var(--danger);
 }
 
 .assumptions {

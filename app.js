@@ -861,7 +861,7 @@
     });
 
     renderComparisonCard(weekData, totals);
-    renderChart(totals.daily);
+    renderChart(totals.daily, selectedWeekKey);
   }
 
   function renderComparisonCard(weekData, totals) {
@@ -897,28 +897,140 @@
       });
   }
 
-  function renderChart(dailyTotals) {
+  // Monzo Trends-style "budget pace" chart: a dashed target line burns down
+  // from the weekly goal to 0 in a straight line across Mon-Sun, and a solid
+  // line tracks your actual remaining budget (goal minus CO2e confirmed so
+  // far). Falling below the dashed line means you're using CO2e faster than
+  // the goal allows for how far through the week it is; staying above it
+  // means you're on pace or ahead. For the current week, the actual line
+  // only draws up to today - it doesn't project forward.
+  function renderChart(dailyTotals, weekKey) {
     const chart = document.getElementById("daily-chart");
     chart.innerHTML = "";
-    const max = Math.max(1, ...dailyTotals);
+
+    const goal = Math.max(0.0001, currentGoal());
+    const cumulative = [0];
+    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d));
+    const remaining = cumulative.map((c) => goal - c);
+
+    const predicted = [];
+    for (let j = 0; j <= 7; j++) predicted.push(goal * (1 - j / 7));
+
+    const isCurrentWeek = weekKey === CURRENT_WEEK_KEY;
+    const pointCount = isCurrentWeek ? Math.min(todayIndexInWeek(), 7) : 7;
+    const actualPoints = remaining.slice(0, pointCount + 1);
+
+    const W = 300, H = 160, PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
+    const plotW = W - PAD_X * 2;
+    const plotH = H - PAD_TOP - PAD_BOTTOM;
+
+    const allValues = predicted.concat(actualPoints);
+    const yMax = Math.max(goal, ...allValues);
+    const yMin = Math.min(0, ...allValues);
+    const yRange = Math.max(0.0001, yMax - yMin);
+
+    const xAt = (j) => PAD_X + (j / 7) * plotW;
+    const yAt = (v) => PAD_TOP + (1 - (v - yMin) / yRange) * plotH;
+    const pathFor = (values) => values.map((v, j) => `${j === 0 ? "M" : "L"}${xAt(j).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
+
+    const predictedPath = pathFor(predicted);
+    const actualPath = pathFor(actualPoints);
+    const lastJ = actualPoints.length - 1;
+    const finalActual = actualPoints[lastJ];
+    const onTrack = finalActual >= predicted[lastJ];
+    const zeroY = yAt(0).toFixed(1);
+    const areaPath = `${actualPath} L${xAt(lastJ).toFixed(1)},${zeroY} L${xAt(0).toFixed(1)},${zeroY} Z`;
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("class", `budget-chart-svg ${onTrack ? "on-track" : "over-track"}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", `Budget pace: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
+
+    const defs = document.createElementNS(svgNS, "defs");
+    const gradient = document.createElementNS(svgNS, "linearGradient");
+    gradient.setAttribute("id", "budget-area-fill");
+    gradient.setAttribute("x1", "0"); gradient.setAttribute("y1", "0");
+    gradient.setAttribute("x2", "0"); gradient.setAttribute("y2", "1");
+    const stop1 = document.createElementNS(svgNS, "stop");
+    stop1.setAttribute("offset", "0%");
+    stop1.setAttribute("class", "budget-fill-stop-start");
+    const stop2 = document.createElementNS(svgNS, "stop");
+    stop2.setAttribute("offset", "100%");
+    stop2.setAttribute("class", "budget-fill-stop-end");
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+    svg.appendChild(defs);
+
+    if (yMin < 0) {
+      const zeroLine = document.createElementNS(svgNS, "line");
+      zeroLine.setAttribute("x1", xAt(0)); zeroLine.setAttribute("x2", xAt(7));
+      zeroLine.setAttribute("y1", zeroY); zeroLine.setAttribute("y2", zeroY);
+      zeroLine.setAttribute("class", "budget-zero-line");
+      svg.appendChild(zeroLine);
+    }
+
+    const area = document.createElementNS(svgNS, "path");
+    area.setAttribute("d", areaPath);
+    area.setAttribute("class", "budget-area");
+    svg.appendChild(area);
+
+    const predictedLine = document.createElementNS(svgNS, "path");
+    predictedLine.setAttribute("d", predictedPath);
+    predictedLine.setAttribute("class", "budget-predicted-line");
+    svg.appendChild(predictedLine);
+
+    const actualLine = document.createElementNS(svgNS, "path");
+    actualLine.setAttribute("d", actualPath);
+    actualLine.setAttribute("class", "budget-actual-line");
+    svg.appendChild(actualLine);
+
+    const dot = document.createElementNS(svgNS, "circle");
+    dot.setAttribute("cx", xAt(lastJ));
+    dot.setAttribute("cy", yAt(finalActual));
+    dot.setAttribute("r", 3.2);
+    dot.setAttribute("class", "budget-actual-dot");
+    svg.appendChild(dot);
+
+    const goalLabel = document.createElementNS(svgNS, "text");
+    goalLabel.textContent = `${fmt(goal)} kg goal`;
+    goalLabel.setAttribute("x", xAt(0));
+    goalLabel.setAttribute("y", Math.max(9, yAt(goal) - 5));
+    goalLabel.setAttribute("class", "budget-axis-label");
+    svg.appendChild(goalLabel);
+
+    if (yMin < 0) {
+      const zeroLabel = document.createElementNS(svgNS, "text");
+      zeroLabel.textContent = "0";
+      zeroLabel.setAttribute("x", xAt(0));
+      zeroLabel.setAttribute("y", Number(zeroY) - 3);
+      zeroLabel.setAttribute("class", "budget-axis-label");
+      svg.appendChild(zeroLabel);
+    }
+
     DAYS.forEach((day, i) => {
-      const wrap = document.createElement("div");
-      wrap.className = "chart-bar-wrap";
-
-      const bar = document.createElement("div");
-      bar.className = "chart-bar";
-      const heightPct = Math.max(2, (dailyTotals[i] / max) * 100);
-      bar.style.height = `${heightPct}%`;
-      bar.title = `${day.full}: ${fmt(dailyTotals[i])} kg CO2e`;
-
-      const label = document.createElement("div");
-      label.className = "chart-label";
+      const isToday = isCurrentWeek && i + 1 === todayIndexInWeek();
+      const label = document.createElementNS(svgNS, "text");
       label.textContent = day.short;
-
-      wrap.appendChild(bar);
-      wrap.appendChild(label);
-      chart.appendChild(wrap);
+      label.setAttribute("x", xAt(i + 0.5).toFixed(1));
+      label.setAttribute("y", H - 6);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("class", "budget-day-label" + (isToday ? " is-today" : ""));
+      svg.appendChild(label);
     });
+
+    chart.appendChild(svg);
+
+    const legend = document.createElement("div");
+    legend.className = "budget-chart-legend";
+    legend.innerHTML = `
+      <span class="legend-item"><span class="legend-swatch legend-swatch-target"></span>Target pace</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch-actual ${onTrack ? "on-track" : "over-track"}"></span>${onTrack ? "On pace" : "Over pace"} &middot; ${fmt(Math.abs(finalActual))} kg ${finalActual >= 0 ? "left" : "over goal"}</span>
+    `;
+    chart.appendChild(legend);
   }
 
   function renderWeekPage() {
