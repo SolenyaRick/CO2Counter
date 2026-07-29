@@ -504,8 +504,8 @@ input, select {
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -517,9 +517,8 @@ input, select {
   padding: 0;
 }
 
-.diet-opt.meat-opt svg {
-  width: 23px;
-  height: 23px;
+.diet-opt.meat-opt {
+  font-size: 1.15rem;
 }
 
 .diet-opt:hover {

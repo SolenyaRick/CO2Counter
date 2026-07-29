@@ -9,9 +9,11 @@ with accounts and a friends leaderboard backed by Supabase.
   flow), gating the rest of the app.
 - **This Week** — the inputs, toggleable between "This week" and "Last week".
   For each day (M–S) pick how you got to work (Walk, Cycle, Train, Car, or
-  Didn't travel) and what you ate — a row of tap targets (flat silhouette
-  icons, not emoji, so they render the same everywhere): Ve (vegan), Vg
-  (veggie), then chicken/pork/beef/fish/lamb. Tapping a meat icon reveals a
+  Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
+  (veggie), then a meat-type emoji per option (🍗 🥓 🥩 🐟 🍖) — the cut/product
+  rather than a live animal, so they're easy to tell apart at a glance and
+  read a bit less "cutesy" than an animal-face emoji. Tapping a meat icon
+  reveals a
   Small/Medium/Large portion picker right below it. Once any diet is picked,
   an In/Out toggle lets you say whether dinner was eaten in or out — eating
   out applies a rough 1.5&times; multiplier to just the dinner slice of that

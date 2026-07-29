@@ -35,59 +35,11 @@
   // Rough average emission factors, kg CO2e per kg of product.
   const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 27, lamb: 25, other: 10 };
   const MEAT_LABELS = { chicken: "Chicken / poultry", fish: "Fish / seafood", pork: "Pork", beef: "Beef", lamb: "Lamb", other: "Other" };
-  // Flat single-color silhouettes (currentColor) rather than emoji, so they
-  // pick up the button's active/inactive color and render consistently
-  // across platforms instead of depending on the OS emoji font.
-  const MEAT_ICON_SVGS = {
-    chicken: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '<polygon points="3,14 0.5,8.5 5.5,13.3"/>'
-      + '<ellipse cx="9.5" cy="16" rx="6.3" ry="4.7"/>'
-      + '<circle cx="16.5" cy="9.5" r="3.1"/>'
-      + '<polygon points="19.4,8.8 23,9.5 19.4,10.2"/>'
-      + '<polygon points="14.3,7.2 15,4.7 15.7,7"/>'
-      + '<polygon points="15.6,6.8 16.3,4 17,6.8"/>'
-      + '<polygon points="16.9,7 17.6,4.9 18.2,7.3"/>'
-      + '<rect x="7.5" y="20" width="1.2" height="2.8" rx="0.5"/>'
-      + '<rect x="11" y="20" width="1.2" height="2.8" rx="0.5"/>'
-      + '</svg>',
-    pork: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '<ellipse cx="11" cy="13" rx="8" ry="6"/>'
-      + '<polygon points="6,7.5 4,3.5 9,6.5"/>'
-      + '<rect x="18" y="10.5" width="5" height="4.5" rx="2"/>'
-      + '<circle cx="20" cy="12.7" r="0.55"/>'
-      + '<circle cx="21.7" cy="12.7" r="0.55"/>'
-      + '<rect x="6" y="18.5" width="1.6" height="3" rx="0.6"/>'
-      + '<rect x="9.5" y="18.8" width="1.6" height="3" rx="0.6"/>'
-      + '<rect x="13" y="18.8" width="1.6" height="3" rx="0.6"/>'
-      + '<rect x="16" y="18.2" width="1.6" height="3" rx="0.6"/>'
-      + '</svg>',
-    beef: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '<polygon points="8,7 7,3.2 9.5,6"/>'
-      + '<polygon points="16,7 17,3.2 14.5,6"/>'
-      + '<ellipse cx="3.6" cy="11.5" rx="3" ry="2.1" transform="rotate(-25 3.6 11.5)"/>'
-      + '<ellipse cx="20.4" cy="11.5" rx="3" ry="2.1" transform="rotate(25 20.4 11.5)"/>'
-      + '<rect x="5" y="6.5" width="14" height="11.5" rx="4"/>'
-      + '<rect x="8" y="15.5" width="8" height="5" rx="2.3"/>'
-      + '<circle cx="10.3" cy="18" r="0.7"/>'
-      + '<circle cx="13.7" cy="18" r="0.7"/>'
-      + '</svg>',
-    fish: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '<path d="M2 12c3.5-5.5 11-8.5 17-8.5-2.2 2.8-3 5.6-3 8.5s.8 5.7 3 8.5c-6 0-13.5-3-17-8.5z"/>'
-      + '<polygon points="19,7 23,4.5 21.5,12 23,19.5 19,17"/>'
-      + '</svg>',
-    lamb: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
-      + '<circle cx="8" cy="11" r="4"/>'
-      + '<circle cx="12.5" cy="9" r="4.4"/>'
-      + '<circle cx="16.5" cy="11.5" r="4"/>'
-      + '<circle cx="9.5" cy="14.5" r="4.2"/>'
-      + '<circle cx="14.5" cy="14.7" r="4.2"/>'
-      + '<circle cx="20.5" cy="13.8" r="3"/>'
-      + '<ellipse cx="22.7" cy="12.5" rx="1.3" ry="1.8" transform="rotate(30 22.7 12.5)"/>'
-      + '<rect x="8.5" y="19.5" width="1.5" height="3" rx="0.6"/>'
-      + '<rect x="12" y="19.8" width="1.5" height="3" rx="0.6"/>'
-      + '<rect x="15.5" y="19.5" width="1.5" height="3" rx="0.6"/>'
-      + '</svg>',
-  };
+  // Emoji of the cooked cut/product rather than a live animal - reads as
+  // "less lifelike" than an animal-face emoji (or the hand-drawn animal
+  // silhouettes this replaced, which turned out too similar to tell apart
+  // at button size) while staying easy to visually distinguish at a glance.
+  const MEAT_ICONS = { chicken: "🍗", pork: "🥓", beef: "🥩", fish: "🐟", lamb: "🍖" };
   // Order the meat picker buttons appear in; "other" has no icon button (kept
   // only so older saved entries with that value still compute correctly).
   const MEAT_ICON_ORDER = ["chicken", "pork", "beef", "fish", "lamb"];
@@ -904,8 +856,7 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "diet-opt" + (meat ? " meat-opt" : "");
-        if (meat) btn.innerHTML = MEAT_ICON_SVGS[meat] || "";
-        else btn.textContent = label;
+        btn.textContent = meat ? (MEAT_ICONS[meat] || "?") : label;
         btn.title = title;
         btn.setAttribute("aria-label", title);
         const isActive = entry?.type === type && (!meat || entry.meat === meat);
@@ -924,7 +875,7 @@
       typeRow.appendChild(makeOption("vegan", null, "Ve", "Vegan"));
       typeRow.appendChild(makeOption("veggie", null, "Vg", "Veggie"));
       MEAT_ICON_ORDER.forEach((meat) => {
-        typeRow.appendChild(makeOption("meat", meat, null, MEAT_LABELS[meat]));
+        typeRow.appendChild(makeOption("meat", meat, MEAT_ICONS[meat], MEAT_LABELS[meat]));
       });
       cell.appendChild(typeRow);
 
