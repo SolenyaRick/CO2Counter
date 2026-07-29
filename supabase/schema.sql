@@ -157,6 +157,16 @@ create policy "friendships: either side can delete" on public.friendships
 -- Look up a user id by email, for sending a friend request. Returns null if
 -- no match. security definer so it can read auth.users without granting
 -- broad access; only ever returns a bare id, never other account details.
+--
+-- Every function below is preceded by a DROP FUNCTION IF EXISTS: Postgres
+-- rejects CREATE OR REPLACE FUNCTION when the return columns change
+-- ("cannot change return type of existing function" / "Row type defined
+-- by OUT parameters is different"), and several of these have gained
+-- columns across earlier versions of this file. Dropping first makes
+-- every function here safe to re-run regardless of which version you last
+-- applied.
+drop function if exists public.find_user_by_email(text);
+
 create or replace function public.find_user_by_email(lookup_email text)
 returns uuid
 language sql
@@ -174,6 +184,8 @@ grant execute on function public.find_user_by_email(text) to authenticated;
 -- with at least one confirmed day are included - otherwise a week with
 -- nothing but unconfirmed drafts (total_kg = 0) would misleadingly rank as
 -- a perfect zero-carbon week.
+drop function if exists public.friend_leaderboard(text);
+
 create or replace function public.friend_leaderboard(target_week_key text)
 returns table (user_id uuid, display_name text, total_kg numeric, is_self boolean)
 language sql
@@ -209,6 +221,8 @@ grant execute on function public.friend_leaderboard(text) to authenticated;
 -- average down as if it were a real full week. NOT used for
 -- friend_leaderboard() itself, which needs to keep working on a live,
 -- still-in-progress "this week".
+drop function if exists public.week_is_fully_confirmed(jsonb);
+
 create or replace function public.week_is_fully_confirmed(confirmed jsonb)
 returns boolean
 language sql
@@ -229,6 +243,8 @@ grant execute on function public.week_is_fully_confirmed(jsonb) to authenticated
 -- SHORT_HAUL_FLIGHT_KG etc. in app.js) and adds it on top of the average
 -- this function returns, using the flight/home-energy profiles columns
 -- friends can already read via the "profiles: friends can select" policy.
+drop function if exists public.friend_weekly_average();
+
 create or replace function public.friend_weekly_average()
 returns table (user_id uuid, display_name text, avg_weekly_kg numeric, weeks_confirmed integer, is_self boolean)
 language sql
