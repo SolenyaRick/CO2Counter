@@ -110,6 +110,8 @@
   // scored as if that category doesn't apply to them.
   const GAS_HEATING_KG_PER_KWH = 0.18; // rough blended gas/oil heating factor
   const CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR = 700; // rough embodied build footprint, amortized over an ~14yr average car lifetime
+  const DOG_KG_PER_YEAR = 770; // rough average dog footprint/yr (mostly diet-driven)
+  const CAT_KG_PER_YEAR = 310; // rough average cat footprint/yr
 
   const KM_PER_MILE = 1.60934;
   const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
@@ -145,9 +147,11 @@
     // UK's 8 tracked categories".
     annualGasKwh: 12000, // rough typical UK gas-heated household usage/yr
     weeklyNonCommuteCarKm: 50, // rough extra (non-commute) driving per week
+    numDogs: 0.2, // rough UK dogs-per-person (~13M dogs / ~67M population)
+    numCats: 0.15, // rough UK cats-per-person (~11M cats / ~67M population)
   };
 
-  // includeOptional: { gasHeating, nonCommuteCar, carOwnership } booleans -
+  // includeOptional: { gasHeating, nonCommuteCar, carOwnership, pets } booleans -
   // pass whichever optional categories the person being compared against has
   // actually answered, so both sides of the comparison cover the same ground.
   // Returns a per-category breakdown (not just a total) so each domain on
@@ -175,9 +179,11 @@
     const gasHeating = includeOptional.gasHeating ? (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople : null;
     const nonCommuteCar = includeOptional.nonCommuteCar ? a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
+    const pets = includeOptional.pets ? a.numDogs * DOG_KG_PER_YEAR + a.numCats * CAT_KG_PER_YEAR : null;
 
-    const total = commute + food + flying + homeEnergy + goods + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0);
-    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, total, commuteWeekly, foodWeekly };
+    const total = commute + food + flying + homeEnergy + goods
+      + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0) + (pets || 0);
+    return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, total, commuteWeekly, foodWeekly };
   }
 
   // Weekly UK-average reference for the This Week page's "Compared to an
@@ -199,6 +205,44 @@
   // other than mismatched scope.
   const PARIS_1_5C_YEARLY_KG = 6.3 * 365;
 
+  // A food+commute-only slice of the 1.5C target, for the weekly goal
+  // preset (which only tracks those two categories, plus alcohol). There's
+  // no official published category-level split of the 2.5-tonne/yr target,
+  // so this isn't MyEmission's number - it's our own estimate, applying
+  // published 2030 reduction requirements for developed countries (Hot or
+  // Cool Institute's "1.5-Degree Lifestyles" research: nutrition footprints
+  // need to fall ~47%, mobility ~72%, by 2030) to our own UK-average
+  // commute/food baseline above.
+  const PARIS_1_5C_FOOD_COMMUTE_WEEKLY_KG = (() => {
+    const uk = computeUkAverageBreakdown({});
+    return uk.foodWeekly * (1 - 0.47) + uk.commuteWeekly * (1 - 0.72);
+  })();
+
+  // A lightweight bottom-up "world average" week (commute + food only,
+  // same shape as UK_AVERAGE_ASSUMPTIONS), for the "Match world average
+  // week" goal preset. Much rougher than the UK figures above - there's no
+  // single global survey of commute distances or diets the way the UK has
+  // national travel/diet surveys, so this blends a lower car-commute
+  // distance and less meat than the UK figures, reflecting that most of
+  // the world's population drives less and eats less meat on average than
+  // the UK does. Treat this one as more illustrative than the others.
+  const WORLD_AVERAGE_WEEKLY_KG = (() => {
+    const wasteMult = FOOD_WASTE_MULTIPLIERS.some;
+    const commuteWeekly = TRANSPORT_FACTORS.car * 4 * 2; // ~4km one-way car-equivalent
+    const meatDays = [
+      { meat: "chicken", portion: "medium" },
+      { meat: "chicken", portion: "medium" },
+      { meat: "fish", portion: "medium" },
+    ];
+    const meatWeekly = meatDays.reduce((sum, day) => {
+      const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
+      const portionKg = PORTION_KG[day.portion] ?? PORTION_KG.medium;
+      return sum + (meatFactor * portionKg + MEAT_SIDES_BASELINE) * wasteMult;
+    }, 0);
+    const veggieWeekly = 4 * FOOD_DAY_FACTORS.veggie * wasteMult; // 4 veggie days
+    return commuteWeekly + meatWeekly + veggieWeekly;
+  })();
+
   const DEFAULT_PROFILE = {
     name: "",
     commuteDistanceKm: 8,
@@ -214,6 +258,8 @@
     annualGasKwh: null,
     weeklyNonCommuteCarKm: null,
     ownsCar: null,
+    numDogs: null,
+    numCats: null,
   };
 
   function blankWeek() {
@@ -445,6 +491,8 @@
         annualGasKwh: data.annual_gas_kwh ?? null,
         weeklyNonCommuteCarKm: data.weekly_noncommute_car_km ?? null,
         ownsCar: data.owns_car ?? null,
+        numDogs: data.num_dogs ?? null,
+        numCats: data.num_cats ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -467,6 +515,8 @@
       annual_gas_kwh: profile.annualGasKwh,
       weekly_noncommute_car_km: profile.weeklyNonCommuteCarKm,
       owns_car: profile.ownsCar,
+      num_dogs: profile.numDogs,
+      num_cats: profile.numCats,
     };
   }
 
@@ -1563,6 +1613,8 @@
     document.getElementById("gas-heating-kwh").value = optionalInputValue(profile.annualGasKwh);
     document.getElementById("noncommute-car-km").value = optionalInputValue(profile.weeklyNonCommuteCarKm);
     document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
+    document.getElementById("num-dogs").value = optionalInputValue(profile.numDogs);
+    document.getElementById("num-cats").value = optionalInputValue(profile.numCats);
 
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
@@ -1586,13 +1638,16 @@
       gasHeating: profile.annualGasKwh !== null && profile.annualGasKwh !== undefined,
       nonCommuteCar: profile.weeklyNonCommuteCarKm !== null && profile.weeklyNonCommuteCarKm !== undefined,
       carOwnership: profile.ownsCar !== null && profile.ownsCar !== undefined,
+      pets: (profile.numDogs !== null && profile.numDogs !== undefined) || (profile.numCats !== null && profile.numCats !== undefined),
     };
     const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
     const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
+    const yearlyPets = includeOptional.pets ? (profile.numDogs || 0) * DOG_KG_PER_YEAR + (profile.numCats || 0) * CAT_KG_PER_YEAR : null;
     if (yearlyGasHeating !== null) yearlyTotal += yearlyGasHeating;
     if (yearlyNonCommuteCar !== null) yearlyTotal += yearlyNonCommuteCar;
     if (yearlyCarOwnership !== null) yearlyTotal += yearlyCarOwnership;
+    if (yearlyPets !== null) yearlyTotal += yearlyPets;
 
     document.getElementById("yearly-avg-food").textContent = fmt(avgFood);
     document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
@@ -1604,6 +1659,7 @@
     document.getElementById("yearly-gas-heating").textContent = yearlyGasHeating === null ? "–" : Math.round(yearlyGasHeating).toLocaleString();
     document.getElementById("yearly-noncommute-car").textContent = yearlyNonCommuteCar === null ? "–" : Math.round(yearlyNonCommuteCar).toLocaleString();
     document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
+    document.getElementById("yearly-pets").textContent = yearlyPets === null ? "–" : Math.round(yearlyPets).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
 
     const uk = computeUkAverageBreakdown(includeOptional);
@@ -1618,6 +1674,7 @@
     setComparisonDiff("yearly-gas-heating-diff", yearlyGasHeating, uk.gasHeating, "kg");
     setComparisonDiff("yearly-noncommute-car-diff", yearlyNonCommuteCar, uk.nonCommuteCar, "kg");
     setComparisonDiff("yearly-car-ownership-diff", yearlyCarOwnership, uk.carOwnership, "kg");
+    setComparisonDiff("yearly-pets-diff", yearlyPets, uk.pets, "kg");
 
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);
@@ -2001,6 +2058,8 @@
       persistProfile();
     }
     document.getElementById("goal-preset-uk").addEventListener("click", () => setGoalPreset(UK_AVERAGE_WEEKLY_KG));
+    document.getElementById("goal-preset-15c-fc").addEventListener("click", () => setGoalPreset(PARIS_1_5C_FOOD_COMMUTE_WEEKLY_KG));
+    document.getElementById("goal-preset-world").addEventListener("click", () => setGoalPreset(WORLD_AVERAGE_WEEKLY_KG));
     document.getElementById("profile-food-waste").addEventListener("change", (e) => {
       profile.foodWaste = e.target.value;
       persistProfile();
@@ -2034,6 +2093,8 @@
     }
     bindOptionalNumberField("gas-heating-kwh", (v) => { profile.annualGasKwh = v; });
     bindOptionalNumberField("noncommute-car-km", (v) => { profile.weeklyNonCommuteCarKm = v; });
+    bindOptionalNumberField("num-dogs", (v) => { profile.numDogs = v; });
+    bindOptionalNumberField("num-cats", (v) => { profile.numCats = v; });
 
     document.getElementById("owns-car").addEventListener("change", (e) => {
       profile.ownsCar = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;

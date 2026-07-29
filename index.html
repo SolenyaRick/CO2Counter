@@ -329,6 +329,19 @@
           footprint, amortized over an average ~14-year car lifetime &mdash; separate
           from the fuel/charging for trips you log elsewhere in the app.
         </p>
+        <label class="field">
+          Dogs
+          <input type="number" id="num-dogs" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <label class="field">
+          Cats
+          <input type="number" id="num-cats" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Uses rough average footprints of ~770 kg CO2e/yr per dog and ~310 kg
+          CO2e/yr per cat &mdash; mostly driven by their (often meat-heavy) diet.
+          Answering either one counts the other as 0 if left blank.
+        </p>
       </section>
 
       <section class="card">
@@ -381,6 +394,11 @@
             <span class="stat-value" id="yearly-car-ownership">–</span>
             <span class="stat-label">kg CO2e/yr &middot; Car manufacturing (optional)</span>
             <span class="week-diff" id="yearly-car-ownership-diff"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-pets">–</span>
+            <span class="stat-label">kg CO2e/yr &middot; Pets (optional)</span>
+            <span class="week-diff" id="yearly-pets-diff"></span>
           </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="yearly-total">0</span>
@@ -444,16 +462,15 @@
         <p class="assumptions">
           This app tracks commuting, food, flights, home electricity, clothing
           purchases, and (optionally, above) gas/oil heating, non-commute car driving,
-          and car ownership &mdash; a real personal footprint includes a lot more, so
-          treat every total here as a partial, illustrative estimate, not your actual
-          footprint:
+          car ownership, and pets &mdash; a real personal footprint includes a lot
+          more, so treat every total here as a partial, illustrative estimate, not
+          your actual footprint:
         </p>
         <ul class="unaccounted-list">
           <li>Non-car, non-commute travel: taxis/rideshare, buses, ferries, trains beyond your commute, cruises</li>
           <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, alcohol, snacks, eating out vs. cooking, food miles/packaging</li>
           <li>Purchases beyond clothing: electronics, furniture, appliances, subscriptions, streaming/data use</li>
           <li>Household waste and water usage</li>
-          <li>Pets</li>
           <li>Your share of public services, infrastructure, and government spending &mdash; often a substantial slice of "full" consumption-based footprint figures, and essentially impossible to self-report</li>
         </ul>
         <p class="assumptions">
@@ -490,13 +507,23 @@
         </label>
         <div class="goal-presets">
           <button type="button" class="btn-secondary btn-small" id="goal-preset-uk">Match UK average week</button>
+          <button type="button" class="btn-secondary btn-small" id="goal-preset-15c-fc">1.5&deg;C 2030 (food + commute)</button>
+          <button type="button" class="btn-secondary btn-small" id="goal-preset-world">Match world average week</button>
         </div>
         <p class="assumptions">
-          Sets your goal to the same commute + food UK average shown on the Stats
-          page (only those two, since that's what this weekly goal tracks). Looking
-          for the 1.5&deg;C by 2030 climate target instead? That's on the Stats page,
-          compared against your fuller yearly total rather than this narrower weekly
-          figure.
+          "Match UK average week" sets your goal to the same commute + food UK
+          average shown on the Stats page (only those two, since that's what this
+          weekly goal tracks). "1.5&deg;C 2030 (food + commute)" is our own estimate
+          (~11.3 kg CO2e/week) &mdash; there's no official category-level split of
+          the 1.5&deg;C target (see the Stats page for that comprehensive figure), so
+          this applies published 2030 reduction requirements for developed countries
+          (nutrition &minus;47%, mobility &minus;72%, per Hot or Cool Institute
+          research) to the UK-average food and commute figures above. "Match world
+          average week" (~15.3 kg CO2e/week) is the roughest of the three &mdash;
+          there's no global equivalent of the UK's national travel/diet surveys, so
+          it's a rough estimate assuming less car use and less meat than the UK
+          figures, reflecting that most of the world's population drives and eats
+          meat less than the UK does on average.
         </p>
         <label class="field">
           How much food do you waste?

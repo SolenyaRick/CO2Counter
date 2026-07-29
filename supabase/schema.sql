@@ -40,6 +40,8 @@ alter table public.profiles add constraint profiles_food_waste_bracket_check
 alter table public.profiles add column if not exists annual_gas_kwh numeric;
 alter table public.profiles add column if not exists weekly_noncommute_car_km numeric;
 alter table public.profiles add column if not exists owns_car boolean;
+alter table public.profiles add column if not exists num_dogs numeric;
+alter table public.profiles add column if not exists num_cats numeric;
 
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
