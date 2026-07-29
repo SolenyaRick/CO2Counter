@@ -295,7 +295,18 @@
   const DEFAULT_PROFILE = {
     name: "",
     commuteDistanceKm: 8,
-    weeklyGoalKg: 20,
+    // Matches the "Match UK average week" preset - a brand-new,
+    // unmodified profile starts out neither ahead of nor behind the UK
+    // average, rather than a flat number that can go stale relative to
+    // the underlying emission factors. (This used to be a hardcoded 20,
+    // which looked fine when FOOD_DAY_FACTORS.veggie was 1.5, but after
+    // that moved to 2.6 - see the Rosi et al. update - an all-veggie
+    // week's food alone came to ~93% of that old default before any
+    // commute was even added, making a fully plant-based diet look like
+    // it was barely beating a stale goal instead of clearly beating a
+    // live one. Existing accounts keep whatever weekly_goal_kg is already
+    // saved for them - only brand-new profiles pick this up.)
+    weeklyGoalKg: Math.round(UK_AVERAGE_WEEKLY_KG * 10) / 10,
     foodWaste: "low",
     shortHaulFlights: 0,
     longHaulFlights: 0,
