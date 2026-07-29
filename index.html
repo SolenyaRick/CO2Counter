@@ -366,6 +366,10 @@
             <span class="week-diff" id="yearly-commute-diff"></span>
           </div>
           <div class="stat">
+            <span class="stat-value" id="yearly-alcohol">0</span>
+            <span class="stat-label">kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
+          </div>
+          <div class="stat">
             <span class="stat-value" id="yearly-flying">0</span>
             <span class="stat-label">kg CO2e/yr &middot; Flying</span>
             <span class="week-diff" id="yearly-flying-diff"></span>
@@ -407,12 +411,14 @@
           </div>
         </div>
         <p class="assumptions">
-          Commute and food are extrapolated from the average of your confirmed weeks so
-          far (needs at least one confirmed week to be non-zero); everything else comes
-          from your answers above. The three optional tiles show &ldquo;&ndash;&rdquo;
-          until you answer them, and are then included in the total below &mdash; and in
-          the UK comparison, which only ever includes the same optional categories you
-          have. All figures are rough, illustrative estimates.
+          Commute, food, and alcohol are extrapolated from the average of your fully
+          confirmed weeks so far (needs at least one to be non-zero); everything else
+          comes from your answers above. The four optional tiles show
+          &ldquo;&ndash;&rdquo; until you answer them, and are then included in the
+          total below &mdash; and in the UK comparison, which only ever includes the
+          same optional categories you have (alcohol isn't part of that UK comparison
+          at all, since it isn't modeled there). All figures are rough, illustrative
+          estimates.
         </p>
       </section>
 
@@ -434,12 +440,13 @@
           app still doesn't track everything (see below).
         </p>
         <p class="assumptions">
-          UK average for the same categories your total above includes: roughly
+          UK average for the same categories your total above includes, except alcohol
+          (not modeled in this average): roughly
           <strong id="uk-average-value">0</strong> kg CO2e/yr. Built the same way as your
           own total &mdash; average UK commute, average week of meat/veggie eating, average
           flights, average household electricity, and (only if you've answered them)
-          average heating, non-commute driving, and car ownership &mdash; run through the
-          same maths, rather than a generic "average footprint" statistic that covers a
+          average heating, non-commute driving, car ownership, and pets &mdash; run through
+          the same maths, rather than a generic "average footprint" statistic that covers a
           lot this app doesn't track (see below). The comparisons below are illustrative
           ways to picture that number, not precise conversions.
         </p>

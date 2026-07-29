@@ -69,10 +69,13 @@ with accounts and a friends leaderboard backed by Supabase.
   the Weeks grid; "All-time weekly average" ranks everyone by their average
   CO2e per *fully* confirmed week (every day, both commute and food — see
   the Weeks page above) since they started, which also folds in a
-  weekly-equivalent share of each person's flights and home electricity
-  (their yearly Stats page figures, divided by 52) so it isn't just
-  commute and food; "Everyone on the app" shows one anonymous, aggregate
-  figure — the same fully-confirmed-week average across every account on
+  weekly-equivalent share of each person's yearly Stats page figures
+  (flights, home electricity, buying goods, and any optional extras
+  they've answered — everything the yearly total on the Stats page
+  includes besides commute/food/alcohol, divided by 52), so this figure
+  and "Stats page yearly total ÷ 52" always agree; "Everyone on the app"
+  shows one anonymous, aggregate figure — the same fully-confirmed-week
+  average across every account on
   the app, and how many people it's based on — with no per-user data or
   names ever exposed (see `app_wide_weekly_average()` in
   `supabase/schema.sql`).
@@ -87,7 +90,8 @@ with accounts and a friends leaderboard backed by Supabase.
   than counting it as zero, so an unanswered question never makes your
   estimate look artificially low. The "Your year, estimated" analysis
   card below rolls those together with your fully confirmed weeks' average
-  commute/food (extrapolated ×52) into an estimated yearly total, next to a
+  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
+  next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). Every domain tile (food,
   commute, flying, home energy, goods, and the three optional extras once

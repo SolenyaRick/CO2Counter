@@ -644,7 +644,11 @@
     if (otherIds.length > 0) {
       const { data: profs } = await sbClient
         .from("profiles")
-        .select("id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, household_kwh_per_month, household_people")
+        .select(
+          "id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, " +
+          "household_kwh_per_month, household_people, clothes_per_month, " +
+          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, num_dogs, num_cats"
+        )
         .in("id", otherIds);
       (profs || []).forEach((p) => {
         namesById[p.id] = p.display_name || "(no name set)";
@@ -653,6 +657,12 @@
           longHaulFlights: p.long_haul_flights_per_year ?? 0,
           householdKwhPerMonth: p.household_kwh_per_month ?? 0,
           householdPeople: p.household_people ?? 1,
+          clothesPerMonth: p.clothes_per_month ?? 0,
+          annualGasKwh: p.annual_gas_kwh ?? null,
+          weeklyNonCommuteCarKm: p.weekly_noncommute_car_km ?? null,
+          ownsCar: p.owns_car ?? null,
+          numDogs: p.num_dogs ?? null,
+          numCats: p.num_cats ?? null,
         };
       });
     }
@@ -1456,15 +1466,33 @@
   }
 
   // ---------- Page 3: Leaderboard ----------
-  // Flights and home electricity are yearly figures (Stats page inputs),
-  // not weekly - amortized to a weekly-equivalent here so the all-time
-  // weekly average isn't just commute and food. Same math as renderStatsPage(),
-  // just per-week instead of per-year (divided by 52 instead of multiplied).
+  // Flights, home electricity, buying goods, and (if answered) the four
+  // optional extras are all yearly figures (Stats page inputs), not
+  // weekly - amortized to a weekly-equivalent here so the all-time weekly
+  // average matches the Stats page's yearly total ÷ 52, not just commute
+  // and food. Mirrors the composition of yearlyTotal in renderStatsPage(),
+  // just per-week instead of per-year.
   function weeklyExtrasFor(inputs) {
     const yearlyFlying = (inputs.shortHaulFlights || 0) * SHORT_HAUL_FLIGHT_KG + (inputs.longHaulFlights || 0) * LONG_HAUL_FLIGHT_KG;
     const yearlyHomeEnergyTotal = (inputs.householdKwhPerMonth || 0) * 12 * GRID_ELECTRICITY_KG_PER_KWH;
     const yearlyHomeEnergy = yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1);
-    return (yearlyFlying + yearlyHomeEnergy) / 52;
+    const yearlyGoods = (inputs.clothesPerMonth || 0) * 12 * CLOTHING_ITEM_KG;
+
+    let yearlyOptional = 0;
+    if (inputs.annualGasKwh !== null && inputs.annualGasKwh !== undefined) {
+      yearlyOptional += (inputs.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, inputs.householdPeople || 1);
+    }
+    if (inputs.weeklyNonCommuteCarKm !== null && inputs.weeklyNonCommuteCarKm !== undefined) {
+      yearlyOptional += inputs.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52;
+    }
+    if (inputs.ownsCar) {
+      yearlyOptional += CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR;
+    }
+    if ((inputs.numDogs !== null && inputs.numDogs !== undefined) || (inputs.numCats !== null && inputs.numCats !== undefined)) {
+      yearlyOptional += (inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR;
+    }
+
+    return (yearlyFlying + yearlyHomeEnergy + yearlyGoods + yearlyOptional) / 52;
   }
 
   function renderLeaderboardRow(list, rank, label, sub, kg, isSelf) {
@@ -1618,8 +1646,10 @@
 
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
+    const avgAlcohol = averageConfirmedWeekly("alcohol");
     const yearlyFood = avgFood * 52;
     const yearlyCommute = avgCommute * 52;
+    const yearlyAlcohol = avgAlcohol * 52;
 
     const yearlyFlying = profile.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + profile.longHaulFlights * LONG_HAUL_FLIGHT_KG;
 
@@ -1629,7 +1659,7 @@
 
     const yearlyGoods = profile.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
-    let yearlyTotal = yearlyFood + yearlyCommute + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
+    let yearlyTotal = yearlyFood + yearlyCommute + yearlyAlcohol + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
 
     // Optional extras: only added (and only shown) when actually answered -
     // a blank/unanswered one is left out of the total entirely, not treated
@@ -1653,6 +1683,7 @@
     document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
     document.getElementById("yearly-food").textContent = Math.round(yearlyFood).toLocaleString();
     document.getElementById("yearly-commute").textContent = Math.round(yearlyCommute).toLocaleString();
+    document.getElementById("yearly-alcohol").textContent = Math.round(yearlyAlcohol).toLocaleString();
     document.getElementById("yearly-flying").textContent = Math.round(yearlyFlying).toLocaleString();
     document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
     document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
