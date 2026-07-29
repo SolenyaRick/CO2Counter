@@ -165,6 +165,24 @@ worth knowing the standard deviation is sample (n-1), not population,
 and any column with fewer than two numeric values is left blank there
 rather than showing a misleading 0.
 
+The most recent run adds `p.commute_distance_km` to `research_weeks`
+(via the join it already needed for the `research_opt_in` check) - a
+coarse km figure that doesn't identify anyone on its own, and this view
+still can't be joined back to `research_profiles` (no shared key). It
+exists so the Excel export can compute an actual kg CO2e figure per
+commute mode, not just a count. The export now has two more sheets,
+"Meal Breakdown" and "Commute Breakdown", collating every *confirmed*
+day (matching how every other average in this app treats confirmation)
+across every opted-in week into "how many of each per week, on
+average" plus the kg CO2e that represents - e.g. "Beef: 1.0/week, 9.8kg
+CO2e/week". Meal kg uses the same baseline meat/portion formula as
+`foodFootprint()` in `app.js`, but without a per-user food-waste or
+eating-out multiplier (neither is available in this anonymized rollup),
+so it's the plain meal/portion figure on its own, not each user's exact
+stored total. Verified all of this - the schema upgrade path, the new
+column's data, and the breakdown math - against a real Postgres
+instance and a mocked browser run with hand-calculated expected values.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

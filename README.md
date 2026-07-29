@@ -123,10 +123,12 @@ with accounts and a friends leaderboard backed by Supabase.
   app owner, this card also shows buttons to download every opted-in
   user's data as either .json or .xlsx (the latter includes each week's
   actual kg CO2e breakdown by commute/food/alcohol, not just the raw
-  day-by-day choices, and an Average/Std Dev row under every numeric
-  column on both sheets), gated server-side on the signed-in account's
-  email rather than anything checkable client-side), a friends list (add
-  by email, accept/decline requests), sign-out, and
+  day-by-day choices, an Average/Std Dev row under every numeric column
+  on both sheets, and two extra sheets collating every confirmed day
+  across every opted-in week into an "avg N per week" + kg CO2e
+  breakdown by meal type and by commute mode), gated server-side on the
+  signed-in account's email rather than anything checkable client-side),
+  a friends list (add by email, accept/decline requests), sign-out, and
   export/import/reset for your data.
 
 ## Architecture

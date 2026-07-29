@@ -1969,6 +1969,93 @@
     return [...rows, spacer, avgRow, sdRow];
   }
 
+  // Diet-day kg CO2e using the same baseline formula as foodFootprint(),
+  // but WITHOUT a per-user food-waste or eating-out multiplier - neither
+  // is available in this anonymized rollup (food_waste_bracket lives on
+  // research_profiles, which has no shared key with research_weeks), so
+  // this is the plain meal/portion figure on its own.
+  function baselineMealKg(entry) {
+    if (!entry || !entry.type) return null;
+    if (entry.type === "vegan") return FOOD_DAY_FACTORS.vegan;
+    if (entry.type === "veggie") return FOOD_DAY_FACTORS.veggie;
+    if (entry.type === "meat") {
+      const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
+      const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
+      return MEAT_SIDES_BASELINE + meatFactor * portionKg;
+    }
+    return null;
+  }
+
+  function mealTypeLabel(entry) {
+    if (entry.type === "meat") return MEAT_LABELS[entry.meat] ?? MEAT_LABELS.other;
+    if (entry.type === "veggie") return "Veggie";
+    if (entry.type === "vegan") return "Vegan";
+    return entry.type;
+  }
+
+  // Collates every confirmed diet/commute day across every opted-in week in
+  // the export - "however many weeks back" there are - into "how many of
+  // each per week, on average" plus the kg CO2e that represents. Only
+  // confirmed days count, matching how every other average in this app
+  // treats confirmation. weekCount is the number of week-rows in the
+  // export (i.e. how many weeks of data this is collated from), used as
+  // the per-week denominator for both breakdowns.
+  function summarizeMealsAndCommute(weeksRaw) {
+    const weekCount = weeksRaw.length;
+    const meals = new Map(); // label -> { days, kg }
+    const commutes = new Map(); // label -> { days, kg }
+
+    weeksRaw.forEach((w) => {
+      const diet = w.diet || {};
+      const confirmedDiet = w.confirmed_diet || {};
+      Object.keys(confirmedDiet).forEach((day) => {
+        if (!confirmedDiet[day]) return;
+        const entry = diet[day];
+        const kg = baselineMealKg(entry);
+        if (kg === null) return;
+        const label = mealTypeLabel(entry);
+        const bucket = meals.get(label) || { days: 0, kg: 0 };
+        bucket.days += 1;
+        bucket.kg += kg;
+        meals.set(label, bucket);
+      });
+
+      const commute = w.commute || {};
+      const confirmedCommute = w.confirmed_commute || {};
+      const distanceKm = w.commute_distance_km;
+      Object.keys(confirmedCommute).forEach((day) => {
+        if (!confirmedCommute[day]) return;
+        const mode = commute[day];
+        if (!mode || mode === "none") return;
+        const factor = TRANSPORT_FACTORS[mode];
+        if (factor === undefined || typeof distanceKm !== "number") return;
+        const kg = factor * distanceKm * 2;
+        const label = TRANSPORT_LABELS[mode] ?? mode;
+        const bucket = commutes.get(label) || { days: 0, kg: 0 };
+        bucket.days += 1;
+        bucket.kg += kg;
+        commutes.set(label, bucket);
+      });
+    });
+
+    function toRows(map, labelHeader) {
+      return [...map.entries()]
+        .map(([label, { days, kg }]) => ({
+          [labelHeader]: label,
+          "Confirmed days (all opted-in weeks)": days,
+          "Avg per week": weekCount ? round2(days / weekCount) : 0,
+          "Avg kg CO2e per week": weekCount ? round2(kg / weekCount) : 0,
+        }))
+        .sort((a, b) => b["Avg per week"] - a["Avg per week"]);
+    }
+
+    return {
+      weekCount,
+      mealRows: toRows(meals, "Meal type"),
+      commuteRows: toRows(commutes, "Commute mode"),
+    };
+  }
+
   async function exportResearchDataXlsx() {
     const data = await fetchResearchData();
     if (!data) return;
@@ -1984,6 +2071,17 @@
     window.XLSX.utils.book_append_sheet(wb, profilesSheet, "Profiles");
     const weeksSheet = window.XLSX.utils.json_to_sheet(withSummaryStats(data.weeks.map(flattenWeekRowForXlsx)));
     window.XLSX.utils.book_append_sheet(wb, weeksSheet, "Weeks");
+
+    const { weekCount, mealRows, commuteRows } = summarizeMealsAndCommute(data.weeks);
+    const mealsSheet = window.XLSX.utils.json_to_sheet(
+      mealRows.length ? mealRows : [{ "Meal type": `No confirmed diet days across ${weekCount} week(s)` }]
+    );
+    window.XLSX.utils.book_append_sheet(wb, mealsSheet, "Meal Breakdown");
+    const commuteSheet = window.XLSX.utils.json_to_sheet(
+      commuteRows.length ? commuteRows : [{ "Commute mode": `No confirmed commute days across ${weekCount} week(s)` }]
+    );
+    window.XLSX.utils.book_append_sheet(wb, commuteSheet, "Commute Breakdown");
+
     window.XLSX.writeFile(wb, "co2-tracker-research-data.xlsx");
   }
 

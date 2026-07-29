@@ -414,6 +414,12 @@ grant execute on function public.app_wide_weekly_average() to authenticated;
 --     commute_food_kg/total_kg combined figures) - so the exported data
 --     covers both "what did they choose" and "what did it come to in
 --     kg CO2e", not just one or the other. Also excludes user_id/display_name.
+--     Also includes the user's one-way commute_distance_km (from profiles,
+--     via the join already needed for the research_opt_in check) so the
+--     Excel export's commute-mode breakdown can compute an actual kg CO2e
+--     figure per mode, not just a count - a coarse km figure on its own
+--     doesn't identify anyone, and this view still can't be joined back to
+--     research_profiles (no shared key between them).
 --
 -- Neither view is granted to `authenticated` or `anon` - the app itself
 -- never queries them, and a signed-in user has no way to read them through
@@ -462,7 +468,8 @@ select
   w.total_kg,
   w.commute_kg,
   w.food_kg,
-  w.alcohol_kg
+  w.alcohol_kg,
+  p.commute_distance_km
 from public.weeks w
 join public.profiles p on p.id = w.user_id
 where p.research_opt_in = true;
