@@ -91,19 +91,19 @@ with accounts and a friends leaderboard backed by Supabase.
   UK", worded so it never reads backwards). Every domain tile (food,
   commute, flying, home energy, goods, and the three optional extras once
   answered) shows its own ▲/▼ delta against the UK average for that same
-  category, not just the total. A "How your year compares"
-  card at the bottom shows a UK average — built from the same core
+  category, not just the total. A "How your year compares" card at the
+  bottom opens with your estimated total against the 1.5°C-by-2030 climate
+  target (see below), then shows a UK average — built from the same core
   categories plus whichever optional extras you've personally answered, so
   the comparison is always apples-to-apples — alongside your total
   converted into car miles and mature-trees-of-CO2-absorption equivalents,
   each with a delta against the UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal
-  (with two quick-set presets — "Match UK average week" and "1.5°C by 2030
-  target", see below — alongside typing your own number), a food-waste
-  setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures everywhere
-  to account for produced-but-wasted food), a friends list (add by email,
-  accept/decline requests), sign-out, and export/import/reset for your
-  data.
+  (with a "Match UK average week" quick-set preset alongside typing your own
+  number), a food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up
+  food figures everywhere to account for produced-but-wasted food), a
+  friends list (add by email, accept/decline requests), sign-out, and
+  export/import/reset for your data.
 
 ## Architecture
 
@@ -202,12 +202,14 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   preset): the same commute + food UK-average assumptions as above, without
   the ×52, since this is what a single average week (not year) comes to —
   roughly 22.8 kg CO2e.
-- **1.5°C by 2030 target** (Account page goal preset): 44.1 kg CO2e/week
-  (6.3 kg/day × 7), the personal daily carbon budget the MyEmission app
-  cites as roughly a fair-share target for keeping warming under 1.5°C by
-  2030. That figure is for a whole lifestyle (mobility, energy, food,
-  shopping, leisure) — using it as a goal here, where only commute, food,
-  and alcohol count toward the weekly total, is stricter than intended.
+- **1.5°C by 2030 target** (Stats page, "How your year compares"): 2,300 kg
+  CO2e/yr (6.3 kg/day × 365), the personal daily carbon budget the
+  MyEmission app cites as roughly a fair-share target for keeping warming
+  under 1.5°C by 2030. Compared against the Stats page's fuller yearly
+  total (5–8 categories) rather than the This Week page's narrower
+  commute+food-only weekly figure — using the latter would make this
+  target look roughly double a "UK average" for no reason other than
+  mismatched scope.
 
 These are based on commonly cited average emission factors (in the style of
 DEFRA conversion factors and Our World in Data / Poore & Nemecek food

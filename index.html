@@ -400,6 +400,21 @@
 
       <section class="card">
         <h2>How your year compares</h2>
+        <div class="avg-week-savings" id="paris-target-box">
+          <span class="stat-value" id="paris-target-value">0</span>
+          <span class="stat-label">kg CO2e/yr &middot; your estimated total</span>
+          <span class="week-diff" id="paris-target-diff"></span>
+        </div>
+        <p class="assumptions">
+          The MyEmission app cites a 6.3 kg CO2e/day (2,300 kg CO2e/yr) personal
+          budget as roughly a fair-share target for keeping warming under
+          1.5&deg;C by 2030, covering a person's whole lifestyle. It's compared
+          here against your fuller yearly total above (not the This Week page's
+          narrower commute + food weekly figure, which would make this target
+          look roughly double a "UK average" for no reason other than mismatched
+          scope) &mdash; a much closer match, though still not exact, since this
+          app still doesn't track everything (see below).
+        </p>
         <p class="assumptions">
           UK average for the same categories your total above includes: roughly
           <strong id="uk-average-value">0</strong> kg CO2e/yr. Built the same way as your
@@ -475,19 +490,13 @@
         </label>
         <div class="goal-presets">
           <button type="button" class="btn-secondary btn-small" id="goal-preset-uk">Match UK average week</button>
-          <button type="button" class="btn-secondary btn-small" id="goal-preset-15c">1.5&deg;C by 2030 target</button>
         </div>
         <p class="assumptions">
-          "Match UK average week" sets your goal to the same commute + food UK
-          average shown on the Stats page (only those two, since that's what
-          this goal tracks). "1.5&deg;C by 2030 target" sets it to 44.1 kg CO2e/week
-          &mdash; the MyEmission app cites a 6.3 kg CO2e/day personal budget as
-          roughly a fair-share target for keeping warming under 1.5&deg;C by 2030.
-          That figure covers a person's <em>whole</em> lifestyle (mobility, energy,
-          food, shopping, leisure), not just commute and food, so using it as your
-          goal here is stricter than intended &mdash; it leaves no room for flights,
-          home energy, or goods, which this app tracks yearly on the Stats page
-          instead.
+          Sets your goal to the same commute + food UK average shown on the Stats
+          page (only those two, since that's what this weekly goal tracks). Looking
+          for the 1.5&deg;C by 2030 climate target instead? That's on the Stats page,
+          compared against your fuller yearly total rather than this narrower weekly
+          figure.
         </p>
         <label class="field">
           How much food do you waste?

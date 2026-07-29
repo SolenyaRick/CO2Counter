@@ -192,10 +192,12 @@
   // MyEmission (a comprehensive carbon-tracking app) states a 6.3 kg CO2e/day
   // personal budget as roughly a fair-share target to help keep warming
   // under 1.5C by 2030. That covers a person's WHOLE lifestyle (mobility,
-  // energy, food, shopping, leisure) - not just commute and food - so using
-  // it as a weekly goal here is stricter than intended; see the Account
-  // page copy for that caveat.
-  const PARIS_1_5C_WEEKLY_KG = 6.3 * 7;
+  // energy, food, shopping, leisure) - so it's compared against the Stats
+  // page's fuller yearly total (which covers 5-8 categories), not the This
+  // Week page's commute+food-only weekly figure, which would make this
+  // target look roughly double a narrower "UK average" for no real reason
+  // other than mismatched scope.
+  const PARIS_1_5C_YEARLY_KG = 6.3 * 365;
 
   const DEFAULT_PROFILE = {
     name: "",
@@ -1629,7 +1631,20 @@
       percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
     }
 
+    renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
+  }
+
+  // Compared against the fuller yearly total (5-8 categories) rather than
+  // the This Week page's commute+food-only weekly figure, since the 1.5C
+  // target is meant to cover a whole lifestyle - a much closer match in
+  // scope, even if still not exact (see "What this doesn't account for").
+  function renderParisTargetComparison(yearlyTotal) {
+    const diff = yearlyTotal - PARIS_1_5C_YEARLY_KG;
+    document.getElementById("paris-target-value").textContent = Math.round(yearlyTotal).toLocaleString();
+    document.getElementById("paris-target-box").classList.toggle("avg-week-good", diff <= 0);
+    document.getElementById("paris-target-box").classList.toggle("avg-week-bad", diff > 0);
+    setComparisonDiff("paris-target-diff", yearlyTotal, PARIS_1_5C_YEARLY_KG, "kg", "the 1.5°C by 2030 target");
   }
 
   function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
@@ -1647,7 +1662,7 @@
     setComparisonDiff("compare-trees-diff", yourTrees, ukTrees, "trees");
   }
 
-  function setComparisonDiff(elementId, yourValue, ukValue, unit) {
+  function setComparisonDiff(elementId, yourValue, ukValue, unit, compareLabel = "UK average") {
     const el = document.getElementById(elementId);
     if (!el) return;
     // Optional categories pass null on both sides when unanswered - nothing
@@ -1661,7 +1676,7 @@
     const diff = yourValue - ukValue;
     const over = diff > 0;
     el.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;
-    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} ${unit} vs UK average`;
+    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} ${unit} vs ${compareLabel}`;
   }
 
   function exportData() {
@@ -1986,7 +2001,6 @@
       persistProfile();
     }
     document.getElementById("goal-preset-uk").addEventListener("click", () => setGoalPreset(UK_AVERAGE_WEEKLY_KG));
-    document.getElementById("goal-preset-15c").addEventListener("click", () => setGoalPreset(PARIS_1_5C_WEEKLY_KG));
     document.getElementById("profile-food-waste").addEventListener("change", (e) => {
       profile.foodWaste = e.target.value;
       persistProfile();
