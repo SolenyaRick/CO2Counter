@@ -14,7 +14,13 @@ with accounts and a friends leaderboard backed by Supabase.
   over" (red), prorated to how far through the week it is the same way the
   Weeks-grid goal is. The point is you don't need to log every category for
   this to be meaningful, unlike apps that require comprehensive manual
-  tracking before they'll show you anything. Below that, the inputs,
+  tracking before they'll show you anything. You can swap the UK average
+  out for one of your own fully-confirmed weeks instead (Account page,
+  "Baseline week") — the card then reads "Compared to your baseline week"
+  and compares full totals (commute + food + alcohol) rather than the UK
+  average's commute+food-only figure, since a real week of yours has
+  actual alcohol data on both sides where the UK average doesn't. Below
+  that, the inputs,
   toggleable between "This week" and "Last week". For each day (M–S) pick
   how you got to work (Walk, Cycle, Train, Car, or
   Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
@@ -114,8 +120,11 @@ with accounts and a friends leaderboard backed by Supabase.
   world average week", the roughest of the three since there's no global
   equivalent of the UK's national travel/diet surveys to build it from), a
   food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
-  everywhere to account for produced-but-wasted food), a "Help improve UK
-  averages" opt-in (off by default — if turned on, everything on the
+  everywhere to account for produced-but-wasted food), a "Baseline week"
+  picker (a dropdown of your own fully-confirmed weeks — only ones with a
+  "✓ FULL" badge on the Weeks page qualify — to compare the This Week
+  page's card against instead of the UK average; "UK average (default)"
+  switches back), a "Help improve UK averages" opt-in (off by default — if turned on, everything on the
   Account/Stats pages except your banking answers becomes visible to the
   app developer for calibrating the UK-average assumptions against real
   data; your name/email/account are never included, see

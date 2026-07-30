@@ -75,10 +75,11 @@
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week">
       <section class="card">
-        <h2>Compared to an average week</h2>
+        <h2 id="avg-week-title">Compared to an average week</h2>
         <p class="assumptions">
-          An average UK week (commute + food only, the same bottom-up figures used
-          on the Stats page) comes to about <strong id="avg-week-value">0</strong> kg
+          <span id="avg-week-desc-lead">An average UK week (commute + food only, the
+          same bottom-up figures used on the Stats page)</span> comes to about
+          <strong id="avg-week-value">0</strong> kg
           CO2e. You don't need to log every category for this to be useful &mdash;
           here's how this week is looking against that so far.
         </p>
@@ -607,6 +608,23 @@
           10&ndash;30% waste means buying/producing about 25% more than you actually eat.
           Your goal colors the boxes on the Weeks page: green at or under goal, amber a
           bit over, red well over.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Baseline week</h2>
+        <label class="field">
+          Compare This Week's card against
+          <select id="baseline-week">
+            <option value="">UK average (default)</option>
+          </select>
+        </label>
+        <p class="assumptions">
+          By default, the "Compared to an average week" card on the front page
+          measures you against a bottom-up UK average. Pick one of your own fully
+          confirmed weeks here instead to compare against that real week of yours
+          going forward &mdash; only weeks with a &ldquo;&check; FULL&rdquo; badge on
+          the Weeks page show up here. Switch back to "UK average" any time.
         </p>
       </section>
 

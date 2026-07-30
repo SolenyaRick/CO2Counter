@@ -340,6 +340,10 @@
     // whom (the app owner only, via the Supabase SQL Editor - never
     // readable through the app itself).
     researchOptIn: false,
+    // Optional: a fully-confirmed week_key to compare This Week's card
+    // against instead of the UK average - null means "use the UK average"
+    // (the default for everyone until they pick one on the Account page).
+    baselineWeekKey: null,
   };
 
   function blankWeek() {
@@ -577,6 +581,7 @@
         bankName: data.bank_name ?? null,
         bankBalance: data.bank_balance ?? null,
         researchOptIn: data.research_opt_in ?? false,
+        baselineWeekKey: data.baseline_week_key ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -605,6 +610,7 @@
       bank_name: profile.bankName,
       bank_balance: profile.bankBalance,
       research_opt_in: profile.researchOptIn,
+      baseline_week_key: profile.baselineWeekKey,
     };
   }
 
@@ -1165,16 +1171,41 @@
     renderChart(totals.daily, selectedWeekKey, totals.alcohol);
   }
 
-  // "Compared to an average week" card: a savings-framed comparison against
-  // a UK-average week (commute + food, same bottom-up figures as the Stats
-  // page), prorated to how far through the week it is - so it's meaningful
-  // Wednesday, not just Sunday, and doesn't require logging every category
-  // to be useful (unlike a full manual carbon calculator).
-  function renderAverageWeekCard(weekKey, totals) {
-    const avgWeek = proratedUkAverageForWeek(weekKey);
-    document.getElementById("avg-week-value").textContent = fmt(UK_AVERAGE_WEEKLY_KG);
+  // A fully-confirmed week the person has picked on the Account page to
+  // compare against instead of the UK average - null if they haven't set
+  // one, or if the week they picked is no longer in weeksCache (e.g. after
+  // a data reset). Recomputed live from stored commute/diet choices, same
+  // as any other week's total, so it stays in sync with the current
+  // emission-factor constants rather than being a frozen snapshot.
+  function getBaselineWeekData() {
+    if (!profile.baselineWeekKey) return null;
+    return weeksCache[profile.baselineWeekKey] || null;
+  }
 
-    const saved = avgWeek - totals.total;
+  // "Compared to an average week" card: a savings-framed comparison against
+  // either a UK-average week (commute + food, same bottom-up figures as the
+  // Stats page) or, if set, the person's own chosen baseline week -
+  // prorated to how far through the week it is either way, so it's
+  // meaningful Wednesday, not just Sunday, and doesn't require logging
+  // every category to be useful (unlike a full manual carbon calculator).
+  function renderAverageWeekCard(weekKey, totals) {
+    const baselineWeekData = getBaselineWeekData();
+    const usingBaseline = !!baselineWeekData;
+    // Baseline mode compares full week totals (commute + food + alcohol) -
+    // unlike the UK average, which is commute + food only because there's
+    // no real "UK average alcohol" figure to compare against, a personal
+    // baseline week has real alcohol data on both sides, so there's no
+    // reason to leave it out.
+    const fullReferenceKg = usingBaseline ? weekTotals(baselineWeekData).total : UK_AVERAGE_WEEKLY_KG;
+    const referenceKg = prorateForCurrentWeek(weekKey, fullReferenceKg);
+
+    document.getElementById("avg-week-title").textContent = usingBaseline ? "Compared to your baseline week" : "Compared to an average week";
+    document.getElementById("avg-week-desc-lead").textContent = usingBaseline
+      ? `Your baseline week (${weekLabel(profile.baselineWeekKey)})`
+      : "An average UK week (commute + food only, the same bottom-up figures used on the Stats page)";
+    document.getElementById("avg-week-value").textContent = fmt(fullReferenceKg);
+
+    const saved = referenceKg - totals.total;
     const valueEl = document.getElementById("avg-week-savings-value");
     const labelEl = document.getElementById("avg-week-savings-label");
     const boxEl = document.getElementById("avg-week-savings-box");
@@ -1184,9 +1215,10 @@
     boxEl.classList.toggle("avg-week-bad", saved < 0);
 
     const soFar = weekKey === CURRENT_WEEK_KEY ? " so far" : "";
+    const referenceLabel = usingBaseline ? "your baseline week" : "an average week";
     labelEl.textContent = saved >= 0
-      ? `kg CO2e saved vs an average week${soFar}`
-      : `kg CO2e over an average week${soFar}`;
+      ? `kg CO2e saved vs ${referenceLabel}${soFar}`
+      : `kg CO2e over ${referenceLabel}${soFar}`;
   }
 
   function setAlcoholField(weekData, applyFn) {
@@ -1450,12 +1482,14 @@
     return fullGoal * (todayIndexInWeek() / 7);
   }
 
-  // Same day-of-week proration as goalForWeek(), but against the UK average
-  // week rather than your personal goal - so "saved vs an average week" is
-  // meaningful mid-week rather than trivially true on a Monday.
-  function proratedUkAverageForWeek(weekKey) {
-    if (weekKey !== CURRENT_WEEK_KEY) return UK_AVERAGE_WEEKLY_KG;
-    return UK_AVERAGE_WEEKLY_KG * (todayIndexInWeek() / 7);
+  // Same day-of-week proration as goalForWeek(), but against a reference
+  // figure (the UK average, or a personal baseline week) rather than your
+  // personal goal - so "saved vs..." is meaningful mid-week rather than
+  // trivially true on a Monday. Past/completed weeks compare against the
+  // reference's full value, same as goalForWeek().
+  function prorateForCurrentWeek(weekKey, fullKg) {
+    if (weekKey !== CURRENT_WEEK_KEY) return fullKg;
+    return fullKg * (todayIndexInWeek() / 7);
   }
 
   function statusClass(total, started, goal) {
@@ -1732,7 +1766,40 @@
     document.getElementById("account-email").textContent = currentUser?.email || "";
     document.getElementById("owner-research-export").hidden =
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
+    populateBaselineWeekSelect();
     renderFriendsUI();
+  }
+
+  // Rebuilds the baseline-week dropdown from whichever of the person's own
+  // weeks are currently fully confirmed (matching what renderAverageWeekCard
+  // is willing to use as a baseline) - run every time the Account page
+  // renders, since which weeks qualify can change as more get confirmed.
+  function populateBaselineWeekSelect() {
+    const select = document.getElementById("baseline-week");
+    const fullyConfirmedKeys = Object.keys(weeksCache)
+      .filter((key) => isFullyConfirmed(weeksCache[key]))
+      .sort((a, b) => (a < b ? 1 : -1)); // newest first
+
+    select.innerHTML = "";
+    const noneOption = document.createElement("option");
+    noneOption.value = "";
+    noneOption.textContent = "UK average (default)";
+    select.appendChild(noneOption);
+
+    fullyConfirmedKeys.forEach((key) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = weekLabel(key);
+      select.appendChild(option);
+    });
+
+    // Falls back to "UK average" if the saved baseline week no longer
+    // qualifies (e.g. it's been un-confirmed or the data was reset) -
+    // renderAverageWeekCard() falls back the same way, so the dropdown and
+    // the actual comparison never disagree about what's in effect.
+    select.value = profile.baselineWeekKey && fullyConfirmedKeys.includes(profile.baselineWeekKey)
+      ? profile.baselineWeekKey
+      : "";
   }
 
   // ---------- Page: Stats (yearly estimate) ----------
@@ -2491,6 +2558,12 @@
     document.getElementById("research-opt-in").addEventListener("change", (e) => {
       profile.researchOptIn = e.target.checked;
       persistProfile();
+    });
+
+    document.getElementById("baseline-week").addEventListener("change", (e) => {
+      profile.baselineWeekKey = e.target.value || null;
+      persistProfile();
+      renderFootprints();
     });
 
     document.getElementById("add-friend-form").addEventListener("submit", (e) => {

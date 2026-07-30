@@ -52,6 +52,16 @@ alter table public.profiles add column if not exists bank_balance numeric;
 -- actually exposes, and to whom.
 alter table public.profiles add column if not exists research_opt_in boolean not null default false;
 
+-- Optional: a fully-confirmed week_key (see weeks below) the person has
+-- picked on the Account page to compare This Week's card against instead
+-- of the UK average - nullable with no default, same "not answered" =
+-- "use the UK average" pattern as the optional Stats-page extras above.
+-- Deliberately not a foreign key into weeks (user_id, week_key) - a week
+-- getting un-confirmed or deleted later shouldn't fail this column's
+-- constraint, it should just make the app fall back to the UK average
+-- (handled client-side in getBaselineWeekData()).
+alter table public.profiles add column if not exists baseline_week_key text;
+
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
 -- total_kg is computed client-side (same emission-factor logic as the rest

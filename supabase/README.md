@@ -185,6 +185,18 @@ stored total. Verified all of this - the schema upgrade path, the new
 column's data, and the breakdown math - against a real Postgres
 instance and a mocked browser run with hand-calculated expected values.
 
+The most recent run adds a `baseline_week_key` column to `profiles` -
+nullable with no default, same "not answered" = "use the UK average"
+pattern as the optional Stats-page extras. Lets a user pick one of their
+own fully-confirmed weeks (Account page) to compare This Week's
+"Compared to..." card against instead of the UK average. Deliberately
+not a foreign key into `weeks` (which would need `(user_id, week_key)` -
+composite foreign keys onto a table that isn't itself keyed that way
+add real complexity for little benefit here) - if the referenced week
+later gets un-confirmed or the account's data gets reset, the app just
+falls back to the UK average client-side (`getBaselineWeekData()` in
+`app.js`) rather than the column enforcing anything.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table
