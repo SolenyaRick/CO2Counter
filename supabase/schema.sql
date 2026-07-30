@@ -525,3 +525,34 @@ $$;
 
 revoke all on function public.research_export_weeks() from public;
 grant execute on function public.research_export_weeks() to authenticated;
+
+-- ==================== account deletion ====================
+
+-- Lets a signed-in user permanently delete their own account (Account
+-- page, "Delete account" - separate from "Reset all data", which only
+-- clears profile/week data and keeps the login working). Apple's App
+-- Store review guidelines require any app that supports account creation
+-- to also offer account deletion that's easy to find, hence this.
+--
+-- SECURITY DEFINER because the authenticated/anon roles have no direct
+-- access to auth.users - but scoped strictly to auth.uid(), so this can
+-- only ever delete the CALLER's own account, never anyone else's, no
+-- matter what id is passed in (nothing is passed in - there's no
+-- parameter, it's always "whoever is calling this").
+--
+-- profiles, weeks, and friendships all have "on delete cascade" foreign
+-- keys into auth.users(id) already, so deleting the auth.users row alone
+-- cleans up every table this app owns - nothing else needs to run here.
+drop function if exists public.delete_own_account();
+
+create or replace function public.delete_own_account()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from auth.users where id = auth.uid();
+$$;
+
+revoke all on function public.delete_own_account() from public;
+grant execute on function public.delete_own_account() to authenticated;

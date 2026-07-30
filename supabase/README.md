@@ -197,6 +197,23 @@ later gets un-confirmed or the account's data gets reset, the app just
 falls back to the UK average client-side (`getBaselineWeekData()` in
 `app.js`) rather than the column enforcing anything.
 
+The most recent run adds a `delete_own_account()` function, backing the
+Account page's "Delete account" button (Apple's App Store review
+guidelines require any app that supports account creation to also offer
+account deletion, easy to find - this is separate from "Reset all data",
+which only clears profile/week data and leaves the login working).
+`security definer` so it can reach `auth.users` (which `authenticated`/
+`anon` have no direct access to), but the function takes no parameters
+and always deletes `where id = auth.uid()` - it can only ever delete the
+caller's own account, never anyone else's. `profiles`, `weeks`, and
+`friendships` all already have `on delete cascade` foreign keys into
+`auth.users(id)`, so deleting the `auth.users` row alone cleans up every
+table this app owns - nothing else needs to run in this function.
+Verified against a real Postgres instance with two users: one calling
+`delete_own_account()` as themselves removed exactly their own auth,
+profile, week, and shared-friendship rows, while the other user's data
+was completely untouched.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

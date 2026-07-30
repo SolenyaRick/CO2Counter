@@ -137,8 +137,11 @@ with accounts and a friends leaderboard backed by Supabase.
   across every opted-in week into an "avg N per week" + kg CO2e
   breakdown by meal type and by commute mode), gated server-side on the
   signed-in account's email rather than anything checkable client-side),
-  a friends list (add by email, accept/decline requests), sign-out, and
-  export/import/reset for your data.
+  a friends list (add by email, accept/decline requests), sign-out,
+  export/import/reset for your data, and a separate "Delete account"
+  button that permanently deletes the account itself (login included),
+  not just its data — required for App Store review, since Apple mandates
+  in-app account deletion for any app that supports account creation.
 
 ## Architecture
 

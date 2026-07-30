@@ -2248,6 +2248,27 @@
     showTab(currentTab());
   }
 
+  // Permanently deletes the signed-in account itself, not just its data -
+  // see delete_own_account() in schema.sql, which only ever deletes the
+  // CALLER's own auth.users row (cascades clean up profiles/weeks/
+  // friendships automatically). Different from resetAllData() above,
+  // which keeps the login working.
+  async function deleteOwnAccount() {
+    if (!confirm(
+      "This PERMANENTLY deletes your account - your login, profile, every week " +
+      "you've logged, and your friend connections. This cannot be undone and " +
+      "there is no way to recover it afterward. Continue?"
+    )) return;
+    const { error } = await sbClient.rpc("delete_own_account");
+    if (error) {
+      console.error("Failed to delete account", error);
+      alert("Could not delete your account — see console for details. Nothing was deleted.");
+      return;
+    }
+    await sbClient.auth.signOut();
+    window.location.reload();
+  }
+
   // ---------- Auth ----------
   let authMode = "signin";
 
@@ -2582,6 +2603,7 @@
       e.target.value = "";
     });
     document.getElementById("reset-all-data").addEventListener("click", resetAllData);
+    document.getElementById("delete-account-btn").addEventListener("click", deleteOwnAccount);
 
     updateAuthModeUI();
 
