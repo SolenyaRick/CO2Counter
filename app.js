@@ -1750,7 +1750,7 @@
     if (!currentUser) return;
     const { data, error } = await sbClient.rpc("app_wide_weekly_average");
     if (error || !data || !data[0]) return;
-    document.getElementById("app-average-commute-food-value").textContent = fmt(data[0].avg_commute_food_kg || 0);
+    document.getElementById("app-average-commute-food-value").textContent = fmt(data[0].avg_commute_food_alcohol_kg || 0);
     document.getElementById("app-average-total-value").textContent = fmt(data[0].avg_total_kg || 0);
     document.getElementById("app-average-count").textContent = data[0].user_count || 0;
     document.getElementById("app-average-count-2").textContent = data[0].user_count || 0;

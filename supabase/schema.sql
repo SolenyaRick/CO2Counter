@@ -306,8 +306,12 @@ grant execute on function public.friend_weekly_average() to authenticated;
 
 -- App-wide averages across every account, not just friends - for the
 -- Leaderboard page's "Everyone on the app" card. Two figures:
---   avg_commute_food_kg - just commute + food (commute_food_kg), no
---     duplicated math needed since it's already stored per week.
+--   avg_commute_food_alcohol_kg - commute + food + alcohol (total_kg), no
+--     duplicated math needed since it's already stored per week. This
+--     used to be commute + food only (commute_food_kg, excluding
+--     alcohol) - widened to include alcohol too, since there's no longer
+--     a good reason for this figure to leave it out when the fuller
+--     avg_total_kg figure right next to it already includes it.
 --   avg_total_kg - the fuller figure that matches "Stats page yearly
 --     total / 52" for each user (commute + food + alcohol, plus a
 --     weekly-equivalent share of flights, home energy, buying goods, and
@@ -326,14 +330,15 @@ grant execute on function public.friend_weekly_average() to authenticated;
 -- any user_id, name, or per-person row - so it's safe to expose to any
 -- signed-in user with no friendship relationship required.
 --
--- This function used to return a single avg_weekly_kg column; Postgres
+-- This function's output columns have changed more than once (most
+-- recently: avg_commute_food_kg -> avg_commute_food_alcohol_kg); Postgres
 -- won't let CREATE OR REPLACE change a function's output columns, so the
 -- old version has to be dropped first (safe: nothing else in this schema
 -- depends on it).
 drop function if exists public.app_wide_weekly_average();
 
 create or replace function public.app_wide_weekly_average()
-returns table (avg_commute_food_kg numeric, avg_total_kg numeric, user_count integer)
+returns table (avg_commute_food_alcohol_kg numeric, avg_total_kg numeric, user_count integer)
 language sql
 security definer
 set search_path = public
@@ -355,7 +360,7 @@ as $$
   ),
   per_user_extras as (
     select
-      pu.avg_commute_food_kg,
+      pu.avg_commute_food_alcohol_kg as avg_commute_food_alcohol_kg,
       pu.avg_commute_food_alcohol_kg
         + (
             (coalesce(p.short_haul_flights_per_year, 0) * 250 + coalesce(p.long_haul_flights_per_year, 0) * 1600)
@@ -392,7 +397,7 @@ as $$
     join public.profiles p on p.id = pu.user_id
   )
   select
-    coalesce(avg(avg_commute_food_kg), 0) as avg_commute_food_kg,
+    coalesce(avg(avg_commute_food_alcohol_kg), 0) as avg_commute_food_alcohol_kg,
     coalesce(avg(avg_total_kg), 0) as avg_total_kg,
     count(*)::int as user_count
   from per_user_extras;

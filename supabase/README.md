@@ -197,7 +197,7 @@ later gets un-confirmed or the account's data gets reset, the app just
 falls back to the UK average client-side (`getBaselineWeekData()` in
 `app.js`) rather than the column enforcing anything.
 
-The most recent run adds a `delete_own_account()` function, backing the
+A later run adds a `delete_own_account()` function, backing the
 Account page's "Delete account" button (Apple's App Store review
 guidelines require any app that supports account creation to also offer
 account deletion, easy to find - this is separate from "Reset all data",
@@ -213,6 +213,22 @@ Verified against a real Postgres instance with two users: one calling
 `delete_own_account()` as themselves removed exactly their own auth,
 profile, week, and shared-friendship rows, while the other user's data
 was completely untouched.
+
+The most recent run widens `app_wide_weekly_average()`'s first return
+column from `avg_commute_food_kg` (commute + food only, excluding
+alcohol) to `avg_commute_food_alcohol_kg` (commute + food + alcohol) -
+there was no longer a good reason for the "Everyone on the app" card's
+first figure to leave alcohol out when the fuller `avg_total_kg` figure
+right next to it already includes it. The value is just `avg(total_kg)`
+per eligible week (already computed internally as
+`avg_commute_food_alcohol_kg` in the `per_user` CTE, previously only
+used to help build `avg_total_kg`) - no new math, just returning a
+figure that already existed under a different name. Since this renames
+an output column, the function had to be dropped first (same
+"cannot change return type" constraint as before) - verified by
+upgrading a database seeded with the previous schema version and
+confirming a clean apply, then checking the actual returned value
+against a hand-inserted week.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

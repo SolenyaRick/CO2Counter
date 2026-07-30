@@ -81,9 +81,10 @@ with accounts and a friends leaderboard backed by Supabase.
   includes besides commute/food/alcohol, divided by 52), so this figure
   and "Stats page yearly total ÷ 52" always agree; "Everyone on the app"
   shows two anonymous, aggregate figures across every account on the app —
-  commute + food only, and the fuller total (same composition as above) —
-  and how many people each is based on, with no per-user data or names
-  ever exposed. The full-total figure is computed entirely in SQL (see
+  commute + food + alcohol, and the fuller total (that plus the same
+  yearly-extras composition as above) — and how many people each is based
+  on, with no per-user data or names ever exposed. The full-total figure
+  is computed entirely in SQL (see
   `app_wide_weekly_average()` in `supabase/schema.sql`), since unlike the
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
