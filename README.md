@@ -230,17 +230,41 @@ Xcode builds from the copied snapshot in `ios/App/App/public`, not live
 from the repo root, so a plain Xcode rebuild without re-syncing first will
 still show the old version.
 
-**Known gap, not addressed yet**: the "forgot password" email flow computes
-its redirect URL from wherever the app is "actually running" (see
-`supabase/README.md`'s note on `emailRedirectTo`/`redirectTo`), which
-inside the native app is Capacitor's internal `capacitor://localhost`
-origin — not a real URL Supabase can allowlist or a password-reset email
-link can sensibly point at. In practice the reset link will likely just
-open in mobile Safari instead of deep-linking back into the app, which
-still lets someone reset their password, just outside the native shell. A
-proper fix would mean setting up Universal Links/Associated Domains so
-`https://` reset links open directly in the app - a bigger, separate piece
-of work not done here.
+**Password-reset deep linking (Universal Links)**: the app-code half of
+this is done - `registerDeepLinkHandling()`/`handleDeepLink()` in `app.js`
+manually pick up a password-reset link opened via iOS Universal Links
+(the WKWebView never navigates to the real `https://` URL the way a
+browser tab would, so Supabase's normal automatic session detection can't
+fire on its own; this extracts the same token(s) from whatever URL the OS
+handed the app and establishes the session itself, same end result as the
+web flow). That's everything that can be done without knowing where the
+app will actually be hosted - the rest is genuinely domain-dependent and
+still outstanding:
+
+1. Decide on production hosting (a custom domain, or a GitHub Pages
+   *user* site you control - **not** possible with only a GitHub Pages
+   *project* site like `solenyarick.github.io/CO2Counter/`, since the
+   association file below has to sit at the domain's root, above what a
+   project page can serve).
+2. Set `PRODUCTION_URL` near the top of `app.js`'s Auth section to that
+   domain (e.g. `"https://co2tracker.example.com/"`) - without this, a
+   password reset *requested from inside the native app* still sends an
+   email, but with a redirect URL Supabase will reject, since it's stuck
+   using `capacitor://localhost`. (Requesting one from the web version is
+   unaffected either way.)
+3. Fill in `ios-universal-links/apple-app-site-association.template.json`
+   (your Apple Developer Team ID + the bundle ID) and host the result at
+   `https://<your-domain>/.well-known/apple-app-site-association` (or the
+   domain root - either is checked - no file extension, served as
+   `application/json`).
+4. In Xcode: App target → Signing & Capabilities → **+ Capability** →
+   **Associated Domains** → add `applinks:<your-domain>`.
+5. Add the production URL to Supabase's Authentication → URL
+   Configuration → Redirect URLs allowlist (see `supabase/README.md`).
+
+None of steps 1-5 can be done from this environment - 1 is your decision,
+2-3 need the domain from step 1 to have a real value, and 4 is an Xcode
+UI action.
 
 Safe-area padding (`env(safe-area-inset-*)` in `style.css`'s `.app` rule)
 and `apple-mobile-web-app-*` meta tags in `index.html` are already in place

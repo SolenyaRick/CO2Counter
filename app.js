@@ -2272,13 +2272,27 @@
   // ---------- Auth ----------
   let authMode = "signin";
 
+  // Fill in once production hosting is decided (see README.md's "iOS app
+  // (Capacitor)" section) - needed ONLY for currentAppUrl() below, when
+  // running inside the native app. e.g. "https://co2tracker.example.com/".
+  // Until this is set, requesting a password reset from inside the native
+  // app will still work from the web version, but the emailed link won't
+  // deep-link back into the app (see registerDeepLinkHandling() and
+  // handleDeepLink() above for the other half of this).
+  const PRODUCTION_URL = "";
+
   // Where Supabase should send the user back to after clicking a signup
-  // confirmation or password-reset email link. Computed from wherever the
-  // app actually is (not hardcoded), so this works on GitHub Pages, a
-  // custom domain, or localhost alike - as long as that URL is also added
-  // to the Supabase project's Authentication > URL Configuration >
-  // Redirect URLs allowlist (Supabase ignores redirects not on that list).
+  // confirmation or password-reset email link. On the web this is
+  // computed from wherever the app actually is (not hardcoded), so it
+  // works on GitHub Pages, a custom domain, or localhost alike - as long
+  // as that URL is also added to the Supabase project's Authentication >
+  // URL Configuration > Redirect URLs allowlist (Supabase ignores
+  // redirects not on that list). Inside the native app, window.location
+  // is Capacitor's internal capacitor://localhost, not a real address an
+  // email link can point at - use PRODUCTION_URL there instead.
   function currentAppUrl() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNative && PRODUCTION_URL) return PRODUCTION_URL;
     return window.location.origin + window.location.pathname;
   }
 
@@ -2293,6 +2307,56 @@
 
   function clearAuthParamsFromUrl() {
     history.replaceState(null, "", window.location.pathname);
+  }
+
+  // Handles a password-reset link opened via iOS Universal Links (see
+  // ios/App/App/App.entitlements and the apple-app-site-association setup
+  // documented in README.md - requires a real hosting domain, not yet
+  // wired up). In the web app, Supabase's client notices the recovery
+  // token in window.location automatically; inside the native app the
+  // WKWebView never navigates to the https:// link at all (the OS hands
+  // Capacitor the URL directly instead), so that automatic detection
+  // never fires - this manually extracts the same token(s) from whatever
+  // URL the OS handed us and establishes the session itself. Handles both
+  // shapes Supabase can send (see urlIndicatesPasswordRecovery() above).
+  // Setting expectingPasswordRecovery here (synchronously, before the
+  // async session calls below resolve) is what makes routeSession() show
+  // the reset-password screen instead of a normal sign-in once the
+  // session comes through, exactly like the web flow.
+  async function handleDeepLink(url) {
+    if (!url || !/type=recovery/.test(url)) return;
+    expectingPasswordRecovery = true;
+
+    const hashIndex = url.indexOf("#");
+    const queryIndex = url.indexOf("?");
+    const hash = hashIndex >= 0 ? url.slice(hashIndex + 1) : "";
+    const query = queryIndex >= 0 ? url.slice(queryIndex + 1, hashIndex >= 0 ? hashIndex : undefined) : "";
+    const hashParams = new URLSearchParams(hash);
+    const queryParams = new URLSearchParams(query);
+
+    if (queryParams.get("code")) {
+      const { error } = await sbClient.auth.exchangeCodeForSession(queryParams.get("code"));
+      if (error) console.error("Failed to exchange recovery code from deep link", error);
+    } else if (hashParams.get("access_token")) {
+      const { error } = await sbClient.auth.setSession({
+        access_token: hashParams.get("access_token"),
+        refresh_token: hashParams.get("refresh_token"),
+      });
+      if (error) console.error("Failed to set recovery session from deep link", error);
+    }
+  }
+
+  // Registers the above only when actually running inside the native app
+  // (window.Capacitor is undefined in a normal browser, including the
+  // plain web version of this same app) - getLaunchUrl() covers the case
+  // where the link cold-started the app, before any listener could have
+  // been registered yet; addListener covers the app already being open.
+  function registerDeepLinkHandling() {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) return;
+    const CapApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if (!CapApp) return;
+    CapApp.addListener("appUrlOpen", ({ url }) => handleDeepLink(url));
+    CapApp.getLaunchUrl().then((result) => { if (result && result.url) handleDeepLink(result.url); });
   }
 
   function updateAuthModeUI() {
@@ -2607,6 +2671,7 @@
 
     updateAuthModeUI();
 
+    registerDeepLinkHandling();
     expectingPasswordRecovery = urlIndicatesPasswordRecovery();
 
     function routeSession(event, session) {
