@@ -1,4 +1,4 @@
-# Weekly CO2 Tracker
+# CO2 Tracker
 
 A web app for tracking your weekly carbon footprint from commuting and food,
 with accounts and a friends leaderboard backed by Supabase.

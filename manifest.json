@@ -1,5 +1,5 @@
 {
-  "name": "Weekly CO2 Tracker",
+  "name": "CO2 Tracker",
   "short_name": "CO2 Tracker",
   "description": "Track your weekly carbon footprint from commuting and food.",
   "start_url": "./index.html",

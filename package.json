@@ -1,7 +1,7 @@
 {
   "name": "co2-tracker",
   "version": "1.0.0",
-  "description": "Weekly CO2 Tracker - static web app wrapped for iOS via Capacitor",
+  "description": "CO2 Tracker - static web app wrapped for iOS via Capacitor",
   "private": true,
   "scripts": {
     "build:web": "sh scripts/sync-web.sh",
