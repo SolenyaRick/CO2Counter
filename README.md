@@ -174,6 +174,76 @@ You'll need your own Supabase project — see `supabase/README.md` — with its
 URL and anon key set in the `SUPABASE_URL` / `SUPABASE_ANON_KEY` constants
 near the top of `app.js`.
 
+## iOS app (Capacitor)
+
+The `ios/` folder is a [Capacitor](https://capacitorjs.com) wrapper around
+this exact web app — same `index.html`/`app.js`/`style.css`/`vendor`/`icons`,
+unchanged, running inside a native WKWebView shell, producing a real app you
+can install on a device or submit to the App Store. No rewrite: fetch calls
+to Supabase work the same way from inside the native app as they do in a
+browser.
+
+**This part needs a Mac with Xcode installed** (and, for real-device
+installs or App Store submission, a free or paid Apple ID — the $99/yr
+Apple Developer Program is only required for App Store distribution, not
+for running on your own device via Xcode). None of the steps below can be
+done from this environment.
+
+On your Mac:
+
+1. Clone the repo and run `npm install` (installs the Capacitor CLI/core/iOS
+   packages - see `package.json`).
+2. Run `npm run sync:ios`. This copies the real web files into `www/` (a
+   build artifact, regenerated from scratch each run - see
+   `scripts/sync-web.sh` - never edit `www/` directly, edit the real files
+   at the repo root) and then into `ios/App/App/public`, which is what
+   Xcode actually builds from.
+3. Run `npm run open:ios`, or just open `ios/App/App.xcodeproj` directly in
+   Xcode. (Capacitor 8's iOS platform uses Swift Package Manager, not
+   CocoaPods - no `.xcworkspace` or `pod install` needed. Xcode will
+   resolve the Capacitor Swift package automatically the first time it
+   opens, which needs an internet connection.)
+4. In Xcode, select the `App` target → **Signing & Capabilities** → pick
+   your team under **Team** (add your Apple ID first via **Xcode → Settings
+   → Accounts** if you haven't). Xcode will auto-generate a free
+   development signing certificate.
+5. Pick a simulator or a connected iPhone as the run destination and hit
+   **Run** (▶). That's a working native build.
+6. For the App Store: first create the app's record in [App Store
+   Connect](https://appstoreconnect.apple.com) using the same bundle ID as
+   `capacitor.config.json`'s `appId` (currently `com.solenyarick.co2tracker`
+   — a placeholder; change it in `capacitor.config.json` and re-run `npm run
+   sync:ios` before registering anything if you want a different one, since
+   a registered bundle ID is effectively permanent). Then in Xcode:
+   **Product → Archive**, and once it finishes, **Distribute App** from the
+   Organizer window that opens, following Apple's App Store submission flow
+   (screenshots, description, privacy details, etc. are filled in on App
+   Store Connect's website, not in Xcode).
+
+**Whenever you change the web app** (`index.html`/`app.js`/`style.css`/
+`vendor`/`icons`), re-run `npm run sync:ios` before rebuilding in Xcode —
+Xcode builds from the copied snapshot in `ios/App/App/public`, not live
+from the repo root, so a plain Xcode rebuild without re-syncing first will
+still show the old version.
+
+**Known gap, not addressed yet**: the "forgot password" email flow computes
+its redirect URL from wherever the app is "actually running" (see
+`supabase/README.md`'s note on `emailRedirectTo`/`redirectTo`), which
+inside the native app is Capacitor's internal `capacitor://localhost`
+origin — not a real URL Supabase can allowlist or a password-reset email
+link can sensibly point at. In practice the reset link will likely just
+open in mobile Safari instead of deep-linking back into the app, which
+still lets someone reset their password, just outside the native shell. A
+proper fix would mean setting up Universal Links/Associated Domains so
+`https://` reset links open directly in the app - a bigger, separate piece
+of work not done here.
+
+Safe-area padding (`env(safe-area-inset-*)` in `style.css`'s `.app` rule)
+and `apple-mobile-web-app-*` meta tags in `index.html` are already in place
+so content clears the notch/Dynamic Island and home indicator, and so
+"Add to Home Screen" from Safari (a separate, App-Store-free path to a
+home-screen icon - see `manifest.json`) looks reasonable too.
+
 ## Emission factor assumptions
 
 Figures are illustrative averages, not a precise personal carbon calculator:

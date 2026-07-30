@@ -36,7 +36,14 @@ body {
 .app {
   max-width: 760px;
   margin: 0 auto;
-  padding: 24px 16px 64px;
+  /* env(safe-area-inset-*) is 0 in a normal browser (these are then just
+     the original 24px/16px/64px), but keeps content clear of the notch/
+     Dynamic Island and home indicator when running full-screen in the
+     Capacitor iOS wrapper - see capacitor.config.json. */
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: max(64px, calc(64px + env(safe-area-inset-bottom)));
+  padding-left: max(16px, env(safe-area-inset-left));
 }
 
 /* Auth screen */

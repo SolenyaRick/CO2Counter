@@ -1,0 +1,16 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Capacitor build artifact - regenerated from the real source files via
+# `npm run build:web` (see scripts/sync-web.sh). Never edit www/ directly.
+www/
+
+# Xcode / CocoaPods
+ios/App/Pods/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+**/xcuserdata/
+*.xcuserstate
+.DS_Store

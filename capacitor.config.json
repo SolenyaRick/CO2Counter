@@ -1,0 +1,9 @@
+{
+  "appId": "com.solenyarick.co2tracker",
+  "appName": "Weekly CO2 Tracker",
+  "webDir": "www",
+  "backgroundColor": "#f4f6f5",
+  "ios": {
+    "contentInset": "automatic"
+  }
+}
