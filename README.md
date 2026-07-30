@@ -215,15 +215,22 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   trips logged elsewhere.
 - **UK average reference** (Stats page): computed bottom-up the same way as
   your own total, from representative average UK inputs run through the
-  same formulas — a 10 km one-way commute by car, a representative average
-  week's food (5 meat days weighted toward poultry + 2 veggie days, 3–10%
-  waste), 1 short-haul + 0.2 long-haul flights/yr, ~2,900 kWh/yr household
-  electricity split across ~2.4 people, and 3 clothing items/month — rather
-  than a generic "average footprint" statistic, which would cover a lot
-  this app doesn't track (see the Stats page's "What this doesn't account
-  for" card). This core figure comes to roughly 2,860 kg CO2e/yr, well
-  below often-cited "average person" figures (8–10 tonnes) because those
-  are scoped much more broadly. If you've answered any of the optional
+  same formulas — a 10 km one-way commute by car over a standard 5-day
+  working week (~0.89 tonnes CO2e/yr on its own — this used to be missing
+  the 5-day multiplier entirely, landing at ~0.18 tonnes/yr versus the
+  ~1 tonne/yr commonly cited for a UK car commuter, until that was fixed),
+  a representative average week's food (5 meat days weighted toward
+  poultry + 2 veggie days, 3–10% waste, ~1.51 tonnes CO2e/yr on its own —
+  narrower than the ~2.2 tonnes/yr sometimes cited, since this only
+  covers the meat/veg choice behind each meal, not dairy, eggs, snacks, or
+  packaging/food-miles — see "What this doesn't account for" below), 1
+  short-haul + 0.2 long-haul flights/yr, ~2,900 kWh/yr household
+  electricity split across ~2.4 people, and 3 clothing items/month —
+  rather than a generic "average footprint" statistic, which would cover
+  a lot this app doesn't track. This core figure comes to roughly 3,570
+  kg CO2e/yr, still below often-cited "average person" figures (8–10
+  tonnes) because those are scoped much more broadly. If you've answered
+  any of the optional
   extras above (gas heating, non-commute driving, car ownership, pets,
   water usage, banking), the matching representative UK figure for each
   one is added to *both* sides of the comparison, so it's never your
@@ -239,7 +246,7 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 - **UK average week** (This Week page, and the "Match UK average week" goal
   preset): the same commute + food UK-average assumptions as above, without
   the ×52, since this is what a single average week (not year) comes to —
-  roughly 32.5 kg CO2e.
+  roughly 46.2 kg CO2e.
 - **1.5°C by 2030 target — comprehensive** (Stats page, "How your year
   compares"): 2,500 kg CO2e/yr per capita, the Hot or Cool Institute's
   "1.5-Degree Lifestyles" research target (dropping further for 2040/2050)
@@ -253,13 +260,13 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   figure instead — switched to Hot or Cool's own headline number so this
   and the food+commute preset below cite one consistent source.)
 - **1.5°C by 2030 target — food + commute only** (Account page goal
-  preset): ~16.4 kg CO2e/week. There's no officially published
+  preset): ~20.2 kg CO2e/week. There's no officially published
   category-level split of the comprehensive target above, so this is our
   own estimate: applying published 2030 reduction requirements for
   developed countries (nutrition −47%, mobility −72%, per Hot or Cool
   Institute's "1.5-Degree Lifestyles" research) to the UK-average food and
   commute figures already used elsewhere in this app.
-- **World average week** (Account page goal preset): ~23.6 kg CO2e/week.
+- **World average week** (Account page goal preset): ~29.0 kg CO2e/week.
   The roughest figure in the app — there's no global equivalent of the
   UK's national travel/diet surveys, so this is a lightweight bottom-up
   estimate (a shorter car-equivalent commute and less meat than the UK

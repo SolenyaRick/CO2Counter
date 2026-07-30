@@ -158,6 +158,13 @@
   // at all (see the note on the Stats page for what's missing).
   const UK_AVERAGE_ASSUMPTIONS = {
     commuteOneWayKm: 10, // rough average UK one-way commute, assumed by car (the majority mode)
+    // Standard UK working week - this used to be missing entirely, which
+    // meant the UK-average commute figure only ever counted ONE round trip
+    // for the whole week (not five), landing at ~0.18 tonnes CO2e/yr versus
+    // commonly cited UK figures of "nearly 1 tonne/yr" for a car commuter -
+    // multiplying by a representative 5-day week brings this to ~0.89
+    // tonnes/yr, a much closer match.
+    commuteDaysPerWeek: 5,
     // A representative average week's meat: mostly poultry (the most-eaten
     // meat in the UK), with one day each of the next few most common types.
     weeklyMeatDays: [
@@ -203,7 +210,7 @@
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
 
-    const commuteWeekly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2;
+    const commuteWeekly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * a.commuteDaysPerWeek;
     const commute = commuteWeekly * 52;
 
     const meatWeekly = a.weeklyMeatDays.reduce((sum, day) => {
@@ -277,7 +284,11 @@
   // the UK does. Treat this one as more illustrative than the others.
   const WORLD_AVERAGE_WEEKLY_KG = (() => {
     const wasteMult = FOOD_WASTE_MULTIPLIERS.some;
-    const commuteWeekly = TRANSPORT_FACTORS.car * 4 * 2; // ~4km one-way car-equivalent
+    // ~4km one-way car-equivalent, reusing the UK figure's 5-day working
+    // week rather than guessing a separate global commuting-frequency
+    // number - the "world drives less" assumption is already captured via
+    // the shorter distance, not via commuting fewer days.
+    const commuteWeekly = TRANSPORT_FACTORS.car * 4 * 2 * UK_AVERAGE_ASSUMPTIONS.commuteDaysPerWeek;
     const meatDays = [
       { meat: "chicken", portion: "medium" },
       { meat: "chicken", portion: "medium" },
