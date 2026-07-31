@@ -1638,7 +1638,11 @@
     return (yearlyFlying + yearlyHomeEnergy + yearlyGoods + yearlyOptional) / 52;
   }
 
-  function renderLeaderboardRow(list, rank, label, sub, kg, isSelf) {
+  // kgSuffix/detailText are optional - only "This week" (renderLeaderboard)
+  // passes them, for the daily-average figure + a small grey "X kg total ·
+  // D/E days" note next to it. Every other caller (renderWeeklyAverageLeaderboard)
+  // gets the same "kg" total it always has, unchanged.
+  function renderLeaderboardRow(list, rank, label, sub, kg, isSelf, kgSuffix = "kg", detailText = null) {
     const li = document.createElement("li");
     li.className = "leaderboard-row" + (isSelf ? " is-current" : "");
 
@@ -1657,13 +1661,22 @@
     info.appendChild(nameEl);
     info.appendChild(subEl);
 
+    const totalWrap = document.createElement("span");
+    totalWrap.className = "leaderboard-total-wrap";
     const total = document.createElement("span");
     total.className = "leaderboard-total";
-    total.textContent = `${fmt(kg)} kg`;
+    total.textContent = `${fmt(kg)} ${kgSuffix}`;
+    totalWrap.appendChild(total);
+    if (detailText) {
+      const note = document.createElement("span");
+      note.className = "leaderboard-sub-note";
+      note.textContent = detailText;
+      totalWrap.appendChild(note);
+    }
 
     li.appendChild(rankEl);
     li.appendChild(info);
-    li.appendChild(total);
+    li.appendChild(totalWrap);
     list.appendChild(li);
   }
 
@@ -1685,22 +1698,35 @@
       return;
     }
 
-    if (data.length > 1) {
-      const winner = data[0];
+    // Ranked (by the RPC) on average daily kg, not raw total - someone
+    // who's simply behind on logging so far this week shouldn't look
+    // "better" than someone current on every day just because they've
+    // logged less. daysElapsed is always today's position in THIS week
+    // (Mon=1...Sun=7), since this card only ever shows the current week.
+    const daysElapsed = todayIndexInWeek();
+    const withAvg = data.map((entry) => ({
+      ...entry,
+      avgDaily: entry.total_kg / Math.max(1, entry.days_confirmed),
+    }));
+
+    if (withAvg.length > 1) {
+      const winner = withAvg[0];
       const winnerName = winner.is_self ? "You" : winner.display_name || "A friend";
-      winnerEl.textContent = `\u{1F3C6} ${winnerName} ${winner.is_self ? "are" : "is"} winning this week with ${fmt(winner.total_kg)} kg CO2e.`;
+      winnerEl.textContent = `\u{1F3C6} ${winnerName} ${winner.is_self ? "are" : "is"} winning this week with ${fmt(winner.avgDaily)} kg CO2e/day average.`;
       winnerEl.hidden = false;
     }
 
     const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
-    data.forEach((entry, i) => {
+    withAvg.forEach((entry, i) => {
       renderLeaderboardRow(
         list,
         medals[i] || `#${i + 1}`,
         entry.is_self ? "You" : entry.display_name || "Friend",
         weekLabel(CURRENT_WEEK_KEY),
-        entry.total_kg,
-        entry.is_self
+        entry.avgDaily,
+        entry.is_self,
+        "kg/day",
+        `${fmt(entry.total_kg)} kg total · ${entry.days_confirmed}/${daysElapsed} days`
       );
     });
   }

@@ -216,7 +216,7 @@ Verified against a real Postgres instance with two users: one calling
 profile, week, and shared-friendship rows, while the other user's data
 was completely untouched.
 
-The most recent run widens `app_wide_weekly_average()`'s first return
+A later run widens `app_wide_weekly_average()`'s first return
 column from `avg_commute_food_kg` (commute + food only, excluding
 alcohol) to `avg_commute_food_alcohol_kg` (commute + food + alcohol) -
 there was no longer a good reason for the "Everyone on the app" card's
@@ -231,6 +231,22 @@ an output column, the function had to be dropped first (same
 upgrading a database seeded with the previous schema version and
 confirming a clean apply, then checking the actual returned value
 against a hand-inserted week.
+
+The most recent run adds a `week_days_confirmed(confirmed_commute,
+confirmed_diet)` helper (count of days, 0-7, where both are confirmed -
+the per-day version of the existing `week_is_fully_confirmed()` bar) and
+changes `friend_leaderboard()` to rank by average daily kg
+(`total_kg / days_confirmed`) instead of raw `total_kg`, since that
+function deliberately still works on a live, in-progress week - ranking
+by total let someone who's simply behind on logging (e.g. only Monday
+confirmed by Friday) look artificially "better" than a friend who's kept
+every day current, purely because they'd logged less, not emitted less.
+`days_confirmed` is now also returned alongside `total_kg`, so the
+Leaderboard page can show "X kg total · D/E days" next to each person's
+average. Verified against a real Postgres instance with two users - one
+behind on logging with a worse per-day rate but a lower raw total, one
+diligent with a better per-day rate but a higher raw total - confirming
+the diligent one now correctly ranks first.
 
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a

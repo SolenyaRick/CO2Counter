@@ -208,20 +208,57 @@ $$;
 revoke all on function public.find_user_by_email(text) from public;
 grant execute on function public.find_user_by_email(text) to authenticated;
 
+-- Count of days (0-7) where BOTH commute and diet are confirmed for a
+-- week - the same per-day bar as a "✓ FULL" week just applied one day at
+-- a time, used by friend_leaderboard() below to rank a live, still-in-
+-- progress week fairly (by average daily kg) rather than by raw total,
+-- which would otherwise reward simply not having logged yet.
+drop function if exists public.week_days_confirmed(jsonb, jsonb);
+
+create or replace function public.week_days_confirmed(confirmed_commute jsonb, confirmed_diet jsonb)
+returns integer
+language sql
+immutable
+as $$
+  select
+    (case when confirmed_commute @> '{"mon":true}'::jsonb and confirmed_diet @> '{"mon":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"tue":true}'::jsonb and confirmed_diet @> '{"tue":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"wed":true}'::jsonb and confirmed_diet @> '{"wed":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"thu":true}'::jsonb and confirmed_diet @> '{"thu":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"fri":true}'::jsonb and confirmed_diet @> '{"fri":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"sat":true}'::jsonb and confirmed_diet @> '{"sat":true}'::jsonb then 1 else 0 end) +
+    (case when confirmed_commute @> '{"sun":true}'::jsonb and confirmed_diet @> '{"sun":true}'::jsonb then 1 else 0 end);
+$$;
+
+revoke all on function public.week_days_confirmed(jsonb, jsonb) from public;
+grant execute on function public.week_days_confirmed(jsonb, jsonb) to authenticated;
+
 -- Leaderboard: self + accepted friends' totals for one week, with display
 -- names. Everything else about a friend's week stays private. Only weeks
 -- with at least one confirmed day are included - otherwise a week with
 -- nothing but unconfirmed drafts (total_kg = 0) would misleadingly rank as
 -- a perfect zero-carbon week.
+--
+-- Ranked by average daily kg (total_kg / days_confirmed), not raw
+-- total_kg - this is the one leaderboard that deliberately works on a
+-- live, still-in-progress week (see week_is_fully_confirmed()'s comment
+-- below), so ranking by total would let someone who's simply behind on
+-- logging (say, only Monday confirmed by Friday) look artificially
+-- "better" than someone who's confirmed every day so far - not because
+-- they emit less, but because they've logged less. days_confirmed is
+-- also returned so the client can show "X/Y days" alongside the total.
 drop function if exists public.friend_leaderboard(text);
 
 create or replace function public.friend_leaderboard(target_week_key text)
-returns table (user_id uuid, display_name text, total_kg numeric, is_self boolean)
+returns table (user_id uuid, display_name text, total_kg numeric, days_confirmed integer, is_self boolean)
 language sql
 security definer
 set search_path = public
 as $$
-  select w.user_id, p.display_name, w.total_kg, (w.user_id = auth.uid()) as is_self
+  select
+    w.user_id, p.display_name, w.total_kg,
+    public.week_days_confirmed(w.confirmed_commute, w.confirmed_diet) as days_confirmed,
+    (w.user_id = auth.uid()) as is_self
   from public.weeks w
   join public.profiles p on p.id = w.user_id
   where w.week_key = target_week_key
@@ -238,7 +275,7 @@ as $$
             or (f.addressee_id = auth.uid() and f.requester_id = w.user_id))
       )
     )
-  order by w.total_kg asc;
+  order by (w.total_kg / greatest(1, public.week_days_confirmed(w.confirmed_commute, w.confirmed_diet))) asc;
 $$;
 
 revoke all on function public.friend_leaderboard(text) from public;

@@ -70,9 +70,14 @@ with accounts and a friends leaderboard backed by Supabase.
   Monday doesn't drag those averages down as if it were a whole week's
   worth of data. Tap a box for a day-by-day breakdown.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
-  friends by this week's total CO2e (lowest first) with a callout for
-  whoever's winning — this one still includes in-progress weeks, same as
-  the Weeks grid; "All-time weekly average" ranks everyone by their average
+  friends by this week's *average* kg CO2e per confirmed day so far (lowest
+  first), not raw total, with a callout for whoever's winning — this one
+  still includes in-progress weeks, same as the Weeks grid, and ranking by
+  average rather than total means being behind on logging days doesn't make
+  someone look artificially better than a friend who's kept every day up to
+  date; each person's raw total and "confirmed/elapsed days" (e.g. "3/5" on
+  a Friday if only Mon–Wed are done) show in small text next to their
+  average; "All-time weekly average" ranks everyone by their average
   CO2e per *fully* confirmed week (every day, both commute and food — see
   the Weeks page above) since they started, which also folds in a
   weekly-equivalent share of each person's yearly Stats page figures
