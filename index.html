@@ -615,6 +615,16 @@
           Display name
           <input type="text" id="profile-name" placeholder="Your name" />
         </label>
+        <label class = "field">
+          University (optional)
+          <select id="profile-university">
+                     <option value="low">0&ndash;3% &mdash; Not affiliated</option>
+            <option value="UCL"</option>
+            <option value="Imperial"</option>
+            <option value="KCL"</option>
+          </select>
+                     
+          </label>
         <label class="field">
           One-way commute distance (km)
           <input type="number" id="profile-distance" min="0" step="0.5" />
@@ -632,16 +642,11 @@
           "Match UK average week" sets your goal to the same commute + food UK
           average shown on the Stats page (only those two, since that's what this
           weekly goal tracks). "1.5&deg;C 2030 (food + commute)" is our own estimate
-          (~20.2 kg CO2e/week) &mdash; there's no official category-level split of
-          the 1.5&deg;C target (see the Stats page for that comprehensive figure), so
-          this applies published 2030 reduction requirements for developed countries
+          &mdash; applying published 2030 reduction requirements for developed countries
           (nutrition &minus;47%, mobility &minus;72%, per Hot or Cool Institute
-          research) to the UK-average food and commute figures above. "Match world
-          average week" (~29.0 kg CO2e/week) is the roughest of the three &mdash;
-          there's no global equivalent of the UK's national travel/diet surveys, so
-          it's a rough estimate assuming less car use and less meat than the UK
-          figures, reflecting that most of the world's population drives and eats
-          meat less than the UK does on average.
+          research). "Match world average week" is the roughest of the three &mdash;
+          rough estimate assuming less car use and less meat than the UK
+          figures.
         </p>
         <label class="field">
           How much food do you waste?
@@ -691,9 +696,7 @@
           left out. Your name, email, and account are never included &mdash; the
           developer only ever sees the raw numbers (commute distance, diet mix,
           flights, home energy, heating, pets, water, etc.), not who they belong to.
-          This is used purely to sanity-check and improve the UK-average assumptions
-          this app is built on, which are currently rough estimates rather than real
-          measured data.
+          
         </p>
         <div id="owner-research-export" hidden>
           <div class="account-actions">
@@ -753,8 +756,7 @@
           Permanently deletes your account and everything tied to it &mdash; your login,
           profile settings, every week you've logged, and your friend connections.
           This is different from &ldquo;Reset all data&rdquo; above, which only clears
-          your data but keeps your account and login working. Deleting your account
-          cannot be undone.
+          your data but keeps your account. <strong> Deleting your account cannot be undone </strong>
         </p>
         <button id="delete-account-btn" class="btn-secondary danger">Delete my account</button>
       </section>
