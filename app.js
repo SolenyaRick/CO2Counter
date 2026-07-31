@@ -2272,14 +2272,13 @@
   // ---------- Auth ----------
   let authMode = "signin";
 
-  // Fill in once production hosting is decided (see README.md's "iOS app
-  // (Capacitor)" section) - needed ONLY for currentAppUrl() below, when
-  // running inside the native app. e.g. "https://co2tracker.example.com/".
-  // Until this is set, requesting a password reset from inside the native
-  // app will still work from the web version, but the emailed link won't
-  // deep-link back into the app (see registerDeepLinkHandling() and
-  // handleDeepLink() above for the other half of this).
-  const PRODUCTION_URL = "";
+  // Needed ONLY for currentAppUrl() below, when running inside the native
+  // app - see README.md's "iOS app (Capacitor)" section for the rest of
+  // what's needed to make this domain actually serve the app and resolve
+  // Universal Links (DNS, GitHub Pages custom domain verification, the
+  // apple-app-site-association file, and the Associated Domains
+  // capability in Xcode - none of that is done just by setting this).
+  const PRODUCTION_URL = "https://co2counter.co.uk/";
 
   // Where Supabase should send the user back to after clicking a signup
   // confirmation or password-reset email link. On the web this is

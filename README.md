@@ -230,41 +230,44 @@ Xcode builds from the copied snapshot in `ios/App/App/public`, not live
 from the repo root, so a plain Xcode rebuild without re-syncing first will
 still show the old version.
 
-**Password-reset deep linking (Universal Links)**: the app-code half of
-this is done - `registerDeepLinkHandling()`/`handleDeepLink()` in `app.js`
-manually pick up a password-reset link opened via iOS Universal Links
-(the WKWebView never navigates to the real `https://` URL the way a
-browser tab would, so Supabase's normal automatic session detection can't
-fire on its own; this extracts the same token(s) from whatever URL the OS
-handed the app and establishes the session itself, same end result as the
-web flow). That's everything that can be done without knowing where the
-app will actually be hosted - the rest is genuinely domain-dependent and
-still outstanding:
+**Password-reset deep linking (Universal Links)**: production hosting is
+now decided - **`co2counter.co.uk`** (a `CNAME` file at the repo root
+declares this to GitHub Pages, `PRODUCTION_URL` in `app.js`'s Auth
+section is set to it, and `registerDeepLinkHandling()`/`handleDeepLink()`
+in the same file already handle picking up a password-reset link opened
+via Universal Links - the WKWebView never navigates to the real
+`https://` URL the way a browser tab would, so Supabase's normal
+automatic session detection can't fire on its own; this extracts the
+same token(s) from whatever URL the OS handed the app and establishes
+the session itself, same end result as the web flow). What's left needs
+your domain registrar, GitHub's website, and Xcode - none of which this
+environment has access to:
 
-1. Decide on production hosting (a custom domain, or a GitHub Pages
-   *user* site you control - **not** possible with only a GitHub Pages
-   *project* site like `solenyarick.github.io/CO2Counter/`, since the
-   association file below has to sit at the domain's root, above what a
-   project page can serve).
-2. Set `PRODUCTION_URL` near the top of `app.js`'s Auth section to that
-   domain (e.g. `"https://co2tracker.example.com/"`) - without this, a
-   password reset *requested from inside the native app* still sends an
-   email, but with a redirect URL Supabase will reject, since it's stuck
-   using `capacitor://localhost`. (Requesting one from the web version is
-   unaffected either way.)
-3. Fill in `ios-universal-links/apple-app-site-association.template.json`
-   (your Apple Developer Team ID + the bundle ID) and host the result at
-   `https://<your-domain>/.well-known/apple-app-site-association` (or the
-   domain root - either is checked - no file extension, served as
-   `application/json`).
-4. In Xcode: App target → Signing & Capabilities → **+ Capability** →
-   **Associated Domains** → add `applinks:<your-domain>`.
-5. Add the production URL to Supabase's Authentication → URL
-   Configuration → Redirect URLs allowlist (see `supabase/README.md`).
-
-None of steps 1-5 can be done from this environment - 1 is your decision,
-2-3 need the domain from step 1 to have a real value, and 4 is an Xcode
-UI action.
+1. **Buy `co2counter.co.uk`** at a registrar, if you haven't already.
+2. **Point DNS at GitHub Pages**: since this is a subdomain-free root
+   domain, use GitHub's recommended `ALIAS`/`ANAME` record if your
+   registrar supports one, otherwise four **A** records to
+   `185.199.108.153`, `185.199.109.153`, `185.199.110.153`,
+   `185.199.111.153`.
+3. In the repo's **Settings → Pages** on GitHub's website, confirm the
+   custom domain shows as `co2counter.co.uk` (the `CNAME` file usually
+   makes this automatic once DNS resolves) and enable **Enforce HTTPS**
+   once that option becomes available.
+4. Fill in `ios-universal-links/apple-app-site-association.template.json`
+   - replace `TEAMID` with your Apple Developer Team ID (Xcode →
+   Settings → Accounts, or developer.apple.com/account → Membership) -
+   and host the resulting file at
+   `https://co2counter.co.uk/.well-known/apple-app-site-association`
+   (add it to this repo, since that's what's now serving the domain; no
+   file extension, needs to be served as `application/json`, which
+   GitHub Pages does automatically for a `.json`-free filename like
+   this one as long as it doesn't misdetect the content type - verify
+   this once it's live, e.g. `curl -I` and check the `Content-Type`
+   header).
+5. In Xcode: App target → Signing & Capabilities → **+ Capability** →
+   **Associated Domains** → add `applinks:co2counter.co.uk`.
+6. Add `https://co2counter.co.uk/` to Supabase's Authentication → URL
+   Configuration → Site URL and Redirect URLs (see `supabase/README.md`).
 
 Safe-area padding (`env(safe-area-inset-*)` in `style.css`'s `.app` rule)
 and `apple-mobile-web-app-*` meta tags in `index.html` are already in place

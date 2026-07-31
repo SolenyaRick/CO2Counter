@@ -27,11 +27,13 @@ auth) once login is wired up. To set that up:
    on before any real users sign up.
 6. **Required for signup-confirmation and password-reset emails to actually
    work**: go to **Authentication > URL Configuration** and:
-   - Set **Site URL** to wherever the app is actually hosted, e.g.
-     `https://solenyarick.github.io/CO2Counter/`.
+   - Set **Site URL** to wherever the app is actually hosted -
+     `https://co2counter.co.uk/` once that domain is live (see
+     `README.md`'s "iOS app (Capacitor)" section), or
+     `https://solenyarick.github.io/CO2Counter/` in the meantime.
    - Add that same URL under **Redirect URLs** (a wildcard like
-     `https://solenyarick.github.io/CO2Counter/**` also works, and covers
-     local testing origins too if you add e.g. `http://localhost:8000/**`).
+     `https://co2counter.co.uk/**` also works, and covers local testing
+     origins too if you add e.g. `http://localhost:8000/**`).
 
    The app tells Supabase where to send the user back to (via
    `emailRedirectTo`/`redirectTo`, computed from whatever URL the app is
