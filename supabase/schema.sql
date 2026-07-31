@@ -46,6 +46,9 @@ alter table public.profiles add column if not exists annual_water_m3 numeric;
 alter table public.profiles add column if not exists bank_name text;
 alter table public.profiles add column if not exists bank_balance numeric;
 alter table public.profiles add column if not exists university text;
+alter table public.profiles drop constraint if exists profiles_university_check;
+alter table public.profiles add constraint profiles_university_check
+  check (university is null or university in ('leeds', 'manchester', 'bristol'));
 
 -- Research opt-in (Account page): off by default, unlike every other column
 -- on this table - nothing is shared until the user actively turns it on.
