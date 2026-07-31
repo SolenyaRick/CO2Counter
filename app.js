@@ -35,6 +35,8 @@
     { key: "sun", short: "S", full: "Sunday" },
   ];
 
+  const MONTH_SHORT_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   // Rough average emission factors, kg CO2e per passenger-km.
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
@@ -1321,36 +1323,21 @@
   }
 
   // Monzo Trends-style "budget pace" chart: a dashed target line burns down
-  // from the weekly goal to 0 in a straight line across Mon-Sun, and a solid
-  // line tracks your actual remaining budget (goal minus CO2e confirmed so
-  // far). Falling below the dashed line means you're using CO2e faster than
-  // the goal allows for how far through the week it is; staying above it
-  // means you're on pace or ahead. For the current week, the actual line
-  // only draws up to today - it doesn't project forward.
-  function renderChart(dailyTotals, weekKey, alcoholKg = 0) {
-    const chart = document.getElementById("daily-chart");
+  // from a goal to 0 in a straight line across the tracked span, and a solid
+  // line tracks the actual remaining budget (goal minus CO2e confirmed so
+  // far). Falling below the dashed line means CO2e is being used faster than
+  // the goal allows for how far through the span it is; staying above it
+  // means on pace or ahead. The actual line only draws up to the current
+  // point - it doesn't project forward. Shared by the This Week page's
+  // weekly chart and the Stats page's yearly one below, parameterized on
+  // `goal`/`predicted`/`actualPoints`/`xLabels` so both stay pixel-for-pixel
+  // consistent and any future tweak to one applies to both automatically.
+  function renderBudgetChart(containerId, { goal, predicted, actualPoints, xLabels, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
+    const chart = document.getElementById(containerId);
+    if (!chart) return;
     chart.innerHTML = "";
 
-    const goal = Math.max(0.0001, currentGoal());
-    // Alcohol isn't tied to a specific day, so it's spread evenly across
-    // the week (1/7th per day) rather than counted as already "spent" the
-    // moment the week starts - the previous version front-loaded the
-    // WHOLE week's alcohol onto day 0, before Monday had even happened,
-    // making the pace line look missed from minute one regardless of
-    // actual Mon/Tue choices. Spreading it out means day 0 still starts
-    // exactly even with the predicted line (as it should, before any day
-    // has elapsed), and the full alcoholKg has still fully accrued by day
-    // 7 either way, so the final total still matches weekTotals().
-    const cumulative = [0];
-    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d + alcoholKg / 7));
-    const remaining = cumulative.map((c) => goal - c);
-
-    const predicted = [];
-    for (let j = 0; j <= 7; j++) predicted.push(goal * (1 - j / 7));
-
-    const isCurrentWeek = weekKey === CURRENT_WEEK_KEY;
-    const pointCount = isCurrentWeek ? Math.min(todayIndexInWeek(), 7) : 7;
-    const actualPoints = remaining.slice(0, pointCount + 1);
+    const totalUnits = predicted.length - 1;
 
     // Match the viewBox to the chart's actual rendered pixel width so 1 SVG
     // unit = 1 real pixel in both axes - otherwise a fixed viewBox stretched
@@ -1358,7 +1345,7 @@
     // horizontally (preserveAspectRatio="none" scales x/y independently).
     // Falls back to 340 if the chart is currently hidden (width 0), e.g.
     // when a change on another tab re-renders it in the background; it's
-    // recomputed correctly next time the week tab is actually shown.
+    // recomputed correctly next time this tab is actually shown.
     // Height scales with width (instead of a fixed 160px) so the chart
     // doesn't go flat and thin on wide screens - clamped so it doesn't get
     // absurdly tall either.
@@ -1373,7 +1360,7 @@
     const yMin = Math.min(0, ...allValues);
     const yRange = Math.max(0.0001, yMax - yMin);
 
-    const xAt = (j) => PAD_X + (j / 7) * plotW;
+    const xAt = (j) => PAD_X + (j / totalUnits) * plotW;
     const yAt = (v) => PAD_TOP + (1 - (v - yMin) / yRange) * plotH;
     const pathFor = (values) => values.map((v, j) => `${j === 0 ? "M" : "L"}${xAt(j).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
 
@@ -1391,7 +1378,7 @@
     svg.style.height = `${H}px`;
     svg.setAttribute("class", `budget-chart-svg ${onTrack ? "on-track" : "over-track"}`);
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `Budget pace: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
+    svg.setAttribute("aria-label", `${ariaPrefix}: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
 
     const defs = document.createElementNS(svgNS, "defs");
     const gradient = document.createElementNS(svgNS, "linearGradient");
@@ -1411,7 +1398,7 @@
 
     if (yMin < 0) {
       const zeroLine = document.createElementNS(svgNS, "line");
-      zeroLine.setAttribute("x1", xAt(0)); zeroLine.setAttribute("x2", xAt(7));
+      zeroLine.setAttribute("x1", xAt(0)); zeroLine.setAttribute("x2", xAt(totalUnits));
       zeroLine.setAttribute("y1", zeroY); zeroLine.setAttribute("y2", zeroY);
       zeroLine.setAttribute("class", "budget-zero-line");
       svg.appendChild(zeroLine);
@@ -1440,7 +1427,7 @@
     svg.appendChild(dot);
 
     const goalLabel = document.createElementNS(svgNS, "text");
-    goalLabel.textContent = `${fmt(goal)} kg goal`;
+    goalLabel.textContent = `${fmt(goal)} ${goalLabelSuffix}`;
     goalLabel.setAttribute("x", xAt(0));
     goalLabel.setAttribute("y", Math.max(9, yAt(goal) - 5));
     goalLabel.setAttribute("class", "budget-axis-label");
@@ -1455,18 +1442,13 @@
       svg.appendChild(zeroLabel);
     }
 
-    // Each day's tick sits at the boundary point representing "as of the end
-    // of that day" (j = i + 1) - the same x each day's line vertex and, for
-    // today, the actual-value dot are drawn at - so the label lines up
-    // directly under its data point instead of under the middle of a column.
-    DAYS.forEach((day, i) => {
-      const isToday = isCurrentWeek && i + 1 === todayIndexInWeek();
+    xLabels.forEach(({ j, text, isCurrent }) => {
       const label = document.createElementNS(svgNS, "text");
-      label.textContent = day.short;
-      label.setAttribute("x", xAt(i + 1).toFixed(1));
+      label.textContent = text;
+      label.setAttribute("x", xAt(j).toFixed(1));
       label.setAttribute("y", H - 6);
       label.setAttribute("text-anchor", "middle");
-      label.setAttribute("class", "budget-day-label" + (isToday ? " is-today" : ""));
+      label.setAttribute("class", "budget-day-label" + (isCurrent ? " is-today" : ""));
       svg.appendChild(label);
     });
 
@@ -1479,6 +1461,108 @@
       <span class="legend-item"><span class="legend-swatch legend-swatch-actual ${onTrack ? "on-track" : "over-track"}"></span>${onTrack ? "On pace" : "Over pace"} &middot; ${fmt(Math.abs(finalActual))} kg ${finalActual >= 0 ? "left" : "over goal"}</span>
     `;
     chart.appendChild(legend);
+  }
+
+  function renderChart(dailyTotals, weekKey, alcoholKg = 0) {
+    const goal = Math.max(0.0001, currentGoal());
+    // Alcohol isn't tied to a specific day, so it's spread evenly across
+    // the week (1/7th per day) rather than counted as already "spent" the
+    // moment the week starts - the previous version front-loaded the
+    // WHOLE week's alcohol onto day 0, before Monday had even happened,
+    // making the pace line look missed from minute one regardless of
+    // actual Mon/Tue choices. Spreading it out means day 0 still starts
+    // exactly even with the predicted line (as it should, before any day
+    // has elapsed), and the full alcoholKg has still fully accrued by day
+    // 7 either way, so the final total still matches weekTotals().
+    const cumulative = [0];
+    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d + alcoholKg / 7));
+    const remaining = cumulative.map((c) => goal - c);
+
+    const predicted = [];
+    for (let j = 0; j <= 7; j++) predicted.push(goal * (1 - j / 7));
+
+    const isCurrentWeek = weekKey === CURRENT_WEEK_KEY;
+    const pointCount = isCurrentWeek ? Math.min(todayIndexInWeek(), 7) : 7;
+    const actualPoints = remaining.slice(0, pointCount + 1);
+
+    // Each day's tick sits at the boundary point representing "as of the end
+    // of that day" (j = i + 1) - the same x each day's line vertex and, for
+    // today, the actual-value dot are drawn at - so the label lines up
+    // directly under its data point instead of under the middle of a column.
+    const xLabels = DAYS.map((day, i) => ({
+      j: i + 1,
+      text: day.short,
+      isCurrent: isCurrentWeek && i + 1 === todayIndexInWeek(),
+    }));
+
+    renderBudgetChart("daily-chart", { goal, predicted, actualPoints, xLabels });
+  }
+
+  // Same "budget pace" chart as This Week's, scaled to a calendar year: the
+  // dashed target line burns from a yearly goal (the weekly goal x52, same
+  // commute+food+alcohol scope the weekly chart tracks - flights/home
+  // energy/etc are fixed annual estimates with no dated data to plot a pace
+  // against) down to 0 across Jan 1-Dec 31, and the solid actual line is
+  // built from real per-day confirmed commute/food data (plus each week's
+  // alcohol spread evenly across its 7 days, same technique as the weekly
+  // chart) for every day of the current year up to today.
+  function computeYearToDateDaily() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const jan1 = new Date(year, 0, 1);
+    jan1.setHours(0, 0, 0, 0);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const daysInYear = isLeapYear ? 366 : 365;
+    const todayOffset = Math.round((today - jan1) / (24 * 60 * 60 * 1000));
+    const dailyKg = new Array(todayOffset + 1).fill(0);
+
+    Object.keys(weeksCache).forEach((weekKey) => {
+      const weekData = weeksCache[weekKey];
+      const monday = new Date(`${weekKey}T00:00:00`);
+      const alcoholKg = alcoholFootprint(weekData);
+      DAYS.forEach((day, i) => {
+        const dayDate = new Date(monday);
+        dayDate.setDate(dayDate.getDate() + i);
+        if (dayDate < jan1 || dayDate > today) return;
+        const offset = Math.round((dayDate - jan1) / (24 * 60 * 60 * 1000));
+        dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
+      });
+    });
+
+    return { dailyKg, daysInYear, todayOffset, year, jan1 };
+  }
+
+  function renderYearChart() {
+    const goal = Math.max(0.0001, currentGoal() * 52);
+    const { dailyKg, daysInYear, todayOffset, year, jan1 } = computeYearToDateDaily();
+
+    const cumulative = [0];
+    dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
+    const remaining = cumulative.map((c) => goal - c);
+
+    const predicted = [];
+    for (let j = 0; j <= daysInYear; j++) predicted.push(goal * (1 - j / daysInYear));
+
+    const actualPoints = remaining.slice(0, todayOffset + 2);
+
+    const currentMonth = new Date().getMonth();
+    const xLabels = [];
+    for (let m = 0; m < 12; m++) {
+      const monthStart = new Date(year, m, 1);
+      const j = Math.round((monthStart - jan1) / (24 * 60 * 60 * 1000));
+      xLabels.push({ j, text: MONTH_SHORT_LABELS[m], isCurrent: m === currentMonth });
+    }
+
+    renderBudgetChart("yearly-chart", {
+      goal,
+      predicted,
+      actualPoints,
+      xLabels,
+      goalLabelSuffix: "kg/yr goal",
+      ariaPrefix: "Yearly budget pace",
+    });
   }
 
   function renderWeekPage() {
@@ -1969,6 +2053,7 @@
 
     renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
+    renderYearChart();
   }
 
   // Compared against the fuller yearly total (5-8 categories) rather than

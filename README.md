@@ -125,7 +125,18 @@ with accounts and a friends leaderboard backed by Supabase.
   than ~X%" / "higher than ~X% of people in the UK", worded so it never
   reads backwards). Every domain tile (food, commute, flying, home energy,
   goods, and the six optional extras once answered) shows its own ▲/▼ delta
-  against the UK average for that same category, not just the total. A "How
+  against the UK average for that same category, not just the total. A "Year
+  budget pace" card underneath is the This Week page's Monzo Trends-style
+  budget-pace chart scaled to a calendar year: a dashed target line burns
+  straight down from your weekly goal ×52 to 0 across Jan–Dec, plotted
+  against a solid actual line built day by day from your real confirmed
+  commute + food data (plus each week's alcohol spread evenly across its 7
+  days, same as the weekly chart) for every day of the year so far — falling
+  below the dashed line means the same thing it does on the weekly chart,
+  just over the whole year. Flights, home energy, buying goods, and the
+  optional extras aren't part of this line, since they're fixed annual
+  figures with no day-by-day data to plot a pace against, unlike
+  commute/food/alcohol which accrue from real logged days. A "How
   your year compares" card at the bottom opens with your estimated total
   against the 1.5°C-by-2030 climate target (see below), then shows a UK
   average — built from the same core categories plus whichever optional
