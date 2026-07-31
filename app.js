@@ -35,8 +35,6 @@
     { key: "sun", short: "S", full: "Sunday" },
   ];
 
-  const MONTH_SHORT_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
   // Rough average emission factors, kg CO2e per passenger-km.
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
@@ -1498,24 +1496,35 @@
     renderBudgetChart("daily-chart", { goal, predicted, actualPoints, xLabels });
   }
 
-  // Same "budget pace" chart as This Week's, scaled to a calendar year: the
-  // dashed target line burns from a yearly goal (the weekly goal x52, same
-  // commute+food+alcohol scope the weekly chart tracks - flights/home
-  // energy/etc are fixed annual estimates with no dated data to plot a pace
-  // against) down to 0 across Jan 1-Dec 31, and the solid actual line is
-  // built from real per-day confirmed commute/food data (plus each week's
-  // alcohol spread evenly across its 7 days, same technique as the weekly
-  // chart) for every day of the current year up to today.
+  const YEAR_CHART_SPAN_DAYS = 364; // 52 weeks, matching the weekly goal x52 yearly goal
+
+  // The Monday of whichever week you first confirmed at least one day (commute
+  // or diet) - the yearly chart's "day 0", so weeks before you started
+  // tracking don't sit in the chart as if you'd emitted nothing during them
+  // (which would make the actual line look artificially far ahead of pace).
+  // Falls back to the current week for a brand-new account with nothing
+  // confirmed yet, so the chart still has a valid start point to draw from.
+  function firstTrackedWeekKey() {
+    const trackedKeys = Object.keys(weeksCache).filter((key) => {
+      const w = weeksCache[key];
+      return DAYS.some((day) => w.confirmedCommute?.[day.key] || w.confirmedDiet?.[day.key]);
+    });
+    if (trackedKeys.length === 0) return CURRENT_WEEK_KEY;
+    // Week keys are "YYYY-MM-DD" Mondays, so lexical sort is chronological.
+    return trackedKeys.sort()[0];
+  }
+
+  // Same "budget pace" chart as This Week's, scaled to a 52-week year that
+  // starts from firstTrackedWeekKey() above rather than the calendar year,
+  // and the solid actual line is built from real per-day confirmed
+  // commute/food data (plus each week's alcohol spread evenly across its 7
+  // days, same technique as the weekly chart) for every day since then, up
+  // to today.
   function computeYearToDateDaily() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const jan1 = new Date(year, 0, 1);
-    jan1.setHours(0, 0, 0, 0);
-    const today = new Date(now);
+    const start = new Date(`${firstTrackedWeekKey()}T00:00:00`);
+    const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    const daysInYear = isLeapYear ? 366 : 365;
-    const todayOffset = Math.round((today - jan1) / (24 * 60 * 60 * 1000));
+    const todayOffset = Math.min(YEAR_CHART_SPAN_DAYS, Math.max(0, Math.round((today - start) / (24 * 60 * 60 * 1000))));
     const dailyKg = new Array(todayOffset + 1).fill(0);
 
     Object.keys(weeksCache).forEach((weekKey) => {
@@ -1525,35 +1534,45 @@
       DAYS.forEach((day, i) => {
         const dayDate = new Date(monday);
         dayDate.setDate(dayDate.getDate() + i);
-        if (dayDate < jan1 || dayDate > today) return;
-        const offset = Math.round((dayDate - jan1) / (24 * 60 * 60 * 1000));
+        if (dayDate < start || dayDate > today) return;
+        const offset = Math.round((dayDate - start) / (24 * 60 * 60 * 1000));
+        if (offset > YEAR_CHART_SPAN_DAYS) return;
         dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
       });
     });
 
-    return { dailyKg, daysInYear, todayOffset, year, jan1 };
+    return { dailyKg, todayOffset, start };
   }
 
   function renderYearChart() {
     const goal = Math.max(0.0001, currentGoal() * 52);
-    const { dailyKg, daysInYear, todayOffset, year, jan1 } = computeYearToDateDaily();
+    const { dailyKg, todayOffset, start } = computeYearToDateDaily();
 
     const cumulative = [0];
     dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
     const remaining = cumulative.map((c) => goal - c);
 
     const predicted = [];
-    for (let j = 0; j <= daysInYear; j++) predicted.push(goal * (1 - j / daysInYear));
+    for (let j = 0; j <= YEAR_CHART_SPAN_DAYS; j++) predicted.push(goal * (1 - j / YEAR_CHART_SPAN_DAYS));
 
     const actualPoints = remaining.slice(0, todayOffset + 2);
 
-    const currentMonth = new Date().getMonth();
+    // Date-based ticks (not calendar months) since the span now starts from
+    // an arbitrary tracking-start date rather than always Jan 1 - roughly
+    // 4-weekly, 14 ticks across the 52-week span, closest one to today
+    // highlighted the same way "today" is on the weekly chart.
+    const LABEL_STEP_DAYS = 28;
     const xLabels = [];
-    for (let m = 0; m < 12; m++) {
-      const monthStart = new Date(year, m, 1);
-      const j = Math.round((monthStart - jan1) / (24 * 60 * 60 * 1000));
-      xLabels.push({ j, text: MONTH_SHORT_LABELS[m], isCurrent: m === currentMonth });
+    for (let j = 0; j <= YEAR_CHART_SPAN_DAYS; j += LABEL_STEP_DAYS) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + j);
+      xLabels.push({ j, text: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }), isCurrent: false });
     }
+    let nearestIdx = 0;
+    xLabels.forEach((label, i) => {
+      if (Math.abs(label.j - todayOffset) < Math.abs(xLabels[nearestIdx].j - todayOffset)) nearestIdx = i;
+    });
+    xLabels[nearestIdx].isCurrent = true;
 
     renderBudgetChart("yearly-chart", {
       goal,

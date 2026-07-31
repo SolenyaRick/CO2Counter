@@ -119,25 +119,29 @@ with accounts and a friends leaderboard backed by Supabase.
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
 - **Stats** — a yearly estimate, built from the inputs on the This Year
-  page. The "Your year, estimated" analysis card rolls those together with
-  your fully confirmed weeks' average commute/food/alcohol (extrapolated
-  ×52) into an estimated yearly total, next to a rough percentile ("lower
-  than ~X%" / "higher than ~X% of people in the UK", worded so it never
-  reads backwards). Every domain tile (food, commute, flying, home energy,
-  goods, and the six optional extras once answered) shows its own ▲/▼ delta
-  against the UK average for that same category, not just the total. A "Year
-  budget pace" card underneath is the This Week page's Monzo Trends-style
-  budget-pace chart scaled to a calendar year: a dashed target line burns
-  straight down from your weekly goal ×52 to 0 across Jan–Dec, plotted
+  page. It opens with a "Year budget pace" card — the This Week page's Monzo
+  Trends-style budget-pace chart scaled up to a 52-week year, plotted
   against a solid actual line built day by day from your real confirmed
   commute + food data (plus each week's alcohol spread evenly across its 7
-  days, same as the weekly chart) for every day of the year so far — falling
-  below the dashed line means the same thing it does on the weekly chart,
-  just over the whole year. Flights, home energy, buying goods, and the
-  optional extras aren't part of this line, since they're fixed annual
-  figures with no day-by-day data to plot a pace against, unlike
-  commute/food/alcohol which accrue from real logged days. A "How
-  your year compares" card at the bottom opens with your estimated total
+  days, same as the weekly chart). Unlike the weekly chart, this one doesn't
+  start from a fixed calendar date — it starts from whichever week you first
+  confirmed a day, so weeks before you started tracking don't sit in the
+  chart looking like zero-emission weeks and make the actual line seem
+  artificially far ahead of pace. The dashed target line burns from your
+  weekly goal ×52 down to 0 across those 52 weeks; falling below it means
+  the same thing it does on the weekly chart, just over the whole year.
+  Flights, home energy, buying goods, and the optional extras aren't part of
+  this line, since they're fixed annual figures with no day-by-day data to
+  plot a pace against, unlike commute/food/alcohol which accrue from real
+  logged days. Below that, the "Your year, estimated" analysis card rolls
+  those fixed figures together with your fully confirmed weeks' average
+  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
+  next to a rough percentile ("lower than ~X%" / "higher than ~X% of people
+  in the UK", worded so it never reads backwards). Every domain tile (food,
+  commute, flying, home energy, goods, and the six optional extras once
+  answered) shows its own ▲/▼ delta against the UK average for that same
+  category, not just the total. A "How your year compares" card at the
+  bottom opens with your estimated total
   against the 1.5°C-by-2030 climate target (see below), then shows a UK
   average — built from the same core categories plus whichever optional
   extras you've personally answered, so the comparison is always

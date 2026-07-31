@@ -423,6 +423,24 @@
 
     <!-- PAGE 4: Stats (yearly estimate) -->
     <section class="view" id="view-stats" hidden>
+      <section class="card summary-card">
+        <h2>Year budget pace</h2>
+        <div class="chart budget-chart" id="yearly-chart"><!-- budget pace chart injected by app.js --></div>
+        <p class="assumptions">
+          Same idea as the This Week page's chart, scaled up to a 52-week year &mdash;
+          but starting from whichever week you first confirmed a day, not January 1st,
+          so weeks before you started tracking don't count against you as if you'd
+          emitted nothing. The dashed line burns down from your weekly goal
+          &times;52 to 0 across those 52 weeks, and the solid line tracks your actual
+          confirmed commute + food + alcohol day by day since then. Falling below the
+          dashed line means you're on pace to go over for the year; staying above it
+          means you're on pace or ahead. Flights, home energy, and the other
+          yearly-estimate categories below aren't included here, since they're fixed
+          annual figures rather than something with day-by-day data to plot a pace
+          against.
+        </p>
+      </section>
+
       <section class="card">
         <h2>Your year, estimated</h2>
         <div class="summary-totals" id="yearly-summary-totals">
@@ -508,21 +526,6 @@
           same optional categories you have (alcohol isn't part of that UK comparison
           at all, since it isn't modeled there). All figures are rough, illustrative
           estimates.
-        </p>
-      </section>
-
-      <section class="card summary-card">
-        <h2>Year budget pace</h2>
-        <div class="chart budget-chart" id="yearly-chart"><!-- budget pace chart injected by app.js --></div>
-        <p class="assumptions">
-          Same idea as the This Week page's chart, scaled to the calendar year: the
-          dashed line burns down from your weekly goal &times;52 to 0 across Jan&ndash;Dec,
-          and the solid line tracks your actual confirmed commute + food + alcohol so far
-          this year, day by day. Falling below the dashed line means you're on pace to go
-          over the year; staying above it means you're on pace or ahead. Flights, home
-          energy, and the other yearly-estimate categories above aren't included here,
-          since they're fixed annual figures rather than something with day-by-day data
-          to plot a pace against.
         </p>
       </section>
 
