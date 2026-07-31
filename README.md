@@ -126,12 +126,14 @@ with accounts and a friends leaderboard backed by Supabase.
   confirmed commute + food data (plus each week's alcohol spread evenly
   across its 7 days, same as the weekly chart). Unlike the weekly chart,
   the solid line doesn't start at the left edge — it only starts at a light
-  vertical marker showing the week you first confirmed a day, since weeks
-  before that have no data and plotting them as a flat "remaining = goal"
-  run would make it look like a fully on-pace (green) stretch you never
-  actually tracked, rather than months you genuinely emitted nothing in.
-  Falling below the dashed line means the same thing it does on the weekly
-  chart, just over the whole year. Flights, home energy, buying goods, and
+  vertical marker showing the week you first confirmed a day, and picks up
+  exactly on the dashed target line there rather than at the full yearly
+  goal: the weeks before that marker have no data, so they're assumed to
+  have used exactly their fair share of the goal at the target rate
+  (neither over nor under) rather than being credited as zero-emission
+  weeks, which would make the actual line jump out ahead of pace for no
+  real reason. Falling below the dashed line means the same thing it does
+  on the weekly chart, just over the whole year. Flights, home energy, buying goods, and
   the optional extras aren't part of this line, since they're fixed annual
   figures with no day-by-day data to plot a pace against, unlike
   commute/food/alcohol which accrue from real logged days. Below that, the

@@ -1571,18 +1571,29 @@
     const goal = Math.max(0.0001, currentGoal() * 52);
     const { dailyKg, daysInYear, todayOffset, trackingStartOffset, year, jan1 } = computeYearToDateDaily();
 
-    const cumulative = [0];
-    dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
-    const remaining = cumulative.map((c) => goal - c);
-
     const predicted = [];
     for (let j = 0; j <= daysInYear; j++) predicted.push(goal * (1 - j / daysInYear));
 
+    // Untracked weeks (before trackingStartOffset) have no data, so there's
+    // no way to know what they actually emitted - rather than either
+    // ignoring them (crediting the full yearly goal at the tracking-start
+    // point, which is what made the actual line jump out ahead of pace) or
+    // guessing a real figure for them, they're assumed to have exactly used
+    // up their share of the goal at the target rate: neither over nor under.
+    // That means "remaining budget" at the tracking-start point is the
+    // target line's own value there (predicted[trackingStartOffset]), with
+    // real confirmed emissions subtracted from that starting point onward -
+    // so the actual line begins exactly on the dashed target line, and only
+    // diverges based on what's actually been tracked since.
+    const budgetAtTrackingStart = predicted[trackingStartOffset];
+    const cumulative = [0];
+    dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
+    const remaining = cumulative.map((c) => budgetAtTrackingStart - c);
+
     // Only draw the actual line from the day tracking started - before
-    // that there's no confirmed data, and plotting "remaining = goal" flat
-    // across those untracked months would look like a fully on-pace (green)
-    // stretch you never actually logged, rather than genuinely emission-free
-    // months.
+    // that there's no confirmed data, and plotting a line across those
+    // untracked months would look like a stretch you never actually
+    // logged, rather than genuinely emission-free months.
     const actualPoints = remaining.slice(trackingStartOffset, todayOffset + 2);
 
     const currentMonth = new Date().getMonth();
