@@ -248,6 +248,31 @@ behind on logging with a worse per-day rate but a lower raw total, one
 diligent with a better per-day rate but a higher raw total - confirming
 the diligent one now correctly ranks first.
 
+The most recent run adds a `car_fuel_type` column to `profiles`
+(nullable, `check`-constrained to `diesel`/`hybrid`/`electric` or null,
+same "not answered" = "use the blended-average car factor" pattern as the
+other optional extras). This backs the This Year page's "What type of car
+do you mainly drive?" question - the app-side `carFactorFor()` helper in
+`app.js` swaps in a DEFRA-style per-fuel-type factor (~0.171 diesel,
+~0.111 hybrid, ~0.058 electric) in place of the ~0.171 blended average,
+for both logged commute days and the non-commute-driving extra. Also
+divides the pets figure (`num_dogs`/`num_cats`) by household size, the
+same way home energy/gas/water already were, since a household's pets
+aren't really just one person's footprint - previously the full pets
+figure was attributed entirely to whichever household member answered
+the question. `app_wide_weekly_average()`'s duplicated formula was
+updated to match both changes (a `case p.car_fuel_type` expression for
+non-commute driving, and dividing the pets term by
+`greatest(1, p.household_people)`) - neither change altered that
+function's output columns, so no `drop function` was needed first, only
+the internal formula. `research_profiles` also gains `car_fuel_type`,
+appended at the end of its column list per the positional-columns
+constraint noted above. Verified against a real Postgres instance
+(hand-computed expected `avg_total_kg` for an electric-car, two-dog,
+two-person household against the function's actual output) and a mocked
+browser run confirming the This Year page's inputs and the Stats page's
+resulting figures match.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

@@ -39,6 +39,20 @@
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
 
+  // Optional per-car-type factors (This Year page, "Driving"), rough
+  // DEFRA-style kg CO2e/km - diesel is close to TRANSPORT_FACTORS.car (the
+  // blended average used when this isn't answered), hybrid and electric
+  // notably lower. Electric uses average UK grid intensity to charge it,
+  // not tailpipe emissions (there are none). Applies to both commute days
+  // where "Car" is picked and non-commute driving - not to the UK-average
+  // reference figures, which stay a fixed population-wide benchmark
+  // regardless of what car the current user personally drives.
+  const CAR_FUEL_FACTORS = { diesel: 0.171, hybrid: 0.111, electric: 0.058 };
+
+  function carFactorFor(p) {
+    return (p.carFuelType && CAR_FUEL_FACTORS[p.carFuelType]) || TRANSPORT_FACTORS.car;
+  }
+
   // Rough average emission factors, kg CO2e per kg of product. Beef ~36 and
   // chicken ~6 per commonly cited figures (beef is roughly 4-6x chicken).
   const MEAT_FACTORS = { chicken: 6, fish: 5, pork: 7, beef: 36, lamb: 25, other: 10 };
@@ -229,7 +243,7 @@
     const gasHeating = includeOptional.gasHeating ? (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople : null;
     const nonCommuteCar = includeOptional.nonCommuteCar ? a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
-    const pets = includeOptional.pets ? a.numDogs * DOG_KG_PER_YEAR + a.numCats * CAT_KG_PER_YEAR : null;
+    const pets = includeOptional.pets ? (a.numDogs * DOG_KG_PER_YEAR + a.numCats * CAT_KG_PER_YEAR) / a.householdPeople : null;
     const water = includeOptional.water ? (a.annualWaterM3 * WATER_KG_PER_M3) / a.householdPeople : null;
     const banks = includeOptional.banks ? a.bankKgPerPoundPerYear * a.bankBalance : null;
 
@@ -344,6 +358,9 @@
     // against instead of the UK average - null means "use the UK average"
     // (the default for everyone until they pick one on the Account page).
     baselineWeekKey: null,
+    // Optional: "diesel" | "hybrid" | "electric" - null means use the
+    // blended-average car factor (TRANSPORT_FACTORS.car) everywhere.
+    carFuelType: null,
   };
 
   function blankWeek() {
@@ -455,7 +472,7 @@
   // ---------- Footprint math ----------
   function commuteFootprint(weekData, dayKey) {
     const mode = weekData.commute[dayKey];
-    const factor = TRANSPORT_FACTORS[mode] ?? 0;
+    const factor = mode === "car" ? carFactorFor(profile) : (TRANSPORT_FACTORS[mode] ?? 0);
     return factor * (profile.commuteDistanceKm || 0) * 2;
   }
 
@@ -582,6 +599,7 @@
         bankBalance: data.bank_balance ?? null,
         researchOptIn: data.research_opt_in ?? false,
         baselineWeekKey: data.baseline_week_key ?? null,
+        carFuelType: data.car_fuel_type ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -611,6 +629,7 @@
       bank_balance: profile.bankBalance,
       research_opt_in: profile.researchOptIn,
       baseline_week_key: profile.baselineWeekKey,
+      car_fuel_type: profile.carFuelType,
     };
   }
 
@@ -745,7 +764,7 @@
         .select(
           "id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, " +
           "household_kwh_per_month, household_people, clothes_per_month, " +
-          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, num_dogs, num_cats, annual_water_m3, " +
+          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, car_fuel_type, num_dogs, num_cats, annual_water_m3, " +
           "bank_name, bank_balance"
         )
         .in("id", otherIds);
@@ -760,6 +779,7 @@
           annualGasKwh: p.annual_gas_kwh ?? null,
           weeklyNonCommuteCarKm: p.weekly_noncommute_car_km ?? null,
           ownsCar: p.owns_car ?? null,
+          carFuelType: p.car_fuel_type ?? null,
           numDogs: p.num_dogs ?? null,
           numCats: p.num_cats ?? null,
           annualWaterM3: p.annual_water_m3 ?? null,
@@ -909,11 +929,11 @@
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
-    if (tab === "weeks") renderWeeksGrid();
+    if (tab === "weeks") renderYearlyInputs();
     if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
-    if (tab === "week") renderWeekPage();
+    if (tab === "week") { renderWeekPage(); renderWeeksGrid(); }
   }
 
   // ---------- Page 1: This Week ----------
@@ -1619,13 +1639,13 @@
       yearlyOptional += (inputs.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, inputs.householdPeople || 1);
     }
     if (inputs.weeklyNonCommuteCarKm !== null && inputs.weeklyNonCommuteCarKm !== undefined) {
-      yearlyOptional += inputs.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52;
+      yearlyOptional += inputs.weeklyNonCommuteCarKm * carFactorFor(inputs) * 52;
     }
     if (inputs.ownsCar) {
       yearlyOptional += CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR;
     }
     if ((inputs.numDogs !== null && inputs.numDogs !== undefined) || (inputs.numCats !== null && inputs.numCats !== undefined)) {
-      yearlyOptional += (inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR;
+      yearlyOptional += ((inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR) / Math.max(1, inputs.householdPeople || 1);
     }
     if (inputs.annualWaterM3 !== null && inputs.annualWaterM3 !== undefined) {
       yearlyOptional += (inputs.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, inputs.householdPeople || 1);
@@ -1839,21 +1859,27 @@
   // null/blank -> "" (so the input shows empty, not "0"); a real 0 still shows as 0.
   function optionalInputValue(v) { return v === null || v === undefined ? "" : v; }
 
-  function renderStatsPage() {
+  // Populates the "This Year" tab's input fields. Kept separate from
+  // renderStatsPage() (the results-only Stats page) since the two now
+  // live on different tabs.
+  function renderYearlyInputs() {
+    document.getElementById("noncommute-car-km").value = optionalInputValue(profile.weeklyNonCommuteCarKm);
+    document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
+    document.getElementById("car-fuel-type").value = profile.carFuelType || "";
     document.getElementById("flights-short-haul").value = profile.shortHaulFlights;
     document.getElementById("flights-long-haul").value = profile.longHaulFlights;
     document.getElementById("household-people").value = profile.householdPeople;
     document.getElementById("household-kwh").value = profile.householdKwhPerMonth;
-    document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
     document.getElementById("gas-heating-kwh").value = optionalInputValue(profile.annualGasKwh);
-    document.getElementById("noncommute-car-km").value = optionalInputValue(profile.weeklyNonCommuteCarKm);
-    document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
+    document.getElementById("annual-water-m3").value = optionalInputValue(profile.annualWaterM3);
     document.getElementById("num-dogs").value = optionalInputValue(profile.numDogs);
     document.getElementById("num-cats").value = optionalInputValue(profile.numCats);
-    document.getElementById("annual-water-m3").value = optionalInputValue(profile.annualWaterM3);
     document.getElementById("bank-name").value = profile.bankName || "";
     document.getElementById("bank-balance").value = optionalInputValue(profile.bankBalance);
+    document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
+  }
 
+  function renderStatsPage() {
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
     const avgAlcohol = averageConfirmedWeekly("alcohol");
@@ -1883,9 +1909,11 @@
       banks: !!profile.bankName && profile.bankBalance !== null && profile.bankBalance !== undefined,
     };
     const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
-    const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
+    const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * carFactorFor(profile) * 52 : null;
     const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
-    const yearlyPets = includeOptional.pets ? (profile.numDogs || 0) * DOG_KG_PER_YEAR + (profile.numCats || 0) * CAT_KG_PER_YEAR : null;
+    const yearlyPets = includeOptional.pets
+      ? ((profile.numDogs || 0) * DOG_KG_PER_YEAR + (profile.numCats || 0) * CAT_KG_PER_YEAR) / Math.max(1, profile.householdPeople || 1)
+      : null;
     const yearlyWater = includeOptional.water ? (profile.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, profile.householdPeople || 1) : null;
     const yearlyBanks = includeOptional.banks ? (BANK_KG_PER_POUND_PER_YEAR[profile.bankName] || 0) * profile.bankBalance : null;
     if (yearlyGasHeating !== null) yearlyTotal += yearlyGasHeating;
@@ -2662,6 +2690,13 @@
     document.getElementById("owns-car").addEventListener("change", (e) => {
       profile.ownsCar = e.target.value === "yes" ? true : e.target.value === "no" ? false : null;
       persistProfile();
+      renderStatsPage();
+    });
+
+    document.getElementById("car-fuel-type").addEventListener("change", (e) => {
+      profile.carFuelType = e.target.value || null;
+      persistProfile();
+      renderFootprints();
       renderStatsPage();
     });
 

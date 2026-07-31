@@ -55,70 +55,84 @@ with accounts and a friends leaderboard backed by Supabase.
   turns from green to red if you dip below the dashed pace line — i.e.
   you're using CO2e faster than the week allows for — even if you haven't
   blown the full weekly goal yet. For the current week the actual line only
-  draws up to today; it doesn't project the rest of the week for you.
-- **Weeks** — a grid of boxes, one per week (Mon–Sun), most recent first.
-  Each box shows that week's total CO2e, color-coded against your goal from
-  the Account page, with an over/under-goal indicator. For the current,
-  still-in-progress week, the goal itself is prorated to how much of the
-  week has elapsed (e.g. Wednesday = 3/7 of the weekly goal) so "under
-  goal" is meaningful before the week is actually over, rather than
-  trivially true on day one. A week that has every day confirmed for both
-  commute and food gets a "✓ FULL" badge — this is a stricter bar than just
-  having *some* data (which is all that's needed for the box to show a
-  total at all), and is what counts toward the "confirmed week" averages on
-  the Stats and Leaderboard pages below, so a week where you only logged
-  Monday doesn't drag those averages down as if it were a whole week's
-  worth of data. Tap a box for a day-by-day breakdown.
+  draws up to today; it doesn't project the rest of the week for you. At
+  the bottom of the page, a "Your weeks" grid shows one box per week
+  (Mon–Sun), most recent first. Each box shows that week's total CO2e,
+  color-coded against your goal from the Account page, with an over/under-goal
+  indicator. For the current, still-in-progress week, the goal itself is
+  prorated to how much of the week has elapsed (e.g. Wednesday = 3/7 of the
+  weekly goal) so "under goal" is meaningful before the week is actually
+  over, rather than trivially true on day one. A week that has every day
+  confirmed for both commute and food gets a "✓ FULL" badge — this is a
+  stricter bar than just having *some* data (which is all that's needed for
+  the box to show a total at all), and is what counts toward the "confirmed
+  week" averages on the Stats and Leaderboard pages below, so a week where
+  you only logged Monday doesn't drag those averages down as if it were a
+  whole week's worth of data. Tap a box for a day-by-day breakdown.
+- **This Year** — the yearly-estimate inputs, grouped into six cards in a
+  roughly biggest-to-smallest-impact order: **Driving** (extra non-commute
+  car km/week; whether you own or regularly drive a car; and what type —
+  Diesel, Hybrid, or Electric/EV, which swaps in a DEFRA-style factor —
+  ~0.171 kg CO2e/km diesel, ~0.111 hybrid, ~0.058 electric using average UK
+  grid intensity to charge it — used for *both* this non-commute driving
+  figure and, retroactively, every "Car" day you log on the This Week page,
+  in place of the ~0.171 kg CO2e/km blended-average fallback used if you
+  leave it as "Prefer not to say"), **Flying** (short-haul European vs
+  long-haul international flights per year), **Household energy** (people
+  in your household; total electricity kWh/month; total gas/oil heating +
+  hot water kWh/yr; total household water usage in m&sup3;/yr — the last
+  two optional), **Pets** (number of dogs and cats, optional — their
+  ~770/~310 kg CO2e/yr-each footprint is split evenly across everyone in
+  your household, the "People in your household" figure above, rather than
+  attributed entirely to you, since a household's pets aren't really just
+  one person's footprint), **Banking** (which bank you mainly hold money
+  with, plus a balance, optional), and **Buying goods** (clothing items
+  bought per month). Household energy, non-commute driving/pets/water, and
+  banking are all split or weighted by household size the same way, for
+  consistency. The optional extras are skippable: leaving one blank leaves
+  it out of every total on the Stats page rather than counting it as zero,
+  so an unanswered question never makes your estimate look artificially
+  low.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
   friends by this week's *average* kg CO2e per confirmed day so far (lowest
   first), not raw total, with a callout for whoever's winning — this one
-  still includes in-progress weeks, same as the Weeks grid, and ranking by
-  average rather than total means being behind on logging days doesn't make
-  someone look artificially better than a friend who's kept every day up to
-  date; each person's raw total and "confirmed/elapsed days" (e.g. "3/5" on
-  a Friday if only Mon–Wed are done) show in small text next to their
-  average; "All-time weekly average" ranks everyone by their average
-  CO2e per *fully* confirmed week (every day, both commute and food — see
-  the Weeks page above) since they started, which also folds in a
-  weekly-equivalent share of each person's yearly Stats page figures
-  (flights, home electricity, buying goods, and any optional extras
-  they've answered — everything the yearly total on the Stats page
-  includes besides commute/food/alcohol, divided by 52), so this figure
-  and "Stats page yearly total ÷ 52" always agree; "Everyone on the app"
-  shows two anonymous, aggregate figures across every account on the app —
-  commute + food + alcohol, and the fuller total (that plus the same
-  yearly-extras composition as above) — and how many people each is based
-  on, with no per-user data or names ever exposed. The full-total figure
-  is computed entirely in SQL (see
+  still includes in-progress weeks, same as the This Week page's weeks
+  grid, and ranking by average rather than total means being behind on
+  logging days doesn't make someone look artificially better than a friend
+  who's kept every day up to date; each person's raw total and
+  "confirmed/elapsed days" (e.g. "3/5" on a Friday if only Mon–Wed are
+  done) show in small text next to their average; "All-time weekly
+  average" ranks everyone by their average CO2e per *fully* confirmed week
+  (every day, both commute and food — see the weeks grid above) since they
+  started, which also folds in a weekly-equivalent share of each person's
+  yearly Stats page figures (flights, home electricity, buying goods, and
+  any optional extras they've answered — everything the yearly total on
+  the Stats page includes besides commute/food/alcohol, divided by 52), so
+  this figure and "Stats page yearly total ÷ 52" always agree; "Everyone on
+  the app" shows two anonymous, aggregate figures across every account on
+  the app — commute + food + alcohol, and the fuller total (that plus the
+  same yearly-extras composition as above) — and how many people each is
+  based on, with no per-user data or names ever exposed. The full-total
+  figure is computed entirely in SQL (see
   `app_wide_weekly_average()` in `supabase/schema.sql`), since unlike the
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
-- **Stats** — a yearly estimate. Inputs (flights: short-haul European vs
-  long-haul international; home energy: household kWh/month split across
-  everyone in the household; clothing purchases per month; then an
-  **Other factors** card of optional extras — gas/oil heating kWh/yr,
-  extra non-commute car km/week, whether you own a car, number of dogs and
-  cats, household water usage in m&sup3;/yr, and which bank you mainly hold
-  money with plus a balance) come first, each converted
-  to a yearly kg CO2e figure. The optional extras are skippable: leaving
-  one blank leaves it out of every total below rather
-  than counting it as zero, so an unanswered question never makes your
-  estimate look artificially low. The "Your year, estimated" analysis
-  card below rolls those together with your fully confirmed weeks' average
-  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
-  next to a
-  rough percentile ("lower than ~X%" / "higher than ~X% of people in the
-  UK", worded so it never reads backwards). Every domain tile (food,
-  commute, flying, home energy, goods, and the six optional extras once
-  answered) shows its own ▲/▼ delta against the UK average for that same
-  category, not just the total. A "How your year compares" card at the
-  bottom opens with your estimated total against the 1.5°C-by-2030 climate
-  target (see below), then shows a UK average — built from the same core
-  categories plus whichever optional extras you've personally answered, so
-  the comparison is always apples-to-apples — alongside your total
-  converted into car miles and mature-trees-of-CO2-absorption equivalents,
-  each with a delta against the UK average.
+- **Stats** — a yearly estimate, built from the inputs on the This Year
+  page. The "Your year, estimated" analysis card rolls those together with
+  your fully confirmed weeks' average commute/food/alcohol (extrapolated
+  ×52) into an estimated yearly total, next to a rough percentile ("lower
+  than ~X%" / "higher than ~X% of people in the UK", worded so it never
+  reads backwards). Every domain tile (food, commute, flying, home energy,
+  goods, and the six optional extras once answered) shows its own ▲/▼ delta
+  against the UK average for that same category, not just the total. A "How
+  your year compares" card at the bottom opens with your estimated total
+  against the 1.5°C-by-2030 climate target (see below), then shows a UK
+  average — built from the same core categories plus whichever optional
+  extras you've personally answered, so the comparison is always
+  apples-to-apples — alongside your total converted into car miles and
+  mature-trees-of-CO2-absorption equivalents, each with a delta against the
+  UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal
   (with three quick-set presets alongside typing your own number: "Match UK
   average week", "1.5°C 2030 (food + commute)" — our own estimate, since
@@ -128,7 +142,7 @@ with accounts and a friends leaderboard backed by Supabase.
   food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
   everywhere to account for produced-but-wasted food), a "Baseline week"
   picker (a dropdown of your own fully-confirmed weeks — only ones with a
-  "✓ FULL" badge on the Weeks page qualify — to compare the This Week
+  "✓ FULL" badge on the weeks grid qualify — to compare the This Week
   page's card against instead of the UK average; "UK average (default)"
   switches back), a "Help improve UK averages" opt-in (off by default — if turned on, everything on the
   Account/Stats pages except your banking answers becomes visible to the
@@ -285,7 +299,12 @@ home-screen icon - see `manifest.json`) looks reasonable too.
 Figures are illustrative averages, not a precise personal carbon calculator:
 
 - **Transport** (kg CO2e per passenger-km): Walk/Cycle 0, Train ~0.041, Car
-  ~0.171. Applied to a round trip using your commute distance.
+  ~0.171 (blended average). Applied to a round trip using your commute
+  distance. If you've picked a car type on the This Year page's Driving
+  card, "Car" days use that DEFRA-style factor instead of the ~0.171
+  blended average — ~0.171 diesel (near-identical to the blended average),
+  ~0.111 hybrid, ~0.058 electric (using average UK grid intensity to charge
+  it).
 - **Food** (kg CO2e per day): Vegan ~2.3, Veggie ~2.6, from Rosi et al. 2017
   (seven-day diets for ~150 people in Italy). A Meat day uses the same ~2.6
   kg baseline for the rest of that day's food (it isn't any more
@@ -313,18 +332,21 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   0, before Monday had even happened, which made the pace line look
   missed from the very start of the week regardless of your actual
   Monday/Tuesday choices.
-- **Flying** (Stats page, per return trip): ~250 kg CO2e short-haul within
-  Europe, ~1,600 kg CO2e long-haul international.
-- **Home energy** (Stats page): household kWh/month × 12 × ~0.2 kg CO2e/kWh
-  (rough grid average), divided evenly across everyone in the household.
-- **Buying goods** (Stats page): ~10 kg CO2e per clothing item bought, a
-  rough blended average across garment types.
-- **Gas/oil heating** (Stats page, optional): household kWh/year × ~0.18 kg
-  CO2e/kWh (rough blended gas/oil factor), split evenly across the
+- **Flying** (This Year page, per return trip): ~250 kg CO2e short-haul
+  within Europe, ~1,600 kg CO2e long-haul international.
+- **Home energy** (This Year page): household kWh/month × 12 × ~0.2 kg
+  CO2e/kWh (rough grid average), divided evenly across everyone in the
+  household.
+- **Buying goods** (This Year page): ~10 kg CO2e per clothing item bought,
+  a rough blended average across garment types.
+- **Gas/oil heating** (This Year page, optional): household kWh/year ×
+  ~0.18 kg CO2e/kWh (rough blended gas/oil factor), split evenly across the
   household the same way electricity is.
-- **Non-commute driving** (Stats page, optional): extra car km/week beyond
-  your logged commute × 52, using the same ~0.171 kg CO2e/km car factor.
-- **Car ownership** (Stats page, optional yes/no): if yes, a flat ~700 kg
+- **Non-commute driving** (This Year page, optional): extra car km/week
+  beyond your logged commute × 52, using the same car factor as your
+  commute (either the ~0.171 kg CO2e/km blended average, or your chosen car
+  type's DEFRA-style factor — see "Transport" above).
+- **Car ownership** (This Year page, optional yes/no): if yes, a flat ~700 kg
   CO2e/yr for the car's own manufacturing footprint, amortized over an
   average ~14-year car lifetime — separate from the fuel/charging for
   trips logged elsewhere.
@@ -387,16 +409,18 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   estimate (a shorter car-equivalent commute and less meat than the UK
   figures) rather than being built from real survey data the way the UK
   figures are.
-- **Pets** (Stats page, optional): ~770 kg CO2e/yr per dog, ~310 kg CO2e/yr
-  per cat, mostly driven by their (often meat-heavy) diet. The UK-average
-  comparison assumes ~0.2 dogs and ~0.15 cats per person, a rough estimate
-  from UK pet-population figures.
-- **Water usage** (Stats page, optional): household m&sup3;/yr (from a
+- **Pets** (This Year page, optional): ~770 kg CO2e/yr per dog, ~310 kg
+  CO2e/yr per cat, mostly driven by their (often meat-heavy) diet, split
+  evenly across everyone in the household (the "People in your household"
+  figure), the same way home energy is. The UK-average comparison assumes
+  ~0.2 dogs and ~0.15 cats per person, a rough estimate from UK
+  pet-population figures.
+- **Water usage** (This Year page, optional): household m&sup3;/yr (from a
   water bill) &times; ~0.32 kg CO2e/m&sup3;, a rough DEFRA-style combined
   supply + treatment factor, split evenly across the household the same
   way electricity and gas are. The UK-average comparison assumes ~122
   m&sup3;/yr per household (~140 L/person/day).
-- **Banking** (Stats page, optional): balance held with your bank
+- **Banking** (This Year page, optional): balance held with your bank
   (current + savings) × that bank's kg CO2e financed per £/yr, from
   MotherTree's bank carbon emissions league table
   ([mymothertree.com/bank-league-table](https://www.mymothertree.com/bank-league-table)),

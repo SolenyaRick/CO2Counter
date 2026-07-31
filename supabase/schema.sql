@@ -62,6 +62,14 @@ alter table public.profiles add column if not exists research_opt_in boolean not
 -- (handled client-side in getBaselineWeekData()).
 alter table public.profiles add column if not exists baseline_week_key text;
 
+-- Optional: "diesel" | "hybrid" | "electric" - null means use the
+-- blended-average car factor (0.171 kg CO2e/km) for both commute and
+-- non-commute driving, same as before this column existed.
+alter table public.profiles add column if not exists car_fuel_type text;
+alter table public.profiles drop constraint if exists profiles_car_fuel_type_check;
+alter table public.profiles add constraint profiles_car_fuel_type_check
+  check (car_fuel_type is null or car_fuel_type in ('diesel', 'hybrid', 'electric'));
+
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
 -- total_kg is computed client-side (same emission-factor logic as the rest
@@ -404,9 +412,18 @@ as $$
             + (coalesce(p.household_kwh_per_month, 0) * 12 * 0.2) / greatest(1, coalesce(p.household_people, 1))
             + (coalesce(p.clothes_per_month, 0) * 12 * 10)
             + case when p.annual_gas_kwh is not null then (p.annual_gas_kwh * 0.18) / greatest(1, coalesce(p.household_people, 1)) else 0 end
-            + case when p.weekly_noncommute_car_km is not null then p.weekly_noncommute_car_km * 0.171 * 52 else 0 end
+            + case when p.weekly_noncommute_car_km is not null then
+                p.weekly_noncommute_car_km * 52 * (case p.car_fuel_type
+                  when 'diesel' then 0.171
+                  when 'hybrid' then 0.111
+                  when 'electric' then 0.058
+                  else 0.171
+                end)
+              else 0 end
             + case when p.owns_car then 700 else 0 end
-            + case when p.num_dogs is not null or p.num_cats is not null then coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310 else 0 end
+            + case when p.num_dogs is not null or p.num_cats is not null then
+                (coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310) / greatest(1, coalesce(p.household_people, 1))
+              else 0 end
             + case when p.annual_water_m3 is not null then (p.annual_water_m3 * 0.32) / greatest(1, coalesce(p.household_people, 1)) else 0 end
             + case when p.bank_name is not null and p.bank_balance is not null then
                 p.bank_balance * (case p.bank_name
@@ -497,7 +514,8 @@ select
   owns_car,
   num_dogs,
   num_cats,
-  annual_water_m3
+  annual_water_m3,
+  car_fuel_type
 from public.profiles
 where research_opt_in = true;
 

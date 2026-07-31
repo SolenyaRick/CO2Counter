@@ -71,7 +71,7 @@
 
     <nav class="tabs" id="main-tabs">
       <button class="tab-btn" data-tab="week">This Week</button>
-      <button class="tab-btn" data-tab="weeks">Weeks</button>
+      <button class="tab-btn" data-tab="weeks">This Year</button>
       <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
       <button class="tab-btn" data-tab="stats">Stats</button>
       <button class="tab-btn" data-tab="account">Account</button>
@@ -203,14 +203,176 @@
           commute days.
         </p>
       </section>
-    </section>
 
-    <!-- PAGE 2: Weeks grid -->
-    <section class="view" id="view-weeks" hidden>
       <section class="card">
         <h2>Your weeks</h2>
         <p class="assumptions">Each box is one week (Mon&ndash;Sun). Tap a box to see the day-by-day breakdown.</p>
         <div class="weeks-grid" id="weeks-grid"><!-- boxes injected by app.js --></div>
+      </section>
+    </section>
+
+    <!-- PAGE 2: This Year (yearly-estimate inputs) -->
+    <section class="view" id="view-weeks" hidden>
+      <section class="card">
+        <h2>Driving <span class="optional-badge">Optional</span></h2>
+        <label class="field">
+          Non-commute driving (extra car km per week)
+          <input type="number" id="noncommute-car-km" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Errands, road trips, and other driving beyond the commute you log on the This
+          Week page.
+        </p>
+        <label class="field">
+          Do you own or regularly drive a car?
+          <select id="owns-car">
+            <option value="">Prefer not to say</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <p class="assumptions">
+          If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
+          footprint, amortized over an average ~14-year car lifetime &mdash; separate
+          from the fuel/charging for trips you log elsewhere in the app.
+        </p>
+        <label class="field">
+          What type of car do you mainly drive?
+          <select id="car-fuel-type">
+            <option value="">Prefer not to say (uses a blended average)</option>
+            <option value="diesel">Diesel</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="electric">Electric (EV)</option>
+          </select>
+        </label>
+        <p class="assumptions">
+          Uses rough DEFRA-style factors: diesel ~0.171 kg CO2e/km (about the same as the
+          blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
+          ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
+          default car factor for both your logged commute days (whenever you pick "Car")
+          and the non-commute driving above.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Flying</h2>
+        <label class="field">
+          Short-haul flights within Europe per year
+          <input type="number" id="flights-short-haul" min="0" step="1" />
+        </label>
+        <label class="field">
+          Long-haul international flights per year (Americas, Australia, Asia, etc.)
+          <input type="number" id="flights-long-haul" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Counted per return trip: ~250 kg CO2e for a short-haul European flight, ~1,600 kg
+          CO2e for a long-haul international one &mdash; rough averages, actual footprint
+          varies a lot by distance and cabin class.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Household energy</h2>
+        <label class="field">
+          People in your household
+          <input type="number" id="household-people" min="1" step="1" />
+        </label>
+        <label class="field">
+          Total household electricity use (kWh per month)
+          <input type="number" id="household-kwh" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Include everyday use like showering (if electric water heating), lighting,
+          heating, and appliances &mdash; check a recent bill if unsure. Uses a rough grid
+          average of ~0.2 kg CO2e/kWh, split evenly across everyone in the household.
+        </p>
+        <label class="field">
+          Total gas/oil heating &amp; hot water (household kWh per year)
+          <input type="number" id="gas-heating-kwh" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Optional &mdash; leave blank to skip. Uses a rough blended gas/oil factor of
+          ~0.18 kg CO2e/kWh, split evenly across your household. Check a recent annual
+          bill if unsure.
+        </p>
+        <label class="field">
+          Total household water usage (m&sup3; per year)
+          <input type="number" id="annual-water-m3" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Optional &mdash; leave blank to skip. Check a recent water bill for this figure
+          (usually shown in m&sup3;, sometimes called "cubic metres" or "units"). Uses a
+          rough DEFRA-style combined supply + treatment factor of ~0.32 kg CO2e/m&sup3;,
+          split evenly across your household.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Pets <span class="optional-badge">Optional</span></h2>
+        <label class="field">
+          Dogs
+          <input type="number" id="num-dogs" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <label class="field">
+          Cats
+          <input type="number" id="num-cats" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Uses rough average footprints of ~770 kg CO2e/yr per dog and ~310 kg CO2e/yr per
+          cat &mdash; mostly driven by their (often meat-heavy) diet &mdash; split evenly
+          across everyone in your household (the "People in your household" figure above),
+          the same way home energy is, since a household's pets aren't really just one
+          person's footprint. Answering either one counts the other as 0 if left blank.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Banking <span class="optional-badge">Optional</span></h2>
+        <label class="field">
+          Which bank do you mainly hold money with?
+          <select id="bank-name">
+            <option value="">Prefer not to say</option>
+            <option value="barclays">Barclays</option>
+            <option value="hsbc">HSBC</option>
+            <option value="firstDirect">First Direct</option>
+            <option value="chase">Chase</option>
+            <option value="santander">Santander</option>
+            <option value="natwest">NatWest</option>
+            <option value="rbs">RBS (Royal Bank of Scotland)</option>
+            <option value="monzo">Monzo</option>
+            <option value="lloyds">Lloyds</option>
+            <option value="halifax">Halifax</option>
+            <option value="metroBank">Metro Bank</option>
+            <option value="starling">Starling</option>
+            <option value="virginMoney">Virgin Money</option>
+            <option value="nationwide">Nationwide</option>
+            <option value="cooperative">The Co-operative Bank</option>
+            <option value="triodos">Triodos</option>
+          </select>
+        </label>
+        <label class="field">
+          Combined current + savings balance held with that bank (&pound;)
+          <input type="number" id="bank-balance" min="0" step="1" placeholder="Leave blank to skip" />
+        </label>
+        <p class="assumptions">
+          Uses MotherTree's bank carbon emissions league table, which estimates each UK
+          bank's indirect footprint from financing fossil fuels, per &pound; of customer
+          deposits held. Both the bank and a balance need answering for this to count
+          &mdash; picking a bank without a balance (or vice versa) leaves it out of your
+          total, same as any other optional field here.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Buying goods</h2>
+        <label class="field">
+          Clothing items bought per month
+          <input type="number" id="clothes-per-month" min="0" step="1" />
+        </label>
+        <p class="assumptions">
+          Uses a rough blended average of ~10 kg CO2e per item &mdash; a T-shirt is much
+          less, a coat or a pair of jeans much more.
+        </p>
       </section>
     </section>
 
@@ -261,147 +423,6 @@
 
     <!-- PAGE 4: Stats (yearly estimate) -->
     <section class="view" id="view-stats" hidden>
-      <section class="card">
-        <h2>Flying</h2>
-        <label class="field">
-          Short-haul flights within Europe per year
-          <input type="number" id="flights-short-haul" min="0" step="1" />
-        </label>
-        <label class="field">
-          Long-haul international flights per year (Americas, Australia, Asia, etc.)
-          <input type="number" id="flights-long-haul" min="0" step="1" />
-        </label>
-        <p class="assumptions">
-          Counted per return trip: ~250 kg CO2e for a short-haul European flight, ~1,600 kg
-          CO2e for a long-haul international one &mdash; rough averages, actual footprint
-          varies a lot by distance and cabin class.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>Home energy</h2>
-        <label class="field">
-          People in your household
-          <input type="number" id="household-people" min="1" step="1" />
-        </label>
-        <label class="field">
-          Household electricity use (kWh per month)
-          <input type="number" id="household-kwh" min="0" step="1" />
-        </label>
-        <p class="assumptions">
-          Include everyday use like showering (if electric water heating), lighting,
-          heating, and appliances &mdash; check a recent bill if unsure. Uses a rough grid
-          average of ~0.2 kg CO2e/kWh, split evenly across everyone in the household.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>Buying goods</h2>
-        <label class="field">
-          Clothing items bought per month
-          <input type="number" id="clothes-per-month" min="0" step="1" />
-        </label>
-        <p class="assumptions">
-          Uses a rough blended average of ~10 kg CO2e per item &mdash; a T-shirt is much
-          less, a coat or a pair of jeans much more.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>Other factors <span class="optional-badge">Optional</span></h2>
-        <p class="assumptions">
-          None of these are required. Leave any of them blank and it's simply left out
-          of your total below &mdash; not counted as zero &mdash; so skipping a question
-          never makes your estimate look better than it is.
-        </p>
-        <label class="field">
-          Gas/oil heating &amp; hot water (household kWh per year)
-          <input type="number" id="gas-heating-kwh" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Uses a rough blended gas/oil factor of ~0.18 kg CO2e/kWh, split evenly across
-          your household (same split as home electricity above). Check a recent annual
-          bill if unsure.
-        </p>
-        <label class="field">
-          Non-commute driving (extra car km per week)
-          <input type="number" id="noncommute-car-km" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Errands, road trips, and other driving beyond the commute you log on the This
-          Week page &mdash; uses the same ~0.171 kg CO2e/km car factor.
-        </p>
-        <label class="field">
-          Do you own or regularly drive a car?
-          <select id="owns-car">
-            <option value="">Prefer not to say</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
-        <p class="assumptions">
-          If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
-          footprint, amortized over an average ~14-year car lifetime &mdash; separate
-          from the fuel/charging for trips you log elsewhere in the app.
-        </p>
-        <label class="field">
-          Dogs
-          <input type="number" id="num-dogs" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <label class="field">
-          Cats
-          <input type="number" id="num-cats" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Uses rough average footprints of ~770 kg CO2e/yr per dog and ~310 kg
-          CO2e/yr per cat &mdash; mostly driven by their (often meat-heavy) diet.
-          Answering either one counts the other as 0 if left blank.
-        </p>
-        <label class="field">
-          Household water usage (m&sup3; per year)
-          <input type="number" id="annual-water-m3" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Check a recent water bill for this figure (usually shown in m&sup3;, sometimes
-          called "cubic metres" or "units"). Uses a rough DEFRA-style combined
-          supply + treatment factor of ~0.32 kg CO2e/m&sup3;, split evenly across your
-          household (same split as home electricity and gas above).
-        </p>
-        <label class="field">
-          Which bank do you mainly hold money with?
-          <select id="bank-name">
-            <option value="">Prefer not to say</option>
-            <option value="barclays">Barclays</option>
-            <option value="hsbc">HSBC</option>
-            <option value="firstDirect">First Direct</option>
-            <option value="chase">Chase</option>
-            <option value="santander">Santander</option>
-            <option value="natwest">NatWest</option>
-            <option value="rbs">RBS (Royal Bank of Scotland)</option>
-            <option value="monzo">Monzo</option>
-            <option value="lloyds">Lloyds</option>
-            <option value="halifax">Halifax</option>
-            <option value="metroBank">Metro Bank</option>
-            <option value="starling">Starling</option>
-            <option value="virginMoney">Virgin Money</option>
-            <option value="nationwide">Nationwide</option>
-            <option value="cooperative">The Co-operative Bank</option>
-            <option value="triodos">Triodos</option>
-          </select>
-        </label>
-        <label class="field">
-          Combined current + savings balance held with that bank (&pound;)
-          <input type="number" id="bank-balance" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Uses MotherTree's bank carbon emissions league table, which estimates each UK
-          bank's indirect footprint from financing fossil fuels, per &pound; of customer
-          deposits held. Both the bank and a balance need answering for this to count
-          &mdash; picking a bank without a balance (or vice versa) leaves it out of your
-          total, same as any other optional field here.
-        </p>
-      </section>
-
       <section class="card">
         <h2>Your year, estimated</h2>
         <div class="summary-totals" id="yearly-summary-totals">
