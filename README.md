@@ -120,20 +120,22 @@ with accounts and a friends leaderboard backed by Supabase.
   ones in `app.js` and need to be kept in sync by hand if either changes.
 - **Stats** — a yearly estimate, built from the inputs on the This Year
   page. It opens with a "Year budget pace" card — the This Week page's Monzo
-  Trends-style budget-pace chart scaled up to a 52-week year, plotted
-  against a solid actual line built day by day from your real confirmed
-  commute + food data (plus each week's alcohol spread evenly across its 7
-  days, same as the weekly chart). Unlike the weekly chart, this one doesn't
-  start from a fixed calendar date — it starts from whichever week you first
-  confirmed a day, so weeks before you started tracking don't sit in the
-  chart looking like zero-emission weeks and make the actual line seem
-  artificially far ahead of pace. The dashed target line burns from your
-  weekly goal ×52 down to 0 across those 52 weeks; falling below it means
-  the same thing it does on the weekly chart, just over the whole year.
-  Flights, home energy, buying goods, and the optional extras aren't part of
-  this line, since they're fixed annual figures with no day-by-day data to
-  plot a pace against, unlike commute/food/alcohol which accrue from real
-  logged days. Below that, the "Your year, estimated" analysis card rolls
+  Trends-style budget-pace chart scaled to the calendar year: a dashed
+  target line burns from your weekly goal ×52 down to 0 across Jan–Dec,
+  plotted against a solid actual line built day by day from your real
+  confirmed commute + food data (plus each week's alcohol spread evenly
+  across its 7 days, same as the weekly chart). Unlike the weekly chart,
+  the solid line doesn't start at the left edge — it only starts at a light
+  vertical marker showing the week you first confirmed a day, since weeks
+  before that have no data and plotting them as a flat "remaining = goal"
+  run would make it look like a fully on-pace (green) stretch you never
+  actually tracked, rather than months you genuinely emitted nothing in.
+  Falling below the dashed line means the same thing it does on the weekly
+  chart, just over the whole year. Flights, home energy, buying goods, and
+  the optional extras aren't part of this line, since they're fixed annual
+  figures with no day-by-day data to plot a pace against, unlike
+  commute/food/alcohol which accrue from real logged days. Below that, the
+  "Your year, estimated" analysis card rolls
   those fixed figures together with your fully confirmed weeks' average
   commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
   next to a rough percentile ("lower than ~X%" / "higher than ~X% of people

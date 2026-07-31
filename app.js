@@ -35,6 +35,8 @@
     { key: "sun", short: "S", full: "Sunday" },
   ];
 
+  const MONTH_SHORT_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   // Rough average emission factors, kg CO2e per passenger-km.
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
@@ -1330,7 +1332,11 @@
   // weekly chart and the Stats page's yearly one below, parameterized on
   // `goal`/`predicted`/`actualPoints`/`xLabels` so both stay pixel-for-pixel
   // consistent and any future tweak to one applies to both automatically.
-  function renderBudgetChart(containerId, { goal, predicted, actualPoints, xLabels, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
+  // actualStartJ lets the actual line begin partway along the x-axis instead
+  // of always at j=0 - used by the yearly chart so the stretch before
+  // tracking began is left blank (no line, no green) rather than plotted as
+  // a flat "remaining = goal" run that would misleadingly look on-track.
+  function renderBudgetChart(containerId, { goal, predicted, actualPoints, xLabels, actualStartJ = 0, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
     const chart = document.getElementById(containerId);
     if (!chart) return;
     chart.innerHTML = "";
@@ -1360,15 +1366,15 @@
 
     const xAt = (j) => PAD_X + (j / totalUnits) * plotW;
     const yAt = (v) => PAD_TOP + (1 - (v - yMin) / yRange) * plotH;
-    const pathFor = (values) => values.map((v, j) => `${j === 0 ? "M" : "L"}${xAt(j).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
+    const pathFor = (values, startJ = 0) => values.map((v, k) => `${k === 0 ? "M" : "L"}${xAt(startJ + k).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
 
     const predictedPath = pathFor(predicted);
-    const actualPath = pathFor(actualPoints);
-    const lastJ = actualPoints.length - 1;
-    const finalActual = actualPoints[lastJ];
+    const actualPath = pathFor(actualPoints, actualStartJ);
+    const lastJ = actualStartJ + actualPoints.length - 1;
+    const finalActual = actualPoints[actualPoints.length - 1];
     const onTrack = finalActual >= predicted[lastJ];
     const zeroY = yAt(0).toFixed(1);
-    const areaPath = `${actualPath} L${xAt(lastJ).toFixed(1)},${zeroY} L${xAt(0).toFixed(1)},${zeroY} Z`;
+    const areaPath = `${actualPath} L${xAt(lastJ).toFixed(1)},${zeroY} L${xAt(actualStartJ).toFixed(1)},${zeroY} Z`;
 
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
@@ -1400,6 +1406,14 @@
       zeroLine.setAttribute("y1", zeroY); zeroLine.setAttribute("y2", zeroY);
       zeroLine.setAttribute("class", "budget-zero-line");
       svg.appendChild(zeroLine);
+    }
+
+    if (actualStartJ > 0) {
+      const startLine = document.createElementNS(svgNS, "line");
+      startLine.setAttribute("x1", xAt(actualStartJ)); startLine.setAttribute("x2", xAt(actualStartJ));
+      startLine.setAttribute("y1", PAD_TOP); startLine.setAttribute("y2", H - PAD_BOTTOM);
+      startLine.setAttribute("class", "budget-zero-line");
+      svg.appendChild(startLine);
     }
 
     const area = document.createElementNS(svgNS, "path");
@@ -1496,14 +1510,11 @@
     renderBudgetChart("daily-chart", { goal, predicted, actualPoints, xLabels });
   }
 
-  const YEAR_CHART_SPAN_DAYS = 364; // 52 weeks, matching the weekly goal x52 yearly goal
-
   // The Monday of whichever week you first confirmed at least one day (commute
-  // or diet) - the yearly chart's "day 0", so weeks before you started
-  // tracking don't sit in the chart as if you'd emitted nothing during them
-  // (which would make the actual line look artificially far ahead of pace).
-  // Falls back to the current week for a brand-new account with nothing
-  // confirmed yet, so the chart still has a valid start point to draw from.
+  // or diet) - used below so the yearly chart's actual line doesn't start
+  // drawing at Jan 1 for someone who only started using the app much later
+  // in the year. Falls back to the current week for a brand-new account with
+  // nothing confirmed yet.
   function firstTrackedWeekKey() {
     const trackedKeys = Object.keys(weeksCache).filter((key) => {
       const w = weeksCache[key];
@@ -1514,17 +1525,23 @@
     return trackedKeys.sort()[0];
   }
 
-  // Same "budget pace" chart as This Week's, scaled to a 52-week year that
-  // starts from firstTrackedWeekKey() above rather than the calendar year,
-  // and the solid actual line is built from real per-day confirmed
-  // commute/food data (plus each week's alcohol spread evenly across its 7
-  // days, same technique as the weekly chart) for every day since then, up
-  // to today.
+  // Same "budget pace" chart as This Week's, scaled to the calendar year: the
+  // dashed target line burns from a yearly goal (the weekly goal x52, same
+  // commute+food+alcohol scope the weekly chart tracks) down to 0 across
+  // Jan 1-Dec 31, and the solid actual line is built from real per-day
+  // confirmed commute/food data (plus each week's alcohol spread evenly
+  // across its 7 days, same technique as the weekly chart) for every day of
+  // the current year up to today.
   function computeYearToDateDaily() {
-    const start = new Date(`${firstTrackedWeekKey()}T00:00:00`);
-    const today = new Date();
+    const now = new Date();
+    const year = now.getFullYear();
+    const jan1 = new Date(year, 0, 1);
+    jan1.setHours(0, 0, 0, 0);
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
-    const todayOffset = Math.min(YEAR_CHART_SPAN_DAYS, Math.max(0, Math.round((today - start) / (24 * 60 * 60 * 1000))));
+    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const daysInYear = isLeapYear ? 366 : 365;
+    const todayOffset = Math.round((today - jan1) / (24 * 60 * 60 * 1000));
     const dailyKg = new Array(todayOffset + 1).fill(0);
 
     Object.keys(weeksCache).forEach((weekKey) => {
@@ -1534,50 +1551,53 @@
       DAYS.forEach((day, i) => {
         const dayDate = new Date(monday);
         dayDate.setDate(dayDate.getDate() + i);
-        if (dayDate < start || dayDate > today) return;
-        const offset = Math.round((dayDate - start) / (24 * 60 * 60 * 1000));
-        if (offset > YEAR_CHART_SPAN_DAYS) return;
+        if (dayDate < jan1 || dayDate > today) return;
+        const offset = Math.round((dayDate - jan1) / (24 * 60 * 60 * 1000));
         dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
       });
     });
 
-    return { dailyKg, todayOffset, start };
+    // Where the actual line should start being drawn - the Monday of the
+    // week tracking first began, clamped into [0, todayOffset] so a
+    // tracking history starting in an earlier calendar year just counts as
+    // "the whole year so far" (no gap needed at the start).
+    const trackedStart = new Date(`${firstTrackedWeekKey()}T00:00:00`);
+    const trackingStartOffset = Math.min(todayOffset, Math.max(0, Math.round((trackedStart - jan1) / (24 * 60 * 60 * 1000))));
+
+    return { dailyKg, daysInYear, todayOffset, trackingStartOffset, year, jan1 };
   }
 
   function renderYearChart() {
     const goal = Math.max(0.0001, currentGoal() * 52);
-    const { dailyKg, todayOffset, start } = computeYearToDateDaily();
+    const { dailyKg, daysInYear, todayOffset, trackingStartOffset, year, jan1 } = computeYearToDateDaily();
 
     const cumulative = [0];
     dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
     const remaining = cumulative.map((c) => goal - c);
 
     const predicted = [];
-    for (let j = 0; j <= YEAR_CHART_SPAN_DAYS; j++) predicted.push(goal * (1 - j / YEAR_CHART_SPAN_DAYS));
+    for (let j = 0; j <= daysInYear; j++) predicted.push(goal * (1 - j / daysInYear));
 
-    const actualPoints = remaining.slice(0, todayOffset + 2);
+    // Only draw the actual line from the day tracking started - before
+    // that there's no confirmed data, and plotting "remaining = goal" flat
+    // across those untracked months would look like a fully on-pace (green)
+    // stretch you never actually logged, rather than genuinely emission-free
+    // months.
+    const actualPoints = remaining.slice(trackingStartOffset, todayOffset + 2);
 
-    // Date-based ticks (not calendar months) since the span now starts from
-    // an arbitrary tracking-start date rather than always Jan 1 - roughly
-    // 4-weekly, 14 ticks across the 52-week span, closest one to today
-    // highlighted the same way "today" is on the weekly chart.
-    const LABEL_STEP_DAYS = 28;
+    const currentMonth = new Date().getMonth();
     const xLabels = [];
-    for (let j = 0; j <= YEAR_CHART_SPAN_DAYS; j += LABEL_STEP_DAYS) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + j);
-      xLabels.push({ j, text: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }), isCurrent: false });
+    for (let m = 0; m < 12; m++) {
+      const monthStart = new Date(year, m, 1);
+      const j = Math.round((monthStart - jan1) / (24 * 60 * 60 * 1000));
+      xLabels.push({ j, text: MONTH_SHORT_LABELS[m], isCurrent: m === currentMonth });
     }
-    let nearestIdx = 0;
-    xLabels.forEach((label, i) => {
-      if (Math.abs(label.j - todayOffset) < Math.abs(xLabels[nearestIdx].j - todayOffset)) nearestIdx = i;
-    });
-    xLabels[nearestIdx].isCurrent = true;
 
     renderBudgetChart("yearly-chart", {
       goal,
       predicted,
       actualPoints,
+      actualStartJ: trackingStartOffset,
       xLabels,
       goalLabelSuffix: "kg/yr goal",
       ariaPrefix: "Yearly budget pace",
