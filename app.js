@@ -1933,6 +1933,10 @@
     document.getElementById("profile-food-waste").value = profile.foodWaste;
     document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
+    document.getElementById("profile-university").addEventListener("change",(e) =>{
+      profile.university = e.target.value || null;
+      persistProfile();
+    });
     document.getElementById("owner-research-export").hidden =
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
     populateBaselineWeekSelect();
