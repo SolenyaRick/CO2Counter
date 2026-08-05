@@ -29,36 +29,40 @@ with accounts and a friends leaderboard backed by Supabase.
   line jump out ahead of pace for no real reason. Flights, home energy,
   and the other yearly-estimate categories below aren't part of any of
   these lines, since they're fixed annual figures with no day-by-day data
-  to plot a pace against. Next, a "To do" card lists six quick nudges -
-  yesterday's and today's commute and meal, electricity per year, and
-  flights per year - each shown as a checked-off item once there's
+  to plot a pace against. Next, a "To do" card lists up to six quick
+  nudges - yesterday's and today's commute and meal, electricity per year,
+  and flights per year - each dropping off the list the moment there's
   something logged for it (yesterday/today check that specific day's
   commute/diet confirm status, wherever that day's data actually lives -
   this week's or last week's; electricity/flights just check for a
   non-zero answer, since those two don't have a distinct "unanswered"
-  state the way nullable optional fields do). Tapping an item jumps to
-  wherever you'd log it (This Week for the day-based ones, This Year for
-  the other two) - nothing here blocks you, it's just a pointer to
-  whatever's quickest to knock out next. Below that, a "Your year,
-  estimated" card rolls those fixed figures together with your fully
-  confirmed weeks' average commute/food/alcohol (extrapolated ×52) into an
-  estimated yearly total, next to a rough percentile ("lower than ~X%" /
-  "higher than ~X% of people in the UK", worded so it never reads
-  backwards). Each of its 14 tiles gets a small category emoji next to the
-  label for quicker scanning, and the "Estimated total" tile is visually
-  set apart with an accent-colored border, shadow, and value text. Every
-  domain tile (food, commute, flying, home energy, goods, and the six
-  optional extras once answered) shows its own ▲/▼ delta against the UK
-  average for that same category, not just the total. A "How your year
-  compares" card underneath opens with your estimated total against the 1.5°C-by-2030
-  climate target (see below), then shows a UK average - built from the
-  same core categories plus whichever optional extras you've personally
-  answered, so the comparison is always apples-to-apples - alongside your
-  total converted into car miles and mature-trees-of-CO2-absorption
-  equivalents, each with a delta against the UK average. A final "What
-  this doesn't account for" card lists everything the app doesn't model,
-  so every total on this page reads as a partial, illustrative estimate
-  rather than an actual personal footprint.
+  state the way nullable optional fields do), so the list only ever shows
+  what's actually still outstanding rather than a permanent checklist of
+  everything. Once every item's dropped off, the list itself is replaced
+  by a single "All done" message. Tapping an item jumps to wherever you'd
+  log it (This Week for the day-based ones, This Year for the other two).
+  Below that, a small "Your week"
+  card shows your average confirmed week's food, commute, and alcohol
+  totals side by side. Then "Your year, estimated" opens with a hero box -
+  your estimated yearly total in large accent-colored type, next to a
+  rough percentile ("lower than ~X%" / "higher than ~X% of people in the
+  UK", worded so it never reads backwards) - immediately followed by two
+  comparison tiles converting that total into km driven by an average car
+  and mature-trees-of-CO2-absorption equivalents, each with a delta against
+  the UK average. A divider then splits the 12 category tiles into three
+  rows: an unlabeled "everyday" row (food, commute, non-commute driving,
+  alcohol), then "Home" (home energy, gas/oil heating, water usage, pets),
+  then "Other" (flying, banking, buying goods, car manufacturing) - each
+  tile keeps its own category emoji and ▲/▼ delta against the UK average
+  for that category. A "How your year compares" card underneath holds the
+  1.5°C-by-2030 climate target comparison (see below) and the paragraph
+  explaining how the UK average figure quoted throughout this page is
+  built. A final, deliberately compact "What this doesn't account for"
+  card condenses the app's disclaimed categories into four bullet points,
+  including a rough figure for the one people ask about most - your share
+  of public infrastructure and government spending runs to roughly 3.3
+  tonnes CO2e/yr per person in the UK, real but not something an app like
+  this can help you reduce.
 - **This Week** — starts with a "Compared to an average week" card: a UK
   average week (commute + food only, the same bottom-up figures as the
   Home page) shown alongside a savings-framed comparison against your
@@ -407,10 +411,11 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   distributed around the UK average above (median = average, an assumed
   spread) to estimate a percentile — illustrative, not based on real
   ONS/population distribution data.
-- **Car-miles / trees comparisons** (Home page): the car-miles comparison
-  reuses the same car factor as commuting (~0.171 kg CO2e/km, converted to
-  miles); the trees comparison uses ~22 kg CO2e absorbed per mature tree
-  per year.
+- **Car-km / trees comparisons** (Home page): the car-km comparison reuses
+  the same blended-average car factor as commuting (~0.171 kg CO2e/km, not
+  converted to miles or personalized to a chosen car type - it's a
+  reference unit, not a claim about your actual car); the trees comparison
+  uses ~22 kg CO2e absorbed per mature tree per year.
 - **UK average week** (This Week page, and the "Match UK average week" goal
   preset): the same commute + food UK-average assumptions as above, without
   the ×52, since this is what a single average week (not year) comes to —

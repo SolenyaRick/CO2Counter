@@ -165,7 +165,6 @@
     triodos: 0.0317,
   };
 
-  const KM_PER_MILE = 1.60934;
   const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
 
   // ---------- UK average reference ("How your year compares" card) ----------
@@ -2098,6 +2097,7 @@
 
     document.getElementById("yearly-avg-food").textContent = fmt(avgFood);
     document.getElementById("yearly-avg-commute").textContent = fmt(avgCommute);
+    document.getElementById("yearly-avg-alcohol").textContent = fmt(avgAlcohol);
     document.getElementById("yearly-food").textContent = Math.round(yearlyFood).toLocaleString();
     document.getElementById("yearly-commute").textContent = Math.round(yearlyCommute).toLocaleString();
     document.getElementById("yearly-alcohol").textContent = Math.round(yearlyAlcohol).toLocaleString();
@@ -2155,6 +2155,9 @@
   // non-zero, on the assumption that most people's genuine answer isn't
   // exactly zero. Someone with truly 0 flights this year will never see
   // this one tick off, which is an acceptable tradeoff for a to-do nudge.
+  // Each item drops off the list entirely once it's done, rather than
+  // sitting there checked off - once everything's done, the list itself
+  // is replaced with a single "All done" message.
   function renderHomeTodoList() {
     const today = new Date();
     const yesterday = new Date(today);
@@ -2163,17 +2166,28 @@
     const todayStatus = dayConfirmStatus(today);
     const yesterdayStatus = dayConfirmStatus(yesterday);
 
-    const setDone = (id, done) => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle("done", !!done);
-    };
+    const items = [
+      ["todo-yesterday-commute", yesterdayStatus.commuteDone],
+      ["todo-yesterday-meal", yesterdayStatus.dietDone],
+      ["todo-today-commute", todayStatus.commuteDone],
+      ["todo-today-meal", todayStatus.dietDone],
+      ["todo-electricity", !!profile.householdKwhPerMonth],
+      ["todo-flights", !!(profile.shortHaulFlights || profile.longHaulFlights)],
+    ];
 
-    setDone("todo-yesterday-commute", yesterdayStatus.commuteDone);
-    setDone("todo-yesterday-meal", yesterdayStatus.dietDone);
-    setDone("todo-today-commute", todayStatus.commuteDone);
-    setDone("todo-today-meal", todayStatus.dietDone);
-    setDone("todo-electricity", !!profile.householdKwhPerMonth);
-    setDone("todo-flights", !!(profile.shortHaulFlights || profile.longHaulFlights));
+    let allDone = true;
+    items.forEach(([id, done]) => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = !!done;
+      if (!done) allDone = false;
+    });
+
+    const hint = document.getElementById("home-todo-hint");
+    const list = document.getElementById("home-todo-list");
+    const doneMessage = document.getElementById("home-todo-all-done");
+    if (hint) hint.hidden = allDone;
+    if (list) list.hidden = allDone;
+    if (doneMessage) doneMessage.hidden = !allDone;
   }
 
   // Compared against the fuller yearly total (5-8 categories) rather than
@@ -2189,17 +2203,16 @@
   }
 
   function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
-    const carKgPerMile = TRANSPORT_FACTORS.car * KM_PER_MILE;
-    const yourCarMiles = yearlyTotal / carKgPerMile;
-    const ukCarMiles = ukAverageYearlyKg / carKgPerMile;
+    const yourCarKm = yearlyTotal / TRANSPORT_FACTORS.car;
+    const ukCarKm = ukAverageYearlyKg / TRANSPORT_FACTORS.car;
     const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
     const ukTrees = ukAverageYearlyKg / TREE_KG_PER_YEAR;
 
     document.getElementById("uk-average-value").textContent = Math.round(ukAverageYearlyKg).toLocaleString();
-    document.getElementById("compare-car-miles").textContent = Math.round(yourCarMiles).toLocaleString();
+    document.getElementById("compare-car-km").textContent = Math.round(yourCarKm).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
 
-    setComparisonDiff("compare-car-miles-diff", yourCarMiles, ukCarMiles, "miles");
+    setComparisonDiff("compare-car-km-diff", yourCarKm, ukCarKm, "km");
     setComparisonDiff("compare-trees-diff", yourTrees, ukTrees, "trees");
   }
 

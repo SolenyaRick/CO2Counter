@@ -703,6 +703,53 @@ input, select {
   color: var(--accent);
 }
 
+.year-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 20px 16px;
+  margin-bottom: 8px;
+  box-shadow: var(--tile-shadow-highlight);
+}
+
+.year-hero-value {
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.year-hero-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.assumptions.small-print {
+  font-size: 0.75rem;
+  margin-bottom: 16px;
+}
+
+.section-break {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 18px 0;
+}
+
+.category-heading {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .avg-week-savings {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -802,6 +849,25 @@ input, select {
   color: var(--text);
 }
 
+.compact-card {
+  padding: 16px 20px;
+}
+
+.compact-card h2 {
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+.compact-bullets {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.compact-bullets strong {
+  color: var(--text);
+}
+
 .savings-breakdown li {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -841,6 +907,14 @@ input, select {
   gap: 8px;
 }
 
+/* [hidden] and .todo-list/.todo-item{display:flex} have equal specificity,
+   so without these the later rule would always win and the list/items
+   would stay visible even when JS sets the hidden attribute (the list once
+   everything's done, individual items as each one gets done). */
+.todo-list[hidden] {
+  display: none;
+}
+
 .todo-item {
   display: flex;
   align-items: center;
@@ -851,6 +925,10 @@ input, select {
   background: var(--bg);
   cursor: pointer;
   transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.todo-item[hidden] {
+  display: none;
 }
 
 .todo-item:hover {
@@ -875,31 +953,24 @@ input, select {
   color: var(--text);
 }
 
-.todo-item.done {
+.todo-all-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
   background: var(--accent-light);
-  border-color: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.92rem;
 }
 
-.todo-item.done .todo-circle {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
-.todo-item.done .todo-circle::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 1px;
-  width: 6px;
-  height: 11px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.todo-item.done .todo-text {
-  color: var(--text-muted);
-  text-decoration: line-through;
+/* [hidden] and .todo-all-done{display:flex} have equal specificity, so
+   without this the later rule (this one) would always win and the message
+   would stay visible even when JS sets the hidden attribute. */
+.todo-all-done[hidden] {
+  display: none;
 }
 
 .budget-chart {

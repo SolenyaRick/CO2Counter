@@ -451,9 +451,10 @@
 
       <section class="card">
         <h2>To do</h2>
-        <p class="assumptions">
+        <p class="assumptions" id="home-todo-hint">
           Nothing here ever locks you out &mdash; it's just a nudge for what's
-          quickest to log next. Tap an item to jump to where you log it.
+          quickest to log next. Tap an item to jump to where you log it, and
+          it drops off the list once it's done.
         </p>
         <ul class="todo-list" id="home-todo-list">
           <li class="todo-item" id="todo-yesterday-commute" data-nav="week" tabindex="0" role="button">
@@ -481,11 +482,12 @@
             <span class="todo-text">Flights per year</span>
           </li>
         </ul>
+        <p class="todo-all-done" id="home-todo-all-done" hidden>&#10003; All done &mdash; nothing outstanding right now.</p>
       </section>
 
       <section class="card">
-        <h2>Your year, estimated</h2>
-        <div class="summary-totals" id="yearly-summary-totals">
+        <h2>Your week</h2>
+        <div class="summary-totals">
           <div class="stat">
             <span class="stat-value" id="yearly-avg-food">0.0</span>
             <span class="stat-label">🍽️ kg CO2e &middot; Avg confirmed week &middot; Food</span>
@@ -494,6 +496,42 @@
             <span class="stat-value" id="yearly-avg-commute">0.0</span>
             <span class="stat-label">🚗 kg CO2e &middot; Avg confirmed week &middot; Commute</span>
           </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-avg-alcohol">0.0</span>
+            <span class="stat-label">🍷 kg CO2e &middot; Avg confirmed week &middot; Alcohol</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Your year, estimated</h2>
+
+        <div class="year-hero">
+          <span class="year-hero-value" id="yearly-total">0</span>
+          <span class="year-hero-label">📊 kg CO2e/yr &middot; Estimated total</span>
+          <span class="stat-percentile" id="yearly-percentile"></span>
+        </div>
+        <p class="assumptions small-print">
+          Commute, food &amp; alcohol come from your confirmed weeks' average (&times;52);
+          everything else from your This Year answers. Rough, illustrative estimate.
+        </p>
+
+        <div class="comparison-grid">
+          <div class="comparison-item">
+            <span class="comparison-value" id="compare-car-km">0</span>
+            <span class="comparison-label">km driven by an average car &mdash; that's how far you'd have to drive to match your estimated year</span>
+            <span class="week-diff" id="compare-car-km-diff"></span>
+          </div>
+          <div class="comparison-item">
+            <span class="comparison-value" id="compare-trees">0</span>
+            <span class="comparison-label">mature trees' worth of a year's CO2 absorption</span>
+            <span class="week-diff" id="compare-trees-diff"></span>
+          </div>
+        </div>
+
+        <hr class="section-break" />
+
+        <div class="summary-totals">
           <div class="stat">
             <span class="stat-value" id="yearly-food">0</span>
             <span class="stat-label">🍽️ kg CO2e/yr &middot; Food (&times;52 weeks)</span>
@@ -505,23 +543,24 @@
             <span class="week-diff" id="yearly-commute-diff"></span>
           </div>
           <div class="stat">
+            <span class="stat-value" id="yearly-noncommute-car">–</span>
+            <span class="stat-label">🚙 kg CO2e/yr &middot; Non-commute driving (optional)</span>
+            <span class="week-diff" id="yearly-noncommute-car-diff"></span>
+          </div>
+          <div class="stat">
             <span class="stat-value" id="yearly-alcohol">0</span>
             <span class="stat-label">🍷 kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
           </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-flying">0</span>
-            <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
-            <span class="week-diff" id="yearly-flying-diff"></span>
-          </div>
+        </div>
+
+        <hr class="section-break" />
+
+        <h3 class="category-heading">Home</h3>
+        <div class="summary-totals">
           <div class="stat">
             <span class="stat-value" id="yearly-home-energy">0</span>
             <span class="stat-label">⚡ kg CO2e/yr &middot; Home energy (your share)</span>
             <span class="week-diff" id="yearly-home-energy-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-goods">0</span>
-            <span class="stat-label">🛍️ kg CO2e/yr &middot; Buying goods</span>
-            <span class="week-diff" id="yearly-goods-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-gas-heating">–</span>
@@ -529,46 +568,42 @@
             <span class="week-diff" id="yearly-gas-heating-diff"></span>
           </div>
           <div class="stat">
-            <span class="stat-value" id="yearly-noncommute-car">–</span>
-            <span class="stat-label">🚙 kg CO2e/yr &middot; Non-commute driving (optional)</span>
-            <span class="week-diff" id="yearly-noncommute-car-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-car-ownership">–</span>
-            <span class="stat-label">🏭 kg CO2e/yr &middot; Car manufacturing (optional)</span>
-            <span class="week-diff" id="yearly-car-ownership-diff"></span>
+            <span class="stat-value" id="yearly-water">–</span>
+            <span class="stat-label">💧 kg CO2e/yr &middot; Water usage (optional)</span>
+            <span class="week-diff" id="yearly-water-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-pets">–</span>
             <span class="stat-label">🐾 kg CO2e/yr &middot; Pets (optional)</span>
             <span class="week-diff" id="yearly-pets-diff"></span>
           </div>
+        </div>
+
+        <hr class="section-break" />
+
+        <h3 class="category-heading">Other</h3>
+        <div class="summary-totals">
           <div class="stat">
-            <span class="stat-value" id="yearly-water">–</span>
-            <span class="stat-label">💧 kg CO2e/yr &middot; Water usage (optional)</span>
-            <span class="week-diff" id="yearly-water-diff"></span>
+            <span class="stat-value" id="yearly-flying">0</span>
+            <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
+            <span class="week-diff" id="yearly-flying-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-banking">–</span>
             <span class="stat-label">🏦 kg CO2e/yr &middot; Banking (optional)</span>
             <span class="week-diff" id="yearly-banking-diff"></span>
           </div>
-          <div class="stat stat-highlight">
-            <span class="stat-value" id="yearly-total">0</span>
-            <span class="stat-label">📊 kg CO2e/yr &middot; Estimated total</span>
-            <span class="stat-percentile" id="yearly-percentile"></span>
+          <div class="stat">
+            <span class="stat-value" id="yearly-goods">0</span>
+            <span class="stat-label">🛍️ kg CO2e/yr &middot; Buying goods</span>
+            <span class="week-diff" id="yearly-goods-diff"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="yearly-car-ownership">–</span>
+            <span class="stat-label">🏭 kg CO2e/yr &middot; Car manufacturing (optional)</span>
+            <span class="week-diff" id="yearly-car-ownership-diff"></span>
           </div>
         </div>
-        <p class="assumptions">
-          Commute, food, and alcohol are extrapolated from the average of your fully
-          confirmed weeks so far (needs at least one to be non-zero); everything else
-          comes from your answers above. The six optional tiles show
-          &ldquo;&ndash;&rdquo; until you answer them, and are then included in the
-          total below &mdash; and in the UK comparison, which only ever includes the
-          same optional categories you have (alcohol isn't part of that UK comparison
-          at all, since it isn't modeled there). All figures are rough, illustrative
-          estimates.
-        </p>
       </section>
 
       <section class="card">
@@ -597,47 +632,18 @@
           flights, average household electricity, and (only if you've answered them)
           average heating, non-commute driving, car ownership, pets, water usage, and
           banking &mdash; run through the same maths, rather than a generic "average
-          footprint" statistic that covers a lot this app doesn't track (see below). The
-          comparisons below are illustrative ways to picture that number, not precise
-          conversions.
+          footprint" statistic that covers a lot this app doesn't track (see below).
         </p>
-        <div class="comparison-grid">
-          <div class="comparison-item">
-            <span class="comparison-value" id="compare-car-miles">0</span>
-            <span class="comparison-label">miles driven by an average car &mdash; that's how far you'd have to drive to match your estimated year</span>
-            <span class="week-diff" id="compare-car-miles-diff"></span>
-          </div>
-          <div class="comparison-item">
-            <span class="comparison-value" id="compare-trees">0</span>
-            <span class="comparison-label">mature trees' worth of a year's CO2 absorption</span>
-            <span class="week-diff" id="compare-trees-diff"></span>
-          </div>
-        </div>
       </section>
 
-      <section class="card">
+      <section class="card compact-card">
         <h2>What this doesn't account for</h2>
-        <p class="assumptions">
-          This app tracks commuting, food, alcohol, flights, home electricity,
-          clothing purchases, and (optionally, above) gas/oil heating, non-commute
-          car driving, car ownership, pets, water usage, and banking &mdash; a real
-          personal footprint includes a lot more, so treat every total here as a
-          partial, illustrative estimate, not your actual footprint:
-        </p>
-        <ul class="unaccounted-list">
-          <li>Non-car, non-commute travel: taxis/rideshare, buses, ferries, trains beyond your commute, cruises</li>
-          <li>Diet detail beyond meat/veggie/vegan: dairy, eggs, snacks, food miles/packaging</li>
-          <li>Purchases beyond clothing: electronics, furniture, appliances, subscriptions, streaming/data use</li>
-          <li>Household waste</li>
-          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint, but aren't modeled here</li>
-          <li>Your share of public services, infrastructure, and government spending &mdash; often a substantial slice of "full" consumption-based footprint figures, and essentially impossible to self-report</li>
+        <ul class="unaccounted-list compact-bullets">
+          <li>Travel beyond your logged commute: taxis/rideshare, buses, trains, ferries, cruises</li>
+          <li>Diet and purchases beyond what's tracked: dairy, eggs, snacks, food miles, electronics, subscriptions, household waste</li>
+          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint</li>
+          <li>Your share of public services and infrastructure &mdash; roughly <strong>3.3 tonnes CO2e/yr</strong> per person in the UK, and real, but not something you can meaningfully reduce or self-report here</li>
         </ul>
-        <p class="assumptions">
-          This is a large part of why official "average person" footprint figures you may
-          see elsewhere (often 8&ndash;10 tonnes CO2e/yr for the UK) run well above the UK
-          average shown above &mdash; that number is deliberately scoped to match only what
-          this app measures.
-        </p>
       </section>
     </section>
 
