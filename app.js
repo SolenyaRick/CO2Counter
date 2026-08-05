@@ -406,6 +406,25 @@
     return DAYS[todayIndexInWeek() - 1].key;
   }
 
+  // Which DAYS entry a given date falls on, regardless of which week it's
+  // in - unlike todayDayKey() above (always "today", always the current
+  // week), this works for any date, e.g. "yesterday" when that's actually
+  // in last week's data (viewing on a Monday).
+  function dayKeyFor(date) {
+    return DAYS[(date.getDay() + 6) % 7].key; // JS Sun=0...Sat=6 -> Mon=0...Sun=6
+  }
+
+  // Whether a given date's commute/diet have been confirmed, wherever that
+  // date's week lives in weeksCache (this week or last week).
+  function dayConfirmStatus(date) {
+    const weekData = weeksCache[weekKeyFor(date)];
+    const dayKey = dayKeyFor(date);
+    return {
+      commuteDone: !!weekData?.confirmedCommute?.[dayKey],
+      dietDone: !!weekData?.confirmedDiet?.[dayKey],
+    };
+  }
+
   function weekLabel(weekKey) {
     const monday = new Date(`${weekKey}T00:00:00`);
     const sunday = new Date(monday);
@@ -2124,6 +2143,37 @@
     renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
     renderPeriodChart();
+    renderHomeTodoList();
+  }
+
+  // A lightweight nudge, not a data-completeness tracker: yesterday/today's
+  // commute and meal are done once that day's actually confirmed (works
+  // whether "yesterday" falls in this week's or last week's data). Electricity
+  // and flights don't have an "unanswered" state to check the way the This
+  // Year page's true optional fields do (num_dogs, bank_name, etc. are
+  // nullable; these two default to a real 0) - so "done" here just means
+  // non-zero, on the assumption that most people's genuine answer isn't
+  // exactly zero. Someone with truly 0 flights this year will never see
+  // this one tick off, which is an acceptable tradeoff for a to-do nudge.
+  function renderHomeTodoList() {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayStatus = dayConfirmStatus(today);
+    const yesterdayStatus = dayConfirmStatus(yesterday);
+
+    const setDone = (id, done) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle("done", !!done);
+    };
+
+    setDone("todo-yesterday-commute", yesterdayStatus.commuteDone);
+    setDone("todo-yesterday-meal", yesterdayStatus.dietDone);
+    setDone("todo-today-commute", todayStatus.commuteDone);
+    setDone("todo-today-meal", todayStatus.dietDone);
+    setDone("todo-electricity", !!profile.householdKwhPerMonth);
+    setDone("todo-flights", !!(profile.shortHaulFlights || profile.longHaulFlights));
   }
 
   // Compared against the fuller yearly total (5-8 categories) rather than
@@ -2766,6 +2816,14 @@
 
     document.querySelectorAll(".home-period-btn").forEach((btn) => {
       btn.addEventListener("click", () => renderPeriodChart(btn.dataset.period));
+    });
+
+    document.querySelectorAll(".todo-item").forEach((item) => {
+      const navigate = () => { location.hash = item.dataset.nav; };
+      item.addEventListener("click", navigate);
+      item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(); }
+      });
     });
 
     document.getElementById("alcohol-spirits-abv").addEventListener("input", (e) => {

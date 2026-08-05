@@ -450,78 +450,112 @@
       </section>
 
       <section class="card">
+        <h2>To do</h2>
+        <p class="assumptions">
+          Nothing here ever locks you out &mdash; it's just a nudge for what's
+          quickest to log next. Tap an item to jump to where you log it.
+        </p>
+        <ul class="todo-list" id="home-todo-list">
+          <li class="todo-item" id="todo-yesterday-commute" data-nav="week" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Yesterday's commute</span>
+          </li>
+          <li class="todo-item" id="todo-yesterday-meal" data-nav="week" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Yesterday's meal</span>
+          </li>
+          <li class="todo-item" id="todo-today-commute" data-nav="week" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Today's commute</span>
+          </li>
+          <li class="todo-item" id="todo-today-meal" data-nav="week" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Today's meal</span>
+          </li>
+          <li class="todo-item" id="todo-electricity" data-nav="weeks" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Electricity per year</span>
+          </li>
+          <li class="todo-item" id="todo-flights" data-nav="weeks" tabindex="0" role="button">
+            <span class="todo-circle" aria-hidden="true"></span>
+            <span class="todo-text">Flights per year</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="card">
         <h2>Your year, estimated</h2>
         <div class="summary-totals" id="yearly-summary-totals">
           <div class="stat">
             <span class="stat-value" id="yearly-avg-food">0.0</span>
-            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Food</span>
+            <span class="stat-label">🍽️ kg CO2e &middot; Avg confirmed week &middot; Food</span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-avg-commute">0.0</span>
-            <span class="stat-label">kg CO2e &middot; Avg confirmed week &middot; Commute</span>
+            <span class="stat-label">🚗 kg CO2e &middot; Avg confirmed week &middot; Commute</span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-food">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Food (&times;52 weeks)</span>
+            <span class="stat-label">🍽️ kg CO2e/yr &middot; Food (&times;52 weeks)</span>
             <span class="week-diff" id="yearly-food-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-commute">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
+            <span class="stat-label">🚗 kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
             <span class="week-diff" id="yearly-commute-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-alcohol">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
+            <span class="stat-label">🍷 kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-flying">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Flying</span>
+            <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
             <span class="week-diff" id="yearly-flying-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-home-energy">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Home energy (your share)</span>
+            <span class="stat-label">⚡ kg CO2e/yr &middot; Home energy (your share)</span>
             <span class="week-diff" id="yearly-home-energy-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-goods">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Buying goods</span>
+            <span class="stat-label">🛍️ kg CO2e/yr &middot; Buying goods</span>
             <span class="week-diff" id="yearly-goods-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-gas-heating">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Gas/oil heating (optional)</span>
+            <span class="stat-label">🔥 kg CO2e/yr &middot; Gas/oil heating (optional)</span>
             <span class="week-diff" id="yearly-gas-heating-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-noncommute-car">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Non-commute driving (optional)</span>
+            <span class="stat-label">🚙 kg CO2e/yr &middot; Non-commute driving (optional)</span>
             <span class="week-diff" id="yearly-noncommute-car-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-car-ownership">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Car manufacturing (optional)</span>
+            <span class="stat-label">🏭 kg CO2e/yr &middot; Car manufacturing (optional)</span>
             <span class="week-diff" id="yearly-car-ownership-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-pets">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Pets (optional)</span>
+            <span class="stat-label">🐾 kg CO2e/yr &middot; Pets (optional)</span>
             <span class="week-diff" id="yearly-pets-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-water">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Water usage (optional)</span>
+            <span class="stat-label">💧 kg CO2e/yr &middot; Water usage (optional)</span>
             <span class="week-diff" id="yearly-water-diff"></span>
           </div>
           <div class="stat">
             <span class="stat-value" id="yearly-banking">–</span>
-            <span class="stat-label">kg CO2e/yr &middot; Banking (optional)</span>
+            <span class="stat-label">🏦 kg CO2e/yr &middot; Banking (optional)</span>
             <span class="week-diff" id="yearly-banking-diff"></span>
           </div>
           <div class="stat stat-highlight">
             <span class="stat-value" id="yearly-total">0</span>
-            <span class="stat-label">kg CO2e/yr &middot; Estimated total</span>
+            <span class="stat-label">📊 kg CO2e/yr &middot; Estimated total</span>
             <span class="stat-percentile" id="yearly-percentile"></span>
           </div>
         </div>

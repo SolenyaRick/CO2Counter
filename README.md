@@ -29,15 +29,28 @@ with accounts and a friends leaderboard backed by Supabase.
   line jump out ahead of pace for no real reason. Flights, home energy,
   and the other yearly-estimate categories below aren't part of any of
   these lines, since they're fixed annual figures with no day-by-day data
-  to plot a pace against. Below that, a "Your year, estimated" card rolls
-  those fixed figures together with your fully confirmed weeks' average
-  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
-  next to a rough percentile ("lower than ~X%" / "higher than ~X% of
-  people in the UK", worded so it never reads backwards). Every domain
-  tile (food, commute, flying, home energy, goods, and the six optional
-  extras once answered) shows its own ▲/▼ delta against the UK average for
-  that same category, not just the total. A "How your year compares" card
-  underneath opens with your estimated total against the 1.5°C-by-2030
+  to plot a pace against. Next, a "To do" card lists six quick nudges -
+  yesterday's and today's commute and meal, electricity per year, and
+  flights per year - each shown as a checked-off item once there's
+  something logged for it (yesterday/today check that specific day's
+  commute/diet confirm status, wherever that day's data actually lives -
+  this week's or last week's; electricity/flights just check for a
+  non-zero answer, since those two don't have a distinct "unanswered"
+  state the way nullable optional fields do). Tapping an item jumps to
+  wherever you'd log it (This Week for the day-based ones, This Year for
+  the other two) - nothing here blocks you, it's just a pointer to
+  whatever's quickest to knock out next. Below that, a "Your year,
+  estimated" card rolls those fixed figures together with your fully
+  confirmed weeks' average commute/food/alcohol (extrapolated ×52) into an
+  estimated yearly total, next to a rough percentile ("lower than ~X%" /
+  "higher than ~X% of people in the UK", worded so it never reads
+  backwards). Each of its 14 tiles gets a small category emoji next to the
+  label for quicker scanning, and the "Estimated total" tile is visually
+  set apart with an accent-colored border, shadow, and value text. Every
+  domain tile (food, commute, flying, home energy, goods, and the six
+  optional extras once answered) shows its own ▲/▼ delta against the UK
+  average for that same category, not just the total. A "How your year
+  compares" card underneath opens with your estimated total against the 1.5°C-by-2030
   climate target (see below), then shows a UK average - built from the
   same core categories plus whichever optional extras you've personally
   answered, so the comparison is always apples-to-apples - alongside your
