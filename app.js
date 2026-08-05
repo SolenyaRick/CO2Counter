@@ -279,6 +279,16 @@
   // now cites one consistent source rather than two.
   const PARIS_1_5C_YEARLY_KG = 2500;
 
+  // A single commonly-cited global per-capita footprint figure (roughly
+  // 4.7 tonnes CO2e/yr), for the Home page's "World average" comparison
+  // chip. Deliberately NOT built bottom-up the rigorous way the UK average
+  // above is (there's no single global travel/diet survey to build it
+  // from - see WORLD_AVERAGE_WEEKLY_KG below, "the roughest figure in the
+  // app") - this is a single illustrative reference number, same spirit as
+  // the "8-10 tonnes CO2e/yr" UK figure cited in the app's copy without a
+  // bottom-up model behind it either.
+  const WORLD_AVERAGE_YEARLY_KG = 4700;
+
   // A food+commute-only slice of the 1.5C target, for the weekly goal
   // preset (which only tracks those two categories, plus alcohol). There's
   // no official published category-level split of the 2,500 kg/yr target
@@ -364,6 +374,10 @@
     // Optional: "diesel" | "hybrid" | "electric" - null means use the
     // blended-average car factor (TRANSPORT_FACTORS.car) everywhere.
     carFuelType: null,
+    // Optional: e.g. "UCL"/"Imperial"/"KCL" - null means "prefer not to say"
+    // (the select's "None" option). Used for the Home page's uni-average
+    // comparison chip once enough people from the same university opt in.
+    university: null,
   };
 
   function blankWeek() {
@@ -622,6 +636,7 @@
         researchOptIn: data.research_opt_in ?? false,
         baselineWeekKey: data.baseline_week_key ?? null,
         carFuelType: data.car_fuel_type ?? null,
+        university: data.university ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -652,6 +667,7 @@
       research_opt_in: profile.researchOptIn,
       baseline_week_key: profile.baselineWeekKey,
       car_fuel_type: profile.carFuelType,
+      university: profile.university,
     };
   }
 
@@ -1976,12 +1992,9 @@
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
     document.getElementById("profile-goal").value = profile.weeklyGoalKg;
     document.getElementById("profile-food-waste").value = profile.foodWaste;
+    document.getElementById("profile-university").value = profile.university || "None";
     document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
-    document.getElementById("profile-university").addEventListener("change",(e) =>{
-      profile.university = e.target.value || null;
-      persistProfile();
-    });
     document.getElementById("owner-research-export").hidden =
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
     populateBaselineWeekSelect();
@@ -2142,8 +2155,63 @@
 
     renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
+    renderYearCompareChips(yearlyTotal, uk.total);
     renderPeriodChart();
     renderHomeTodoList();
+  }
+
+  function setCompareChip(id, yourValue, benchmarkValue, label) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (yourValue === null || yourValue === undefined || benchmarkValue === null || benchmarkValue === undefined) {
+      el.textContent = label;
+      el.className = "compare-chip compare-chip-muted";
+      return;
+    }
+    const diff = yourValue - benchmarkValue;
+    const over = diff > 0;
+    el.className = `compare-chip ${over ? "compare-chip-over" : "compare-chip-under"}`;
+    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} kg vs ${label}`;
+  }
+
+  // Small "Compared to: ..." chip row right under the yearly hero total -
+  // 1.5C target and UK average reuse figures already computed for the
+  // cards below; World average is the single illustrative constant above
+  // (WORLD_AVERAGE_YEARLY_KG); Uni average is the only one needing a
+  // network round trip, so it renders as a neutral "loading" chip first
+  // and fills in once university_weekly_average() resolves (or explains
+  // why it can't yet).
+  function renderYearCompareChips(yearlyTotal, ukAverageYearlyKg) {
+    setCompareChip("compare-chip-15c", yearlyTotal, PARIS_1_5C_YEARLY_KG, "1.5°C target");
+    setCompareChip("compare-chip-uk", yearlyTotal, ukAverageYearlyKg, "UK average");
+    setCompareChip("compare-chip-world", yearlyTotal, WORLD_AVERAGE_YEARLY_KG, "World average");
+    renderUniCompareChip(yearlyTotal);
+  }
+
+  const UNIVERSITY_MIN_PEOPLE = 3;
+
+  async function renderUniCompareChip(yearlyTotal) {
+    const chip = document.getElementById("compare-chip-uni");
+    if (!chip) return;
+    if (!profile.university) {
+      chip.textContent = "Set your university on Account to compare";
+      chip.className = "compare-chip compare-chip-muted";
+      return;
+    }
+    chip.textContent = `Loading ${profile.university} average…`;
+    chip.className = "compare-chip compare-chip-muted";
+    const { data, error } = await sbClient.rpc("university_weekly_average", { target_university: profile.university });
+    const row = data && data[0];
+    // Requires a handful of people from the same university before showing
+    // a real number - comparing against an "average" built from only one
+    // or two other people gets close to just showing their own data back
+    // to them, which isn't the point of an anonymous aggregate.
+    if (error || !row || (row.user_count || 0) < UNIVERSITY_MIN_PEOPLE) {
+      chip.textContent = `Not enough people from ${profile.university} yet`;
+      chip.className = "compare-chip compare-chip-muted";
+      return;
+    }
+    setCompareChip("compare-chip-uni", yearlyTotal, row.avg_total_kg * 52, `${profile.university} average`);
   }
 
   // A lightweight nudge, not a data-completeness tracker: yesterday/today's
@@ -2839,6 +2907,15 @@
       });
     });
 
+    const uniChip = document.getElementById("compare-chip-uni");
+    if (uniChip) {
+      const navigateToAccount = () => { location.hash = uniChip.dataset.nav; };
+      uniChip.addEventListener("click", navigateToAccount);
+      uniChip.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigateToAccount(); }
+      });
+    }
+
     document.getElementById("alcohol-spirits-abv").addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       const weekData = getWeek(selectedWeekKey);
@@ -2877,6 +2954,11 @@
       profile.foodWaste = e.target.value;
       persistProfile();
       renderFootprints();
+    });
+    document.getElementById("profile-university").addEventListener("change", (e) => {
+      profile.university = e.target.value === "None" ? null : e.target.value;
+      persistProfile();
+      renderStatsPage();
     });
 
     function bindNumberField(id, applyToProfile, { min = 0, rerenderStats = true } = {}) {

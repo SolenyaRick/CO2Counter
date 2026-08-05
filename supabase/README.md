@@ -273,6 +273,39 @@ two-person household against the function's actual output) and a mocked
 browser run confirming the This Year page's inputs and the Stats page's
 resulting figures match.
 
+The most recent run adds a `check` constraint to the `university` column
+on `profiles` (already present in the file, but previously unconstrained -
+`university is null or university in ('UCL', 'Imperial', 'KCL')`, same
+nullable-optional pattern as `car_fuel_type`) and a new
+`university_weekly_average(target_university text)` function - a near-copy
+of `app_wide_weekly_average()`'s duplicated formula (see its own comment
+for why the duplication exists), just with a `where p.university =
+target_university` filter instead of aggregating every account. Backs the
+Home page's "Uni average" comparison chip; `app.js` only calls it once the
+signed-in user has picked a university, and only shows a real number once
+`user_count` comes back at 3 or more, so the "average" is never just one
+or two other people's data reflected back at the caller. If
+`app_wide_weekly_average()`'s formula ever changes, this needs the same
+edit - there was no clean way to share the duplicated SQL between the two
+functions without a bigger refactor, so for now they have to be kept in
+sync by hand, same as the client/SQL duplication already noted above.
+
+While building this, found that the `university` column added earlier
+was never actually wired up end-to-end on the client side - `app.js`
+read the select's value into an in-memory `profile.university` on change,
+but never included it in the row sent to `profiles` on save, never read
+it back out of a loaded profile, and re-added a fresh change listener
+every time the Account page rendered (accumulating duplicate listeners
+per visit). Since no code path ever included `university` in the saved
+row, no real account could have had a non-null value in the database
+regardless of what the dropdown showed in a given session - fixed by
+adding it to `ensureProfile()`/`profileToRow()`/`DEFAULT_PROFILE` like
+every other profile field, moving the listener to the one-time wiring
+block alongside the other Account page fields, and normalizing the
+select's `"None"` sentinel value to `null` client-side (the check
+constraint only allows `null` or an actual university, not the literal
+string `"None"`).
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

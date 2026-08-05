@@ -45,7 +45,13 @@ alter table public.profiles add column if not exists num_cats numeric;
 alter table public.profiles add column if not exists annual_water_m3 numeric;
 alter table public.profiles add column if not exists bank_name text;
 alter table public.profiles add column if not exists bank_balance numeric;
+-- Optional: null means "prefer not to say" (the select's "None" option,
+-- normalized to null client-side before saving) - matches the same
+-- nullable-optional pattern as car_fuel_type/food_waste_bracket above.
 alter table public.profiles add column if not exists university text;
+alter table public.profiles drop constraint if exists profiles_university_check;
+alter table public.profiles add constraint profiles_university_check
+  check (university is null or university in ('UCL', 'Imperial', 'KCL'));
 
 -- Research opt-in (Account page): off by default, unlike every other column
 -- on this table - nothing is shared until the user actively turns it on.
@@ -460,6 +466,87 @@ $$;
 
 revoke all on function public.app_wide_weekly_average() from public;
 grant execute on function public.app_wide_weekly_average() to authenticated;
+
+-- Same duplicated-formula pattern as app_wide_weekly_average() above (see
+-- its comment for why - can't read other users' profiles client-side, so
+-- this has to recompute the yearly-extras formula in SQL too), scoped to
+-- whichever university is passed in - backs the Home page's "Uni average"
+-- comparison chip. Returns a weekly-equivalent figure (same convention as
+-- app_wide_weekly_average()), which app.js multiplies by 52 for the yearly
+-- comparison. If the formula above ever changes, this needs the same edit.
+create or replace function public.university_weekly_average(target_university text)
+returns table (avg_total_kg numeric, user_count integer)
+language sql
+security definer
+set search_path = public
+as $$
+  with eligible_weeks as (
+    select w.user_id, w.total_kg
+    from public.weeks w
+    where
+      public.week_is_fully_confirmed(w.confirmed_commute)
+      and public.week_is_fully_confirmed(w.confirmed_diet)
+  ),
+  per_user as (
+    select user_id, avg(total_kg) as avg_commute_food_alcohol_kg
+    from eligible_weeks
+    group by user_id
+  ),
+  per_user_extras as (
+    select
+      pu.avg_commute_food_alcohol_kg
+        + (
+            (coalesce(p.short_haul_flights_per_year, 0) * 250 + coalesce(p.long_haul_flights_per_year, 0) * 1600)
+            + (coalesce(p.household_kwh_per_month, 0) * 12 * 0.2) / greatest(1, coalesce(p.household_people, 1))
+            + (coalesce(p.clothes_per_month, 0) * 12 * 10)
+            + case when p.annual_gas_kwh is not null then (p.annual_gas_kwh * 0.18) / greatest(1, coalesce(p.household_people, 1)) else 0 end
+            + case when p.weekly_noncommute_car_km is not null then
+                p.weekly_noncommute_car_km * 52 * (case p.car_fuel_type
+                  when 'diesel' then 0.171
+                  when 'hybrid' then 0.111
+                  when 'electric' then 0.058
+                  else 0.171
+                end)
+              else 0 end
+            + case when p.owns_car then 700 else 0 end
+            + case when p.num_dogs is not null or p.num_cats is not null then
+                (coalesce(p.num_dogs, 0) * 770 + coalesce(p.num_cats, 0) * 310) / greatest(1, coalesce(p.household_people, 1))
+              else 0 end
+            + case when p.annual_water_m3 is not null then (p.annual_water_m3 * 0.32) / greatest(1, coalesce(p.household_people, 1)) else 0 end
+            + case when p.bank_name is not null and p.bank_balance is not null then
+                p.bank_balance * (case p.bank_name
+                  when 'barclays' then 0.2376
+                  when 'hsbc' then 0.2170
+                  when 'firstDirect' then 0.2170
+                  when 'chase' then 0.1897
+                  when 'santander' then 0.1742
+                  when 'natwest' then 0.1295
+                  when 'rbs' then 0.1295
+                  when 'monzo' then 0.1088
+                  when 'lloyds' then 0.0704
+                  when 'halifax' then 0.0704
+                  when 'metroBank' then 0.0694
+                  when 'starling' then 0.0610
+                  when 'virginMoney' then 0.0517
+                  when 'nationwide' then 0.0432
+                  when 'cooperative' then 0.0328
+                  when 'triodos' then 0.0317
+                  else 0
+                end)
+              else 0 end
+          ) / 52.0 as avg_total_kg
+    from per_user pu
+    join public.profiles p on p.id = pu.user_id
+    where p.university = target_university
+  )
+  select
+    coalesce(avg(avg_total_kg), 0) as avg_total_kg,
+    count(*)::int as user_count
+  from per_user_extras;
+$$;
+
+revoke all on function public.university_weekly_average(text) from public;
+grant execute on function public.university_weekly_average(text) to authenticated;
 
 -- ==================== research opt-in views ====================
 

@@ -46,9 +46,19 @@ with accounts and a friends leaderboard backed by Supabase.
   totals side by side. Then "Your year, estimated" opens with a hero box -
   your estimated yearly total in large accent-colored type, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
-  UK", worded so it never reads backwards) - immediately followed by two
-  comparison tiles converting that total into km driven by an average car
-  and mature-trees-of-CO2-absorption equivalents, each with a delta against
+  UK", worded so it never reads backwards). A small "Compared to:" row of
+  four pill-shaped chips sits right underneath - 1.5°C target, UK average,
+  World average, and Uni average (▲/▼ delta against each, same red/green
+  convention as everywhere else on this page). The first three are
+  instant; the Uni one needs your university set on the Account page and
+  a network round trip (`university_weekly_average()`, see
+  `supabase/README.md`) - it reads "Set your university on Account to
+  compare" until you've picked one, "Not enough people from X yet" until
+  at least 3 people from that university have a fully confirmed week (so
+  the comparison is never just reflecting one or two other people's data
+  back at you), and only then shows a real number. Next, two comparison
+  tiles convert that total into km driven by an average car and
+  mature-trees-of-CO2-absorption equivalents, each with a delta against
   the UK average. A divider then splits the 12 category tiles into three
   rows: an unlabeled "everyday" row (food, commute, non-commute driving,
   alcohol), then "Home" (home energy, gas/oil heating, water usage, pets),
@@ -168,7 +178,10 @@ with accounts and a friends leaderboard backed by Supabase.
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
-- **Account** — display name, one-way commute distance, weekly CO2e goal
+- **Account** — display name, university (optional — "Not affiliated" or
+  one of a fixed list; powers the Home page's "Uni average" comparison
+  chip once enough people from the same university have signed up), one-way
+  commute distance, weekly CO2e goal
   (with three quick-set presets alongside typing your own number: "Match UK
   average week", "1.5°C 2030 (food + commute)" — our own estimate, since
   there's no official category-level split of the 1.5°C target — and "Match
@@ -445,6 +458,19 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   estimate (a shorter car-equivalent commute and less meat than the UK
   figures) rather than being built from real survey data the way the UK
   figures are.
+- **World average year** (Home page, "Compared to:" chip): a flat 4,700 kg
+  CO2e/yr — a single commonly-cited global per-capita figure, deliberately
+  *not* built bottom-up the way the weekly figure above or the UK average
+  are. Same spirit as the "8–10 tonnes CO2e/yr" UK figure already cited
+  elsewhere in this app without a bottom-up model behind it: a rough
+  reference point, not something this app derives from its own
+  assumptions.
+- **Uni average year** (Home page, "Compared to:" chip): built the exact
+  same way as the "Everyone on the app" Leaderboard figure, just filtered
+  to whoever shares your selected university — see
+  `university_weekly_average()` in `supabase/schema.sql`. Requires at
+  least 3 people from that university with a fully confirmed week before
+  showing a real number.
 - **Pets** (This Year page, optional): ~770 kg CO2e/yr per dog, ~310 kg
   CO2e/yr per cat, mostly driven by their (often meat-heavy) diet, split
   evenly across everyone in the household (the "People in your household"

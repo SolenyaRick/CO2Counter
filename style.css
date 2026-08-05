@@ -735,6 +735,50 @@ input, select {
   margin-bottom: 16px;
 }
 
+.compare-chip-heading {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.compare-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.compare-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.compare-chip-under {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.compare-chip-over {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.compare-chip-muted {
+  cursor: pointer;
+}
+
+.compare-chip-muted:hover {
+  border-color: var(--accent);
+}
+
 .section-break {
   border: none;
   border-top: 1px solid var(--border);
