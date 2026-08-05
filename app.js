@@ -2153,7 +2153,6 @@
       percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
     }
 
-    renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
     renderYearCompareChips(yearlyTotal, uk.total);
     renderPeriodChart();
@@ -2258,25 +2257,12 @@
     if (doneMessage) doneMessage.hidden = !allDone;
   }
 
-  // Compared against the fuller yearly total (5-8 categories) rather than
-  // the This Week page's commute+food-only weekly figure, since the 1.5C
-  // target is meant to cover a whole lifestyle - a much closer match in
-  // scope, even if still not exact (see "What this doesn't account for").
-  function renderParisTargetComparison(yearlyTotal) {
-    const diff = yearlyTotal - PARIS_1_5C_YEARLY_KG;
-    document.getElementById("paris-target-value").textContent = Math.round(yearlyTotal).toLocaleString();
-    document.getElementById("paris-target-box").classList.toggle("avg-week-good", diff <= 0);
-    document.getElementById("paris-target-box").classList.toggle("avg-week-bad", diff > 0);
-    setComparisonDiff("paris-target-diff", yearlyTotal, PARIS_1_5C_YEARLY_KG, "kg", "the 1.5°C by 2030 target");
-  }
-
   function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
     const yourCarKm = yearlyTotal / TRANSPORT_FACTORS.car;
     const ukCarKm = ukAverageYearlyKg / TRANSPORT_FACTORS.car;
     const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
     const ukTrees = ukAverageYearlyKg / TREE_KG_PER_YEAR;
 
-    document.getElementById("uk-average-value").textContent = Math.round(ukAverageYearlyKg).toLocaleString();
     document.getElementById("compare-car-km").textContent = Math.round(yourCarKm).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
 

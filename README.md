@@ -64,11 +64,9 @@ with accounts and a friends leaderboard backed by Supabase.
   alcohol), then "Home" (home energy, gas/oil heating, water usage, pets),
   then "Other" (flying, banking, buying goods, car manufacturing) - each
   tile keeps its own category emoji and ▲/▼ delta against the UK average
-  for that category. A "How your year compares" card underneath holds the
-  1.5°C-by-2030 climate target comparison (see below) and the paragraph
-  explaining how the UK average figure quoted throughout this page is
-  built. A final, deliberately compact "What this doesn't account for"
-  card condenses the app's disclaimed categories into four bullet points,
+  for that category. A final, deliberately compact "What this doesn't
+  account for" card condenses the app's disclaimed categories into four
+  bullet points,
   including a rough figure for the one people ask about most - your share
   of public infrastructure and government spending runs to roughly 3.3
   tonnes CO2e/yr per person in the UK, real but not something an app like
