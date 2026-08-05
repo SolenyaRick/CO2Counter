@@ -70,15 +70,15 @@
     </header>
 
     <nav class="tabs" id="main-tabs">
+      <button class="tab-btn" data-tab="stats">Home</button>
       <button class="tab-btn" data-tab="week">This Week</button>
       <button class="tab-btn" data-tab="weeks">This Year</button>
       <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
-      <button class="tab-btn" data-tab="stats">Stats</button>
       <button class="tab-btn" data-tab="account">Account</button>
     </nav>
 
     <!-- PAGE 1: This Week (inputs) -->
-    <section class="view" id="view-week">
+    <section class="view" id="view-week" hidden>
       <section class="card">
         <h2 id="avg-week-title">Compared to an average week</h2>
         <p class="assumptions">
@@ -176,11 +176,11 @@
             <span class="stat-label">kg CO2e &middot; Total this week</span>
           </div>
         </div>
-        <div class="chart budget-chart" id="daily-chart"><!-- budget pace chart injected by app.js --></div>
         <p class="assumptions">
           Figures are rough estimates for illustration, based on commonly cited average
           emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
-          style averages). They will not match your actual footprint exactly.
+          style averages). They will not match your actual footprint exactly. See the Home
+          page for a budget-pace chart of this week (and month, and year).
         </p>
         <button id="reset-week" class="btn-secondary">Reset this week</button>
       </section>
@@ -421,24 +421,30 @@
       </section>
     </section>
 
-    <!-- PAGE 4: Stats (yearly estimate) -->
-    <section class="view" id="view-stats" hidden>
+    <!-- PAGE 4: Home (Stats / yearly estimate) -->
+    <section class="view" id="view-stats">
       <section class="card summary-card">
-        <h2>Year budget pace</h2>
-        <div class="chart budget-chart" id="yearly-chart"><!-- budget pace chart injected by app.js --></div>
+        <h2>Budget pace</h2>
+        <div class="week-picker" id="home-period-picker" role="tablist" aria-label="Which timeframe to show">
+          <button type="button" class="week-picker-btn home-period-btn active" data-period="week">This week</button>
+          <button type="button" class="week-picker-btn home-period-btn" data-period="month">This month</button>
+          <button type="button" class="week-picker-btn home-period-btn" data-period="year">This year</button>
+        </div>
+        <div class="chart budget-chart" id="home-chart"><!-- budget pace chart injected by app.js --></div>
         <p class="assumptions">
-          Same idea as the This Week page's chart, scaled to the calendar year: the
-          dashed line burns down from your weekly goal &times;52 to 0 across Jan&ndash;Dec.
-          The solid line only starts where the light vertical marker is &mdash; the week
-          you first confirmed a day &mdash; and picks up exactly on the dashed line
-          there, rather than at the full yearly goal: the weeks before that marker have
-          no data, so they're assumed to have used exactly their fair share of the goal
-          at the target rate (neither over nor under), and the solid line tracks your
-          actual confirmed commute + food + alcohol day by day from that starting point.
-          Falling below the dashed line means you're on pace to go over for the year;
-          staying above it means you're on pace or ahead. Flights, home energy, and the
-          other yearly-estimate categories below aren't included here, since they're
-          fixed annual figures rather than something with day-by-day data to plot a pace
+          A dashed line burns down from your weekly goal &mdash; &times;1 for this week,
+          roughly &times;4.3 for this month, &times;52 for this year &mdash; to 0 across
+          whichever span is selected above, plotted against a solid line tracking your
+          actual confirmed commute + food + alcohol day by day. Falling below the dashed
+          line means you're using CO2e faster than the goal allows for how far through
+          the span it is; staying above it means you're on pace or ahead. For "This
+          month" and "This year", the solid line only starts where the light vertical
+          marker is &mdash; the week you first confirmed a day &mdash; and picks up
+          exactly on the dashed line there rather than at the full goal, since the days
+          before that have no data and would otherwise look like a fully on-pace stretch
+          you never actually tracked. Flights, home energy, and the other yearly-estimate
+          categories below aren't included in any of these lines, since they're fixed
+          annual figures rather than something with day-by-day data to plot a pace
           against.
         </p>
       </section>

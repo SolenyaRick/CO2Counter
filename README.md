@@ -7,9 +7,48 @@ with accounts and a friends leaderboard backed by Supabase.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
+- **Home** — the landing page. Opens with a "Budget pace" card: a
+  three-way toggle ("This week" / "This month" / "This year") over a
+  single Monzo Trends-style budget-pace chart — a dashed target line burns
+  from your weekly goal down to 0 across whichever span is selected
+  (×1 for a week, roughly ×4.3 for a month, ×52 for a year, so the implied
+  daily rate is the same across all three), plotted against a solid line
+  tracking your actual confirmed commute + food + alcohol day by day
+  (alcohol spread evenly across each week's 7 days, since it's a
+  whole-week figure, not tied to a specific day). Falling below the dashed
+  line means you're using CO2e faster than the goal allows for how far
+  through the span it is; staying above it means you're on pace or ahead.
+  For "This week", the actual line only draws up to today - it doesn't
+  project the rest of the week for you. For "This month" and "This year",
+  it additionally only starts drawing from a light vertical marker - the
+  week you first confirmed a day - and picks up exactly on the dashed
+  target line there rather than at the full goal: the days before that
+  marker have no data, so they're assumed to have used exactly their fair
+  share of the goal at the target rate (neither over nor under), rather
+  than being credited as zero-emission days, which would make the actual
+  line jump out ahead of pace for no real reason. Flights, home energy,
+  and the other yearly-estimate categories below aren't part of any of
+  these lines, since they're fixed annual figures with no day-by-day data
+  to plot a pace against. Below that, a "Your year, estimated" card rolls
+  those fixed figures together with your fully confirmed weeks' average
+  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
+  next to a rough percentile ("lower than ~X%" / "higher than ~X% of
+  people in the UK", worded so it never reads backwards). Every domain
+  tile (food, commute, flying, home energy, goods, and the six optional
+  extras once answered) shows its own ▲/▼ delta against the UK average for
+  that same category, not just the total. A "How your year compares" card
+  underneath opens with your estimated total against the 1.5°C-by-2030
+  climate target (see below), then shows a UK average - built from the
+  same core categories plus whichever optional extras you've personally
+  answered, so the comparison is always apples-to-apples - alongside your
+  total converted into car miles and mature-trees-of-CO2-absorption
+  equivalents, each with a delta against the UK average. A final "What
+  this doesn't account for" card lists everything the app doesn't model,
+  so every total on this page reads as a partial, illustrative estimate
+  rather than an actual personal footprint.
 - **This Week** — starts with a "Compared to an average week" card: a UK
   average week (commute + food only, the same bottom-up figures as the
-  Stats page) shown alongside a savings-framed comparison against your
+  Home page) shown alongside a savings-framed comparison against your
   week so far — "X kg CO2e saved vs an average week" (green) or "X kg
   over" (red), prorated to how far through the week it is the same way the
   Weeks-grid goal is. The point is you don't need to log every category for
@@ -46,17 +85,11 @@ with accounts and a friends leaderboard backed by Supabase.
   week, in context" card that converts your confirmed total into an
   equivalent car-km distance (DEFRA-style car factor) and how much CO2e
   you'd have saved if every confirmed meat day had been veggie instead,
-  broken down by meat type (e.g. beef vs chicken). The weekly summary chart
-  is a Monzo Trends-style "budget pace" line chart: a dashed target line
-  burns straight down from your weekly goal to 0 across Mon–Sun, plotted
-  against a solid line for your actual remaining budget (goal minus
-  confirmed CO2e so far, with alcohol counted from the very start of the
-  week since it isn't tied to a day). The line (and the area under it)
-  turns from green to red if you dip below the dashed pace line — i.e.
-  you're using CO2e faster than the week allows for — even if you haven't
-  blown the full weekly goal yet. For the current week the actual line only
-  draws up to today; it doesn't project the rest of the week for you. At
-  the bottom of the page, a "Your weeks" grid shows one box per week
+  broken down by meat type (e.g. beef vs chicken). A "Weekly summary" card
+  below that shows your Commute/Food/Alcohol/Total-so-far tiles and a
+  "Reset this week" button - the budget-pace chart itself now lives on the
+  Home page (its "This week" view), alongside month and year versions of
+  the same chart. At the bottom of the page, a "Your weeks" grid shows one box per week
   (Mon–Sun), most recent first. Each box shows that week's total CO2e,
   color-coded against your goal from the Account page, with an over/under-goal
   indicator. For the current, still-in-progress week, the goal itself is
@@ -66,7 +99,7 @@ with accounts and a friends leaderboard backed by Supabase.
   confirmed for both commute and food gets a "✓ FULL" badge — this is a
   stricter bar than just having *some* data (which is all that's needed for
   the box to show a total at all), and is what counts toward the "confirmed
-  week" averages on the Stats and Leaderboard pages below, so a week where
+  week" averages on the Home and Leaderboard pages, so a week where
   you only logged Monday doesn't drag those averages down as if it were a
   whole week's worth of data. Tap a box for a day-by-day breakdown.
 - **This Year** — the yearly-estimate inputs, grouped into six cards in a
@@ -90,7 +123,7 @@ with accounts and a friends leaderboard backed by Supabase.
   bought per month). Household energy, non-commute driving/pets/water, and
   banking are all split or weighted by household size the same way, for
   consistency. The optional extras are skippable: leaving one blank leaves
-  it out of every total on the Stats page rather than counting it as zero,
+  it out of every total on the Home page rather than counting it as zero,
   so an unanswered question never makes your estimate look artificially
   low.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
@@ -105,10 +138,10 @@ with accounts and a friends leaderboard backed by Supabase.
   average" ranks everyone by their average CO2e per *fully* confirmed week
   (every day, both commute and food — see the weeks grid above) since they
   started, which also folds in a weekly-equivalent share of each person's
-  yearly Stats page figures (flights, home electricity, buying goods, and
+  yearly Home page figures (flights, home electricity, buying goods, and
   any optional extras they've answered — everything the yearly total on
-  the Stats page includes besides commute/food/alcohol, divided by 52), so
-  this figure and "Stats page yearly total ÷ 52" always agree; "Everyone on
+  the Home page includes besides commute/food/alcohol, divided by 52), so
+  this figure and "Home page yearly total ÷ 52" always agree; "Everyone on
   the app" shows two anonymous, aggregate figures across every account on
   the app — commute + food + alcohol, and the fuller total (that plus the
   same yearly-extras composition as above) — and how many people each is
@@ -118,40 +151,6 @@ with accounts and a friends leaderboard backed by Supabase.
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
-- **Stats** — a yearly estimate, built from the inputs on the This Year
-  page. It opens with a "Year budget pace" card — the This Week page's Monzo
-  Trends-style budget-pace chart scaled to the calendar year: a dashed
-  target line burns from your weekly goal ×52 down to 0 across Jan–Dec,
-  plotted against a solid actual line built day by day from your real
-  confirmed commute + food data (plus each week's alcohol spread evenly
-  across its 7 days, same as the weekly chart). Unlike the weekly chart,
-  the solid line doesn't start at the left edge — it only starts at a light
-  vertical marker showing the week you first confirmed a day, and picks up
-  exactly on the dashed target line there rather than at the full yearly
-  goal: the weeks before that marker have no data, so they're assumed to
-  have used exactly their fair share of the goal at the target rate
-  (neither over nor under) rather than being credited as zero-emission
-  weeks, which would make the actual line jump out ahead of pace for no
-  real reason. Falling below the dashed line means the same thing it does
-  on the weekly chart, just over the whole year. Flights, home energy, buying goods, and
-  the optional extras aren't part of this line, since they're fixed annual
-  figures with no day-by-day data to plot a pace against, unlike
-  commute/food/alcohol which accrue from real logged days. Below that, the
-  "Your year, estimated" analysis card rolls
-  those fixed figures together with your fully confirmed weeks' average
-  commute/food/alcohol (extrapolated ×52) into an estimated yearly total,
-  next to a rough percentile ("lower than ~X%" / "higher than ~X% of people
-  in the UK", worded so it never reads backwards). Every domain tile (food,
-  commute, flying, home energy, goods, and the six optional extras once
-  answered) shows its own ▲/▼ delta against the UK average for that same
-  category, not just the total. A "How your year compares" card at the
-  bottom opens with your estimated total
-  against the 1.5°C-by-2030 climate target (see below), then shows a UK
-  average — built from the same core categories plus whichever optional
-  extras you've personally answered, so the comparison is always
-  apples-to-apples — alongside your total converted into car miles and
-  mature-trees-of-CO2-absorption equivalents, each with a delta against the
-  UK average.
 - **Account** — display name, one-way commute distance, weekly CO2e goal
   (with three quick-set presets alongside typing your own number: "Match UK
   average week", "1.5°C 2030 (food + commute)" — our own estimate, since
@@ -164,7 +163,7 @@ with accounts and a friends leaderboard backed by Supabase.
   "✓ FULL" badge on the weeks grid qualify — to compare the This Week
   page's card against instead of the UK average; "UK average (default)"
   switches back), a "Help improve UK averages" opt-in (off by default — if turned on, everything on the
-  Account/Stats pages except your banking answers becomes visible to the
+  Account/Home pages except your banking answers becomes visible to the
   app developer for calibrating the UK-average assumptions against real
   data; your name/email/account are never included, see
   `supabase/README.md` for exactly how this is scoped — signed in as the
@@ -369,7 +368,7 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   CO2e/yr for the car's own manufacturing footprint, amortized over an
   average ~14-year car lifetime — separate from the fuel/charging for
   trips logged elsewhere.
-- **UK average reference** (Stats page): computed bottom-up the same way as
+- **UK average reference** (Home page): computed bottom-up the same way as
   your own total, from representative average UK inputs run through the
   same formulas — a 10 km one-way commute by car over a standard 5-day
   working week (~0.89 tonnes CO2e/yr on its own — this used to be missing
@@ -391,11 +390,11 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   water usage, banking), the matching representative UK figure for each
   one is added to *both* sides of the comparison, so it's never your
   fuller total measured against a narrower UK figure.
-- **UK percentile** (Stats page): models the population as log-normally
+- **UK percentile** (Home page): models the population as log-normally
   distributed around the UK average above (median = average, an assumed
   spread) to estimate a percentile — illustrative, not based on real
   ONS/population distribution data.
-- **Car-miles / trees comparisons** (Stats page): the car-miles comparison
+- **Car-miles / trees comparisons** (Home page): the car-miles comparison
   reuses the same car factor as commuting (~0.171 kg CO2e/km, converted to
   miles); the trees comparison uses ~22 kg CO2e absorbed per mature tree
   per year.
@@ -403,12 +402,12 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   preset): the same commute + food UK-average assumptions as above, without
   the ×52, since this is what a single average week (not year) comes to —
   roughly 46.2 kg CO2e.
-- **1.5°C by 2030 target — comprehensive** (Stats page, "How your year
+- **1.5°C by 2030 target — comprehensive** (Home page, "How your year
   compares"): 2,500 kg CO2e/yr per capita, the Hot or Cool Institute's
   "1.5-Degree Lifestyles" research target (dropping further for 2040/2050)
   as roughly a fair-share pathway for keeping warming under 1.5°C. This
   covers a *whole* lifestyle (mobility, energy, food, shopping, leisure) —
-  not just what this app tracks — so it's compared against the Stats
+  not just what this app tracks — so it's compared against the Home
   page's fuller yearly total (5–8 categories), not the This Week page's
   narrower commute+food-only weekly figure, which would make this target
   look artificially easy to beat for no reason other than mismatched

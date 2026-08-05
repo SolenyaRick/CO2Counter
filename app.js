@@ -37,6 +37,8 @@
 
   const MONTH_SHORT_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
   // Rough average emission factors, kg CO2e per passenger-km.
   const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
   const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
@@ -917,11 +919,11 @@
   }
 
   // ---------- Tab routing ----------
-  const TABS = ["week", "weeks", "leaderboard", "stats", "account"];
+  const TABS = ["stats", "week", "weeks", "leaderboard", "account"];
 
   function currentTab() {
     const fromHash = (location.hash || "").replace("#", "");
-    return TABS.includes(fromHash) ? fromHash : "week";
+    return TABS.includes(fromHash) ? fromHash : "stats";
   }
 
   function showTab(tab) {
@@ -1182,7 +1184,7 @@
     document.getElementById("week-range-heading").firstChild.textContent =
       `${weekPickerHeading(selectedWeekKey)} (${weekLabel(selectedWeekKey)}) `;
 
-    document.querySelectorAll(".week-picker-btn").forEach((btn) => {
+    document.querySelectorAll("#week-picker .week-picker-btn").forEach((btn) => {
       const isCurrent = btn.dataset.week === "current";
       btn.classList.toggle("active", isCurrent ? selectedWeekKey === CURRENT_WEEK_KEY : selectedWeekKey === LAST_WEEK_KEY);
     });
@@ -1190,7 +1192,6 @@
     renderAlcoholSection(weekData);
     renderComparisonCard(weekData, totals);
     renderAverageWeekCard(selectedWeekKey, totals);
-    renderChart(totals.daily, selectedWeekKey, totals.alcohol);
   }
 
   // A fully-confirmed week the person has picked on the Account page to
@@ -1475,46 +1476,11 @@
     chart.appendChild(legend);
   }
 
-  function renderChart(dailyTotals, weekKey, alcoholKg = 0) {
-    const goal = Math.max(0.0001, currentGoal());
-    // Alcohol isn't tied to a specific day, so it's spread evenly across
-    // the week (1/7th per day) rather than counted as already "spent" the
-    // moment the week starts - the previous version front-loaded the
-    // WHOLE week's alcohol onto day 0, before Monday had even happened,
-    // making the pace line look missed from minute one regardless of
-    // actual Mon/Tue choices. Spreading it out means day 0 still starts
-    // exactly even with the predicted line (as it should, before any day
-    // has elapsed), and the full alcoholKg has still fully accrued by day
-    // 7 either way, so the final total still matches weekTotals().
-    const cumulative = [0];
-    dailyTotals.forEach((d, i) => cumulative.push(cumulative[i] + d + alcoholKg / 7));
-    const remaining = cumulative.map((c) => goal - c);
-
-    const predicted = [];
-    for (let j = 0; j <= 7; j++) predicted.push(goal * (1 - j / 7));
-
-    const isCurrentWeek = weekKey === CURRENT_WEEK_KEY;
-    const pointCount = isCurrentWeek ? Math.min(todayIndexInWeek(), 7) : 7;
-    const actualPoints = remaining.slice(0, pointCount + 1);
-
-    // Each day's tick sits at the boundary point representing "as of the end
-    // of that day" (j = i + 1) - the same x each day's line vertex and, for
-    // today, the actual-value dot are drawn at - so the label lines up
-    // directly under its data point instead of under the middle of a column.
-    const xLabels = DAYS.map((day, i) => ({
-      j: i + 1,
-      text: day.short,
-      isCurrent: isCurrentWeek && i + 1 === todayIndexInWeek(),
-    }));
-
-    renderBudgetChart("daily-chart", { goal, predicted, actualPoints, xLabels });
-  }
-
   // The Monday of whichever week you first confirmed at least one day (commute
-  // or diet) - used below so the yearly chart's actual line doesn't start
-  // drawing at Jan 1 for someone who only started using the app much later
-  // in the year. Falls back to the current week for a brand-new account with
-  // nothing confirmed yet.
+  // or diet) - used below so the month/year views' actual line doesn't start
+  // drawing from the beginning of that span for someone who only started
+  // using the app partway through it. Falls back to the current week for a
+  // brand-new account with nothing confirmed yet.
   function firstTrackedWeekKey() {
     const trackedKeys = Object.keys(weeksCache).filter((key) => {
       const w = weeksCache[key];
@@ -1525,25 +1491,14 @@
     return trackedKeys.sort()[0];
   }
 
-  // Same "budget pace" chart as This Week's, scaled to the calendar year: the
-  // dashed target line burns from a yearly goal (the weekly goal x52, same
-  // commute+food+alcohol scope the weekly chart tracks) down to 0 across
-  // Jan 1-Dec 31, and the solid actual line is built from real per-day
-  // confirmed commute/food data (plus each week's alcohol spread evenly
-  // across its 7 days, same technique as the weekly chart) for every day of
-  // the current year up to today.
-  function computeYearToDateDaily() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const jan1 = new Date(year, 0, 1);
-    jan1.setHours(0, 0, 0, 0);
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    const daysInYear = isLeapYear ? 366 : 365;
-    const todayOffset = Math.round((today - jan1) / (24 * 60 * 60 * 1000));
-    const dailyKg = new Array(todayOffset + 1).fill(0);
-
+  // Builds a day-by-day kg CO2e array (commute + food, gated by that day's
+  // own confirm status, plus each week's alcohol spread evenly across its 7
+  // days - same technique as before) for every day in [start, today]. Shared
+  // by all three Home page budget-pace views below, just with a different
+  // `start`/span for each.
+  function computeRangeDailyKg(start, today) {
+    const todayOffset = Math.round((today - start) / DAY_MS);
+    const dailyKg = new Array(Math.max(0, todayOffset) + 1).fill(0);
     Object.keys(weeksCache).forEach((weekKey) => {
       const weekData = weeksCache[weekKey];
       const monday = new Date(`${weekKey}T00:00:00`);
@@ -1551,67 +1506,128 @@
       DAYS.forEach((day, i) => {
         const dayDate = new Date(monday);
         dayDate.setDate(dayDate.getDate() + i);
-        if (dayDate < jan1 || dayDate > today) return;
-        const offset = Math.round((dayDate - jan1) / (24 * 60 * 60 * 1000));
+        if (dayDate < start || dayDate > today) return;
+        const offset = Math.round((dayDate - start) / DAY_MS);
+        if (offset < 0 || offset >= dailyKg.length) return;
         dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
       });
     });
-
-    // Where the actual line should start being drawn - the Monday of the
-    // week tracking first began, clamped into [0, todayOffset] so a
-    // tracking history starting in an earlier calendar year just counts as
-    // "the whole year so far" (no gap needed at the start).
-    const trackedStart = new Date(`${firstTrackedWeekKey()}T00:00:00`);
-    const trackingStartOffset = Math.min(todayOffset, Math.max(0, Math.round((trackedStart - jan1) / (24 * 60 * 60 * 1000))));
-
-    return { dailyKg, daysInYear, todayOffset, trackingStartOffset, year, jan1 };
+    return { dailyKg, todayOffset };
   }
 
-  function renderYearChart() {
-    const goal = Math.max(0.0001, currentGoal() * 52);
-    const { dailyKg, daysInYear, todayOffset, trackingStartOffset, year, jan1 } = computeYearToDateDaily();
+  // The three Home page views' bounds: what day they start counting from,
+  // how many days they span, and the goal for that span - scaled off the
+  // weekly goal so the implied daily rate is the same across all three
+  // (month = weekly goal x days-in-month/7, year = weekly goal x52).
+  // `applyTrackingStart` marks month/year as needing the "start on the
+  // target line" treatment below - not applied to the week view, since a
+  // week is short enough that whatever wasn't logged simply isn't counted,
+  // same as this chart has always behaved.
+  function periodBounds(period) {
+    const now = new Date();
+    const weeklyGoal = Math.max(0.0001, currentGoal());
+    if (period === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      return { start, totalDays, goal: weeklyGoal * (totalDays / 7), applyTrackingStart: true };
+    }
+    if (period === "year") {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const y = now.getFullYear();
+      const isLeapYear = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      return { start, totalDays: isLeapYear ? 366 : 365, goal: weeklyGoal * 52, applyTrackingStart: true };
+    }
+    return { start: weekStart(now), totalDays: 7, goal: weeklyGoal, applyTrackingStart: false };
+  }
+
+  // x-axis tick labels per period: day-of-week letters for a week (same as
+  // before), day-of-month numbers roughly weekly for a month, and month
+  // abbreviations for a year - each highlighting whichever tick sits
+  // closest to today.
+  function periodXLabels(period, start, totalDays, todayOffset) {
+    if (period === "week") {
+      return DAYS.map((day, i) => ({ j: i + 1, text: day.short, isCurrent: i === todayOffset }));
+    }
+    if (period === "year") {
+      const currentMonth = new Date().getMonth();
+      const labels = [];
+      for (let m = 0; m < 12; m++) {
+        const monthStart = new Date(start.getFullYear(), m, 1);
+        const j = Math.round((monthStart - start) / DAY_MS);
+        labels.push({ j, text: MONTH_SHORT_LABELS[m], isCurrent: m === currentMonth });
+      }
+      return labels;
+    }
+    const labels = [];
+    for (let j = 0; j < totalDays; j += 7) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + j);
+      labels.push({ j, text: String(d.getDate()), isCurrent: false });
+    }
+    let nearestIdx = 0;
+    labels.forEach((label, i) => {
+      if (Math.abs(label.j - todayOffset) < Math.abs(labels[nearestIdx].j - todayOffset)) nearestIdx = i;
+    });
+    labels[nearestIdx].isCurrent = true;
+    return labels;
+  }
+
+  const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };
+  const PERIOD_GOAL_SUFFIX = { week: "kg goal", month: "kg/mo goal", year: "kg/yr goal" };
+
+  // The Home page's single budget-pace chart - a dashed target line burning
+  // from the goal to 0 across whichever period is selected, plotted against
+  // a solid actual line built day by day from real confirmed
+  // commute/food/alcohol data. Replaces what used to be two separate charts
+  // (This Week page's weekly one, Stats page's yearly one) with one, toggled
+  // by the picker above it.
+  let homeChartPeriod = "week";
+  function renderPeriodChart(period = homeChartPeriod) {
+    homeChartPeriod = period;
+    document.querySelectorAll(".home-period-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.period === period);
+    });
+
+    const { start, totalDays, goal, applyTrackingStart } = periodBounds(period);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { dailyKg, todayOffset } = computeRangeDailyKg(start, today);
 
     const predicted = [];
-    for (let j = 0; j <= daysInYear; j++) predicted.push(goal * (1 - j / daysInYear));
+    for (let j = 0; j <= totalDays; j++) predicted.push(goal * (1 - j / totalDays));
 
-    // Untracked weeks (before trackingStartOffset) have no data, so there's
-    // no way to know what they actually emitted - rather than either
-    // ignoring them (crediting the full yearly goal at the tracking-start
-    // point, which is what made the actual line jump out ahead of pace) or
-    // guessing a real figure for them, they're assumed to have exactly used
-    // up their share of the goal at the target rate: neither over nor under.
-    // That means "remaining budget" at the tracking-start point is the
-    // target line's own value there (predicted[trackingStartOffset]), with
-    // real confirmed emissions subtracted from that starting point onward -
-    // so the actual line begins exactly on the dashed target line, and only
-    // diverges based on what's actually been tracked since.
-    const budgetAtTrackingStart = predicted[trackingStartOffset];
+    // Untracked days at the start of a month/year (before tracking began)
+    // have no data, so there's no way to know what they actually emitted -
+    // rather than crediting them as zero-emission (which would make the
+    // actual line jump out artificially ahead of pace), they're assumed to
+    // have used exactly their fair share of the goal at the target rate.
+    // "Remaining budget" at the tracking-start point is therefore the
+    // target line's own value there, with real confirmed emissions
+    // subtracted from that point onward - so the actual line begins exactly
+    // on the dashed target line and only diverges based on what's actually
+    // been tracked since.
+    let trackingStartOffset = 0;
+    if (applyTrackingStart) {
+      const trackedStart = new Date(`${firstTrackedWeekKey()}T00:00:00`);
+      trackingStartOffset = Math.min(todayOffset, Math.max(0, Math.round((trackedStart - start) / DAY_MS)));
+    }
+    const budgetAtStart = predicted[trackingStartOffset];
+
     const cumulative = [0];
     dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
-    const remaining = cumulative.map((c) => budgetAtTrackingStart - c);
-
-    // Only draw the actual line from the day tracking started - before
-    // that there's no confirmed data, and plotting a line across those
-    // untracked months would look like a stretch you never actually
-    // logged, rather than genuinely emission-free months.
+    const remaining = cumulative.map((c) => budgetAtStart - c);
     const actualPoints = remaining.slice(trackingStartOffset, todayOffset + 2);
 
-    const currentMonth = new Date().getMonth();
-    const xLabels = [];
-    for (let m = 0; m < 12; m++) {
-      const monthStart = new Date(year, m, 1);
-      const j = Math.round((monthStart - jan1) / (24 * 60 * 60 * 1000));
-      xLabels.push({ j, text: MONTH_SHORT_LABELS[m], isCurrent: m === currentMonth });
-    }
+    const xLabels = periodXLabels(period, start, totalDays, todayOffset);
 
-    renderBudgetChart("yearly-chart", {
+    renderBudgetChart("home-chart", {
       goal,
       predicted,
       actualPoints,
       actualStartJ: trackingStartOffset,
       xLabels,
-      goalLabelSuffix: "kg/yr goal",
-      ariaPrefix: "Yearly budget pace",
+      goalLabelSuffix: PERIOD_GOAL_SUFFIX[period],
+      ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
     });
   }
 
@@ -2107,7 +2123,7 @@
 
     renderParisTargetComparison(yearlyTotal);
     renderYearComparison(yearlyTotal, uk.total);
-    renderYearChart();
+    renderPeriodChart();
   }
 
   // Compared against the fuller yearly total (5-8 categories) rather than
@@ -2741,11 +2757,15 @@
 
     document.getElementById("reset-week").addEventListener("click", resetWeek);
 
-    document.querySelectorAll(".week-picker-btn").forEach((btn) => {
+    document.querySelectorAll("#week-picker .week-picker-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         selectedWeekKey = btn.dataset.week === "current" ? CURRENT_WEEK_KEY : LAST_WEEK_KEY;
         renderWeekPage();
       });
+    });
+
+    document.querySelectorAll(".home-period-btn").forEach((btn) => {
+      btn.addEventListener("click", () => renderPeriodChart(btn.dataset.period));
     });
 
     document.getElementById("alcohol-spirits-abv").addEventListener("input", (e) => {
