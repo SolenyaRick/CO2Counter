@@ -359,12 +359,37 @@ home-screen icon - see `manifest.json`) looks reasonable too.
 
 Every number below lives in `emission-factors.js` at the repo root — a plain,
 directly-editable file (the same idea as `supabase/schema.sql` being the
-single source of truth for the database schema). To change what the app
-calculates, edit the numbers there and reload; nothing else needs to change.
-`emission-factors-reference.xlsx` is a companion read-only spreadsheet
-listing the same figures with sources/notes for easy reviewing away from the
-code — it doesn't feed into the app and won't update itself, so keep it in
-sync by hand if you change `emission-factors.js`.
+single source of truth for the database schema). Edit the numbers there and
+reload; nothing else needs to change.
+
+You can also edit these numbers from `emission-factors-reference.xlsx`, a
+companion spreadsheet listing the same figures with units and sources, if
+that's easier than editing code directly:
+
+1. Open `emission-factors-reference.xlsx` and change a value in the yellow
+   **Value** column (only that column is unlocked). Don't edit the grey
+   **JS Path** column — it tells the sync script exactly which line in
+   `emission-factors.js` that row corresponds to. Rows with no JS Path
+   (currently just the meat-day non-meat baseline) are informational only
+   and mirror another row automatically - edit that other row instead.
+2. Save the spreadsheet.
+3. From the project folder, run:
+   ```bash
+   npm run sync:factors
+   ```
+   This reads the spreadsheet with the same vendored SheetJS build the app
+   uses for its own Excel export (`vendor/xlsx.js` — no extra install
+   needed), rewrites only the values that changed in `emission-factors.js`,
+   and prints a before/after summary. It refuses to write anything if a row
+   has a non-numeric value or a JS Path it can't find, so a bad edit can't
+   silently corrupt the file.
+4. Reload the app. If you're about to build the iOS app, run
+   `npm run sync:ios` too.
+
+The sync only runs one direction (spreadsheet → code) — editing
+`emission-factors.js` directly does not update the spreadsheet, so if you
+edit the code by hand, update the matching spreadsheet row yourself to keep
+them in sync.
 
 Figures are illustrative averages, not a precise personal carbon calculator:
 

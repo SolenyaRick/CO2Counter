@@ -6,7 +6,8 @@
   "scripts": {
     "build:web": "sh scripts/sync-web.sh",
     "sync:ios": "npm run build:web && cap sync ios",
-    "open:ios": "npm run sync:ios && cap open ios"
+    "open:ios": "npm run sync:ios && cap open ios",
+    "sync:factors": "node scripts/sync-emission-factors.js"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
