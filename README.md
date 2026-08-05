@@ -62,9 +62,16 @@ with accounts and a friends leaderboard backed by Supabase.
   the UK average. A divider then splits the 12 category tiles into three
   rows: an unlabeled "everyday" row (food, commute, non-commute driving,
   alcohol), then "Home" (home energy, gas/oil heating, water usage, pets),
-  then "Other" (flying, banking, buying goods, car manufacturing) - each
-  tile keeps its own category emoji and ▲/▼ delta against the UK average
-  for that category. A final, deliberately compact "What this doesn't
+  then "Other" (flying, banking, buying goods, car manufacturing). Unlike
+  the This Year input page, these tile labels don't say "(optional)" -
+  every tile keeps its own category emoji and a consistent two-line ▲/▼
+  delta against the UK average underneath (a bold colored figure, then a
+  small muted "vs UK average" caption), including a muted "–" placeholder
+  with the same caption for whichever optional ones you haven't answered
+  yet, so the grid reads the same way tile to tile rather than some having
+  a comparison line and others just trailing off blank. Alcohol is the one
+  tile with no delta at all, since it isn't modeled in the UK average
+  figure to begin with. A final, deliberately compact "What this doesn't
   account for" card condenses the app's disclaimed categories into four
   bullet points,
   including a rough figure for the one people ask about most - your share

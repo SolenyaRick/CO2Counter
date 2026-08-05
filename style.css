@@ -830,8 +830,9 @@ input, select {
 }
 
 .stat .week-diff {
-  display: block;
-  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
 }
 
 .stat-percentile {
@@ -870,7 +871,8 @@ input, select {
 }
 
 .comparison-item .week-diff {
-  display: block;
+  display: flex;
+  flex-direction: column;
   margin-top: 6px;
 }
 
@@ -1230,6 +1232,7 @@ input, select {
   font-weight: 700;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  gap: 1px;
 }
 
 .week-diff-over {
@@ -1238,6 +1241,14 @@ input, select {
 
 .week-diff-under {
   color: var(--accent);
+}
+
+.diff-caption {
+  font-size: 0.63rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
 }
 
 .week-box-badge {

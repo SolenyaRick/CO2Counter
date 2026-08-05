@@ -2270,21 +2270,39 @@
     setComparisonDiff("compare-trees-diff", yourTrees, ukTrees, "trees");
   }
 
+  // Two-line layout: a bold, colored delta on top and a small muted "vs
+  // X" caption underneath, so every tile reads the same way at a glance
+  // instead of one long inline sentence. The caption stays visible even
+  // for a still-unanswered optional tile (with a muted "–" in place of a
+  // real delta) so the grid doesn't have some tiles with a caption line
+  // and others without one.
   function setComparisonDiff(elementId, yourValue, ukValue, unit, compareLabel = "UK average") {
     const el = document.getElementById(elementId);
     if (!el) return;
+    el.textContent = "";
+
+    const valueSpan = document.createElement("span");
+    valueSpan.className = "diff-value";
+    const captionSpan = document.createElement("span");
+    captionSpan.className = "diff-caption";
+    captionSpan.textContent = `vs ${compareLabel}`;
+
     // Optional categories pass null on both sides when unanswered - nothing
-    // to compare yet, so leave the delta blank rather than showing "0 vs
-    // UK average" (which would misleadingly look like a real answer of 0).
+    // to compare yet, so show a muted placeholder rather than "0 vs UK
+    // average" (which would misleadingly look like a real answer of 0).
     if (yourValue === null || yourValue === undefined || ukValue === null || ukValue === undefined) {
-      el.textContent = "";
       el.className = "week-diff";
+      valueSpan.textContent = "–";
+      el.appendChild(valueSpan);
+      el.appendChild(captionSpan);
       return;
     }
     const diff = yourValue - ukValue;
     const over = diff > 0;
     el.className = `week-diff ${over ? "week-diff-over" : "week-diff-under"}`;
-    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} ${unit} vs ${compareLabel}`;
+    valueSpan.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} ${unit}`;
+    el.appendChild(valueSpan);
+    el.appendChild(captionSpan);
   }
 
   function exportData() {
