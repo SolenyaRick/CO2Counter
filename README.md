@@ -226,6 +226,13 @@ for the full schema — profiles, weeks, and friendships tables with
 row-level security, so friends only ever see each other's weekly totals on
 the leaderboard, never day-by-day commute/diet detail.
 
+All the physical "kg CO2e per unit" numbers the app calculates with live in
+`emission-factors.js`, loaded via a `<script>` tag before `app.js` (plain
+top-level `const` declarations, sharing `app.js`'s global scope since
+neither file is an ES module) — see "Emission factor assumptions" below.
+Everything else (UI labels/icons, Supabase config, page logic) stays in
+`app.js`.
+
 The Account page's owner-only "Download as Excel" button also lazy-loads a
 vendored copy of [SheetJS](https://sheetjs.com) (`vendor/xlsx.js`, the
 ~250KB "mini" browser build — no legacy XLS/XLSB support, which this app
@@ -253,8 +260,9 @@ near the top of `app.js`.
 ## iOS app (Capacitor)
 
 The `ios/` folder is a [Capacitor](https://capacitorjs.com) wrapper around
-this exact web app — same `index.html`/`app.js`/`style.css`/`vendor`/`icons`,
-unchanged, running inside a native WKWebView shell, producing a real app you
+this exact web app — same `index.html`/`app.js`/`emission-factors.js`/
+`style.css`/`vendor`/`icons`, unchanged, running inside a native WKWebView
+shell, producing a real app you
 can install on a device or submit to the App Store. No rewrite: fetch calls
 to Supabase work the same way from inside the native app as they do in a
 browser.
@@ -348,6 +356,15 @@ so content clears the notch/Dynamic Island and home indicator, and so
 home-screen icon - see `manifest.json`) looks reasonable too.
 
 ## Emission factor assumptions
+
+Every number below lives in `emission-factors.js` at the repo root — a plain,
+directly-editable file (the same idea as `supabase/schema.sql` being the
+single source of truth for the database schema). To change what the app
+calculates, edit the numbers there and reload; nothing else needs to change.
+`emission-factors-reference.xlsx` is a companion read-only spreadsheet
+listing the same figures with sources/notes for easy reviewing away from the
+code — it doesn't feed into the app and won't update itself, so keep it in
+sync by hand if you change `emission-factors.js`.
 
 Figures are illustrative averages, not a precise personal carbon calculator:
 
