@@ -1952,11 +1952,24 @@
   }
 
   // ---------- Page: Stats (yearly estimate) ----------
-  // Averaged over fully-confirmed weeks from at most the last 52 weeks (a
-  // rolling window, not all-time) - so someone who's been tracking for two
-  // years gets a yearly estimate based on how they've actually been living
-  // lately, not diluted by habits from a year ago that may no longer apply.
+  // All-time average across every fully-confirmed week - feeds the "Your
+  // week" card, which is describing a typical confirmed week, not
+  // projecting a year, so it isn't windowed to any particular lookback.
   function averageConfirmedWeekly(kind) {
+    const weeks = Object.values(weeksCache).filter(isFullyConfirmed);
+    if (weeks.length === 0) return 0;
+    const sum = weeks.reduce((acc, weekData) => acc + weekTotals(weekData)[kind], 0);
+    return sum / weeks.length;
+  }
+
+  // Same average, but over fully-confirmed weeks from at most the last 52
+  // weeks (a rolling window, not all-time) - feeds only the "Your year,
+  // estimated" food/commute/alcohol figures below, so someone who's been
+  // tracking for two years gets a yearly PROJECTION based on how they've
+  // actually been living lately, not diluted by habits from a year ago
+  // that may no longer apply. The "Your week" card above deliberately does
+  // NOT use this - it's describing a typical week, not projecting a year.
+  function recentAverageConfirmedWeekly(kind) {
     const cutoff = weekStart(new Date());
     cutoff.setDate(cutoff.getDate() - 52 * 7);
     const cutoffKey = dateKey(cutoff);
@@ -1992,12 +2005,14 @@
   }
 
   function renderStatsPage() {
+    // "Your week" card: typical confirmed week, all-time.
     const avgFood = averageConfirmedWeekly("food");
     const avgCommute = averageConfirmedWeekly("commute");
     const avgAlcohol = averageConfirmedWeekly("alcohol");
-    const yearlyFood = avgFood * 52;
-    const yearlyCommute = avgCommute * 52;
-    const yearlyAlcohol = avgAlcohol * 52;
+    // "Your year, estimated": projected from the last 52 weeks only.
+    const yearlyFood = recentAverageConfirmedWeekly("food") * 52;
+    const yearlyCommute = recentAverageConfirmedWeekly("commute") * 52;
+    const yearlyAlcohol = recentAverageConfirmedWeekly("alcohol") * 52;
 
     const yearlyFlying = profile.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + profile.longHaulFlights * LONG_HAUL_FLIGHT_KG;
 
