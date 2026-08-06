@@ -1952,8 +1952,17 @@
   }
 
   // ---------- Page: Stats (yearly estimate) ----------
+  // Averaged over fully-confirmed weeks from at most the last 52 weeks (a
+  // rolling window, not all-time) - so someone who's been tracking for two
+  // years gets a yearly estimate based on how they've actually been living
+  // lately, not diluted by habits from a year ago that may no longer apply.
   function averageConfirmedWeekly(kind) {
-    const weeks = Object.values(weeksCache).filter(isFullyConfirmed);
+    const cutoff = weekStart(new Date());
+    cutoff.setDate(cutoff.getDate() - 52 * 7);
+    const cutoffKey = dateKey(cutoff);
+    const weeks = Object.keys(weeksCache)
+      .filter((key) => key >= cutoffKey && isFullyConfirmed(weeksCache[key]))
+      .map((key) => weeksCache[key]);
     if (weeks.length === 0) return 0;
     const sum = weeks.reduce((acc, weekData) => acc + weekTotals(weekData)[kind], 0);
     return sum / weeks.length;

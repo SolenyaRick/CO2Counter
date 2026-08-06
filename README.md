@@ -43,7 +43,12 @@ with accounts and a friends leaderboard backed by Supabase.
   log it (This Week for the day-based ones, This Year for the other two).
   Below that, a small "Your week"
   card shows your average confirmed week's food, commute, and alcohol
-  totals side by side. Then "Your year, estimated" opens with a hero box -
+  totals side by side - averaged over your fully-confirmed weeks from at
+  most the last 52 weeks (a rolling window, not all-time), so it reflects
+  how you've actually been living lately rather than being diluted by
+  year-old habits once you've been tracking a long time. The "Your year,
+  estimated" figures below multiply that same recent average by 52, for
+  the same reason. Then "Your year, estimated" opens with a hero box -
   your estimated yearly total in large accent-colored type, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). A small "Compared to:" row of
