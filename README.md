@@ -156,23 +156,25 @@ with accounts and a friends leaderboard backed by Supabase.
   leaderboard once you press that day's ✓ confirm button (which plays a
   small pop animation) — changing a confirmed day's pick un-confirms it
   again. Today's row is highlighted (only when viewing "This week", not
-  "Last week"). Below that, an "Alcohol this week" card is a whole-week (not
-  per-day) figure: tap-to-fill rows of beer/wine icons set a weekly count
-  (tap the current count again to clear it), plus an ABV% and shots count
-  for other spirits — counts immediately, with no confirm step needed, since
-  every value including 0 is already a real answer. Below that, a collapsed-
-  by-default "Additional journeys" section (a native `<details>` — no JS
-  needed for the expand/collapse itself) lets you log one-off trips beyond
-  the regular commute above: a distance in km (the journey's own real
+  "Last week"). Nested inside that same commute card, right below the day
+  table, a collapsed-by-default "Additional journeys (optional)" section (a
+  native `<details>` — no JS needed for the expand/collapse itself, just a
+  small text heading rather than its own card) lets you log one-off trips
+  beyond the regular commute above: a distance in km (the journey's own real
   distance, not doubled the way the daily commute is, since a one-off trip
   isn't necessarily a round trip), a Cycle/Tube/Train/Car mode toggle, and
-  which day. Each addition shows up in a list immediately (again, no confirm
-  step — same as alcohol), counts toward commute in every total the app
-  shows, and — if you picked anything other than Car — pops up a small
+  which day. Each addition shows up in a list immediately (no confirm step
+  needed, same pattern as alcohol below), counts toward commute in every
+  total the app shows, and — if you picked anything other than Car — pops up a small
   "Nice one! 🎉" congratulations modal showing how much CO2e that choice
   saved versus driving the same distance would have. Tube is a new transport
   mode this added everywhere (not just here) — a rough DEFRA-style London
-  Underground factor, lower than National Rail's train figure. Also shows a
+  Underground factor, lower than National Rail's train figure. After the
+  diet table, an "Alcohol this week" card is a whole-week (not per-day)
+  figure: tap-to-fill rows of beer/wine icons set a weekly count (tap the
+  current count again to clear it), plus an ABV% and shots count for other
+  spirits — counts immediately, with no confirm step needed, since every
+  value including 0 is already a real answer. Also shows a
   "This week, in context" card that converts your confirmed total into an
   equivalent car-km distance (DEFRA-style car factor) and how much CO2e
   you'd have saved if every confirmed meat day had been veggie instead,
