@@ -306,6 +306,16 @@ select's `"None"` sentinel value to `null` client-side (the check
 constraint only allows `null` or an actual university, not the literal
 string `"None"`).
 
+The latest run adds a `total_signups()` function - a plain `select
+count(*)::int from auth.users`, `security definer` so it can read
+`auth.users` (not otherwise selectable by the `authenticated` role) without
+granting broader access to it. Backs a new figure on the Leaderboard's
+"Everyone on the app" card: total accounts ever created, not just the ones
+with a confirmed week the way `app_wide_weekly_average()`'s `user_count` is
+scoped. Just a count, no rows/emails/names returned, so - unlike the
+research-export functions above, which are gated to the app owner's email -
+this is granted to `authenticated` and safe for any signed-in user to call.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

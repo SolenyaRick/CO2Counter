@@ -2028,11 +2028,20 @@
   async function renderAppWideAverage() {
     if (!currentUser) return;
     const { data, error } = await sbClient.rpc("app_wide_weekly_average");
-    if (error || !data || !data[0]) return;
-    document.getElementById("app-average-commute-food-value").textContent = fmt(data[0].avg_commute_food_alcohol_kg || 0);
-    document.getElementById("app-average-total-value").textContent = fmt(data[0].avg_total_kg || 0);
-    document.getElementById("app-average-count").textContent = data[0].user_count || 0;
-    document.getElementById("app-average-count-2").textContent = data[0].user_count || 0;
+    if (!error && data && data[0]) {
+      document.getElementById("app-average-commute-food-value").textContent = fmt(data[0].avg_commute_food_alcohol_kg || 0);
+      document.getElementById("app-average-total-value").textContent = fmt(data[0].avg_total_kg || 0);
+      document.getElementById("app-average-count").textContent = data[0].user_count || 0;
+      document.getElementById("app-average-count-2").textContent = data[0].user_count || 0;
+    }
+
+    // Total accounts ever created, not just people with a confirmed week
+    // (that's what app-average-count above is) - a separate RPC since it
+    // reads auth.users, which the averages query above doesn't touch.
+    const signups = await sbClient.rpc("total_signups");
+    if (!signups.error && typeof signups.data === "number") {
+      document.getElementById("app-total-signups").textContent = signups.data;
+    }
   }
 
   // ---------- Page 4: Account ----------

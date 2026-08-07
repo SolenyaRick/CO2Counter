@@ -548,6 +548,26 @@ $$;
 revoke all on function public.university_weekly_average(text) from public;
 grant execute on function public.university_weekly_average(text) to authenticated;
 
+-- Total accounts ever created (auth.users), not just people with a
+-- confirmed week the way app_wide_weekly_average()'s user_count is scoped -
+-- backs the Leaderboard's "Everyone on the app" card. Just a count, no
+-- rows/emails/names returned, so unlike the research-export functions
+-- below this is safe to expose to every signed-in user, not just the app
+-- owner. security definer + explicit search_path so it can read auth.users
+-- (not otherwise selectable by the authenticated role) without granting
+-- broader access to it.
+create or replace function public.total_signups()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  select count(*)::int from auth.users;
+$$;
+
+revoke all on function public.total_signups() from public;
+grant execute on function public.total_signups() to authenticated;
+
 -- ==================== research opt-in views ====================
 
 -- For calibrating the UK_AVERAGE_ASSUMPTIONS / UK-average methodology in
