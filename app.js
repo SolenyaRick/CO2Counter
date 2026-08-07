@@ -1467,6 +1467,29 @@
     return { dailyKg, todayOffset };
   }
 
+  // Same [start, today] range and same counted/confirmed-only data as
+  // computeRangeDailyKg() above, but split into commute/food/alcohol
+  // instead of summed into one daily total - feeds the domain bar chart,
+  // so its segments always add up to exactly the total the pace chart
+  // above it is plotting.
+  function computeRangeDomainKg(start, today) {
+    let commute = 0, food = 0, alcohol = 0;
+    Object.keys(weeksCache).forEach((weekKey) => {
+      const weekData = weeksCache[weekKey];
+      const monday = new Date(`${weekKey}T00:00:00`);
+      const alcoholPerDay = alcoholFootprint(weekData) / 7;
+      DAYS.forEach((day, i) => {
+        const dayDate = new Date(monday);
+        dayDate.setDate(dayDate.getDate() + i);
+        if (dayDate < start || dayDate > today) return;
+        commute += countedCommuteFootprint(weekData, day.key);
+        food += countedFoodFootprint(weekData, day.key);
+        alcohol += alcoholPerDay;
+      });
+    });
+    return { commute, food, alcohol };
+  }
+
   // The three Home page views' bounds: what day they start counting from,
   // how many days they span, and the goal for that span - scaled off the
   // weekly goal so the implied daily rate is the same across all three
@@ -1522,6 +1545,66 @@
     });
     labels[nearestIdx].isCurrent = true;
     return labels;
+  }
+
+  const DOMAIN_LABELS = { commute: "Commute", food: "Food", alcohol: "Alcohol" };
+
+  // Stacked bar showing what the period's tracked total (same commute +
+  // food + alcohol scope as the pace chart above it, same [start, today]
+  // range) is actually made up of, domain by domain.
+  function renderDomainBarChart(period, start, today) {
+    const heading = document.getElementById("home-domain-heading");
+    if (heading) heading.textContent = `${PERIOD_LABELS[period]}'s emissions by domain`;
+
+    const bar = document.getElementById("home-domain-bar");
+    const legend = document.getElementById("home-domain-legend");
+    if (!bar || !legend) return;
+    bar.innerHTML = "";
+    legend.innerHTML = "";
+
+    const { commute, food, alcohol } = computeRangeDomainKg(start, today);
+    const total = commute + food + alcohol;
+
+    if (total <= 0) {
+      const empty = document.createElement("div");
+      empty.className = "domain-bar-empty";
+      bar.appendChild(empty);
+      const li = document.createElement("li");
+      li.className = "domain-legend-empty";
+      li.textContent = "No confirmed data for this period yet.";
+      legend.appendChild(li);
+      return;
+    }
+
+    [
+      { key: "commute", value: commute },
+      { key: "food", value: food },
+      { key: "alcohol", value: alcohol },
+    ].forEach(({ key, value }) => {
+      if (value <= 0) return;
+      const pct = (value / total) * 100;
+
+      const seg = document.createElement("div");
+      seg.className = `domain-bar-segment domain-${key}`;
+      seg.style.width = `${pct}%`;
+      seg.title = `${DOMAIN_LABELS[key]}: ${fmt(value)} kg CO2e (${Math.round(pct)}%)`;
+      bar.appendChild(seg);
+
+      const li = document.createElement("li");
+      li.className = "domain-legend-item";
+      const swatch = document.createElement("span");
+      swatch.className = `domain-legend-swatch domain-${key}`;
+      const text = document.createElement("span");
+      text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
+      li.appendChild(swatch);
+      li.appendChild(text);
+      legend.appendChild(li);
+    });
+
+    const totalLi = document.createElement("li");
+    totalLi.className = "domain-legend-total";
+    totalLi.textContent = `Total: ${fmt(total)} kg CO2e`;
+    legend.appendChild(totalLi);
   }
 
   const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };
@@ -1581,6 +1664,8 @@
       goalLabelSuffix: PERIOD_GOAL_SUFFIX[period],
       ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
     });
+
+    renderDomainBarChart(period, start, today);
   }
 
   function renderWeekPage() {

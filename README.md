@@ -29,7 +29,14 @@ with accounts and a friends leaderboard backed by Supabase.
   line jump out ahead of pace for no real reason. Flights, home energy,
   and the other yearly-estimate categories below aren't part of any of
   these lines, since they're fixed annual figures with no day-by-day data
-  to plot a pace against. Next, a "To do" card lists up to six quick
+  to plot a pace against. Below that, an "emissions by domain" card breaks
+  that same tracked total (same commute + food + alcohol scope, same
+  timeframe, same underlying data) into a stacked bar - one segment per
+  domain, sized by share of the total, with a legend giving each domain's
+  exact kg and percentage plus a total row. It follows whichever of the
+  three timeframe buttons above the pace chart is currently selected rather
+  than having its own toggle, since it's describing the composition of the
+  exact figure the pace chart is already plotting. Next, a "To do" card lists up to six quick
   nudges - yesterday's and today's commute and meal, electricity per year,
   and flights per year - each dropping off the list the moment there's
   something logged for it (yesterday/today check that specific day's
