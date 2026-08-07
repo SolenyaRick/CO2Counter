@@ -1888,6 +1888,21 @@
     document.getElementById("week-detail-backdrop").classList.remove("open");
   }
 
+  // Info (ⓘ) popups on a handful of "Your year, estimated" tiles - content
+  // lives in tile-info.js (TILE_INFO), a plain, directly-editable file so
+  // it can be filled in/edited without touching this file.
+  function openTileInfo(key) {
+    const entry = TILE_INFO[key];
+    if (!entry) return;
+    document.getElementById("tile-info-title").textContent = entry.title;
+    document.getElementById("tile-info-body").innerHTML = entry.body;
+    document.getElementById("tile-info-backdrop").classList.add("open");
+  }
+
+  function closeTileInfo() {
+    document.getElementById("tile-info-backdrop").classList.remove("open");
+  }
+
   // ---------- Page 3: Leaderboard ----------
   // Flights, home electricity, buying goods, and (if answered) the four
   // optional extras are all yearly figures (Stats page inputs), not
@@ -3014,6 +3029,14 @@
     document.getElementById("week-detail-close").addEventListener("click", closeWeekDetail);
     document.getElementById("week-detail-backdrop").addEventListener("click", (e) => {
       if (e.target.id === "week-detail-backdrop") closeWeekDetail();
+    });
+
+    document.getElementById("tile-info-close").addEventListener("click", closeTileInfo);
+    document.getElementById("tile-info-backdrop").addEventListener("click", (e) => {
+      if (e.target.id === "tile-info-backdrop") closeTileInfo();
+    });
+    document.querySelectorAll(".tile-info-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openTileInfo(btn.dataset.info));
     });
 
     document.getElementById("reset-week").addEventListener("click", resetWeek);

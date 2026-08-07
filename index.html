@@ -574,6 +574,7 @@
 
         <div class="summary-totals">
           <div class="stat">
+            <button type="button" class="tile-info-btn" data-info="food" aria-label="Food info">&#9432;</button>
             <span class="stat-value" id="yearly-food">0</span>
             <span class="stat-label">🍽️ kg CO2e/yr &middot; Food (&times;52 weeks)</span>
             <span class="week-diff" id="yearly-food-diff"></span>
@@ -599,6 +600,7 @@
         <h3 class="category-heading">Home</h3>
         <div class="summary-totals">
           <div class="stat">
+            <button type="button" class="tile-info-btn" data-info="homeEnergy" aria-label="Home energy info">&#9432;</button>
             <span class="stat-value" id="yearly-home-energy">0</span>
             <span class="stat-label">⚡ kg CO2e/yr &middot; Home energy (your share)</span>
             <span class="week-diff" id="yearly-home-energy-diff"></span>
@@ -625,11 +627,13 @@
         <h3 class="category-heading">Other</h3>
         <div class="summary-totals">
           <div class="stat">
+            <button type="button" class="tile-info-btn" data-info="flying" aria-label="Flying info">&#9432;</button>
             <span class="stat-value" id="yearly-flying">0</span>
             <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
             <span class="week-diff" id="yearly-flying-diff"></span>
           </div>
           <div class="stat">
+            <button type="button" class="tile-info-btn" data-info="banking" aria-label="Banking info">&#9432;</button>
             <span class="stat-value" id="yearly-banking">–</span>
             <span class="stat-label">🏦 kg CO2e/yr &middot; Banking</span>
             <span class="week-diff" id="yearly-banking-diff"></span>
@@ -830,7 +834,18 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="tile-info-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tile-info-title">
+      <h3 id="tile-info-title">Info</h3>
+      <div id="tile-info-body"><!-- injected by app.js from tile-info.js --></div>
+      <div class="modal-actions">
+        <button id="tile-info-close" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="emission-factors.js"></script>
+  <script src="tile-info.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

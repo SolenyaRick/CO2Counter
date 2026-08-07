@@ -107,7 +107,12 @@ with accounts and a friends leaderboard backed by Supabase.
   yet, so the grid reads the same way tile to tile rather than some having
   a comparison line and others just trailing off blank. Alcohol is the one
   tile with no delta at all, since it isn't modeled in the UK average
-  figure to begin with. A final, deliberately compact "What this doesn't
+  figure to begin with. Four tiles - Food, Home energy, Flying, and Banking
+  - additionally have a small ⓘ button in the corner, opening a popup with
+  a short bit of context/advice for that category; the popup content lives
+  in `tile-info.js` (`TILE_INFO`), a plain, directly-editable file (same
+  idea as `emission-factors.js`) - starts out with placeholder text, meant
+  to be filled in by hand. A final, deliberately compact "What this doesn't
   account for" card condenses the app's disclaimed categories into four
   bullet points,
   including a rough figure for the one people ask about most - your share
@@ -270,7 +275,8 @@ All the physical "kg CO2e per unit" numbers the app calculates with live in
 top-level `const` declarations, sharing `app.js`'s global scope since
 neither file is an ES module) — see "Emission factor assumptions" below.
 Everything else (UI labels/icons, Supabase config, page logic) stays in
-`app.js`.
+`app.js`. `tile-info.js`, loaded the same way, holds the editable copy for
+the Home page's four tile info popups (see "Pages" above).
 
 The Account page's owner-only "Download as Excel" button also lazy-loads a
 vendored copy of [SheetJS](https://sheetjs.com) (`vendor/xlsx.js`, the
@@ -300,8 +306,8 @@ near the top of `app.js`.
 
 The `ios/` folder is a [Capacitor](https://capacitorjs.com) wrapper around
 this exact web app — same `index.html`/`app.js`/`emission-factors.js`/
-`style.css`/`vendor`/`icons`, unchanged, running inside a native WKWebView
-shell, producing a real app you
+`tile-info.js`/`style.css`/`vendor`/`icons`, unchanged, running inside a
+native WKWebView shell, producing a real app you
 can install on a device or submit to the App Store. No rewrite: fetch calls
 to Supabase work the same way from inside the native app as they do in a
 browser.
