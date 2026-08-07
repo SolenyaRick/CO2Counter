@@ -1502,18 +1502,13 @@
   // see renderAverageWeekCard()). Illustrative only: days you haven't
   // logged count as zero on your side, same known approximation as the
   // pace chart above it.
-  // Swipe/scroll -> active dot + caption sync for the two-slide savings
-  // carousel above. Pure native scroll-snap (see .carousel/.carousel-slide
-  // in style.css) - this just reflects scroll position back into the dots
-  // and the caption underneath, it doesn't drive the scrolling itself.
-  const SAVINGS_CAROUSEL_CAPTIONS = [
-    "Compares your real confirmed commute + food + alcohol emissions against what the UK average person would have used over the same span — since the week you first confirmed a day. Rough, illustrative estimate: days you haven't logged count as zero on your side, so the more consistently you log, the more accurate this gets.",
-    "Same comparison, against your own baseline week instead (set on the Account page) — a more personal reference point than the UK average. Same rough, illustrative approximation: days you haven't logged count as zero on your side.",
-  ];
+  // Swipe/scroll -> active dot sync for the two-slide savings carousel
+  // above. Pure native scroll-snap (see .carousel/.carousel-slide in
+  // style.css) - this just reflects scroll position back into the dots,
+  // it doesn't drive the scrolling itself.
   function wireSavingsCarousel() {
     const carousel = document.getElementById("home-savings-carousel");
     const dots = document.querySelectorAll("#home-savings-dots .carousel-dot");
-    const note = document.getElementById("home-savings-note");
     if (!carousel) return;
     let ticking = false;
     carousel.addEventListener("scroll", () => {
@@ -1522,7 +1517,6 @@
       requestAnimationFrame(() => {
         const index = Math.round(carousel.scrollLeft / Math.max(1, carousel.clientWidth));
         dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
-        if (note && SAVINGS_CAROUSEL_CAPTIONS[index]) note.textContent = SAVINGS_CAROUSEL_CAPTIONS[index];
         ticking = false;
       });
     });

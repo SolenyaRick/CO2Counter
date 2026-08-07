@@ -23,11 +23,10 @@ with accounts and a friends leaderboard backed by Supabase.
   to set one if you haven't. Each slide is green with a positive number if
   you're under its reference, red/"more than X" if you're over it, and a
   muted placeholder prompting you to confirm a day if you haven't tracked
-  anything yet; the caption underneath swaps to match whichever slide is
-  active. Explicitly illustrative: days you haven't logged count as zero
-  on your side of the comparison, so the more consistently you log, the
-  more accurate it gets — same known approximation the pace chart below
-  already makes. Next is a "Budget pace" card: a
+  anything yet. Explicitly illustrative: days you haven't logged count as
+  zero on your side of the comparison, so the more consistently you log,
+  the more accurate it gets — same known approximation the pace chart
+  below already makes. Next is a "Budget pace" card: a
   three-way toggle ("This week" / "This month" / "This year") over a
   single Monzo Trends-style budget-pace chart — a dashed target line burns
   from your weekly goal down to 0 across whichever span is selected
