@@ -156,6 +156,42 @@
         </p>
       </section>
 
+      <details class="card journeys-card">
+        <summary>Additional journeys <span class="optional-badge">Optional</span></summary>
+        <p class="assumptions">
+          One-off trips beyond your regular commute above &mdash; a weekend trip, an
+          errand, wherever else you travelled. Enter the distance for the whole journey
+          (not round-trip, since not all of these are), how you got there, and which day
+          &mdash; counted the same as commute in every total on this app.
+        </p>
+        <ul class="journey-list" id="journey-list"><!-- entries injected by app.js --></ul>
+        <div class="journey-form">
+          <label class="field">
+            Distance (km)
+            <input type="number" id="journey-km" min="0" step="0.1" />
+          </label>
+          <div class="week-picker" id="journey-mode-toggle" role="tablist" aria-label="How you travelled">
+            <button type="button" class="week-picker-btn journey-mode-btn" data-mode="cycle">Cycle</button>
+            <button type="button" class="week-picker-btn journey-mode-btn" data-mode="tube">Tube</button>
+            <button type="button" class="week-picker-btn journey-mode-btn" data-mode="train">Train</button>
+            <button type="button" class="week-picker-btn journey-mode-btn" data-mode="car">Car</button>
+          </div>
+          <label class="field">
+            Day
+            <select id="journey-day">
+              <option value="mon">Monday</option>
+              <option value="tue">Tuesday</option>
+              <option value="wed">Wednesday</option>
+              <option value="thu">Thursday</option>
+              <option value="fri">Friday</option>
+              <option value="sat">Saturday</option>
+              <option value="sun">Sunday</option>
+            </select>
+          </label>
+          <button type="button" class="btn-secondary btn-small" id="journey-add-btn">Add journey</button>
+        </div>
+      </details>
+
       <section class="card summary-card">
         <h2>Weekly summary</h2>
         <div class="summary-totals">
@@ -823,6 +859,19 @@
       <div id="tile-info-body"><!-- injected by app.js from tile-info.js --></div>
       <div class="modal-actions">
         <button id="tile-info-close" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="journey-congrats-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="journey-congrats-title">
+      <h3 id="journey-congrats-title">Nice one! &#127881;</h3>
+      <div class="year-hero">
+        <div class="year-hero-value" id="journey-congrats-value">0</div>
+        <div class="year-hero-label">kg CO2e saved vs driving that journey</div>
+      </div>
+      <div class="modal-actions">
+        <button id="journey-congrats-close" class="btn-primary">Close</button>
       </div>
     </div>
   </div>

@@ -122,6 +122,14 @@ alter table public.weeks add column if not exists commute_kg numeric not null de
 alter table public.weeks add column if not exists food_kg numeric not null default 0;
 alter table public.weeks add column if not exists alcohol_kg numeric not null default 0;
 
+-- One-off "additional journeys" (This Week page, under Alcohol) - trips
+-- beyond the regular day-by-day commute above, e.g. a weekend trip or an
+-- errand. Array of { day, mode, km } objects. Same as alcohol above: not
+-- gated by the per-day confirm flow, counts toward commute_kg/total_kg
+-- (computed client-side, see journeyFootprint() in app.js) as soon as one
+-- is added.
+alter table public.weeks add column if not exists extra_journeys jsonb not null default '[]'::jsonb;
+
 -- ---------- friendships ----------
 create table if not exists public.friendships (
   id uuid primary key default gen_random_uuid(),
@@ -647,7 +655,8 @@ select
   w.commute_kg,
   w.food_kg,
   w.alcohol_kg,
-  p.commute_distance_km
+  p.commute_distance_km,
+  w.extra_journeys
 from public.weeks w
 join public.profiles p on p.id = w.user_id
 where p.research_opt_in = true;

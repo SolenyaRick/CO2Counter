@@ -44,7 +44,7 @@
   // loaded via a <script> tag before this file - edit the numbers there,
   // not here.
 
-  const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", car: "Car" };
+  const TRANSPORT_LABELS = { none: "Didn't travel", walk: "Walk", cycle: "Cycle", train: "Train", tube: "Tube", car: "Car" };
 
   function carFactorFor(p) {
     return (p.carFuelType && CAR_FUEL_FACTORS[p.carFuelType]) || TRANSPORT_FACTORS.car;
@@ -305,6 +305,10 @@
       confirmedCommute: Object.fromEntries(DAYS.map((d) => [d.key, false])),
       confirmedDiet: Object.fromEntries(DAYS.map((d) => [d.key, false])),
       alcohol: { beer: 0, wine: 0, spiritsShots: 0, spiritsAbv: 40 },
+      // One-off trips beyond the regular day-by-day commute above - each
+      // { day, mode, km }. Not gated by a confirm flow (same as alcohol):
+      // adding one counts it immediately.
+      extraJourneys: [],
     };
   }
 
@@ -430,6 +434,21 @@
     return factor * (profile.commuteDistanceKm || 0) * 2;
   }
 
+  // A one-off "additional journey" (This Week page, under Alcohol) - unlike
+  // the daily commute above, the km entered is the journey's own real
+  // distance, not doubled, since a one-off trip isn't necessarily a round
+  // trip the way a commute is.
+  function journeyFootprint(mode, km) {
+    const factor = mode === "car" ? carFactorFor(profile) : (TRANSPORT_FACTORS[mode] ?? 0);
+    return factor * (km || 0);
+  }
+
+  function extraJourneysFootprintForDay(weekData, dayKey) {
+    return (weekData.extraJourneys || [])
+      .filter((j) => j.day === dayKey)
+      .reduce((sum, j) => sum + journeyFootprint(j.mode, j.km), 0);
+  }
+
   function wasteMultiplier() {
     return FOOD_WASTE_MULTIPLIERS[profile.foodWaste] ?? 1;
   }
@@ -494,7 +513,7 @@
     let food = 0;
     const daily = [];
     DAYS.forEach((day) => {
-      const c = countedCommuteFootprint(weekData, day.key);
+      const c = countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key);
       const f = countedFoodFootprint(weekData, day.key);
       commute += c;
       food += f;
@@ -635,6 +654,8 @@
         confirmedDiet: { ...blank.confirmedDiet, ...(row.confirmed_diet || {}) },
         // Fall back to all-zero for rows saved before this column existed.
         alcohol: { ...blank.alcohol, ...(row.alcohol || {}) },
+        // Fall back to empty for rows saved before this column existed.
+        extraJourneys: row.extra_journeys || [],
         total_kg: row.total_kg,
       };
     });
@@ -674,6 +695,7 @@
         confirmed_commute: weekData.confirmedCommute,
         confirmed_diet: weekData.confirmedDiet,
         alcohol: weekData.alcohol,
+        extra_journeys: weekData.extraJourneys,
         total_kg: totals.total,
         commute_food_kg: totals.commute + totals.food,
         commute_kg: totals.commute,
@@ -1142,6 +1164,7 @@
     });
 
     renderAlcoholSection(weekData);
+    renderJourneyList(weekData);
     renderComparisonCard(weekData, totals);
     renderAverageWeekCard(selectedWeekKey, totals);
   }
@@ -1240,6 +1263,74 @@
     document.getElementById("alcohol-spirits-shots").value = a.spiritsShots ?? 0;
     const spiritsKg = (a.spiritsShots || 0) * SPIRITS_KG_PER_SHOT_AT_40PCT * ((a.spiritsAbv || 40) / 40);
     document.getElementById("alcohol-spirits-total").textContent = `${fmt(spiritsKg)} kg CO2e`;
+  }
+
+  const JOURNEY_MODE_LABELS = { cycle: "Cycle", tube: "Tube", train: "Train", car: "Car" };
+
+  function renderJourneyList(weekData) {
+    const list = document.getElementById("journey-list");
+    if (!list) return;
+    list.innerHTML = "";
+    (weekData.extraJourneys || []).forEach((j, i) => {
+      const day = DAYS.find((d) => d.key === j.day);
+      const kg = journeyFootprint(j.mode, j.km);
+
+      const li = document.createElement("li");
+      li.className = "journey-item";
+      const text = document.createElement("span");
+      text.className = "journey-item-text";
+      text.textContent = `${day ? day.full : j.day} · ${JOURNEY_MODE_LABELS[j.mode] || j.mode} · ${fmt(j.km)} km · ${fmt(kg)} kg CO2e`;
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "journey-remove-btn";
+      removeBtn.setAttribute("aria-label", `Remove ${day ? day.full : j.day} journey`);
+      removeBtn.textContent = "×";
+      removeBtn.dataset.index = i;
+
+      li.appendChild(text);
+      li.appendChild(removeBtn);
+      list.appendChild(li);
+    });
+  }
+
+  let selectedJourneyMode = null;
+
+  function addJourney() {
+    const kmInput = document.getElementById("journey-km");
+    const daySelect = document.getElementById("journey-day");
+    const km = parseFloat(kmInput.value);
+    if (!selectedJourneyMode || !(km > 0)) return;
+    const mode = selectedJourneyMode;
+
+    const weekData = getWeek(selectedWeekKey);
+    weekData.extraJourneys = weekData.extraJourneys || [];
+    weekData.extraJourneys.push({ day: daySelect.value, mode, km });
+
+    persistWeek(selectedWeekKey);
+    renderFootprints();
+
+    kmInput.value = "";
+    document.querySelectorAll(".journey-mode-btn").forEach((btn) => btn.classList.remove("active"));
+    selectedJourneyMode = null;
+
+    // Car is treated as the default/"what you'd have done anyway" mode, so
+    // only a non-car choice has anything to celebrate - and only if it's
+    // actually lower than car would have been (always true for the four
+    // options offered here, but guarded in case that ever changes).
+    if (mode !== "car") {
+      const savedKg = journeyFootprint("car", km) - journeyFootprint(mode, km);
+      if (savedKg > 0) {
+        document.getElementById("journey-congrats-value").textContent = fmt(savedKg);
+        document.getElementById("journey-congrats-backdrop").classList.add("open");
+      }
+    }
+  }
+
+  function removeJourney(index) {
+    const weekData = getWeek(selectedWeekKey);
+    (weekData.extraJourneys || []).splice(index, 1);
+    persistWeek(selectedWeekKey);
+    renderFootprints();
   }
 
   function renderComparisonCard(weekData, totals) {
@@ -1444,10 +1535,10 @@
   }
 
   // Builds a day-by-day kg CO2e array (commute + food, gated by that day's
-  // own confirm status, plus each week's alcohol spread evenly across its 7
-  // days - same technique as before) for every day in [start, today]. Shared
-  // by all three Home page budget-pace views below, just with a different
-  // `start`/span for each.
+  // own confirm status, plus that day's own additional journeys and each
+  // week's alcohol spread evenly across its 7 days - same technique as
+  // before) for every day in [start, today]. Shared by all three Home page
+  // budget-pace views below, just with a different `start`/span for each.
   function computeRangeDailyKg(start, today) {
     const todayOffset = Math.round((today - start) / DAY_MS);
     const dailyKg = new Array(Math.max(0, todayOffset) + 1).fill(0);
@@ -1461,7 +1552,7 @@
         if (dayDate < start || dayDate > today) return;
         const offset = Math.round((dayDate - start) / DAY_MS);
         if (offset < 0 || offset >= dailyKg.length) return;
-        dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
+        dailyKg[offset] += countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key) + countedFoodFootprint(weekData, day.key) + alcoholKg / 7;
       });
     });
     return { dailyKg, todayOffset };
@@ -1482,7 +1573,7 @@
         const dayDate = new Date(monday);
         dayDate.setDate(dayDate.getDate() + i);
         if (dayDate < start || dayDate > today) return;
-        commute += countedCommuteFootprint(weekData, day.key);
+        commute += countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key);
         food += countedFoodFootprint(weekData, day.key);
         alcohol += alcoholPerDay;
       });
@@ -3094,6 +3185,26 @@
     });
 
     wireSavingsCarousel();
+
+    document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedJourneyMode = btn.dataset.mode;
+        document.querySelectorAll(".journey-mode-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      });
+    });
+    document.getElementById("journey-add-btn").addEventListener("click", addJourney);
+    document.getElementById("journey-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".journey-remove-btn");
+      if (btn) removeJourney(parseInt(btn.dataset.index, 10));
+    });
+    document.getElementById("journey-congrats-close").addEventListener("click", () => {
+      document.getElementById("journey-congrats-backdrop").classList.remove("open");
+    });
+    document.getElementById("journey-congrats-backdrop").addEventListener("click", (e) => {
+      if (e.target.id === "journey-congrats-backdrop") {
+        document.getElementById("journey-congrats-backdrop").classList.remove("open");
+      }
+    });
 
     document.getElementById("reset-week").addEventListener("click", resetWeek);
 

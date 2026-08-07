@@ -160,8 +160,20 @@ with accounts and a friends leaderboard backed by Supabase.
   per-day) figure: tap-to-fill rows of beer/wine icons set a weekly count
   (tap the current count again to clear it), plus an ABV% and shots count
   for other spirits — counts immediately, with no confirm step needed, since
-  every value including 0 is already a real answer. Also shows a "This
-  week, in context" card that converts your confirmed total into an
+  every value including 0 is already a real answer. Below that, a collapsed-
+  by-default "Additional journeys" section (a native `<details>` — no JS
+  needed for the expand/collapse itself) lets you log one-off trips beyond
+  the regular commute above: a distance in km (the journey's own real
+  distance, not doubled the way the daily commute is, since a one-off trip
+  isn't necessarily a round trip), a Cycle/Tube/Train/Car mode toggle, and
+  which day. Each addition shows up in a list immediately (again, no confirm
+  step — same as alcohol), counts toward commute in every total the app
+  shows, and — if you picked anything other than Car — pops up a small
+  "Nice one! 🎉" congratulations modal showing how much CO2e that choice
+  saved versus driving the same distance would have. Tube is a new transport
+  mode this added everywhere (not just here) — a rough DEFRA-style London
+  Underground factor, lower than National Rail's train figure. Also shows a
+  "This week, in context" card that converts your confirmed total into an
   equivalent car-km distance (DEFRA-style car factor) and how much CO2e
   you'd have saved if every confirmed meat day had been veggie instead,
   broken down by meat type (e.g. beef vs chicken). A "Weekly summary" card
@@ -444,13 +456,16 @@ them in sync.
 
 Figures are illustrative averages, not a precise personal carbon calculator:
 
-- **Transport** (kg CO2e per passenger-km): Walk/Cycle 0, Train ~0.041, Car
-  ~0.171 (blended average). Applied to a round trip using your commute
-  distance. If you've picked a car type on the This Year page's Driving
-  card, "Car" days use that DEFRA-style factor instead of the ~0.171
-  blended average — ~0.171 diesel (near-identical to the blended average),
-  ~0.111 hybrid, ~0.058 electric (using average UK grid intensity to charge
-  it).
+- **Transport** (kg CO2e per passenger-km): Walk/Cycle 0, Train ~0.041, Tube
+  ~0.028 (London Underground — lower than National Rail, electric traction
+  and high passenger loads), Car ~0.171 (blended average). Applied to a
+  round trip using your commute distance (This Week page's daily commute
+  table), or the journey's own real, non-doubled distance for a one-off
+  "Additional journeys" entry. If you've picked a car type on the This Year
+  page's Driving card, "Car" days/journeys use that DEFRA-style factor
+  instead of the ~0.171 blended average — ~0.171 diesel (near-identical to
+  the blended average), ~0.111 hybrid, ~0.058 electric (using average UK
+  grid intensity to charge it).
 - **Food** (kg CO2e per day): Vegan ~2.3, Veggie ~2.6, from Rosi et al. 2017
   (seven-day diets for ~150 people in Italy). A Meat day uses the same ~2.6
   kg baseline for the rest of that day's food (it isn't any more

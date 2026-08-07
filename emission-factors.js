@@ -24,8 +24,10 @@
 
 // ---------- Transport (kg CO2e per passenger-km) ----------
 
-// Rough average emission factors, kg CO2e per passenger-km.
-const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, car: 0.171 };
+// Rough average emission factors, kg CO2e per passenger-km. Tube (London
+// Underground) is lower than National Rail's train figure - electric
+// traction and high passenger loads - rough DEFRA-style estimate.
+const TRANSPORT_FACTORS = { none: 0, walk: 0, cycle: 0, train: 0.041, tube: 0.028, car: 0.171 };
 
 // Optional per-car-type factors (This Year page, "Driving"), rough
 // DEFRA-style kg CO2e/km - diesel is close to TRANSPORT_FACTORS.car (the

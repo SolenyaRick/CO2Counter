@@ -316,6 +316,16 @@ scoped. Just a count, no rows/emails/names returned, so - unlike the
 research-export functions above, which are gated to the app owner's email -
 this is granted to `authenticated` and safe for any signed-in user to call.
 
+The latest run adds an `extra_journeys` jsonb column to `weeks` (default
+`'[]'::jsonb`, an array of `{ day, mode, km }` objects) for the This Week
+page's new "Additional journeys" section - one-off trips beyond the daily
+commute. Same pattern as `alcohol`: not gated by the per-day confirm flow,
+computed and folded into `commute_kg`/`total_kg` client-side (see
+`journeyFootprint()` in `app.js`), so no SQL formula duplication needed for
+it the way `app_wide_weekly_average()` needed for the yearly-extras
+figures. Also appended to `research_weeks` (at the end of its column list,
+per the positional-columns constraint noted above) for opted-in users.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table
