@@ -12,6 +12,15 @@
   --tile-shadow-highlight: 0 2px 8px rgba(47, 111, 79, 0.16);
   --commute-color: #3b6ea5;
   --alcohol-color: #b5842f;
+  --noncommutecar-color: #7a9cc6;
+  --homeenergy-color: #8a5fb0;
+  --gasheating-color: #cc6b4f;
+  --water-color: #2f95a8;
+  --pets-color: #c76b96;
+  --flying-color: #4fa8c9;
+  --banks-color: #6b7280;
+  --goods-color: #a0559e;
+  --carownership-color: #8a6d3b;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,6 +38,15 @@
     --tile-shadow-highlight: 0 2px 10px rgba(111, 191, 148, 0.2);
     --commute-color: #6fa2d8;
     --alcohol-color: #e0ac54;
+    --noncommutecar-color: #a8c1e0;
+    --homeenergy-color: #b291d9;
+    --gasheating-color: #e0977a;
+    --water-color: #5cc2d4;
+    --pets-color: #e096b4;
+    --flying-color: #7fc4e0;
+    --banks-color: #9aa3b0;
+    --goods-color: #c980c7;
+    --carownership-color: #b89a63;
   }
 }
 
@@ -1166,6 +1184,42 @@ input, select {
 
 .domain-alcohol {
   background: var(--alcohol-color);
+}
+
+.domain-nonCommuteCar {
+  background: var(--noncommutecar-color);
+}
+
+.domain-homeEnergy {
+  background: var(--homeenergy-color);
+}
+
+.domain-gasHeating {
+  background: var(--gasheating-color);
+}
+
+.domain-water {
+  background: var(--water-color);
+}
+
+.domain-pets {
+  background: var(--pets-color);
+}
+
+.domain-flying {
+  background: var(--flying-color);
+}
+
+.domain-banks {
+  background: var(--banks-color);
+}
+
+.domain-goods {
+  background: var(--goods-color);
+}
+
+.domain-carOwnership {
+  background: var(--carownership-color);
 }
 
 .domain-legend {

@@ -30,13 +30,22 @@ with accounts and a friends leaderboard backed by Supabase.
   and the other yearly-estimate categories below aren't part of any of
   these lines, since they're fixed annual figures with no day-by-day data
   to plot a pace against. Below that, an "emissions by domain" card breaks
-  that same tracked total (same commute + food + alcohol scope, same
-  timeframe, same underlying data) into a stacked bar - one segment per
-  domain, sized by share of the total, with a legend giving each domain's
-  exact kg and percentage plus a total row. It follows whichever of the
-  three timeframe buttons above the pace chart is currently selected rather
-  than having its own toggle, since it's describing the composition of the
-  exact figure the pace chart is already plotting. Next, a "To do" card lists up to six quick
+  the selected timeframe into a stacked bar with up to twelve segments - one
+  per domain, sized by share of the total, with a legend giving each
+  domain's exact kg and percentage plus a total row. It follows whichever
+  of the three timeframe buttons above the pace chart is currently selected
+  rather than having its own toggle. Commute, food, and alcohol are real
+  tracked totals, same scope as the pace chart above it; the rest (flights,
+  home energy, gas/oil heating, water, pets, banking, buying goods, car
+  manufacturing, non-commute driving) have no day-by-day data, so each is
+  its own weekly-equivalent share (yearly ÷ 52) scaled to match the
+  timeframe - month uses the same ×(days in month/7) the pace chart's own
+  goal line uses, year uses a flat ×52 (not ×365/7, which would inflate
+  every one of these by about 0.3% versus the exact figures on the "Your
+  year, estimated" tiles) - the same weekly-equivalent approach the
+  all-time weekly average on the Leaderboard already uses. A domain that's
+  zero or unanswered (e.g. gas heating, if that question's been skipped)
+  just doesn't get a segment. Next, a "To do" card lists up to six quick
   nudges - yesterday's and today's commute and meal, electricity per year,
   and flights per year - each dropping off the list the moment there's
   something logged for it (yesterday/today check that specific day's

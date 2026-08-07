@@ -1547,12 +1547,33 @@
     return labels;
   }
 
-  const DOMAIN_LABELS = { commute: "Commute", food: "Food", alcohol: "Alcohol" };
+  const DOMAIN_LABELS = {
+    food: "Food",
+    commute: "Commute",
+    nonCommuteCar: "Non-commute driving",
+    alcohol: "Alcohol",
+    homeEnergy: "Home energy",
+    gasHeating: "Gas/oil heating",
+    water: "Water",
+    pets: "Pets",
+    flying: "Flying",
+    banks: "Banking",
+    goods: "Buying goods",
+    carOwnership: "Car manufacturing",
+  };
+  // Same order as the "Your year, estimated" tiles: day-tracked domains
+  // first, then the Home group, then the Other group.
+  const DOMAIN_ORDER = ["food", "commute", "nonCommuteCar", "alcohol", "homeEnergy", "gasHeating", "water", "pets", "flying", "banks", "goods", "carOwnership"];
 
-  // Stacked bar showing what the period's tracked total (same commute +
-  // food + alcohol scope as the pace chart above it, same [start, today]
-  // range) is actually made up of, domain by domain.
-  function renderDomainBarChart(period, start, today) {
+  // Stacked bar showing what the period's total is made up of, domain by
+  // domain. Commute/food/alcohol are real tracked totals for [start, today]
+  // (same scope as the pace chart above it); the rest (flights, home
+  // energy, and the other yearly-estimate categories) have no day-by-day
+  // data to draw from, so - same approach as the all-time weekly-average
+  // leaderboard - they're each a weekly-equivalent share (yearly ÷ 52),
+  // scaled up to match whichever timeframe is selected (×1 for a week,
+  // ×totalDays/7 for a month, ×52 for a year).
+  function renderDomainBarChart(period, start, today, totalDays) {
     const heading = document.getElementById("home-domain-heading");
     if (heading) heading.textContent = `${PERIOD_LABELS[period]}'s emissions by domain`;
 
@@ -1563,7 +1584,26 @@
     legend.innerHTML = "";
 
     const { commute, food, alcohol } = computeRangeDomainKg(start, today);
-    const total = commute + food + alcohol;
+    const extras = weeklyExtrasBreakdownFor(profile);
+    // Matches periodBounds()'s own goal-scaling exactly (month: totalDays/7,
+    // year: a flat x52, not totalDays/7 - 365/7 is 52.14, which would
+    // inflate every extras figure ~0.3% above the "Your year, estimated"
+    // tiles' exact yearly numbers for no good reason).
+    const periodScale = period === "year" ? 52 : period === "month" ? totalDays / 7 : 1;
+
+    const values = {
+      food, commute, alcohol,
+      nonCommuteCar: extras.nonCommuteCar * periodScale,
+      homeEnergy: extras.homeEnergy * periodScale,
+      gasHeating: extras.gasHeating * periodScale,
+      water: extras.water * periodScale,
+      pets: extras.pets * periodScale,
+      flying: extras.flying * periodScale,
+      banks: extras.banks * periodScale,
+      goods: extras.goods * periodScale,
+      carOwnership: extras.carOwnership * periodScale,
+    };
+    const total = DOMAIN_ORDER.reduce((sum, key) => sum + (values[key] || 0), 0);
 
     if (total <= 0) {
       const empty = document.createElement("div");
@@ -1571,17 +1611,14 @@
       bar.appendChild(empty);
       const li = document.createElement("li");
       li.className = "domain-legend-empty";
-      li.textContent = "No confirmed data for this period yet.";
+      li.textContent = "No emissions to show for this period yet.";
       legend.appendChild(li);
       return;
     }
 
-    [
-      { key: "commute", value: commute },
-      { key: "food", value: food },
-      { key: "alcohol", value: alcohol },
-    ].forEach(({ key, value }) => {
-      if (value <= 0) return;
+    DOMAIN_ORDER.forEach((key) => {
+      const value = values[key];
+      if (!value || value <= 0) return;
       const pct = (value / total) * 100;
 
       const seg = document.createElement("div");
@@ -1665,7 +1702,7 @@
       ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
     });
 
-    renderDomainBarChart(period, start, today);
+    renderDomainBarChart(period, start, today, totalDays);
   }
 
   function renderWeekPage() {
@@ -1811,38 +1848,47 @@
   // ---------- Page 3: Leaderboard ----------
   // Flights, home electricity, buying goods, and (if answered) the four
   // optional extras are all yearly figures (Stats page inputs), not
-  // weekly - amortized to a weekly-equivalent here so the all-time weekly
-  // average matches the Stats page's yearly total ÷ 52, not just commute
-  // and food. Mirrors the composition of yearlyTotal in renderStatsPage(),
-  // just per-week instead of per-year.
-  function weeklyExtrasFor(inputs) {
-    const yearlyFlying = (inputs.shortHaulFlights || 0) * SHORT_HAUL_FLIGHT_KG + (inputs.longHaulFlights || 0) * LONG_HAUL_FLIGHT_KG;
+  // weekly - amortized to a weekly-equivalent here (yearly ÷ 52) so the
+  // all-time weekly average matches the Stats page's yearly total ÷ 52,
+  // not just commute and food. Mirrors the composition of yearlyTotal in
+  // renderStatsPage(), just per-week instead of per-year. Kept as a
+  // per-domain breakdown (rather than a single summed number) so the Home
+  // page's domain bar chart can show each one as its own segment;
+  // weeklyExtrasFor() below just sums it for callers that only want the
+  // total.
+  function weeklyExtrasBreakdownFor(inputs) {
+    const flying = ((inputs.shortHaulFlights || 0) * SHORT_HAUL_FLIGHT_KG + (inputs.longHaulFlights || 0) * LONG_HAUL_FLIGHT_KG) / 52;
     const yearlyHomeEnergyTotal = (inputs.householdKwhPerMonth || 0) * 12 * GRID_ELECTRICITY_KG_PER_KWH;
-    const yearlyHomeEnergy = yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1);
-    const yearlyGoods = (inputs.clothesPerMonth || 0) * 12 * CLOTHING_ITEM_KG;
+    const homeEnergy = (yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1)) / 52;
+    const goods = ((inputs.clothesPerMonth || 0) * 12 * CLOTHING_ITEM_KG) / 52;
 
-    let yearlyOptional = 0;
+    let gasHeating = 0, nonCommuteCar = 0, carOwnership = 0, pets = 0, water = 0, banks = 0;
     if (inputs.annualGasKwh !== null && inputs.annualGasKwh !== undefined) {
-      yearlyOptional += (inputs.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, inputs.householdPeople || 1);
+      gasHeating = ((inputs.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, inputs.householdPeople || 1)) / 52;
     }
     if (inputs.weeklyNonCommuteCarKm !== null && inputs.weeklyNonCommuteCarKm !== undefined) {
-      yearlyOptional += inputs.weeklyNonCommuteCarKm * carFactorFor(inputs) * 52;
+      nonCommuteCar = (inputs.weeklyNonCommuteCarKm * carFactorFor(inputs) * 52) / 52;
     }
     if (inputs.ownsCar) {
-      yearlyOptional += CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR;
+      carOwnership = CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR / 52;
     }
     if ((inputs.numDogs !== null && inputs.numDogs !== undefined) || (inputs.numCats !== null && inputs.numCats !== undefined)) {
-      yearlyOptional += ((inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR) / Math.max(1, inputs.householdPeople || 1);
+      pets = (((inputs.numDogs || 0) * DOG_KG_PER_YEAR + (inputs.numCats || 0) * CAT_KG_PER_YEAR) / Math.max(1, inputs.householdPeople || 1)) / 52;
     }
     if (inputs.annualWaterM3 !== null && inputs.annualWaterM3 !== undefined) {
-      yearlyOptional += (inputs.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, inputs.householdPeople || 1);
+      water = ((inputs.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, inputs.householdPeople || 1)) / 52;
     }
     if (inputs.bankName && inputs.bankBalance !== null && inputs.bankBalance !== undefined) {
       const factor = BANK_KG_PER_POUND_PER_YEAR[inputs.bankName];
-      if (factor !== undefined) yearlyOptional += factor * inputs.bankBalance;
+      if (factor !== undefined) banks = (factor * inputs.bankBalance) / 52;
     }
 
-    return (yearlyFlying + yearlyHomeEnergy + yearlyGoods + yearlyOptional) / 52;
+    return { flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, water, banks };
+  }
+
+  function weeklyExtrasFor(inputs) {
+    const b = weeklyExtrasBreakdownFor(inputs);
+    return b.flying + b.homeEnergy + b.goods + b.gasHeating + b.nonCommuteCar + b.carOwnership + b.pets + b.water + b.banks;
   }
 
   // kgSuffix/detailText are optional - only "This week" (renderLeaderboard)
