@@ -448,10 +448,7 @@
           <span class="carousel-dot"></span>
         </div>
         <p class="assumptions" id="home-savings-note">
-          Compares your real confirmed commute + food + alcohol emissions against what the
-          UK average person would have used over the same span &mdash; since the week you
-          first confirmed a day. Rough, illustrative estimate: days you haven't logged count
-          as zero on your side, so the more consistently you log, the more accurate this gets.
+
         </p>
       </section>
 
@@ -464,20 +461,7 @@
         </div>
         <div class="chart budget-chart" id="home-chart"><!-- budget pace chart injected by app.js --></div>
         <p class="assumptions">
-          A dashed line burns down from your weekly goal &mdash; &times;1 for this week,
-          roughly &times;4.3 for this month, &times;52 for this year &mdash; to 0 across
-          whichever span is selected above, plotted against a solid line tracking your
-          actual confirmed commute + food + alcohol day by day. Falling below the dashed
-          line means you're using CO2e faster than the goal allows for how far through
-          the span it is; staying above it means you're on pace or ahead. For "This
-          month" and "This year", the solid line only starts where the light vertical
-          marker is &mdash; the week you first confirmed a day &mdash; and picks up
-          exactly on the dashed line there rather than at the full goal, since the days
-          before that have no data and would otherwise look like a fully on-pace stretch
-          you never actually tracked. Flights, home energy, and the other yearly-estimate
-          categories below aren't included in any of these lines, since they're fixed
-          annual figures rather than something with day-by-day data to plot a pace
-          against.
+     
         </p>
       </section>
 
@@ -486,21 +470,14 @@
         <div class="domain-bar" id="home-domain-bar"><!-- stacked bar injected by app.js --></div>
         <ul class="domain-legend" id="home-domain-legend"><!-- legend rows injected by app.js --></ul>
         <p class="assumptions">
-          Commute, food, and alcohol are your real confirmed totals for the timeframe
-          selected above &mdash; same scope as the budget pace chart. Flights, home
-          energy, and the other yearly-estimate categories (This Year page) have no
-          day-by-day data, so each is its own weekly-equivalent share (yearly &divide; 52),
-          scaled to match the timeframe &mdash; the same approach the all-time weekly
-          average on the Leaderboard uses.
+          
         </p>
       </section>
 
       <section class="card">
         <h2>To do</h2>
         <p class="assumptions" id="home-todo-hint">
-          Nothing here ever locks you out &mdash; it's just a nudge for what's
-          quickest to log next. Tap an item to jump to where you log it, and
-          it drops off the list once it's done.
+          Tap an item to log it.
         </p>
         <ul class="todo-list" id="home-todo-list">
           <li class="todo-item" id="todo-yesterday-commute" data-nav="week" tabindex="0" role="button">
@@ -567,8 +544,7 @@
         </div>
 
         <p class="assumptions small-print">
-          Commute, food &amp; alcohol come from your confirmed weeks' average (&times;52);
-          everything else from your This Year answers. Rough, illustrative estimate.
+           Rough, illustrative estimate.
         </p>
 
         <div class="comparison-grid">
@@ -669,9 +645,9 @@
         <h2>What this doesn't account for</h2>
         <ul class="unaccounted-list compact-bullets">
           <li>Travel beyond your logged commute: taxis/rideshare, buses, trains, ferries, cruises</li>
-          <li>Diet and purchases beyond what's tracked: dairy, eggs, snacks, food miles, electronics, subscriptions, household waste</li>
-          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint</li>
-          <li>Your share of public services and infrastructure &mdash; roughly <strong>3.3 tonnes CO2e/yr</strong> per person in the UK, and real, but not something you can meaningfully reduce or self-report here</li>
+          <li>Diet + purchases beyond what's tracked: dairy, eggs, snacks, food miles, electronics, subscriptions, household waste</li>
+          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint (will be available soon...)</li>
+          <li>Your share of public services and infrastructure &mdash; roughly <strong>3.3 tonnes CO2e/yr</strong> per person in the UK</li>
         </ul>
       </section>
     </section>
@@ -714,14 +690,7 @@
           <button type="button" class="btn-secondary btn-small" id="goal-preset-world">Match world average week</button>
         </div>
         <p class="assumptions">
-          "Match UK average week" sets your goal to the same commute + food UK
-          average shown on the Stats page (only those two, since that's what this
-          weekly goal tracks). "1.5&deg;C 2030 (food + commute)" is our own estimate
-          &mdash; applying published 2030 reduction requirements for developed countries
-          (nutrition &minus;47%, mobility &minus;72%, per Hot or Cool Institute
-          research). "Match world average week" is the roughest of the three &mdash;
-          rough estimate assuming less car use and less meat than the UK
-          figures.
+          All targets are rough assumptions. Feel free to base your goals on any of them.
         </p>
         <label class="field">
           How much food do you waste?
