@@ -1492,45 +1492,105 @@
 
   // Lifetime "Total CO2 saved" hero at the top of the Home page: your real
   // confirmed commute + food + alcohol emissions since the week you first
-  // confirmed a day, vs. what the UK average person would have used over
-  // that same span (UK_AVERAGE_WEEKLY_KG scaled by days elapsed - the same
-  // flat linear-rate convention the budget pace chart's own dashed target
-  // line uses, just anchored to the UK average instead of your goal).
-  // Illustrative only: days you haven't logged count as zero on your side,
-  // same known approximation as the pace chart above it.
-  function renderSavingsTotaliser() {
-    const hero = document.getElementById("home-savings-hero");
-    const valueEl = document.getElementById("home-savings-value");
-    const labelEl = document.getElementById("home-savings-label");
-    if (!hero || !valueEl || !labelEl) return;
+  // confirmed a day, vs. a weekly reference rate scaled by days elapsed -
+  // the same flat linear-rate convention the budget pace chart's own
+  // dashed target line uses, just anchored to a savings reference instead
+  // of your goal. Two swipeable slides, Instagram-carousel style: the UK
+  // average (always available), and your own baseline week if you've set
+  // one on the Account page (same "your own week instead of the UK
+  // average" choice already offered on This Week's "Compared to" card -
+  // see renderAverageWeekCard()). Illustrative only: days you haven't
+  // logged count as zero on your side, same known approximation as the
+  // pace chart above it.
+  // Swipe/scroll -> active dot + caption sync for the two-slide savings
+  // carousel above. Pure native scroll-snap (see .carousel/.carousel-slide
+  // in style.css) - this just reflects scroll position back into the dots
+  // and the caption underneath, it doesn't drive the scrolling itself.
+  const SAVINGS_CAROUSEL_CAPTIONS = [
+    "Compares your real confirmed commute + food + alcohol emissions against what the UK average person would have used over the same span — since the week you first confirmed a day. Rough, illustrative estimate: days you haven't logged count as zero on your side, so the more consistently you log, the more accurate this gets.",
+    "Same comparison, against your own baseline week instead (set on the Account page) — a more personal reference point than the UK average. Same rough, illustrative approximation: days you haven't logged count as zero on your side.",
+  ];
+  function wireSavingsCarousel() {
+    const carousel = document.getElementById("home-savings-carousel");
+    const dots = document.querySelectorAll("#home-savings-dots .carousel-dot");
+    const note = document.getElementById("home-savings-note");
+    if (!carousel) return;
+    let ticking = false;
+    carousel.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const index = Math.round(carousel.scrollLeft / Math.max(1, carousel.clientWidth));
+        dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
+        if (note && SAVINGS_CAROUSEL_CAPTIONS[index]) note.textContent = SAVINGS_CAROUSEL_CAPTIONS[index];
+        ticking = false;
+      });
+    });
+  }
 
-    const hasTrackedData = Object.values(weeksCache).some(hasAnyConfirmed);
+  function renderSavingsSlide(heroId, valueId, labelId, hasTrackedData, noDataMessage, referenceWeeklyKg, totalDays, actualTotal, referenceLabel) {
+    const hero = document.getElementById(heroId);
+    const valueEl = document.getElementById(valueId);
+    const labelEl = document.getElementById(labelId);
+    if (!hero || !valueEl || !labelEl) return;
     hero.classList.remove("over-average", "no-data");
 
     if (!hasTrackedData) {
       hero.classList.add("no-data");
       valueEl.textContent = "–";
-      labelEl.textContent = "Confirm a day to start tracking how much you're saving vs the UK average.";
+      labelEl.textContent = noDataMessage;
       return;
     }
 
-    const start = new Date(`${firstTrackedWeekKey()}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const totalDays = Math.max(1, Math.round((today - start) / DAY_MS) + 1);
-    const { dailyKg } = computeRangeDailyKg(start, today);
-    const actualTotal = dailyKg.reduce((sum, kg) => sum + kg, 0);
-    const ukBaselineTotal = UK_AVERAGE_WEEKLY_KG * (totalDays / 7);
-    const savedKg = ukBaselineTotal - actualTotal;
+    const referenceTotal = referenceWeeklyKg * (totalDays / 7);
+    const savedKg = referenceTotal - actualTotal;
 
     if (savedKg < 0) {
       hero.classList.add("over-average");
       valueEl.textContent = Math.round(Math.abs(savedKg)).toLocaleString();
-      labelEl.textContent = "kg CO2e more than the UK average since you started tracking";
+      labelEl.textContent = `kg CO2e more than ${referenceLabel} since you started tracking`;
     } else {
       valueEl.textContent = Math.round(savedKg).toLocaleString();
-      labelEl.textContent = "kg CO2e saved vs the UK average since you started tracking";
+      labelEl.textContent = `kg CO2e saved vs ${referenceLabel} since you started tracking`;
     }
+  }
+
+  function renderSavingsTotaliser() {
+    const hasTrackedData = Object.values(weeksCache).some(hasAnyConfirmed);
+    let actualTotal = 0;
+    let totalDays = 1;
+    if (hasTrackedData) {
+      const start = new Date(`${firstTrackedWeekKey()}T00:00:00`);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      totalDays = Math.max(1, Math.round((today - start) / DAY_MS) + 1);
+      actualTotal = computeRangeDailyKg(start, today).dailyKg.reduce((sum, kg) => sum + kg, 0);
+    }
+
+    renderSavingsSlide(
+      "home-savings-hero", "home-savings-value", "home-savings-label",
+      hasTrackedData, "Confirm a day to start tracking how much you're saving vs the UK average.",
+      UK_AVERAGE_WEEKLY_KG, totalDays, actualTotal, "the UK average"
+    );
+
+    const baselineWeekData = getBaselineWeekData();
+    const baselineHero = document.getElementById("home-savings-baseline-hero");
+    const baselineValueEl = document.getElementById("home-savings-baseline-value");
+    const baselineLabelEl = document.getElementById("home-savings-baseline-label");
+    if (!baselineWeekData) {
+      if (baselineHero && baselineValueEl && baselineLabelEl) {
+        baselineHero.classList.remove("over-average");
+        baselineHero.classList.add("no-data");
+        baselineValueEl.textContent = "–";
+        baselineLabelEl.textContent = "Set a baseline week on the Account page to compare here.";
+      }
+      return;
+    }
+    renderSavingsSlide(
+      "home-savings-baseline-hero", "home-savings-baseline-value", "home-savings-baseline-label",
+      hasTrackedData, "Confirm a day to start tracking how much you're saving vs your baseline week.",
+      weekTotals(baselineWeekData).total, totalDays, actualTotal, "your baseline week"
+    );
   }
 
   // The three Home page views' bounds: what day they start counting from,
@@ -3038,6 +3098,8 @@
     document.querySelectorAll(".tile-info-btn").forEach((btn) => {
       btn.addEventListener("click", () => openTileInfo(btn.dataset.info));
     });
+
+    wireSavingsCarousel();
 
     document.getElementById("reset-week").addEventListener("click", resetWeek);
 

@@ -8,19 +8,26 @@ with accounts and a friends leaderboard backed by Supabase.
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
 - **Home** — the landing page. Opens with a "Total CO2 saved" hero card: a
-  single lifetime number - your real confirmed commute + food + alcohol
-  emissions since the week you first confirmed a day, subtracted from what
-  the UK average person would have used over that same span
-  (`UK_AVERAGE_WEEKLY_KG` scaled by days elapsed, the same flat linear-rate
-  convention the budget pace chart's own dashed target line uses below,
-  just anchored to the UK average instead of your personal goal). Green
-  with a positive number if you're under the UK average, red/"more than
-  the UK average" if you're over it, and a muted placeholder prompting you
-  to confirm a day if you haven't tracked anything yet. Explicitly
-  illustrative: days you haven't logged count as zero on your side of the
-  comparison, so the more consistently you log, the more accurate it gets
-  — same known approximation the pace chart below already makes. Next is
-  a "Budget pace" card: a
+  two-slide swipeable carousel (native CSS scroll-snap, Instagram-post
+  style, with two small dots underneath showing which slide you're on -
+  swipe/scroll horizontally on either mobile or desktop to move between
+  them). Both slides are the same lifetime figure - your real confirmed
+  commute + food + alcohol emissions since the week you first confirmed a
+  day, subtracted from a weekly reference rate scaled by days elapsed (the
+  same flat linear-rate convention the budget pace chart's own dashed
+  target line uses below) - just against two different reference points:
+  the first slide is the UK average (`UK_AVERAGE_WEEKLY_KG`, always
+  available); the second is your own baseline week if you've set one on
+  the Account page (the same "your own week instead of the UK average"
+  choice already offered on This Week's "Compared to" card), or a prompt
+  to set one if you haven't. Each slide is green with a positive number if
+  you're under its reference, red/"more than X" if you're over it, and a
+  muted placeholder prompting you to confirm a day if you haven't tracked
+  anything yet; the caption underneath swaps to match whichever slide is
+  active. Explicitly illustrative: days you haven't logged count as zero
+  on your side of the comparison, so the more consistently you log, the
+  more accurate it gets — same known approximation the pace chart below
+  already makes. Next is a "Budget pace" card: a
   three-way toggle ("This week" / "This month" / "This year") over a
   single Monzo Trends-style budget-pace chart — a dashed target line burns
   from your weekly goal down to 0 across whichever span is selected

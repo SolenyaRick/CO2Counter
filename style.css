@@ -796,6 +796,50 @@ input, select {
   font-size: 1.6rem;
 }
 
+/* Instagram-style swipeable carousel: native scroll-snap, no JS drag
+   library needed - works with real touch swipe on mobile and mouse-wheel/
+   trackpad scroll on desktop. */
+.carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.carousel-slide .year-hero {
+  margin-bottom: 0;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.15s ease;
+}
+
+.carousel-dot.active {
+  background: var(--accent);
+}
+
 .assumptions.small-print {
   font-size: 0.75rem;
   margin-bottom: 16px;
