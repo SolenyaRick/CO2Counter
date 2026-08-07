@@ -1490,6 +1490,49 @@
     return { commute, food, alcohol };
   }
 
+  // Lifetime "Total CO2 saved" hero at the top of the Home page: your real
+  // confirmed commute + food + alcohol emissions since the week you first
+  // confirmed a day, vs. what the UK average person would have used over
+  // that same span (UK_AVERAGE_WEEKLY_KG scaled by days elapsed - the same
+  // flat linear-rate convention the budget pace chart's own dashed target
+  // line uses, just anchored to the UK average instead of your goal).
+  // Illustrative only: days you haven't logged count as zero on your side,
+  // same known approximation as the pace chart above it.
+  function renderSavingsTotaliser() {
+    const hero = document.getElementById("home-savings-hero");
+    const valueEl = document.getElementById("home-savings-value");
+    const labelEl = document.getElementById("home-savings-label");
+    if (!hero || !valueEl || !labelEl) return;
+
+    const hasTrackedData = Object.values(weeksCache).some(hasAnyConfirmed);
+    hero.classList.remove("over-average", "no-data");
+
+    if (!hasTrackedData) {
+      hero.classList.add("no-data");
+      valueEl.textContent = "–";
+      labelEl.textContent = "Confirm a day to start tracking how much you're saving vs the UK average.";
+      return;
+    }
+
+    const start = new Date(`${firstTrackedWeekKey()}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const totalDays = Math.max(1, Math.round((today - start) / DAY_MS) + 1);
+    const { dailyKg } = computeRangeDailyKg(start, today);
+    const actualTotal = dailyKg.reduce((sum, kg) => sum + kg, 0);
+    const ukBaselineTotal = UK_AVERAGE_WEEKLY_KG * (totalDays / 7);
+    const savedKg = ukBaselineTotal - actualTotal;
+
+    if (savedKg < 0) {
+      hero.classList.add("over-average");
+      valueEl.textContent = Math.round(Math.abs(savedKg)).toLocaleString();
+      labelEl.textContent = "kg CO2e more than the UK average since you started tracking";
+    } else {
+      valueEl.textContent = Math.round(savedKg).toLocaleString();
+      labelEl.textContent = "kg CO2e saved vs the UK average since you started tracking";
+    }
+  }
+
   // The three Home page views' bounds: what day they start counting from,
   // how many days they span, and the goal for that span - scaled off the
   // weekly goal so the implied daily rate is the same across all three
@@ -2237,6 +2280,7 @@
 
     renderYearComparison(yearlyTotal, uk.total);
     renderYearCompareChips(yearlyTotal, uk.total);
+    renderSavingsTotaliser();
     renderPeriodChart();
     renderHomeTodoList();
   }
