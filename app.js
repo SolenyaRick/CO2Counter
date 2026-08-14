@@ -1798,11 +1798,9 @@
     const bar = document.getElementById("home-domain-bar");
     const legend = document.getElementById("home-domain-legend");
     const breakdownToggle = document.getElementById("home-domain-breakdown-toggle");
-    const breakdown = document.getElementById("home-domain-breakdown");
     if (!bar || !legend) return;
     bar.innerHTML = "";
     legend.innerHTML = "";
-    if (breakdown) breakdown.innerHTML = "";
 
     const { commute, food, alcohol, nonCommuteCar } = computeRangeDomainKg(start, today);
     const extras = weeklyExtrasBreakdownFor(profile);
@@ -1834,17 +1832,14 @@
       li.textContent = "No emissions to show for this period yet.";
       legend.appendChild(li);
       if (breakdownToggle) breakdownToggle.hidden = true;
-      if (breakdown) breakdown.hidden = true;
       return;
     }
     if (breakdownToggle) breakdownToggle.hidden = false;
 
-    const present = [];
     DOMAIN_ORDER.forEach((key) => {
       const value = values[key];
       if (!value || value <= 0) return;
       const pct = (value / total) * 100;
-      present.push({ key, value, pct });
 
       const seg = document.createElement("div");
       seg.className = `domain-bar-segment domain-${key}`;
@@ -1856,6 +1851,12 @@
       li.className = "domain-legend-item";
       const swatch = document.createElement("span");
       swatch.className = `domain-legend-swatch domain-${key}`;
+      // Read by the "expanded" state's CSS (see .domain-legend.expanded
+      // .domain-legend-swatch in style.css) - the swatch is a fixed small
+      // square normally, and grows to this width when expanded, so the
+      // exact same element is the "before" and "after" of the transition
+      // rather than two separate elements swapped out.
+      swatch.style.setProperty("--pct", `${pct}%`);
       const text = document.createElement("span");
       text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
       li.appendChild(swatch);
@@ -1867,48 +1868,26 @@
     totalLi.className = "domain-legend-total";
     totalLi.textContent = `Total: ${fmt(total)} kg CO2e`;
     legend.appendChild(totalLi);
-
-    // Ranked breakdown, biggest first - each row is the same colored swatch
-    // as the legend above it, just stretched out so its own length shows
-    // that domain's share of the total (same pct as the legend/segment
-    // above), with the label and kg/percentage trailing right after it.
-    // Meant to read as a visual bridge between the small legend swatches
-    // above and the single stacked bar at the top of the card.
-    if (breakdown) {
-      present
-        .slice()
-        .sort((a, b) => b.value - a.value)
-        .forEach(({ key, value, pct }) => {
-          const row = document.createElement("div");
-          row.className = "domain-breakdown-row";
-
-          const swatch = document.createElement("div");
-          swatch.className = `domain-breakdown-swatch domain-${key}`;
-          swatch.style.width = `${pct}%`;
-
-          const text = document.createElement("span");
-          text.className = "domain-breakdown-row-text";
-          text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
-
-          row.appendChild(swatch);
-          row.appendChild(text);
-          breakdown.appendChild(row);
-        });
-    }
   }
 
   // One-time wiring for the "Show full breakdown" toggle underneath the
-  // domain bar/legend - the button and panel are static elements (only
-  // their contents get replaced on every renderDomainBarChart() call), so
-  // this only needs to run once at startup, not on every re-render.
+  // domain bar/legend - toggles an "expanded" class on the legend itself,
+  // which CSS uses to grow each swatch from its small square up to its own
+  // percentage-width bar (see --pct above and .domain-legend.expanded in
+  // style.css). Keeps the legend's existing order for now - a later pass
+  // can additionally re-sort the rows into ranked (biggest-first) position
+  // as part of the same animation. The button and legend are static
+  // elements (only the legend's row contents get replaced on every
+  // renderDomainBarChart() call), so this only needs to run once at
+  // startup, not on every re-render.
   function wireDomainBreakdownToggle() {
     const toggle = document.getElementById("home-domain-breakdown-toggle");
-    const breakdown = document.getElementById("home-domain-breakdown");
+    const legend = document.getElementById("home-domain-legend");
     const label = document.getElementById("home-domain-breakdown-toggle-label");
-    if (!toggle || !breakdown || !label) return;
+    if (!toggle || !legend || !label) return;
     toggle.addEventListener("click", () => {
-      const open = breakdown.hidden;
-      breakdown.hidden = !open;
+      const open = !legend.classList.contains("expanded");
+      legend.classList.toggle("expanded", open);
       toggle.setAttribute("aria-expanded", String(open));
       label.textContent = open ? "Hide full breakdown" : "Show full breakdown";
     });
