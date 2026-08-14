@@ -1091,6 +1091,93 @@ input, select {
   color: var(--text-muted);
 }
 
+/* Apple-Watch-style ring for each "Your year, estimated" tile (see
+   renderRingStat() in app.js). .ring-container-empty falls back to the
+   plain .stat-value/.stat-label/.week-diff markup above, so an unanswered
+   tile still looks like every other muted "–" tile in the app rather than
+   an empty ring. */
+.ring-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ring-wrap {
+  position: relative;
+  width: 92px;
+  height: 92px;
+}
+
+.ring-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 8;
+}
+
+.ring-progress {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  /* Anticlockwise sweep starting at 12 o'clock: flips the usual
+     clockwise-fill trick (rotate(-90deg) alone) across the vertical axis
+     while keeping the same 12-o'clock start point. */
+  transform: scaleX(-1) rotate(-90deg);
+  transition: stroke-dashoffset 0.4s ease, stroke 0.2s ease;
+}
+
+.ring-progress-green {
+  stroke: var(--accent);
+}
+
+.ring-progress-red {
+  stroke: var(--danger);
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1px;
+}
+
+.ring-center-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.ring-center-unit {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+}
+
+.ring-center-pct {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.ring-caption {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 .todo-list {
   list-style: none;
   margin: 0;

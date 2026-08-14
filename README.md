@@ -120,15 +120,22 @@ with accounts and a friends leaderboard backed by Supabase.
   tracked/estimated split above), then "Home" (home energy, gas/oil
   heating, water usage, pets), then "Other" (flying, banking, buying
   goods, car manufacturing). Unlike the This Year input page, these tile
-  labels don't say "(optional)" - every tile keeps its own category emoji
-  and a consistent two-line ▲/▼
-  delta against the UK average underneath (a bold colored figure, then a
-  small muted "vs UK average" caption), including a muted "–" placeholder
-  with the same caption for whichever optional ones you haven't answered
-  yet, so the grid reads the same way tile to tile rather than some having
-  a comparison line and others just trailing off blank. Alcohol is the one
-  tile with no delta at all, since it isn't modeled in the UK average
-  figure to begin with. Four tiles - Food, Home energy, Flying, and Banking
+  labels don't say "(optional)". Every tile except Alcohol (which isn't
+  modeled in the UK average figure to begin with, so there's nothing to
+  ring against) is an Apple-Watch-style ring (`renderRingStat()` in
+  `app.js`): starts as a full green ring representing 100% of your UK-average
+  "budget" for that category still unused, and drains anticlockwise from 12
+  o'clock as your own total eats into it - an empty green ring means you've
+  used exactly the UK average, "no budget left". Go over it and the ring
+  switches to red, filling back up the same anticlockwise way from empty,
+  capped at a full red ring for double the UK average or worse. The ring's
+  centre shows the figure itself (kg/yr) and what percentage of the UK
+  average that is - the same two numbers the old delta/caption pairing
+  showed, just as a ring instead of text. Optional categories you haven't
+  answered yet fall back to the same muted "–" tile (value, label, "vs UK
+  average" caption) used everywhere else in the app, rather than showing a
+  misleadingly "full" ring for an unanswered question. Four tiles - Food,
+  Home energy, Flying, and Banking
   - additionally have a small ⓘ button in the corner, opening a popup with
   a short bit of context/advice for that category; the popup content lives
   in `tile-info.js` (`TILE_INFO`), a plain, directly-editable file (same

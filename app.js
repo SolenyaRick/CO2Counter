@@ -2423,6 +2423,52 @@
     document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
   }
 
+  // Apple-Watch-style ring for a single "Your year, estimated" tile:
+  // starts as a full green ring (100% of your UK-average "budget" for that
+  // domain still unused), and drains anticlockwise from 12 o'clock as your
+  // own total eats into it - empty at exactly the UK average ("no budget
+  // left"). Past that, it switches to a red ring that fills back up
+  // (same anticlockwise direction, starting from empty) showing how far
+  // over you are, capped visually at a full red ring for 2x the average or
+  // worse. Falls back to the plain muted "–" tile (same markup/classes as
+  // every other unanswered optional tile) when there's nothing to compare
+  // yet, so an unanswered question never gets a misleadingly "full" ring.
+  const RING_RADIUS = 42;
+  const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+  function renderRingStat(containerId, value, benchmark, emoji, label) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (value === null || value === undefined || benchmark === null || benchmark === undefined || benchmark <= 0) {
+      el.className = "ring-container ring-container-empty";
+      el.innerHTML = `
+        <span class="stat-value">–</span>
+        <span class="stat-label">${emoji} kg CO2e/yr &middot; ${label}</span>
+        <span class="week-diff"><span class="diff-value">–</span><span class="diff-caption">vs UK average</span></span>
+      `;
+      return;
+    }
+    const ratio = value / benchmark;
+    const over = ratio > 1;
+    const fraction = over ? Math.min(ratio - 1, 1) : 1 - ratio;
+    const offset = RING_CIRCUMFERENCE * (1 - fraction);
+    el.className = "ring-container";
+    el.innerHTML = `
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100" class="ring-svg" role="img" aria-label="${label}: ${fmt(value)} kg CO2e per year, ${Math.round(ratio * 100)}% of the UK average">
+          <circle class="ring-track" cx="50" cy="50" r="${RING_RADIUS}"></circle>
+          <circle class="ring-progress ${over ? "ring-progress-red" : "ring-progress-green"}" cx="50" cy="50" r="${RING_RADIUS}"
+            stroke-dasharray="${RING_CIRCUMFERENCE}" stroke-dashoffset="${offset}"></circle>
+        </svg>
+        <div class="ring-center">
+          <span class="ring-center-value">${Math.round(value).toLocaleString()}</span>
+          <span class="ring-center-unit">kg/yr</span>
+          <span class="ring-center-pct">${Math.round(ratio * 100)}% of UK avg</span>
+        </div>
+      </div>
+      <p class="ring-caption">${emoji} ${label}</p>
+    `;
+  }
+
   function renderStatsPage() {
     // "Your year, estimated": projected from the last 52 weeks only.
     const yearlyFood = recentAverageConfirmedWeekly("food") * 52;
@@ -2466,35 +2512,27 @@
     if (yearlyWater !== null) yearlyTotal += yearlyWater;
     if (yearlyBanks !== null) yearlyTotal += yearlyBanks;
 
-    document.getElementById("yearly-food").textContent = Math.round(yearlyFood).toLocaleString();
-    document.getElementById("yearly-commute").textContent = Math.round(yearlyCommute).toLocaleString();
+    // Alcohol has no equivalent in the UK-average model to begin with, so
+    // it's the one tile that stays a plain number, no ring possible.
     document.getElementById("yearly-alcohol").textContent = Math.round(yearlyAlcohol).toLocaleString();
-    document.getElementById("yearly-flying").textContent = Math.round(yearlyFlying).toLocaleString();
-    document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
-    document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
-    document.getElementById("yearly-gas-heating").textContent = yearlyGasHeating === null ? "–" : Math.round(yearlyGasHeating).toLocaleString();
-    document.getElementById("yearly-noncommute-car").textContent = Math.round(yearlyNonCommuteCar).toLocaleString();
-    document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
-    document.getElementById("yearly-pets").textContent = yearlyPets === null ? "–" : Math.round(yearlyPets).toLocaleString();
-    document.getElementById("yearly-water").textContent = yearlyWater === null ? "–" : Math.round(yearlyWater).toLocaleString();
-    document.getElementById("yearly-banking").textContent = yearlyBanks === null ? "–" : Math.round(yearlyBanks).toLocaleString();
     document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
 
     const uk = computeUkAverageBreakdown(includeOptional);
 
-    // Per-domain "vs UK average" delta under each tile - skipped for the
-    // three optional categories when unanswered (nothing to compare yet).
-    setComparisonDiff("yearly-food-diff", yearlyFood, uk.food, "kg");
-    setComparisonDiff("yearly-commute-diff", yearlyCommute, uk.commute, "kg");
-    setComparisonDiff("yearly-flying-diff", yearlyFlying, uk.flying, "kg");
-    setComparisonDiff("yearly-home-energy-diff", yearlyHomeEnergy, uk.homeEnergy, "kg");
-    setComparisonDiff("yearly-goods-diff", yearlyGoods, uk.goods, "kg");
-    setComparisonDiff("yearly-gas-heating-diff", yearlyGasHeating, uk.gasHeating, "kg");
-    setComparisonDiff("yearly-noncommute-car-diff", yearlyNonCommuteCar, uk.nonCommuteCar, "kg");
-    setComparisonDiff("yearly-car-ownership-diff", yearlyCarOwnership, uk.carOwnership, "kg");
-    setComparisonDiff("yearly-pets-diff", yearlyPets, uk.pets, "kg");
-    setComparisonDiff("yearly-water-diff", yearlyWater, uk.water, "kg");
-    setComparisonDiff("yearly-banking-diff", yearlyBanks, uk.banks, "kg");
+    // Every other tile: an Apple-Watch-style ring instead of a plain
+    // number - falls back to the usual muted "–" tile on its own whenever
+    // value or benchmark is null (see renderRingStat() above).
+    renderRingStat("yearly-food", yearlyFood, uk.food, "🍽️", "Food (×52 weeks)");
+    renderRingStat("yearly-commute", yearlyCommute, uk.commute, "🚗", "Commute (×52 weeks)");
+    renderRingStat("yearly-noncommute-car", yearlyNonCommuteCar, uk.nonCommuteCar, "🚙", "Non-commute driving (×52 weeks)");
+    renderRingStat("yearly-home-energy", yearlyHomeEnergy, uk.homeEnergy, "⚡", "Home energy (your share)");
+    renderRingStat("yearly-gas-heating", yearlyGasHeating, uk.gasHeating, "🔥", "Gas/oil heating");
+    renderRingStat("yearly-water", yearlyWater, uk.water, "💧", "Water usage");
+    renderRingStat("yearly-pets", yearlyPets, uk.pets, "🐾", "Pets");
+    renderRingStat("yearly-flying", yearlyFlying, uk.flying, "✈️", "Flying");
+    renderRingStat("yearly-banking", yearlyBanks, uk.banks, "🏦", "Banking");
+    renderRingStat("yearly-goods", yearlyGoods, uk.goods, "🛍️", "Buying goods");
+    renderRingStat("yearly-car-ownership", yearlyCarOwnership, uk.carOwnership, "🏭", "Car manufacturing");
 
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);
