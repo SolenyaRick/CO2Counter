@@ -78,16 +78,7 @@ with accounts and a friends leaderboard backed by Supabase.
   everything. Once every item's dropped off, the list itself is replaced
   by a single "All done" message. Tapping an item jumps to wherever you'd
   log it (This Week for the day-based ones, This Year for the other two).
-  Below that, a small "Your week"
-  card shows your average confirmed week's food, commute, and alcohol
-  totals side by side - an all-time average across every fully-confirmed
-  week, since it's describing a typical week, not projecting a year. The
-  "Your year, estimated" food/commute/alcohol figures below use a
-  *different* average for that same multiply-by-52 projection: only
-  fully-confirmed weeks from the last 52 weeks (a rolling window), so the
-  yearly estimate reflects how you've actually been living lately rather
-  than being diluted by year-old habits once you've been tracking a long
-  time. Then "Your year, estimated" opens with a hero box -
+  Then "Your year, estimated" opens with a hero box -
   your estimated yearly total in large accent-colored type, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
   UK", worded so it never reads backwards). A "Compared to:" Instagram-style
