@@ -1385,6 +1385,71 @@ input, select {
   font-size: 0.85rem;
 }
 
+.domain-breakdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.domain-breakdown-chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.domain-breakdown-toggle[aria-expanded="true"] .domain-breakdown-chevron {
+  transform: rotate(180deg);
+}
+
+.domain-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.domain-breakdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.domain-breakdown-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+
+.domain-breakdown-row-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.domain-breakdown-row-value {
+  color: var(--text-muted);
+}
+
+.domain-breakdown-track {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.domain-breakdown-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.2s ease;
+}
+
 .assumptions {
   font-size: 0.8rem;
   color: var(--text-muted);

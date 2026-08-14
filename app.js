@@ -1797,9 +1797,12 @@
 
     const bar = document.getElementById("home-domain-bar");
     const legend = document.getElementById("home-domain-legend");
+    const breakdownToggle = document.getElementById("home-domain-breakdown-toggle");
+    const breakdown = document.getElementById("home-domain-breakdown");
     if (!bar || !legend) return;
     bar.innerHTML = "";
     legend.innerHTML = "";
+    if (breakdown) breakdown.innerHTML = "";
 
     const { commute, food, alcohol, nonCommuteCar } = computeRangeDomainKg(start, today);
     const extras = weeklyExtrasBreakdownFor(profile);
@@ -1830,13 +1833,18 @@
       li.className = "domain-legend-empty";
       li.textContent = "No emissions to show for this period yet.";
       legend.appendChild(li);
+      if (breakdownToggle) breakdownToggle.hidden = true;
+      if (breakdown) breakdown.hidden = true;
       return;
     }
+    if (breakdownToggle) breakdownToggle.hidden = false;
 
+    const present = [];
     DOMAIN_ORDER.forEach((key) => {
       const value = values[key];
       if (!value || value <= 0) return;
       const pct = (value / total) * 100;
+      present.push({ key, value, pct });
 
       const seg = document.createElement("div");
       seg.className = `domain-bar-segment domain-${key}`;
@@ -1859,6 +1867,58 @@
     totalLi.className = "domain-legend-total";
     totalLi.textContent = `Total: ${fmt(total)} kg CO2e`;
     legend.appendChild(totalLi);
+
+    // Ranked breakdown, biggest first - each row's bar length is that
+    // domain's own share of the total (same pct as the legend/segment
+    // above), with the percentage printed at the end of the bar.
+    if (breakdown) {
+      present
+        .slice()
+        .sort((a, b) => b.value - a.value)
+        .forEach(({ key, value, pct }) => {
+          const row = document.createElement("div");
+          row.className = "domain-breakdown-row";
+
+          const header = document.createElement("div");
+          header.className = "domain-breakdown-row-header";
+          const label = document.createElement("span");
+          label.className = "domain-breakdown-row-label";
+          label.textContent = DOMAIN_LABELS[key];
+          const valueEl = document.createElement("span");
+          valueEl.className = "domain-breakdown-row-value";
+          valueEl.textContent = `${fmt(value)} kg — ${Math.round(pct)}%`;
+          header.appendChild(label);
+          header.appendChild(valueEl);
+
+          const track = document.createElement("div");
+          track.className = "domain-breakdown-track";
+          const fill = document.createElement("div");
+          fill.className = `domain-breakdown-fill domain-${key}`;
+          fill.style.width = `${pct}%`;
+          track.appendChild(fill);
+
+          row.appendChild(header);
+          row.appendChild(track);
+          breakdown.appendChild(row);
+        });
+    }
+  }
+
+  // One-time wiring for the "Show full breakdown" toggle underneath the
+  // domain bar/legend - the button and panel are static elements (only
+  // their contents get replaced on every renderDomainBarChart() call), so
+  // this only needs to run once at startup, not on every re-render.
+  function wireDomainBreakdownToggle() {
+    const toggle = document.getElementById("home-domain-breakdown-toggle");
+    const breakdown = document.getElementById("home-domain-breakdown");
+    const label = document.getElementById("home-domain-breakdown-toggle-label");
+    if (!toggle || !breakdown || !label) return;
+    toggle.addEventListener("click", () => {
+      const open = breakdown.hidden;
+      breakdown.hidden = !open;
+      toggle.setAttribute("aria-expanded", String(open));
+      label.textContent = open ? "Hide full breakdown" : "Show full breakdown";
+    });
   }
 
   const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };
@@ -3229,6 +3289,7 @@
     wireCarousel("home-savings-carousel", "home-savings-dots");
     wireCarousel("home-year-groups-carousel", "home-year-groups-dots");
     wireCarousel("home-compare-carousel", "home-compare-dots");
+    wireDomainBreakdownToggle();
 
     document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {

@@ -66,7 +66,15 @@ with accounts and a friends leaderboard backed by Supabase.
   year, estimated" tiles) - the same weekly-equivalent approach the
   all-time weekly average on the Leaderboard already uses. A domain that's
   zero or unanswered (e.g. gas heating, if that question's been skipped)
-  just doesn't get a segment. Next, a "To do" card lists up to six quick
+  just doesn't get a segment. A "Show full breakdown ▾" toggle sits under
+  the legend - collapsed by default, it expands into a ranked list, biggest
+  domain first, each one its own full-width row: a label, its kg and
+  percentage, and a horizontal bar whose length is that domain's own share
+  of the total (same percentage as the legend above, just drawn out as an
+  actual bar per domain rather than one shared stacked bar). A plain
+  `hidden`-attribute toggle (no animation library), re-rendered every time
+  the chart itself re-renders (period switch, new data) but preserving
+  whichever open/closed state it was already in. Next, a "To do" card lists up to six quick
   nudges - yesterday's and today's commute and meal, electricity per year,
   and flights per year - each dropping off the list the moment there's
   something logged for it (yesterday/today check that specific day's
