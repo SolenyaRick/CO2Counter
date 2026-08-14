@@ -1411,43 +1411,32 @@ input, select {
 .domain-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   margin-top: 14px;
 }
 
 .domain-breakdown-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
 }
 
-.domain-breakdown-row-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+/* Same swatch shape/rounding as the legend's small squares above, just
+   stretched out to its own domain's percentage width - reads as that
+   legend swatch elongating into a bar, bridging the small squares above
+   and the single stacked bar at the top of the card. */
+.domain-breakdown-swatch {
+  height: 18px;
+  min-width: 18px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: width 0.25s ease;
+}
+
+.domain-breakdown-row-text {
   font-size: 0.8rem;
-}
-
-.domain-breakdown-row-label {
   color: var(--text);
-  font-weight: 600;
-}
-
-.domain-breakdown-row-value {
-  color: var(--text-muted);
-}
-
-.domain-breakdown-track {
-  height: 10px;
-  border-radius: 6px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.domain-breakdown-fill {
-  height: 100%;
-  border-radius: 6px;
-  transition: width 0.2s ease;
 }
 
 .assumptions {

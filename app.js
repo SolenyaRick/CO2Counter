@@ -1868,9 +1868,12 @@
     totalLi.textContent = `Total: ${fmt(total)} kg CO2e`;
     legend.appendChild(totalLi);
 
-    // Ranked breakdown, biggest first - each row's bar length is that
-    // domain's own share of the total (same pct as the legend/segment
-    // above), with the percentage printed at the end of the bar.
+    // Ranked breakdown, biggest first - each row is the same colored swatch
+    // as the legend above it, just stretched out so its own length shows
+    // that domain's share of the total (same pct as the legend/segment
+    // above), with the label and kg/percentage trailing right after it.
+    // Meant to read as a visual bridge between the small legend swatches
+    // above and the single stacked bar at the top of the card.
     if (breakdown) {
       present
         .slice()
@@ -1879,26 +1882,16 @@
           const row = document.createElement("div");
           row.className = "domain-breakdown-row";
 
-          const header = document.createElement("div");
-          header.className = "domain-breakdown-row-header";
-          const label = document.createElement("span");
-          label.className = "domain-breakdown-row-label";
-          label.textContent = DOMAIN_LABELS[key];
-          const valueEl = document.createElement("span");
-          valueEl.className = "domain-breakdown-row-value";
-          valueEl.textContent = `${fmt(value)} kg — ${Math.round(pct)}%`;
-          header.appendChild(label);
-          header.appendChild(valueEl);
+          const swatch = document.createElement("div");
+          swatch.className = `domain-breakdown-swatch domain-${key}`;
+          swatch.style.width = `${pct}%`;
 
-          const track = document.createElement("div");
-          track.className = "domain-breakdown-track";
-          const fill = document.createElement("div");
-          fill.className = `domain-breakdown-fill domain-${key}`;
-          fill.style.width = `${pct}%`;
-          track.appendChild(fill);
+          const text = document.createElement("span");
+          text.className = "domain-breakdown-row-text";
+          text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
 
-          row.appendChild(header);
-          row.appendChild(track);
+          row.appendChild(swatch);
+          row.appendChild(text);
           breakdown.appendChild(row);
         });
     }
