@@ -2462,10 +2462,10 @@
         <div class="ring-center">
           <span class="ring-center-value">${Math.round(value).toLocaleString()}</span>
           <span class="ring-center-unit">kg/yr</span>
-          <span class="ring-center-pct">${Math.round(ratio * 100)}% of UK avg</span>
         </div>
       </div>
       <p class="ring-caption">${emoji} ${label}</p>
+      <p class="ring-pct-caption ${over ? "ring-pct-over" : "ring-pct-under"}">${Math.round(ratio * 100)}% of UK avg</p>
     `;
   }
 

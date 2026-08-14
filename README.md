@@ -129,9 +129,11 @@ with accounts and a friends leaderboard backed by Supabase.
   used exactly the UK average, "no budget left". Go over it and the ring
   switches to red, filling back up the same anticlockwise way from empty,
   capped at a full red ring for double the UK average or worse. The ring's
-  centre shows the figure itself (kg/yr) and what percentage of the UK
-  average that is - the same two numbers the old delta/caption pairing
-  showed, just as a ring instead of text. Optional categories you haven't
+  centre shows just the figure itself (kg/yr); the percentage of the UK
+  average that is sits underneath the category caption below the ring
+  instead, colored the same green/red as the ring itself - the same two
+  numbers the old delta/caption pairing showed, just laid out as a ring
+  plus a caption line instead of text. Optional categories you haven't
   answered yet fall back to the same muted "–" tile (value, label, "vs UK
   average" caption) used everywhere else in the app, rather than showing a
   misleadingly "full" ring for an unanswered question. Four tiles - Food,

@@ -1165,17 +1165,24 @@ input, select {
   color: var(--text-muted);
 }
 
-.ring-center-pct {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
 .ring-caption {
   margin: 8px 0 0;
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+.ring-pct-caption {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ring-pct-under {
+  color: var(--accent);
+}
+
+.ring-pct-over {
+  color: var(--danger);
 }
 
 .todo-list {
