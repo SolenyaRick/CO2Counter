@@ -2996,6 +2996,26 @@
     document.getElementById("auth-status").hidden = true;
   }
 
+  // Supabase auth errors normally have a real, readable .message - but some
+  // failure modes (a malformed/unexpected response from the Auth API, a
+  // network-level failure the client couldn't fully parse) leave message as
+  // something unhelpful like the literal text "{}". Fall back to whatever
+  // other fields the error carries (status/code - Supabase's AuthError
+  // includes these even when message is useless) so there's still something
+  // actionable on screen, and always log the raw error for anyone who can
+  // check the browser console.
+  function describeAuthError(error) {
+    console.error("Auth error:", error);
+    const parts = [];
+    if (error.message && error.message !== "{}") parts.push(error.message);
+    if (error.status) parts.push(`(status ${error.status})`);
+    if (error.code) parts.push(`[${error.code}]`);
+    if (parts.length === 0) {
+      parts.push("Something went wrong talking to the server. Check your internet connection and try again - if it keeps happening, open the browser console (or ask whoever manages this site) for the real error.");
+    }
+    return parts.join(" ");
+  }
+
   async function handleAuthSubmit(e) {
     e.preventDefault();
     const email = document.getElementById("auth-email").value.trim();
@@ -3011,7 +3031,7 @@
       if (authMode === "signin") {
         const { error } = await sbClient.auth.signInWithPassword({ email, password });
         if (error) {
-          errorEl.textContent = error.message;
+          errorEl.textContent = describeAuthError(error);
           errorEl.hidden = false;
         }
       } else {
@@ -3021,7 +3041,7 @@
           options: { emailRedirectTo: currentAppUrl() },
         });
         if (error) {
-          errorEl.textContent = error.message;
+          errorEl.textContent = describeAuthError(error);
           errorEl.hidden = false;
         } else if (!data.session) {
           statusEl.textContent = "Check your email to confirm your account, then sign in.";
@@ -3047,7 +3067,7 @@
     }
     const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: currentAppUrl() });
     if (error) {
-      errorEl.textContent = error.message;
+      errorEl.textContent = describeAuthError(error);
       errorEl.hidden = false;
       return;
     }
@@ -3068,7 +3088,7 @@
     try {
       const { error } = await sbClient.auth.updateUser({ password: newPassword });
       if (error) {
-        errorEl.textContent = error.message;
+        errorEl.textContent = describeAuthError(error);
         errorEl.hidden = false;
         return;
       }
