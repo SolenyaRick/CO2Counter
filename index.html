@@ -497,10 +497,15 @@
         <h2 id="home-domain-heading">This week's emissions by domain</h2>
         <div class="domain-bar" id="home-domain-bar"><!-- stacked bar injected by app.js --></div>
         <ul class="domain-legend" id="home-domain-legend"><!-- legend rows injected by app.js --></ul>
-        <button type="button" class="domain-breakdown-toggle" id="home-domain-breakdown-toggle" aria-expanded="false" aria-controls="home-domain-legend">
-          <span id="home-domain-breakdown-toggle-label">Show full breakdown</span>
-          <span class="domain-breakdown-chevron" aria-hidden="true">&#9662;</span>
-        </button>
+        <div class="domain-toolbar">
+          <button type="button" class="btn-secondary btn-small domain-toolbar-btn" id="home-domain-breakdown-toggle" aria-expanded="false" aria-controls="home-domain-legend">
+            <span id="home-domain-breakdown-toggle-label">Show full breakdown</span>
+            <span class="domain-breakdown-chevron" aria-hidden="true">&#9662;</span>
+          </button>
+          <button type="button" class="btn-secondary btn-small domain-toolbar-btn" id="home-domain-rank-toggle" aria-pressed="false">
+            Rank by size
+          </button>
+        </div>
         <p class="assumptions">
 
         </p>

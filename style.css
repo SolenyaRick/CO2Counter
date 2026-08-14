@@ -1400,18 +1400,25 @@ input, select {
   font-size: 0.85rem;
 }
 
-.domain-breakdown-toggle {
+.domain-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.domain-toolbar-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 2px 0 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: 0.8rem;
+  gap: 5px;
+}
+
+.domain-toolbar-btn.active,
+.domain-toolbar-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
   font-weight: 600;
-  color: var(--accent);
-  cursor: pointer;
 }
 
 .domain-breakdown-chevron {
@@ -1419,7 +1426,7 @@ input, select {
   transition: transform 0.15s ease;
 }
 
-.domain-breakdown-toggle[aria-expanded="true"] .domain-breakdown-chevron {
+.domain-toolbar-btn[aria-expanded="true"] .domain-breakdown-chevron {
   transform: rotate(180deg);
 }
 

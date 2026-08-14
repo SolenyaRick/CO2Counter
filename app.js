@@ -1791,6 +1791,11 @@
   // leaderboard - they're each a weekly-equivalent share (yearly ÷ 52),
   // scaled up to match whichever timeframe is selected (×1 for a week,
   // ×totalDays/7 for a month, ×52 for a year).
+  // Whether the legend's rows are sorted biggest-first ("Rank by size") or
+  // left in DOMAIN_ORDER (the default) - persists across re-renders
+  // (period switches, new data) until the toggle is clicked again.
+  let domainLegendRanked = false;
+
   function renderDomainBarChart(period, start, today, totalDays) {
     const heading = document.getElementById("home-domain-heading");
     if (heading) heading.textContent = `${PERIOD_LABELS[period]}'s emissions by domain`;
@@ -1798,6 +1803,7 @@
     const bar = document.getElementById("home-domain-bar");
     const legend = document.getElementById("home-domain-legend");
     const breakdownToggle = document.getElementById("home-domain-breakdown-toggle");
+    const rankToggle = document.getElementById("home-domain-rank-toggle");
     if (!bar || !legend) return;
     bar.innerHTML = "";
     legend.innerHTML = "";
@@ -1832,21 +1838,32 @@
       li.textContent = "No emissions to show for this period yet.";
       legend.appendChild(li);
       if (breakdownToggle) breakdownToggle.hidden = true;
+      if (rankToggle) rankToggle.hidden = true;
       return;
     }
     if (breakdownToggle) breakdownToggle.hidden = false;
+    if (rankToggle) rankToggle.hidden = false;
 
+    // Bar segments always stay in DOMAIN_ORDER (a fixed visual composition -
+    // reordering it wouldn't mean anything). The legend's rows are what
+    // "Rank by size" reorders, so collect each present domain's figures
+    // here and decide the legend's own iteration order separately below.
+    const present = [];
     DOMAIN_ORDER.forEach((key) => {
       const value = values[key];
       if (!value || value <= 0) return;
       const pct = (value / total) * 100;
+      present.push({ key, value, pct });
 
       const seg = document.createElement("div");
       seg.className = `domain-bar-segment domain-${key}`;
       seg.style.width = `${pct}%`;
       seg.title = `${DOMAIN_LABELS[key]}: ${fmt(value)} kg CO2e (${Math.round(pct)}%)`;
       bar.appendChild(seg);
+    });
 
+    const legendOrder = domainLegendRanked ? present.slice().sort((a, b) => b.value - a.value) : present;
+    legendOrder.forEach(({ key, value, pct }) => {
       const li = document.createElement("li");
       li.className = "domain-legend-item";
       const swatch = document.createElement("span");
@@ -1870,27 +1887,40 @@
     legend.appendChild(totalLi);
   }
 
-  // One-time wiring for the "Show full breakdown" toggle underneath the
-  // domain bar/legend - toggles an "expanded" class on the legend itself,
-  // which CSS uses to grow each swatch from its small square up to its own
-  // percentage-width bar (see --pct above and .domain-legend.expanded in
-  // style.css). Keeps the legend's existing order for now - a later pass
-  // can additionally re-sort the rows into ranked (biggest-first) position
-  // as part of the same animation. The button and legend are static
-  // elements (only the legend's row contents get replaced on every
-  // renderDomainBarChart() call), so this only needs to run once at
-  // startup, not on every re-render.
+  // One-time wiring for the two toolbar buttons underneath the domain
+  // bar/legend - the buttons themselves are static elements (only the
+  // legend's row contents get replaced on every renderDomainBarChart()
+  // call), so this only needs to run once at startup, not on every
+  // re-render.
   function wireDomainBreakdownToggle() {
+    // "Show full breakdown": toggles an "expanded" class on the legend
+    // itself, which CSS uses to grow each swatch from its small square up
+    // to its own percentage-width bar (see --pct above and
+    // .domain-legend.expanded in style.css).
     const toggle = document.getElementById("home-domain-breakdown-toggle");
     const legend = document.getElementById("home-domain-legend");
     const label = document.getElementById("home-domain-breakdown-toggle-label");
-    if (!toggle || !legend || !label) return;
-    toggle.addEventListener("click", () => {
-      const open = !legend.classList.contains("expanded");
-      legend.classList.toggle("expanded", open);
-      toggle.setAttribute("aria-expanded", String(open));
-      label.textContent = open ? "Hide full breakdown" : "Show full breakdown";
-    });
+    if (toggle && legend && label) {
+      toggle.addEventListener("click", () => {
+        const open = !legend.classList.contains("expanded");
+        legend.classList.toggle("expanded", open);
+        toggle.setAttribute("aria-expanded", String(open));
+        label.textContent = open ? "Hide full breakdown" : "Show full breakdown";
+      });
+    }
+
+    // "Rank by size": flips domainLegendRanked and re-renders the current
+    // period, which rebuilds the legend's rows biggest-first instead of
+    // DOMAIN_ORDER (bar segments above stay put either way - see
+    // renderDomainBarChart()).
+    const rankToggle = document.getElementById("home-domain-rank-toggle");
+    if (rankToggle) {
+      rankToggle.addEventListener("click", () => {
+        domainLegendRanked = !domainLegendRanked;
+        rankToggle.setAttribute("aria-pressed", String(domainLegendRanked));
+        renderPeriodChart();
+      });
+    }
   }
 
   const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };

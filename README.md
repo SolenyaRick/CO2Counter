@@ -66,18 +66,21 @@ with accounts and a friends leaderboard backed by Supabase.
   year, estimated" tiles) - the same weekly-equivalent approach the
   all-time weekly average on the Leaderboard already uses. A domain that's
   zero or unanswered (e.g. gas heating, if that question's been skipped)
-  just doesn't get a segment. A "Show full breakdown ▾" toggle sits under
-  the legend - clicking it doesn't reveal a separate chart underneath;
-  instead, the legend's own small colored squares each animate (a plain CSS
-  width transition, no library) into a full-length bar sized to that
-  domain's own percentage share (same number as the legend/segment above),
-  with the label and kg/percentage trailing right after it, wrapping onto
-  its own line if the bar's grown wide enough to need it. The same square
-  is the "before" and "after" of the animation - nothing new appears, it
-  just elongates in place - so it reads as one continuous shape rather than
-  two disconnected chart elements swapped by a toggle. Rows keep the
-  legend's existing order for now (not re-sorted biggest-first) - re-render
-  preserves whichever open/closed state the toggle was already in. Next, a
+  just doesn't get a segment. Two small buttons sit under the legend. "Show
+  full breakdown ▾" doesn't reveal a separate chart underneath; instead,
+  the legend's own small colored squares each animate (a plain CSS width
+  transition, no library) into a full-length bar sized to that domain's own
+  percentage share (same number as the legend/segment above), with the
+  label and kg/percentage trailing right after it, wrapping onto its own
+  line if the bar's grown wide enough to need it. The same square is the
+  "before" and "after" of the animation - nothing new appears, it just
+  elongates in place - so it reads as one continuous shape rather than two
+  disconnected chart elements swapped by a toggle. Next to it, "Rank by
+  size" re-sorts those same rows biggest-first (an instant re-render, not
+  an animated reorder) instead of the default DOMAIN_ORDER; toggling it off
+  puts them back. Both buttons remember their own on/off state
+  independently across re-renders (period switch, new data) until clicked
+  again. Next, a
   "To do" card lists up to six quick
   nudges - yesterday's and today's commute and meal, electricity per year,
   and flights per year - each dropping off the list the moment there's
