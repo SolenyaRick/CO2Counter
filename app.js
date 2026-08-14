@@ -2426,13 +2426,20 @@
   // Apple-Watch-style ring for a single "Your year, estimated" tile:
   // starts as a full green ring (100% of your UK-average "budget" for that
   // domain still unused), and drains anticlockwise from 12 o'clock as your
-  // own total eats into it - empty at exactly the UK average ("no budget
-  // left"). Past that, it switches to a red ring that fills back up
-  // (same anticlockwise direction, starting from empty) showing how far
+  // own total eats into it - top-left goes first (75% remaining), then
+  // bottom-left (50%), then bottom-right (25%, leaving only the top-right
+  // quarter), empty at exactly the UK average ("no budget left"). Past
+  // that, it switches to a red ring that fills back up the same
+  // anticlockwise way starting from empty (top-left first) to show how far
   // over you are, capped visually at a full red ring for 2x the average or
-  // worse. Falls back to the plain muted "–" tile (same markup/classes as
-  // every other unanswered optional tile) when there's nothing to compare
-  // yet, so an unanswered question never gets a misleadingly "full" ring.
+  // worse. See .ring-progress-green/.ring-progress-red in style.css for
+  // the two different CSS transforms this needs - green's "missing" edge
+  // and red's "filling" edge sweep the same visual direction, but starting
+  // from opposite states (full vs empty), so they need mirrored dashoffset
+  // rotations to both read as anticlockwise. Falls back to the plain muted
+  // "–" tile (same markup/classes as every other unanswered optional tile)
+  // when there's nothing to compare yet, so an unanswered question never
+  // gets a misleadingly "full" ring.
   const RING_RADIUS = 42;
   const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
   function renderRingStat(containerId, value, benchmark, emoji, label) {

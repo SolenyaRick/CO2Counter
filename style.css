@@ -1126,19 +1126,27 @@ input, select {
   stroke-linecap: round;
   transform-box: fill-box;
   transform-origin: 50% 50%;
-  /* Anticlockwise sweep starting at 12 o'clock: flips the usual
-     clockwise-fill trick (rotate(-90deg) alone) across the vertical axis
-     while keeping the same 12-o'clock start point. */
-  transform: scaleX(-1) rotate(-90deg);
   transition: stroke-dashoffset 0.4s ease, stroke 0.2s ease;
 }
 
+/* Green (budget remaining): the visible arc always starts at 12 o'clock
+   and extends the standard clockwise direction (rotate(-90deg) alone) -
+   which means its far/trailing edge, the part that "goes missing" as the
+   arc shrinks, retreats anticlockwise from 12 o'clock: top-left goes
+   first (75% remaining), then bottom-left (50%), then bottom-right (25%,
+   leaving only the top-right quarter). */
 .ring-progress-green {
   stroke: var(--accent);
+  transform: rotate(-90deg);
 }
 
+/* Red (over budget): fills up from empty the opposite way round - flips
+   the same trick across the vertical axis (keeping the 12-o'clock start
+   point) so the newly-filled sliver always appears counter-clockwise of
+   whatever's already filled, i.e. it fills anticlockwise from empty. */
 .ring-progress-red {
   stroke: var(--danger);
+  transform: scaleX(-1) rotate(-90deg);
 }
 
 .ring-center {
