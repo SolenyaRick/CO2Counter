@@ -252,14 +252,6 @@
       <section class="card">
         <h2>Driving <span class="optional-badge">Optional</span></h2>
         <label class="field">
-          Non-commute driving (extra car km per week)
-          <input type="number" id="noncommute-car-km" min="0" step="1" placeholder="Leave blank to skip" />
-        </label>
-        <p class="assumptions">
-          Errands, road trips, and other driving beyond the commute you log on the This
-          Week page.
-        </p>
-        <label class="field">
           Do you own or regularly drive a car?
           <select id="owns-car">
             <option value="">Prefer not to say</option>
@@ -286,7 +278,7 @@
           blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
           ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
           default car factor for both your logged commute days (whenever you pick "Car")
-          and the non-commute driving above.
+          and any Car-mode additional journeys you log on the This Week page.
         </p>
       </section>
 
@@ -572,11 +564,37 @@
         </div>
 
         <p class="compare-chip-heading">Compared to:</p>
-        <div class="compare-chip-row" id="year-compare-chips">
-          <span class="compare-chip" id="compare-chip-15c">1.5&deg;C target</span>
-          <span class="compare-chip" id="compare-chip-uk">UK average</span>
-          <span class="compare-chip" id="compare-chip-world">World average</span>
-          <span class="compare-chip compare-chip-muted" id="compare-chip-uni" data-nav="account" tabindex="0" role="button">Uni average</span>
+        <div class="carousel" id="home-compare-carousel">
+          <div class="carousel-slide">
+            <div class="year-hero no-data" id="compare-hero-15c">
+              <div class="year-hero-value" id="compare-chip-15c">–</div>
+              <div class="year-hero-label" id="compare-chip-15c-label">1.5&deg;C target</div>
+            </div>
+          </div>
+          <div class="carousel-slide">
+            <div class="year-hero no-data" id="compare-hero-uk">
+              <div class="year-hero-value" id="compare-chip-uk">–</div>
+              <div class="year-hero-label" id="compare-chip-uk-label">UK average</div>
+            </div>
+          </div>
+          <div class="carousel-slide">
+            <div class="year-hero no-data" id="compare-hero-world">
+              <div class="year-hero-value" id="compare-chip-world">–</div>
+              <div class="year-hero-label" id="compare-chip-world-label">World average</div>
+            </div>
+          </div>
+          <div class="carousel-slide">
+            <div class="year-hero no-data" id="compare-hero-uni" data-nav="account" tabindex="0" role="button">
+              <div class="year-hero-value" id="compare-chip-uni">–</div>
+              <div class="year-hero-label" id="compare-chip-uni-label">Set your university on Account to compare</div>
+            </div>
+          </div>
+        </div>
+        <div class="carousel-dots" id="home-compare-dots" aria-hidden="true">
+          <span class="carousel-dot active"></span>
+          <span class="carousel-dot"></span>
+          <span class="carousel-dot"></span>
+          <span class="carousel-dot"></span>
         </div>
 
         <p class="assumptions small-print">
@@ -598,82 +616,92 @@
 
         <hr class="section-break" />
 
-        <div class="summary-totals">
-          <div class="stat">
-            <button type="button" class="tile-info-btn" data-info="food" aria-label="Food info">&#9432;</button>
-            <span class="stat-value" id="yearly-food">0</span>
-            <span class="stat-label">🍽️ kg CO2e/yr &middot; Food (&times;52 weeks)</span>
-            <span class="week-diff" id="yearly-food-diff"></span>
+        <div class="carousel" id="home-year-groups-carousel">
+          <div class="carousel-slide">
+            <h3 class="category-heading">This week</h3>
+            <div class="summary-totals">
+              <div class="stat">
+                <button type="button" class="tile-info-btn" data-info="food" aria-label="Food info">&#9432;</button>
+                <span class="stat-value" id="yearly-food">0</span>
+                <span class="stat-label">🍽️ kg CO2e/yr &middot; Food (&times;52 weeks)</span>
+                <span class="week-diff" id="yearly-food-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-commute">0</span>
+                <span class="stat-label">🚗 kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
+                <span class="week-diff" id="yearly-commute-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-noncommute-car">0</span>
+                <span class="stat-label">🚙 kg CO2e/yr &middot; Non-commute driving (&times;52 weeks)</span>
+                <span class="week-diff" id="yearly-noncommute-car-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-alcohol">0</span>
+                <span class="stat-label">🍷 kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
+              </div>
+            </div>
           </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-commute">0</span>
-            <span class="stat-label">🚗 kg CO2e/yr &middot; Commute (&times;52 weeks)</span>
-            <span class="week-diff" id="yearly-commute-diff"></span>
+
+          <div class="carousel-slide">
+            <h3 class="category-heading">Home</h3>
+            <div class="summary-totals">
+              <div class="stat">
+                <button type="button" class="tile-info-btn" data-info="homeEnergy" aria-label="Home energy info">&#9432;</button>
+                <span class="stat-value" id="yearly-home-energy">0</span>
+                <span class="stat-label">⚡ kg CO2e/yr &middot; Home energy (your share)</span>
+                <span class="week-diff" id="yearly-home-energy-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-gas-heating">–</span>
+                <span class="stat-label">🔥 kg CO2e/yr &middot; Gas/oil heating</span>
+                <span class="week-diff" id="yearly-gas-heating-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-water">–</span>
+                <span class="stat-label">💧 kg CO2e/yr &middot; Water usage</span>
+                <span class="week-diff" id="yearly-water-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-pets">–</span>
+                <span class="stat-label">🐾 kg CO2e/yr &middot; Pets</span>
+                <span class="week-diff" id="yearly-pets-diff"></span>
+              </div>
+            </div>
           </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-noncommute-car">–</span>
-            <span class="stat-label">🚙 kg CO2e/yr &middot; Non-commute driving</span>
-            <span class="week-diff" id="yearly-noncommute-car-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-alcohol">0</span>
-            <span class="stat-label">🍷 kg CO2e/yr &middot; Alcohol (&times;52 weeks)</span>
+
+          <div class="carousel-slide">
+            <h3 class="category-heading">Other</h3>
+            <div class="summary-totals">
+              <div class="stat">
+                <button type="button" class="tile-info-btn" data-info="flying" aria-label="Flying info">&#9432;</button>
+                <span class="stat-value" id="yearly-flying">0</span>
+                <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
+                <span class="week-diff" id="yearly-flying-diff"></span>
+              </div>
+              <div class="stat">
+                <button type="button" class="tile-info-btn" data-info="banking" aria-label="Banking info">&#9432;</button>
+                <span class="stat-value" id="yearly-banking">–</span>
+                <span class="stat-label">🏦 kg CO2e/yr &middot; Banking</span>
+                <span class="week-diff" id="yearly-banking-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-goods">0</span>
+                <span class="stat-label">🛍️ kg CO2e/yr &middot; Buying goods</span>
+                <span class="week-diff" id="yearly-goods-diff"></span>
+              </div>
+              <div class="stat">
+                <span class="stat-value" id="yearly-car-ownership">–</span>
+                <span class="stat-label">🏭 kg CO2e/yr &middot; Car manufacturing</span>
+                <span class="week-diff" id="yearly-car-ownership-diff"></span>
+              </div>
+            </div>
           </div>
         </div>
-
-        <hr class="section-break" />
-
-        <h3 class="category-heading">Home</h3>
-        <div class="summary-totals">
-          <div class="stat">
-            <button type="button" class="tile-info-btn" data-info="homeEnergy" aria-label="Home energy info">&#9432;</button>
-            <span class="stat-value" id="yearly-home-energy">0</span>
-            <span class="stat-label">⚡ kg CO2e/yr &middot; Home energy (your share)</span>
-            <span class="week-diff" id="yearly-home-energy-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-gas-heating">–</span>
-            <span class="stat-label">🔥 kg CO2e/yr &middot; Gas/oil heating</span>
-            <span class="week-diff" id="yearly-gas-heating-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-water">–</span>
-            <span class="stat-label">💧 kg CO2e/yr &middot; Water usage</span>
-            <span class="week-diff" id="yearly-water-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-pets">–</span>
-            <span class="stat-label">🐾 kg CO2e/yr &middot; Pets</span>
-            <span class="week-diff" id="yearly-pets-diff"></span>
-          </div>
-        </div>
-
-        <hr class="section-break" />
-
-        <h3 class="category-heading">Other</h3>
-        <div class="summary-totals">
-          <div class="stat">
-            <button type="button" class="tile-info-btn" data-info="flying" aria-label="Flying info">&#9432;</button>
-            <span class="stat-value" id="yearly-flying">0</span>
-            <span class="stat-label">✈️ kg CO2e/yr &middot; Flying</span>
-            <span class="week-diff" id="yearly-flying-diff"></span>
-          </div>
-          <div class="stat">
-            <button type="button" class="tile-info-btn" data-info="banking" aria-label="Banking info">&#9432;</button>
-            <span class="stat-value" id="yearly-banking">–</span>
-            <span class="stat-label">🏦 kg CO2e/yr &middot; Banking</span>
-            <span class="week-diff" id="yearly-banking-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-goods">0</span>
-            <span class="stat-label">🛍️ kg CO2e/yr &middot; Buying goods</span>
-            <span class="week-diff" id="yearly-goods-diff"></span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="yearly-car-ownership">–</span>
-            <span class="stat-label">🏭 kg CO2e/yr &middot; Car manufacturing</span>
-            <span class="week-diff" id="yearly-car-ownership-diff"></span>
-          </div>
+        <div class="carousel-dots" id="home-year-groups-dots" aria-hidden="true">
+          <span class="carousel-dot active"></span>
+          <span class="carousel-dot"></span>
+          <span class="carousel-dot"></span>
         </div>
       </section>
 

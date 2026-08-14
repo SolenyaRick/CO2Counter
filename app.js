@@ -135,18 +135,21 @@
     bankBalance: 5000,
   };
 
-  // includeOptional: { gasHeating, nonCommuteCar, carOwnership, pets, water,
-  // banks } booleans - pass whichever optional categories the person being
-  // compared against has actually answered, so both sides of the comparison
-  // cover the same ground. Returns a per-category breakdown (not just a
-  // total) so each domain on the Stats page can show its own "vs UK
-  // average" delta.
+  // includeOptional: { gasHeating, carOwnership, pets, water, banks }
+  // booleans - pass whichever optional categories the person being compared
+  // against has actually answered, so both sides of the comparison cover
+  // the same ground. nonCommuteCar isn't gated the same way any more -
+  // like commute/food/alcohol, it's always-tracked (via Additional
+  // Journeys), not a skippable profile question. Returns a per-category
+  // breakdown (not just a total) so each domain on the Stats page can show
+  // its own "vs UK average" delta.
   function computeUkAverageBreakdown(includeOptional = {}) {
     const a = UK_AVERAGE_ASSUMPTIONS;
     const wasteMult = FOOD_WASTE_MULTIPLIERS[a.foodWaste];
 
     const commuteWeekly = TRANSPORT_FACTORS.car * a.commuteOneWayKm * 2 * a.commuteDaysPerWeek;
     const commute = commuteWeekly * 52;
+    const nonCommuteCar = a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52;
 
     const meatWeekly = a.weeklyMeatDays.reduce((sum, day) => {
       const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
@@ -162,14 +165,13 @@
     const goods = a.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
     const gasHeating = includeOptional.gasHeating ? (a.annualGasKwh * GAS_HEATING_KG_PER_KWH) / a.householdPeople : null;
-    const nonCommuteCar = includeOptional.nonCommuteCar ? a.weeklyNonCommuteCarKm * TRANSPORT_FACTORS.car * 52 : null;
     const carOwnership = includeOptional.carOwnership ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : null;
     const pets = includeOptional.pets ? (a.numDogs * DOG_KG_PER_YEAR + a.numCats * CAT_KG_PER_YEAR) / a.householdPeople : null;
     const water = includeOptional.water ? (a.annualWaterM3 * WATER_KG_PER_M3) / a.householdPeople : null;
     const banks = includeOptional.banks ? a.bankKgPerPoundPerYear * a.bankBalance : null;
 
-    const total = commute + food + flying + homeEnergy + goods
-      + (gasHeating || 0) + (nonCommuteCar || 0) + (carOwnership || 0) + (pets || 0) + (water || 0) + (banks || 0);
+    const total = commute + food + nonCommuteCar + flying + homeEnergy + goods
+      + (gasHeating || 0) + (carOwnership || 0) + (pets || 0) + (water || 0) + (banks || 0);
     return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, water, banks, total, commuteWeekly, foodWeekly };
   }
 
@@ -272,7 +274,6 @@
     // Optional extras: null means "not answered", and stays out of every
     // total (never coerced to 0) until the person actually answers.
     annualGasKwh: null,
-    weeklyNonCommuteCarKm: null,
     ownsCar: null,
     numDogs: null,
     numCats: null,
@@ -449,6 +450,17 @@
       .reduce((sum, j) => sum + journeyFootprint(j.mode, j.km), 0);
   }
 
+  // Just the Car-mode slice of the above - this is what "Non-commute
+  // driving" on the Home page means now (see weekTotals() below): logging a
+  // one-off trip as Car is treated as genuine extra driving outside your
+  // regular commute, same rationale as the "assumes Car is the trip you'd
+  // otherwise have made" congrats-popup logic above.
+  function extraCarJourneysFootprintForDay(weekData, dayKey) {
+    return (weekData.extraJourneys || [])
+      .filter((j) => j.day === dayKey && j.mode === "car")
+      .reduce((sum, j) => sum + journeyFootprint(j.mode, j.km), 0);
+  }
+
   function wasteMultiplier() {
     return FOOD_WASTE_MULTIPLIERS[profile.foodWaste] ?? 1;
   }
@@ -508,19 +520,33 @@
     return { total, byType };
   }
 
+  // commute stays the combined figure (regular commute + every extra
+  // journey, any mode) - This Week's own totals, the leaderboard, and goal
+  // colors all keep using this exactly as before. commuteOnly/nonCommuteCar
+  // split that same data into non-car-extra vs car-extra, purely so the
+  // Home page can show "Commute" and "Non-commute driving" as two
+  // non-overlapping tiles/bar segments that still add up to this same
+  // combined commute figure.
   function weekTotals(weekData) {
     let commute = 0;
+    let commuteOnly = 0;
+    let nonCommuteCar = 0;
     let food = 0;
     const daily = [];
     DAYS.forEach((day) => {
-      const c = countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key);
-      const f = countedFoodFootprint(weekData, day.key);
+      const regular = countedCommuteFootprint(weekData, day.key);
+      const carExtra = extraCarJourneysFootprintForDay(weekData, day.key);
+      const allExtra = extraJourneysFootprintForDay(weekData, day.key);
+      const c = regular + allExtra;
       commute += c;
+      commuteOnly += regular + (allExtra - carExtra);
+      nonCommuteCar += carExtra;
+      const f = countedFoodFootprint(weekData, day.key);
       food += f;
       daily.push(c + f);
     });
     const alcohol = alcoholFootprint(weekData);
-    return { commute, food, alcohol, total: commute + food + alcohol, daily };
+    return { commute, commuteOnly, nonCommuteCar, food, alcohol, total: commute + food + alcohol, daily };
   }
 
   function fmt(n) { return n.toFixed(1); }
@@ -563,7 +589,6 @@
         householdKwhPerMonth: data.household_kwh_per_month ?? DEFAULT_PROFILE.householdKwhPerMonth,
         clothesPerMonth: data.clothes_per_month ?? DEFAULT_PROFILE.clothesPerMonth,
         annualGasKwh: data.annual_gas_kwh ?? null,
-        weeklyNonCommuteCarKm: data.weekly_noncommute_car_km ?? null,
         ownsCar: data.owns_car ?? null,
         numDogs: data.num_dogs ?? null,
         numCats: data.num_cats ?? null,
@@ -594,7 +619,6 @@
       household_kwh_per_month: profile.householdKwhPerMonth,
       clothes_per_month: profile.clothesPerMonth,
       annual_gas_kwh: profile.annualGasKwh,
-      weekly_noncommute_car_km: profile.weeklyNonCommuteCarKm,
       owns_car: profile.ownsCar,
       num_dogs: profile.numDogs,
       num_cats: profile.numCats,
@@ -742,7 +766,7 @@
         .select(
           "id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, " +
           "household_kwh_per_month, household_people, clothes_per_month, " +
-          "annual_gas_kwh, weekly_noncommute_car_km, owns_car, car_fuel_type, num_dogs, num_cats, annual_water_m3, " +
+          "annual_gas_kwh, owns_car, car_fuel_type, num_dogs, num_cats, annual_water_m3, " +
           "bank_name, bank_balance"
         )
         .in("id", otherIds);
@@ -755,7 +779,6 @@
           householdPeople: p.household_people ?? 1,
           clothesPerMonth: p.clothes_per_month ?? 0,
           annualGasKwh: p.annual_gas_kwh ?? null,
-          weeklyNonCommuteCarKm: p.weekly_noncommute_car_km ?? null,
           ownsCar: p.owns_car ?? null,
           carFuelType: p.car_fuel_type ?? null,
           numDogs: p.num_dogs ?? null,
@@ -1559,12 +1582,15 @@
   }
 
   // Same [start, today] range and same counted/confirmed-only data as
-  // computeRangeDailyKg() above, but split into commute/food/alcohol
-  // instead of summed into one daily total - feeds the domain bar chart,
-  // so its segments always add up to exactly the total the pace chart
-  // above it is plotting.
+  // computeRangeDailyKg() above, but split into commute/food/alcohol/
+  // nonCommuteCar instead of summed into one daily total - feeds the domain
+  // bar chart, so its segments always add up to exactly the total the pace
+  // chart above it is plotting. nonCommuteCar is just the Car-mode slice of
+  // logged Additional Journeys (see extraCarJourneysFootprintForDay) -
+  // pulled out of commute so the two show as separate, non-overlapping
+  // segments/tiles.
   function computeRangeDomainKg(start, today) {
-    let commute = 0, food = 0, alcohol = 0;
+    let commute = 0, food = 0, alcohol = 0, nonCommuteCar = 0;
     Object.keys(weeksCache).forEach((weekKey) => {
       const weekData = weeksCache[weekKey];
       const monday = new Date(`${weekKey}T00:00:00`);
@@ -1573,12 +1599,14 @@
         const dayDate = new Date(monday);
         dayDate.setDate(dayDate.getDate() + i);
         if (dayDate < start || dayDate > today) return;
-        commute += countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key);
+        const carExtra = extraCarJourneysFootprintForDay(weekData, day.key);
+        commute += countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key) - carExtra;
+        nonCommuteCar += carExtra;
         food += countedFoodFootprint(weekData, day.key);
         alcohol += alcoholPerDay;
       });
     });
-    return { commute, food, alcohol };
+    return { commute, food, alcohol, nonCommuteCar };
   }
 
   // Lifetime "Total CO2 saved" hero at the top of the Home page: your real
@@ -1593,13 +1621,15 @@
   // see renderAverageWeekCard()). Illustrative only: days you haven't
   // logged count as zero on your side, same known approximation as the
   // pace chart above it.
-  // Swipe/scroll -> active dot sync for the two-slide savings carousel
-  // above. Pure native scroll-snap (see .carousel/.carousel-slide in
-  // style.css) - this just reflects scroll position back into the dots,
-  // it doesn't drive the scrolling itself.
-  function wireSavingsCarousel() {
-    const carousel = document.getElementById("home-savings-carousel");
-    const dots = document.querySelectorAll("#home-savings-dots .carousel-dot");
+  // Swipe/scroll -> active dot sync for any Instagram-style carousel (see
+  // .carousel/.carousel-slide/.carousel-dots in style.css) - pure native
+  // scroll-snap drives the actual swiping; this just reflects scroll
+  // position back into the dots underneath. Shared by every carousel on
+  // the Home page (savings totaliser, "Your year, estimated" groups, and
+  // the compare chips).
+  function wireCarousel(carouselId, dotsId) {
+    const carousel = document.getElementById(carouselId);
+    const dots = document.querySelectorAll(`#${dotsId} .carousel-dot`);
     if (!carousel) return;
     let ticking = false;
     carousel.addEventListener("scroll", () => {
@@ -1771,7 +1801,7 @@
     bar.innerHTML = "";
     legend.innerHTML = "";
 
-    const { commute, food, alcohol } = computeRangeDomainKg(start, today);
+    const { commute, food, alcohol, nonCommuteCar } = computeRangeDomainKg(start, today);
     const extras = weeklyExtrasBreakdownFor(profile);
     // Matches periodBounds()'s own goal-scaling exactly (month: totalDays/7,
     // year: a flat x52, not totalDays/7 - 365/7 is 52.14, which would
@@ -1780,8 +1810,7 @@
     const periodScale = period === "year" ? 52 : period === "month" ? totalDays / 7 : 1;
 
     const values = {
-      food, commute, alcohol,
-      nonCommuteCar: extras.nonCommuteCar * periodScale,
+      food, commute, alcohol, nonCommuteCar,
       homeEnergy: extras.homeEnergy * periodScale,
       gasHeating: extras.gasHeating * periodScale,
       water: extras.water * periodScale,
@@ -2065,12 +2094,9 @@
     const homeEnergy = (yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1)) / 52;
     const goods = ((inputs.clothesPerMonth || 0) * 12 * CLOTHING_ITEM_KG) / 52;
 
-    let gasHeating = 0, nonCommuteCar = 0, carOwnership = 0, pets = 0, water = 0, banks = 0;
+    let gasHeating = 0, carOwnership = 0, pets = 0, water = 0, banks = 0;
     if (inputs.annualGasKwh !== null && inputs.annualGasKwh !== undefined) {
       gasHeating = ((inputs.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, inputs.householdPeople || 1)) / 52;
-    }
-    if (inputs.weeklyNonCommuteCarKm !== null && inputs.weeklyNonCommuteCarKm !== undefined) {
-      nonCommuteCar = (inputs.weeklyNonCommuteCarKm * carFactorFor(inputs) * 52) / 52;
     }
     if (inputs.ownsCar) {
       carOwnership = CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR / 52;
@@ -2086,12 +2112,12 @@
       if (factor !== undefined) banks = (factor * inputs.bankBalance) / 52;
     }
 
-    return { flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, water, banks };
+    return { flying, homeEnergy, goods, gasHeating, carOwnership, pets, water, banks };
   }
 
   function weeklyExtrasFor(inputs) {
     const b = weeklyExtrasBreakdownFor(inputs);
-    return b.flying + b.homeEnergy + b.goods + b.gasHeating + b.nonCommuteCar + b.carOwnership + b.pets + b.water + b.banks;
+    return b.flying + b.homeEnergy + b.goods + b.gasHeating + b.carOwnership + b.pets + b.water + b.banks;
   }
 
   // kgSuffix/detailText are optional - only "This week" (renderLeaderboard)
@@ -2331,7 +2357,6 @@
   // renderStatsPage() (the results-only Stats page) since the two now
   // live on different tabs.
   function renderYearlyInputs() {
-    document.getElementById("noncommute-car-km").value = optionalInputValue(profile.weeklyNonCommuteCarKm);
     document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
     document.getElementById("car-fuel-type").value = profile.carFuelType || "";
     document.getElementById("flights-short-haul").value = profile.shortHaulFlights;
@@ -2354,7 +2379,8 @@
     const avgAlcohol = averageConfirmedWeekly("alcohol");
     // "Your year, estimated": projected from the last 52 weeks only.
     const yearlyFood = recentAverageConfirmedWeekly("food") * 52;
-    const yearlyCommute = recentAverageConfirmedWeekly("commute") * 52;
+    const yearlyCommute = recentAverageConfirmedWeekly("commuteOnly") * 52;
+    const yearlyNonCommuteCar = recentAverageConfirmedWeekly("nonCommuteCar") * 52;
     const yearlyAlcohol = recentAverageConfirmedWeekly("alcohol") * 52;
 
     const yearlyFlying = profile.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + profile.longHaulFlights * LONG_HAUL_FLIGHT_KG;
@@ -2365,21 +2391,22 @@
 
     const yearlyGoods = profile.clothesPerMonth * 12 * CLOTHING_ITEM_KG;
 
-    let yearlyTotal = yearlyFood + yearlyCommute + yearlyAlcohol + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
+    let yearlyTotal = yearlyFood + yearlyCommute + yearlyNonCommuteCar + yearlyAlcohol + yearlyFlying + yearlyHomeEnergy + yearlyGoods;
 
     // Optional extras: only added (and only shown) when actually answered -
     // a blank/unanswered one is left out of the total entirely, not treated
     // as 0, so skipping a question never quietly lowers your estimate.
+    // Non-commute driving isn't part of this any more - it's tracked (via
+    // Additional Journeys), not a skippable question, so it's already
+    // folded into yearlyTotal above alongside food/commute/alcohol.
     const includeOptional = {
       gasHeating: profile.annualGasKwh !== null && profile.annualGasKwh !== undefined,
-      nonCommuteCar: profile.weeklyNonCommuteCarKm !== null && profile.weeklyNonCommuteCarKm !== undefined,
       carOwnership: profile.ownsCar !== null && profile.ownsCar !== undefined,
       pets: (profile.numDogs !== null && profile.numDogs !== undefined) || (profile.numCats !== null && profile.numCats !== undefined),
       water: profile.annualWaterM3 !== null && profile.annualWaterM3 !== undefined,
       banks: !!profile.bankName && profile.bankBalance !== null && profile.bankBalance !== undefined,
     };
     const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
-    const yearlyNonCommuteCar = includeOptional.nonCommuteCar ? profile.weeklyNonCommuteCarKm * carFactorFor(profile) * 52 : null;
     const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
     const yearlyPets = includeOptional.pets
       ? ((profile.numDogs || 0) * DOG_KG_PER_YEAR + (profile.numCats || 0) * CAT_KG_PER_YEAR) / Math.max(1, profile.householdPeople || 1)
@@ -2387,7 +2414,6 @@
     const yearlyWater = includeOptional.water ? (profile.annualWaterM3 * WATER_KG_PER_M3) / Math.max(1, profile.householdPeople || 1) : null;
     const yearlyBanks = includeOptional.banks ? (BANK_KG_PER_POUND_PER_YEAR[profile.bankName] || 0) * profile.bankBalance : null;
     if (yearlyGasHeating !== null) yearlyTotal += yearlyGasHeating;
-    if (yearlyNonCommuteCar !== null) yearlyTotal += yearlyNonCommuteCar;
     if (yearlyCarOwnership !== null) yearlyTotal += yearlyCarOwnership;
     if (yearlyPets !== null) yearlyTotal += yearlyPets;
     if (yearlyWater !== null) yearlyTotal += yearlyWater;
@@ -2403,7 +2429,7 @@
     document.getElementById("yearly-home-energy").textContent = Math.round(yearlyHomeEnergy).toLocaleString();
     document.getElementById("yearly-goods").textContent = Math.round(yearlyGoods).toLocaleString();
     document.getElementById("yearly-gas-heating").textContent = yearlyGasHeating === null ? "–" : Math.round(yearlyGasHeating).toLocaleString();
-    document.getElementById("yearly-noncommute-car").textContent = yearlyNonCommuteCar === null ? "–" : Math.round(yearlyNonCommuteCar).toLocaleString();
+    document.getElementById("yearly-noncommute-car").textContent = Math.round(yearlyNonCommuteCar).toLocaleString();
     document.getElementById("yearly-car-ownership").textContent = yearlyCarOwnership === null ? "–" : Math.round(yearlyCarOwnership).toLocaleString();
     document.getElementById("yearly-pets").textContent = yearlyPets === null ? "–" : Math.round(yearlyPets).toLocaleString();
     document.getElementById("yearly-water").textContent = yearlyWater === null ? "–" : Math.round(yearlyWater).toLocaleString();
@@ -2445,46 +2471,60 @@
     renderHomeTodoList();
   }
 
-  function setCompareChip(id, yourValue, benchmarkValue, label) {
-    const el = document.getElementById(id);
-    if (!el) return;
+  // Instagram-carousel version of a single "Compared to: X" slide - reuses
+  // the same .year-hero look (and over/no-data modifier classes) as the
+  // savings totaliser above it, just swapped in per comparison target
+  // instead of per data source.
+  function setCompareChip(valueId, labelId, heroId, yourValue, benchmarkValue, label) {
+    const valueEl = document.getElementById(valueId);
+    const labelEl = document.getElementById(labelId);
+    const heroEl = document.getElementById(heroId);
+    if (!valueEl || !labelEl || !heroEl) return;
+    heroEl.classList.remove("over-average", "no-data");
     if (yourValue === null || yourValue === undefined || benchmarkValue === null || benchmarkValue === undefined) {
-      el.textContent = label;
-      el.className = "compare-chip compare-chip-muted";
+      heroEl.classList.add("no-data");
+      valueEl.textContent = "–";
+      labelEl.textContent = label;
       return;
     }
     const diff = yourValue - benchmarkValue;
     const over = diff > 0;
-    el.className = `compare-chip ${over ? "compare-chip-over" : "compare-chip-under"}`;
-    el.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} kg vs ${label}`;
+    if (over) heroEl.classList.add("over-average");
+    valueEl.textContent = `${over ? "▲" : "▼"} ${Math.round(Math.abs(diff)).toLocaleString()} kg`;
+    labelEl.textContent = `vs ${label}`;
   }
 
-  // Small "Compared to: ..." chip row right under the yearly hero total -
-  // 1.5C target and UK average reuse figures already computed for the
-  // cards below; World average is the single illustrative constant above
-  // (WORLD_AVERAGE_YEARLY_KG); Uni average is the only one needing a
-  // network round trip, so it renders as a neutral "loading" chip first
-  // and fills in once university_weekly_average() resolves (or explains
-  // why it can't yet).
+  // Swipeable "Compared to:" carousel right under the yearly hero total -
+  // one slide per benchmark, dots below (same pattern as the savings
+  // totaliser above it). 1.5C target and UK average reuse figures already
+  // computed for the cards below; World average is the single illustrative
+  // constant above (WORLD_AVERAGE_YEARLY_KG); Uni average is the only one
+  // needing a network round trip, so it renders as a neutral "loading"
+  // slide first and fills in once university_weekly_average() resolves (or
+  // explains why it can't yet).
   function renderYearCompareChips(yearlyTotal, ukAverageYearlyKg) {
-    setCompareChip("compare-chip-15c", yearlyTotal, PARIS_1_5C_YEARLY_KG, "1.5°C target");
-    setCompareChip("compare-chip-uk", yearlyTotal, ukAverageYearlyKg, "UK average");
-    setCompareChip("compare-chip-world", yearlyTotal, WORLD_AVERAGE_YEARLY_KG, "World average");
+    setCompareChip("compare-chip-15c", "compare-chip-15c-label", "compare-hero-15c", yearlyTotal, PARIS_1_5C_YEARLY_KG, "1.5°C target");
+    setCompareChip("compare-chip-uk", "compare-chip-uk-label", "compare-hero-uk", yearlyTotal, ukAverageYearlyKg, "UK average");
+    setCompareChip("compare-chip-world", "compare-chip-world-label", "compare-hero-world", yearlyTotal, WORLD_AVERAGE_YEARLY_KG, "World average");
     renderUniCompareChip(yearlyTotal);
   }
 
   const UNIVERSITY_MIN_PEOPLE = 3;
 
   async function renderUniCompareChip(yearlyTotal) {
-    const chip = document.getElementById("compare-chip-uni");
-    if (!chip) return;
+    const valueEl = document.getElementById("compare-chip-uni");
+    const labelEl = document.getElementById("compare-chip-uni-label");
+    const heroEl = document.getElementById("compare-hero-uni");
+    if (!valueEl || !labelEl || !heroEl) return;
+    heroEl.classList.remove("over-average");
+    heroEl.classList.add("no-data");
     if (!profile.university) {
-      chip.textContent = "Set your university on Account to compare";
-      chip.className = "compare-chip compare-chip-muted";
+      valueEl.textContent = "–";
+      labelEl.textContent = "Set your university on Account to compare";
       return;
     }
-    chip.textContent = `Loading ${profile.university} average…`;
-    chip.className = "compare-chip compare-chip-muted";
+    valueEl.textContent = "…";
+    labelEl.textContent = `Loading ${profile.university} average…`;
     const { data, error } = await sbClient.rpc("university_weekly_average", { target_university: profile.university });
     const row = data && data[0];
     // Requires a handful of people from the same university before showing
@@ -2492,11 +2532,11 @@
     // or two other people gets close to just showing their own data back
     // to them, which isn't the point of an anonymous aggregate.
     if (error || !row || (row.user_count || 0) < UNIVERSITY_MIN_PEOPLE) {
-      chip.textContent = `Not enough people from ${profile.university} yet`;
-      chip.className = "compare-chip compare-chip-muted";
+      valueEl.textContent = "–";
+      labelEl.textContent = `Not enough people from ${profile.university} yet`;
       return;
     }
-    setCompareChip("compare-chip-uni", yearlyTotal, row.avg_total_kg * 52, `${profile.university} average`);
+    setCompareChip("compare-chip-uni", "compare-chip-uni-label", "compare-hero-uni", yearlyTotal, row.avg_total_kg * 52, `${profile.university} average`);
   }
 
   // A lightweight nudge, not a data-completeness tracker: yesterday/today's
@@ -3204,7 +3244,9 @@
       btn.addEventListener("click", () => openTileInfo(btn.dataset.info));
     });
 
-    wireSavingsCarousel();
+    wireCarousel("home-savings-carousel", "home-savings-dots");
+    wireCarousel("home-year-groups-carousel", "home-year-groups-dots");
+    wireCarousel("home-compare-carousel", "home-compare-dots");
 
     document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -3247,11 +3289,11 @@
       });
     });
 
-    const uniChip = document.getElementById("compare-chip-uni");
-    if (uniChip) {
-      const navigateToAccount = () => { location.hash = uniChip.dataset.nav; };
-      uniChip.addEventListener("click", navigateToAccount);
-      uniChip.addEventListener("keydown", (e) => {
+    const uniHero = document.getElementById("compare-hero-uni");
+    if (uniHero) {
+      const navigateToAccount = () => { location.hash = uniHero.dataset.nav; };
+      uniHero.addEventListener("click", navigateToAccount);
+      uniHero.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigateToAccount(); }
       });
     }
@@ -3327,7 +3369,6 @@
       });
     }
     bindOptionalNumberField("gas-heating-kwh", (v) => { profile.annualGasKwh = v; });
-    bindOptionalNumberField("noncommute-car-km", (v) => { profile.weeklyNonCommuteCarKm = v; });
     bindOptionalNumberField("num-dogs", (v) => { profile.numDogs = v; });
     bindOptionalNumberField("num-cats", (v) => { profile.numCats = v; });
     bindOptionalNumberField("annual-water-m3", (v) => { profile.annualWaterM3 = v; });

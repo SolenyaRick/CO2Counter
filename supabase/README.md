@@ -326,6 +326,19 @@ it the way `app_wide_weekly_average()` needed for the yearly-extras
 figures. Also appended to `research_weeks` (at the end of its column list,
 per the positional-columns constraint noted above) for opted-in users.
 
+The app no longer reads or writes the `weekly_noncommute_car_km` column on
+`profiles` - the This Year page's "Non-commute driving (extra car km per
+week)" question was removed, and the Home page now sources that figure from
+the Car-mode slice of the `extra_journeys` column above instead (see
+`extraCarJourneysFootprintForDay()` in `app.js`). The column itself is left
+in place rather than dropped - no destructive schema change, and it isn't
+free-floating: `app_wide_weekly_average()`, `friend_weekly_average()`, and
+`university_weekly_average()` still reference it, so anyone who answered
+that question before this change keeps contributing their old answer to
+those aggregate averages indefinitely; no new profile will ever populate it
+going forward, so its influence there only fades as those accounts age out
+of the data, never anything that needs active cleanup.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

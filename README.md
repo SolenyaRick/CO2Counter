@@ -53,11 +53,13 @@ with accounts and a friends leaderboard backed by Supabase.
   per domain, sized by share of the total, with a legend giving each
   domain's exact kg and percentage plus a total row. It follows whichever
   of the three timeframe buttons above the pace chart is currently selected
-  rather than having its own toggle. Commute, food, and alcohol are real
-  tracked totals, same scope as the pace chart above it; the rest (flights,
-  home energy, gas/oil heating, water, pets, banking, buying goods, car
-  manufacturing, non-commute driving) have no day-by-day data, so each is
-  its own weekly-equivalent share (yearly ÷ 52) scaled to match the
+  rather than having its own toggle. Commute, food, alcohol, and
+  non-commute driving (the Car-mode slice of logged "Additional journeys",
+  pulled out of Commute into its own segment) are real tracked totals, same
+  scope as the pace chart above it; the rest (flights, home energy,
+  gas/oil heating, water, pets, banking, buying goods, car manufacturing)
+  have no day-by-day data, so each is its own weekly-equivalent share
+  (yearly ÷ 52) scaled to match the
   timeframe - month uses the same ×(days in month/7) the pace chart's own
   goal line uses, year uses a flat ×52 (not ×365/7, which would inflate
   every one of these by about 0.3% versus the exact figures on the "Your
@@ -88,25 +90,32 @@ with accounts and a friends leaderboard backed by Supabase.
   time. Then "Your year, estimated" opens with a hero box -
   your estimated yearly total in large accent-colored type, next to a
   rough percentile ("lower than ~X%" / "higher than ~X% of people in the
-  UK", worded so it never reads backwards). A small "Compared to:" row of
-  four pill-shaped chips sits right underneath - 1.5°C target, UK average,
-  World average, and Uni average (▲/▼ delta against each, same red/green
-  convention as everywhere else on this page). The first three are
-  instant; the Uni one needs your university set on the Account page and
-  a network round trip (`university_weekly_average()`, see
-  `supabase/README.md`) - it reads "Set your university on Account to
-  compare" until you've picked one, "Not enough people from X yet" until
-  at least 3 people from that university have a fully confirmed week (so
-  the comparison is never just reflecting one or two other people's data
-  back at you), and only then shows a real number. Next, two comparison
-  tiles convert that total into km driven by an average car and
+  UK", worded so it never reads backwards). A "Compared to:" Instagram-style
+  swipeable carousel sits right underneath - one slide per benchmark (1.5°C
+  target, UK average, World average, Uni average), each a big ▲/▼ delta
+  against that benchmark (same red/green convention as everywhere else on
+  this page) with 4 dots below showing which one you're on - swipe or
+  scroll horizontally to move between them, same native scroll-snap
+  mechanism as the "Total CO2 saved" carousel above. The first three
+  benchmarks are instant; the Uni slide needs your university set on the
+  Account page and a network round trip (`university_weekly_average()`,
+  see `supabase/README.md`) - it reads "Set your university on Account to
+  compare" until you've picked one (tapping/pressing Enter on that slide
+  jumps straight to Account), "Not enough people from X yet" until at
+  least 3 people from that university have a fully confirmed week (so the
+  comparison is never just reflecting one or two other people's data back
+  at you), and only then shows a real number. Next, two comparison tiles
+  convert that total into km driven by an average car and
   mature-trees-of-CO2-absorption equivalents, each with a delta against
-  the UK average. A divider then splits the 12 category tiles into three
-  rows: an unlabeled "everyday" row (food, commute, non-commute driving,
-  alcohol), then "Home" (home energy, gas/oil heating, water usage, pets),
-  then "Other" (flying, banking, buying goods, car manufacturing). Unlike
-  the This Year input page, these tile labels don't say "(optional)" -
-  every tile keeps its own category emoji and a consistent two-line ▲/▼
+  the UK average. A divider then splits the 12 category tiles into another
+  swipeable carousel, one slide per group with its own 3-dot indicator:
+  "This week" (food, commute, non-commute driving, alcohol - the four
+  domains with real day-by-day tracked data, matching the bar chart's own
+  tracked/estimated split above), then "Home" (home energy, gas/oil
+  heating, water usage, pets), then "Other" (flying, banking, buying
+  goods, car manufacturing). Unlike the This Year input page, these tile
+  labels don't say "(optional)" - every tile keeps its own category emoji
+  and a consistent two-line ▲/▼
   delta against the UK average underneath (a bold colored figure, then a
   small muted "vs UK average" caption), including a muted "–" placeholder
   with the same caption for whichever optional ones you haven't answered
@@ -164,8 +173,12 @@ with accounts and a friends leaderboard backed by Supabase.
   distance, not doubled the way the daily commute is, since a one-off trip
   isn't necessarily a round trip), a Cycle/Tube/Train/Car mode toggle, and
   which day. Each addition shows up in a list immediately (no confirm step
-  needed, same pattern as alcohol below), counts toward commute in every
-  total the app shows, and — if you picked anything other than Car — pops up a small
+  needed, same pattern as alcohol below), and counts toward commute in
+  every total this page shows (Total this week, goal colors, leaderboard) —
+  though on the Home page, Car-mode entries specifically get pulled out
+  into their own "Non-commute driving" domain instead of staying folded
+  into Commute, so the two pages' commute figures aren't always identical;
+  see "Non-commute driving" further down. If you picked anything other than Car, it also pops up a small
   "Nice one! 🎉" congratulations modal showing how much CO2e that choice
   saved versus driving the same distance would have. Tube is a new transport
   mode this added everywhere (not just here) — a rough DEFRA-style London
@@ -195,28 +208,30 @@ with accounts and a friends leaderboard backed by Supabase.
   week" averages on the Home and Leaderboard pages, so a week where
   you only logged Monday doesn't drag those averages down as if it were a
   whole week's worth of data. Tap a box for a day-by-day breakdown.
-- **This Year** — the yearly-estimate inputs, grouped into six cards in a
-  roughly biggest-to-smallest-impact order: **Driving** (extra non-commute
-  car km/week; whether you own or regularly drive a car; and what type —
-  Diesel, Hybrid, or Electric/EV, which swaps in a DEFRA-style factor —
-  ~0.171 kg CO2e/km diesel, ~0.111 hybrid, ~0.058 electric using average UK
-  grid intensity to charge it — used for *both* this non-commute driving
-  figure and, retroactively, every "Car" day you log on the This Week page,
-  in place of the ~0.171 kg CO2e/km blended-average fallback used if you
-  leave it as "Prefer not to say"), **Flying** (short-haul European vs
-  long-haul international flights per year), **Household energy** (people
-  in your household; total electricity kWh/month; total gas/oil heating +
-  hot water kWh/yr; total household water usage in m&sup3;/yr — the last
-  two optional), **Pets** (number of dogs and cats, optional — their
-  ~770/~310 kg CO2e/yr-each footprint is split evenly across everyone in
-  your household, the "People in your household" figure above, rather than
-  attributed entirely to you, since a household's pets aren't really just
-  one person's footprint), **Banking** (which bank you mainly hold money
-  with, plus a balance, optional), and **Buying goods** (clothing items
-  bought per month). Household energy, non-commute driving/pets/water, and
-  banking are all split or weighted by household size the same way, for
-  consistency. The optional extras are skippable: leaving one blank leaves
-  it out of every total on the Home page rather than counting it as zero,
+- **This Year** — the yearly-estimate inputs, grouped into five cards in a
+  roughly biggest-to-smallest-impact order: **Driving** (whether you own or
+  regularly drive a car; and what type — Diesel, Hybrid, or Electric/EV,
+  which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111
+  hybrid, ~0.058 electric using average UK grid intensity to charge it —
+  used for *both* every "Car" day you log on the This Week page and any
+  Car-mode additional journeys, in place of the ~0.171 kg CO2e/km
+  blended-average fallback used if you leave it as "Prefer not to say" —
+  the old "extra non-commute driving km/week" question that used to live
+  here is gone; see "Non-commute driving" above for where that figure comes
+  from now), **Flying** (short-haul European vs long-haul international
+  flights per year), **Household energy** (people in your household; total
+  electricity kWh/month; total gas/oil heating + hot water kWh/yr; total
+  household water usage in m&sup3;/yr — the last two optional), **Pets**
+  (number of dogs and cats, optional — their ~770/~310 kg CO2e/yr-each
+  footprint is split evenly across everyone in your household, the "People
+  in your household" figure above, rather than attributed entirely to you,
+  since a household's pets aren't really just one person's footprint),
+  **Banking** (which bank you mainly hold money with, plus a balance,
+  optional), and **Buying goods** (clothing items bought per month).
+  Household energy, pets/water, and banking are all split or weighted by
+  household size the same way, for consistency. The optional extras are
+  skippable: leaving one blank leaves it out of every total on the Home
+  page rather than counting it as zero,
   so an unanswered question never makes your estimate look artificially
   low.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
@@ -505,8 +520,13 @@ Figures are illustrative averages, not a precise personal carbon calculator:
 - **Gas/oil heating** (This Year page, optional): household kWh/year ×
   ~0.18 kg CO2e/kWh (rough blended gas/oil factor), split evenly across the
   household the same way electricity is.
-- **Non-commute driving** (This Year page, optional): extra car km/week
-  beyond your logged commute × 52, using the same car factor as your
+- **Non-commute driving** (Home page): no longer a This Year question — it's
+  the Car-mode slice of whatever you've logged under This Week's
+  "Additional journeys" (see below), averaged the same rolling-52-week way
+  as food/commute/alcohol and ×52'd for the yearly figure. Logging a
+  one-off trip as Car counts here; Cycle/Tube/Train trips stay folded into
+  "Commute" instead. Always tracked (never a skippable "–" tile the way
+  gas heating/pets/water/banking are), using the same car factor as your
   commute (either the ~0.171 kg CO2e/km blended average, or your chosen car
   type's DEFRA-style factor — see "Transport" above).
 - **Car ownership** (This Year page, optional yes/no): if yes, a flat ~700 kg
@@ -527,14 +547,16 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   short-haul + 0.2 long-haul flights/yr, ~2,900 kWh/yr household
   electricity split across ~2.4 people, and 3 clothing items/month —
   rather than a generic "average footprint" statistic, which would cover
-  a lot this app doesn't track. This core figure comes to roughly 3,570
-  kg CO2e/yr, still below often-cited "average person" figures (8–10
-  tonnes) because those are scoped much more broadly. If you've answered
-  any of the optional
-  extras above (gas heating, non-commute driving, car ownership, pets,
-  water usage, banking), the matching representative UK figure for each
-  one is added to *both* sides of the comparison, so it's never your
-  fuller total measured against a narrower UK figure.
+  a lot this app doesn't track. A representative ~50 km/week of
+  non-commute driving is always folded in too (not gated behind an
+  "answered" check, since it's a tracked figure now, not a skippable
+  question). This core figure comes to roughly 3,570 kg CO2e/yr, still
+  below often-cited "average person" figures (8–10 tonnes) because those
+  are scoped much more broadly. If you've answered any of the optional
+  extras above (gas heating, car ownership, pets, water usage, banking),
+  the matching representative UK figure for each one is added to *both*
+  sides of the comparison, so it's never your fuller total measured
+  against a narrower UK figure.
 - **UK percentile** (Home page): models the population as log-normally
   distributed around the UK average above (median = average, an assumed
   spread) to estimate a percentile — illustrative, not based on real
