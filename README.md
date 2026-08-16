@@ -136,12 +136,20 @@ with accounts and a friends leaderboard backed by Supabase.
   average that is sits underneath the category caption below the ring
   instead, colored the same green/red as the ring itself - the same two
   numbers the old delta/caption pairing showed, just laid out as a ring
-  plus a caption line instead of text. Optional categories you haven't
-  answered yet fall back to the same muted "–" tile (value, label, "vs UK
-  average" caption) used everywhere else in the app, rather than showing a
+  plus a caption line instead of text. Each tile's category emoji sits as
+  its own small badge in the top-left corner (static HTML, not part of the
+  ring or caption text any more) rather than prefixing the caption label -
+  and the "(×52 weeks)" that used to follow Food/Commute/Non-commute
+  driving's labels (and Alcohol's) is gone too, since every tile on this
+  card is a ×52 yearly projection, so spelling it out on some tiles and not
+  others just added noise. Optional categories you haven't answered yet
+  fall back to the same muted "–" tile (value, label, "vs UK average"
+  caption) used everywhere else in the app, rather than showing a
   misleadingly "full" ring for an unanswered question. Four tiles - Food,
   Home energy, Flying, and Banking
-  - additionally have a small ⓘ button in the corner, opening a popup with
+  - additionally have a small ⓘ button in the top-right corner (the emoji
+  badge and info button share the tile's two top corners without
+  overlapping), opening a popup with
   a short bit of context/advice for that category; the popup content lives
   in `tile-info.js` (`TILE_INFO`), a plain, directly-editable file (same
   idea as `emission-factors.js`) - starts out with placeholder text, meant

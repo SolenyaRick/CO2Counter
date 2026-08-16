@@ -2602,14 +2602,14 @@
   // gets a misleadingly "full" ring.
   const RING_RADIUS = 42;
   const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-  function renderRingStat(containerId, value, benchmark, emoji, label) {
+  function renderRingStat(containerId, value, benchmark, label) {
     const el = document.getElementById(containerId);
     if (!el) return;
     if (value === null || value === undefined || benchmark === null || benchmark === undefined || benchmark <= 0) {
       el.className = "ring-container ring-container-empty";
       el.innerHTML = `
         <span class="stat-value">–</span>
-        <span class="stat-label">${emoji} kg CO2e/yr &middot; ${label}</span>
+        <span class="stat-label">kg CO2e/yr &middot; ${label}</span>
         <span class="week-diff"><span class="diff-value">–</span><span class="diff-caption">vs UK average</span></span>
       `;
       return;
@@ -2631,7 +2631,7 @@
           <span class="ring-center-unit">kg/yr</span>
         </div>
       </div>
-      <p class="ring-caption">${emoji} ${label}</p>
+      <p class="ring-caption">${label}</p>
       <p class="ring-pct-caption ${over ? "ring-pct-over" : "ring-pct-under"}">${Math.round(ratio * 100)}% of UK avg</p>
     `;
   }
@@ -2690,17 +2690,17 @@
     // Every other tile: an Apple-Watch-style ring instead of a plain
     // number - falls back to the usual muted "–" tile on its own whenever
     // value or benchmark is null (see renderRingStat() above).
-    renderRingStat("yearly-food", yearlyFood, uk.food, "🍽️", "Food (×52 weeks)");
-    renderRingStat("yearly-commute", yearlyCommute, uk.commute, "🚗", "Commute (×52 weeks)");
-    renderRingStat("yearly-noncommute-car", yearlyNonCommuteCar, uk.nonCommuteCar, "🚙", "Non-commute driving (×52 weeks)");
-    renderRingStat("yearly-home-energy", yearlyHomeEnergy, uk.homeEnergy, "⚡", "Home energy (your share)");
-    renderRingStat("yearly-gas-heating", yearlyGasHeating, uk.gasHeating, "🔥", "Gas/oil heating");
-    renderRingStat("yearly-water", yearlyWater, uk.water, "💧", "Water usage");
-    renderRingStat("yearly-pets", yearlyPets, uk.pets, "🐾", "Pets");
-    renderRingStat("yearly-flying", yearlyFlying, uk.flying, "✈️", "Flying");
-    renderRingStat("yearly-banking", yearlyBanks, uk.banks, "🏦", "Banking");
-    renderRingStat("yearly-goods", yearlyGoods, uk.goods, "🛍️", "Buying goods");
-    renderRingStat("yearly-car-ownership", yearlyCarOwnership, uk.carOwnership, "🏭", "Car manufacturing");
+    renderRingStat("yearly-food", yearlyFood, uk.food, "Food");
+    renderRingStat("yearly-commute", yearlyCommute, uk.commute, "Commute");
+    renderRingStat("yearly-noncommute-car", yearlyNonCommuteCar, uk.nonCommuteCar, "Non-commute driving");
+    renderRingStat("yearly-home-energy", yearlyHomeEnergy, uk.homeEnergy, "Home energy (your share)");
+    renderRingStat("yearly-gas-heating", yearlyGasHeating, uk.gasHeating, "Gas/oil heating");
+    renderRingStat("yearly-water", yearlyWater, uk.water, "Water usage");
+    renderRingStat("yearly-pets", yearlyPets, uk.pets, "Pets");
+    renderRingStat("yearly-flying", yearlyFlying, uk.flying, "Flying");
+    renderRingStat("yearly-banking", yearlyBanks, uk.banks, "Banking");
+    renderRingStat("yearly-goods", yearlyGoods, uk.goods, "Buying goods");
+    renderRingStat("yearly-car-ownership", yearlyCarOwnership, uk.carOwnership, "Car manufacturing");
 
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);

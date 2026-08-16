@@ -861,6 +861,14 @@ input, select {
   background: var(--accent-light);
 }
 
+.tile-emoji {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .stat-highlight {
   background: var(--accent-light);
   border-color: var(--accent);
