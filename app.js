@@ -266,8 +266,12 @@
     // saved for them - only brand-new profiles pick this up.)
     weeklyGoalKg: Math.round(UK_AVERAGE_WEEKLY_KG * 10) / 10,
     foodWaste: "low",
-    shortHaulFlights: 0,
-    longHaulFlights: 0,
+    // Itemized flight log - see computeFlyingYearlyKg(). flyingYearlyKg is
+    // a derived cache of the total, written alongside so the SQL-side
+    // app_wide_weekly_average()/university_weekly_average() functions
+    // don't need to re-implement the continent/class lookup themselves.
+    flights: [],
+    flyingYearlyKg: 0,
     householdPeople: 1,
     householdKwhPerMonth: 0,
     clothesPerMonth: 0,
@@ -280,6 +284,12 @@
     annualWaterM3: null,
     bankName: null,
     bankBalance: null,
+    // Electricity bill (This Year page) - household_kwh_per_month above is
+    // derived from these three via computeElectricityMonthlyKwh() rather
+    // than typed in directly. null means no bill submitted yet.
+    electricityBillFrom: null,
+    electricityBillTo: null,
+    electricityBillKwh: null,
     // Off by default - nothing is shared until the user actively opts in.
     // See research_profiles / research_weeks in schema.sql for exactly
     // what this exposes (everything on this page except banking) and to
@@ -388,7 +398,7 @@
   let profile = { ...DEFAULT_PROFILE };
   let weeksCache = {}; // week_key -> { commute, diet, confirmedCommute, confirmedDiet, total_kg? }
   let friendships = []; // [{ id, status, otherId, otherName, iAmRequester }]
-  let friendExtrasById = {}; // otherId -> { shortHaulFlights, longHaulFlights, householdKwhPerMonth, householdPeople }
+  let friendExtrasById = {}; // otherId -> { flyingYearlyKg, householdKwhPerMonth, householdPeople }
   // Which week the This Week page is currently showing/editing.
   let selectedWeekKey = CURRENT_WEEK_KEY;
 
@@ -583,8 +593,8 @@
         commuteDistanceKm: data.commute_distance_km ?? DEFAULT_PROFILE.commuteDistanceKm,
         weeklyGoalKg: data.weekly_goal_kg ?? DEFAULT_PROFILE.weeklyGoalKg,
         foodWaste: data.food_waste_bracket ?? DEFAULT_PROFILE.foodWaste,
-        shortHaulFlights: data.short_haul_flights_per_year ?? DEFAULT_PROFILE.shortHaulFlights,
-        longHaulFlights: data.long_haul_flights_per_year ?? DEFAULT_PROFILE.longHaulFlights,
+        flights: data.flights ?? [],
+        flyingYearlyKg: data.flying_yearly_kg ?? 0,
         householdPeople: data.household_people ?? DEFAULT_PROFILE.householdPeople,
         householdKwhPerMonth: data.household_kwh_per_month ?? DEFAULT_PROFILE.householdKwhPerMonth,
         clothesPerMonth: data.clothes_per_month ?? DEFAULT_PROFILE.clothesPerMonth,
@@ -595,6 +605,9 @@
         annualWaterM3: data.annual_water_m3 ?? null,
         bankName: data.bank_name ?? null,
         bankBalance: data.bank_balance ?? null,
+        electricityBillFrom: data.electricity_bill_from ?? null,
+        electricityBillTo: data.electricity_bill_to ?? null,
+        electricityBillKwh: data.electricity_bill_kwh ?? null,
         researchOptIn: data.research_opt_in ?? false,
         baselineWeekKey: data.baseline_week_key ?? null,
         carFuelType: data.car_fuel_type ?? null,
@@ -613,8 +626,8 @@
       commute_distance_km: profile.commuteDistanceKm,
       weekly_goal_kg: profile.weeklyGoalKg,
       food_waste_bracket: profile.foodWaste,
-      short_haul_flights_per_year: profile.shortHaulFlights,
-      long_haul_flights_per_year: profile.longHaulFlights,
+      flights: profile.flights,
+      flying_yearly_kg: profile.flyingYearlyKg,
       household_people: profile.householdPeople,
       household_kwh_per_month: profile.householdKwhPerMonth,
       clothes_per_month: profile.clothesPerMonth,
@@ -625,6 +638,9 @@
       annual_water_m3: profile.annualWaterM3,
       bank_name: profile.bankName,
       bank_balance: profile.bankBalance,
+      electricity_bill_from: profile.electricityBillFrom,
+      electricity_bill_to: profile.electricityBillTo,
+      electricity_bill_kwh: profile.electricityBillKwh,
       research_opt_in: profile.researchOptIn,
       baseline_week_key: profile.baselineWeekKey,
       car_fuel_type: profile.carFuelType,
@@ -764,7 +780,7 @@
       const { data: profs } = await sbClient
         .from("profiles")
         .select(
-          "id, display_name, short_haul_flights_per_year, long_haul_flights_per_year, " +
+          "id, display_name, flying_yearly_kg, " +
           "household_kwh_per_month, household_people, clothes_per_month, " +
           "annual_gas_kwh, owns_car, car_fuel_type, num_dogs, num_cats, annual_water_m3, " +
           "bank_name, bank_balance"
@@ -773,8 +789,7 @@
       (profs || []).forEach((p) => {
         namesById[p.id] = p.display_name || "(no name set)";
         friendExtrasById[p.id] = {
-          shortHaulFlights: p.short_haul_flights_per_year ?? 0,
-          longHaulFlights: p.long_haul_flights_per_year ?? 0,
+          flyingYearlyKg: p.flying_yearly_kg ?? 0,
           householdKwhPerMonth: p.household_kwh_per_month ?? 0,
           householdPeople: p.household_people ?? 1,
           clothesPerMonth: p.clothes_per_month ?? 0,
@@ -2151,7 +2166,7 @@
   // weeklyExtrasFor() below just sums it for callers that only want the
   // total.
   function weeklyExtrasBreakdownFor(inputs) {
-    const flying = ((inputs.shortHaulFlights || 0) * SHORT_HAUL_FLIGHT_KG + (inputs.longHaulFlights || 0) * LONG_HAUL_FLIGHT_KG) / 52;
+    const flying = (inputs.flyingYearlyKg || 0) / 52;
     const yearlyHomeEnergyTotal = (inputs.householdKwhPerMonth || 0) * 12 * GRID_ELECTRICITY_KG_PER_KWH;
     const homeEnergy = (yearlyHomeEnergyTotal / Math.max(1, inputs.householdPeople || 1)) / 52;
     const goods = ((inputs.clothesPerMonth || 0) * 12 * CLOTHING_ITEM_KG) / 52;
@@ -2404,16 +2419,161 @@
   // null/blank -> "" (so the input shows empty, not "0"); a real 0 still shows as 0.
   function optionalInputValue(v) { return v === null || v === undefined ? "" : v; }
 
+  // ---------- Flying (This Year page, itemized log) ----------
+  const FLIGHT_CONTINENT_LABELS = { europe: "Europe", northAmerica: "N. America", asia: "Asia", africa: "Africa", southAmerica: "S. America", oceania: "Oceania" };
+  const FLIGHT_CLASS_LABELS = { economy: "Economy", economyPlus: "Economy Plus", business: "Business", first: "First" };
+  // A dated flight older than this doesn't count toward the current "per
+  // year" total any more, so a year of past trips doesn't just keep
+  // accumulating forever - a flight logged with no date always counts,
+  // since there's nothing to compare against (matches the old flat
+  // per-year count, which had no date concept at all).
+  const FLIGHT_STALE_DAYS = 365;
+
+  function flightFootprint(flight) {
+    return (FLIGHT_CONTINENT_KG[flight.continent] || 0) * (FLIGHT_CLASS_MULTIPLIER[flight.class] || 1);
+  }
+
+  function isFlightCounted(flight) {
+    if (!flight.date) return true;
+    const flightDate = new Date(`${flight.date}T00:00:00`);
+    return (Date.now() - flightDate.getTime()) / DAY_MS <= FLIGHT_STALE_DAYS;
+  }
+
+  function computeFlyingYearlyKg(flights) {
+    return (flights || []).filter(isFlightCounted).reduce((sum, f) => sum + flightFootprint(f), 0);
+  }
+
+  function renderFlightList() {
+    const list = document.getElementById("flight-list");
+    if (!list) return;
+    list.innerHTML = "";
+    (profile.flights || []).forEach((f, i) => {
+      const counted = isFlightCounted(f);
+      const kg = flightFootprint(f);
+      const dateLabel = f.date
+        ? new Date(`${f.date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+        : "No date";
+
+      const li = document.createElement("li");
+      li.className = counted ? "journey-item" : "journey-item journey-item-excluded";
+      const text = document.createElement("span");
+      text.className = "journey-item-text";
+      text.textContent = `${dateLabel} · ${FLIGHT_CONTINENT_LABELS[f.continent] || f.continent} · ${FLIGHT_CLASS_LABELS[f.class] || f.class} · ${fmt(kg)} kg CO2e`;
+      if (!counted) {
+        const note = document.createElement("span");
+        note.className = "journey-item-excluded-note";
+        note.textContent = " (over a year ago – not counted)";
+        text.appendChild(note);
+      }
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "journey-remove-btn";
+      removeBtn.setAttribute("aria-label", `Remove ${dateLabel} flight`);
+      removeBtn.textContent = "×";
+      removeBtn.dataset.index = i;
+
+      li.appendChild(text);
+      li.appendChild(removeBtn);
+      list.appendChild(li);
+    });
+  }
+
+  let selectedFlightContinent = null;
+  let selectedFlightClass = null;
+
+  function addFlight() {
+    if (!selectedFlightContinent || !selectedFlightClass) return;
+    const dateInput = document.getElementById("flight-date");
+    profile.flights = profile.flights || [];
+    profile.flights.push({ date: dateInput.value || null, continent: selectedFlightContinent, class: selectedFlightClass });
+    profile.flyingYearlyKg = computeFlyingYearlyKg(profile.flights);
+    persistProfile();
+    renderFlightList();
+    renderStatsPage();
+
+    dateInput.value = "";
+    document.querySelectorAll(".flight-continent-btn").forEach((btn) => btn.classList.remove("active"));
+    document.querySelectorAll(".flight-class-btn").forEach((btn) => btn.classList.remove("active"));
+    selectedFlightContinent = null;
+    selectedFlightClass = null;
+  }
+
+  function removeFlight(index) {
+    (profile.flights || []).splice(index, 1);
+    profile.flyingYearlyKg = computeFlyingYearlyKg(profile.flights);
+    persistProfile();
+    renderFlightList();
+    renderStatsPage();
+  }
+
+  // ---------- Household energy (This Year page, bill-based) ----------
+  const AVG_DAYS_PER_MONTH = 365.25 / 12;
+  // How long a submitted bill stays "fresh" before the To-do list nudges
+  // for an updated one - a bit over a year, so a whole-year bill (the
+  // recommended way to submit one) doesn't immediately read as stale the
+  // day after its own end date.
+  const ELECTRICITY_BILL_STALE_DAYS = 400;
+
+  function computeElectricityMonthlyKwh(bill) {
+    if (!bill || !bill.from || !bill.to || !(bill.kwh > 0)) return null;
+    const from = new Date(`${bill.from}T00:00:00`);
+    const to = new Date(`${bill.to}T00:00:00`);
+    const days = Math.round((to - from) / DAY_MS) + 1;
+    if (days <= 0) return null;
+    return (bill.kwh / days) * AVG_DAYS_PER_MONTH;
+  }
+
+  function electricityBillIsFresh() {
+    if (!profile.electricityBillTo) return false;
+    const to = new Date(`${profile.electricityBillTo}T00:00:00`);
+    return (Date.now() - to.getTime()) / DAY_MS <= ELECTRICITY_BILL_STALE_DAYS;
+  }
+
+  function renderElectricityBillSummary() {
+    document.getElementById("electricity-bill-from").value = profile.electricityBillFrom || "";
+    document.getElementById("electricity-bill-to").value = profile.electricityBillTo || "";
+    document.getElementById("electricity-bill-kwh").value = optionalInputValue(profile.electricityBillKwh);
+
+    const summary = document.getElementById("electricity-bill-summary");
+    const stale = document.getElementById("electricity-bill-stale");
+    if (!summary || !stale) return;
+    if (!profile.householdKwhPerMonth || !profile.electricityBillFrom || !profile.electricityBillTo) {
+      summary.textContent = "No bill submitted yet.";
+      stale.hidden = true;
+      return;
+    }
+    summary.textContent = `≈ ${fmt(profile.householdKwhPerMonth)} kWh/month, based on your bill from ${profile.electricityBillFrom} to ${profile.electricityBillTo}.`;
+    stale.hidden = electricityBillIsFresh();
+  }
+
+  function saveElectricityBill() {
+    const fromInput = document.getElementById("electricity-bill-from");
+    const toInput = document.getElementById("electricity-bill-to");
+    const kwhInput = document.getElementById("electricity-bill-kwh");
+    const from = fromInput.value || null;
+    const to = toInput.value || null;
+    const kwh = parseFloat(kwhInput.value);
+    if (!from || !to || to < from || !(kwh > 0)) return;
+
+    profile.electricityBillFrom = from;
+    profile.electricityBillTo = to;
+    profile.electricityBillKwh = kwh;
+    profile.householdKwhPerMonth = computeElectricityMonthlyKwh({ from, to, kwh }) || 0;
+
+    persistProfile();
+    renderElectricityBillSummary();
+    renderStatsPage();
+  }
+
   // Populates the "This Year" tab's input fields. Kept separate from
   // renderStatsPage() (the results-only Stats page) since the two now
   // live on different tabs.
   function renderYearlyInputs() {
     document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
     document.getElementById("car-fuel-type").value = profile.carFuelType || "";
-    document.getElementById("flights-short-haul").value = profile.shortHaulFlights;
-    document.getElementById("flights-long-haul").value = profile.longHaulFlights;
+    renderFlightList();
     document.getElementById("household-people").value = profile.householdPeople;
-    document.getElementById("household-kwh").value = profile.householdKwhPerMonth;
+    renderElectricityBillSummary();
     document.getElementById("gas-heating-kwh").value = optionalInputValue(profile.annualGasKwh);
     document.getElementById("annual-water-m3").value = optionalInputValue(profile.annualWaterM3);
     document.getElementById("num-dogs").value = optionalInputValue(profile.numDogs);
@@ -2483,7 +2643,8 @@
     const yearlyNonCommuteCar = recentAverageConfirmedWeekly("nonCommuteCar") * 52;
     const yearlyAlcohol = recentAverageConfirmedWeekly("alcohol") * 52;
 
-    const yearlyFlying = profile.shortHaulFlights * SHORT_HAUL_FLIGHT_KG + profile.longHaulFlights * LONG_HAUL_FLIGHT_KG;
+    const yearlyFlying = computeFlyingYearlyKg(profile.flights);
+    profile.flyingYearlyKg = yearlyFlying;
 
     const householdYearlyKwh = profile.householdKwhPerMonth * 12;
     const householdYearlyEnergy = householdYearlyKwh * GRID_ELECTRICITY_KG_PER_KWH;
@@ -2630,13 +2791,15 @@
 
   // A lightweight nudge, not a data-completeness tracker: yesterday/today's
   // commute and meal are done once that day's actually confirmed (works
-  // whether "yesterday" falls in this week's or last week's data). Electricity
-  // and flights don't have an "unanswered" state to check the way the This
-  // Year page's true optional fields do (num_dogs, bank_name, etc. are
-  // nullable; these two default to a real 0) - so "done" here just means
-  // non-zero, on the assumption that most people's genuine answer isn't
-  // exactly zero. Someone with truly 0 flights this year will never see
-  // this one tick off, which is an acceptable tradeoff for a to-do nudge.
+  // whether "yesterday" falls in this week's or last week's data).
+  // Electricity is "done" once a bill's been submitted AND it's still
+  // fresh (see electricityBillIsFresh()) - a stale bill (see
+  // ELECTRICITY_BILL_STALE_DAYS) drops back to "not done" so this nudge
+  // doubles as the "if it's been a while, reapply" reminder. Flights is
+  // "done" once at least one has ever been logged, regardless of whether
+  // older ones have since aged out of the current yearly total (see
+  // FLIGHT_STALE_DAYS) - unlike electricity, there's no single "answer"
+  // that can go stale here, just an ongoing log.
   // Each item drops off the list entirely once it's done, rather than
   // sitting there checked off - once everything's done, the list itself
   // is replaced with a single "All done" message.
@@ -2653,8 +2816,8 @@
       ["todo-yesterday-meal", yesterdayStatus.dietDone],
       ["todo-today-commute", todayStatus.commuteDone],
       ["todo-today-meal", todayStatus.dietDone],
-      ["todo-electricity", !!profile.householdKwhPerMonth],
-      ["todo-flights", !!(profile.shortHaulFlights || profile.longHaulFlights)],
+      ["todo-electricity", !!profile.householdKwhPerMonth && electricityBillIsFresh()],
+      ["todo-flights", (profile.flights || []).length > 0],
     ];
 
     let allDone = true;
@@ -3441,11 +3604,28 @@
         if (rerenderStats) renderStatsPage();
       });
     }
-    bindNumberField("flights-short-haul", (v) => { profile.shortHaulFlights = v; });
-    bindNumberField("flights-long-haul", (v) => { profile.longHaulFlights = v; });
     bindNumberField("household-people", (v) => { profile.householdPeople = v; }, { min: 1 });
-    bindNumberField("household-kwh", (v) => { profile.householdKwhPerMonth = v; });
     bindNumberField("clothes-per-month", (v) => { profile.clothesPerMonth = v; });
+
+    document.querySelectorAll(".flight-continent-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedFlightContinent = btn.dataset.continent;
+        document.querySelectorAll(".flight-continent-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      });
+    });
+    document.querySelectorAll(".flight-class-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedFlightClass = btn.dataset.class;
+        document.querySelectorAll(".flight-class-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      });
+    });
+    document.getElementById("flight-add-btn").addEventListener("click", addFlight);
+    document.getElementById("flight-list").addEventListener("click", (e) => {
+      const btn = e.target.closest(".journey-remove-btn");
+      if (btn) removeFlight(parseInt(btn.dataset.index, 10));
+    });
+
+    document.getElementById("electricity-bill-save").addEventListener("click", saveElectricityBill);
 
     // Optional extras: unlike bindNumberField above, a blank input maps to
     // null (excluded from every total) rather than being coerced to 0.

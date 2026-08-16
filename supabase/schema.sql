@@ -77,6 +77,32 @@ alter table public.profiles drop constraint if exists profiles_car_fuel_type_che
 alter table public.profiles add constraint profiles_car_fuel_type_check
   check (car_fuel_type is null or car_fuel_type in ('diesel', 'hybrid', 'electric'));
 
+-- Itemized flight log, replacing the old short_haul_flights_per_year/
+-- long_haul_flights_per_year flat counts (left in place above, unused
+-- going forward - no destructive schema change). flights is the raw
+-- per-trip array (date optional, continent, class) the app reads back to
+-- render the list; flying_yearly_kg is the total this year's worth of
+-- logged flights comes to, computed client-side (see
+-- computeFlyingYearlyKg() in app.js, using the FLIGHT_CONTINENT_KG/
+-- FLIGHT_CLASS_MULTIPLIER factors in emission-factors.js) and written
+-- alongside it purely so app_wide_weekly_average()/
+-- university_weekly_average() below can read a plain number instead of
+-- re-implementing the continent/class lookup in SQL.
+alter table public.profiles add column if not exists flights jsonb not null default '[]'::jsonb;
+alter table public.profiles add column if not exists flying_yearly_kg numeric not null default 0;
+
+-- Electricity bill (This Year page, "Household energy"), replacing manual
+-- entry of a monthly kWh figure - household_kwh_per_month (added above)
+-- is now DERIVED from these three columns (see
+-- computeElectricityMonthlyKwh() in app.js) rather than typed in
+-- directly, but keeps being written as before so nothing downstream needs
+-- to change. Nullable with no default - null means no bill has been
+-- submitted yet, same "not answered" pattern as the optional extras
+-- above.
+alter table public.profiles add column if not exists electricity_bill_from date;
+alter table public.profiles add column if not exists electricity_bill_to date;
+alter table public.profiles add column if not exists electricity_bill_kwh numeric;
+
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
 -- total_kg is computed client-side (same emission-factor logic as the rest
@@ -380,8 +406,10 @@ grant execute on function public.friend_weekly_average() to authenticated;
 --     this function can't expose row-by-row without breaking the
 --     "aggregate only" privacy guarantee it exists for - so unlike the
 --     client-side friends version, the emission-factor constants below are
---     duplicated into SQL. If any of SHORT_HAUL_FLIGHT_KG,
---     LONG_HAUL_FLIGHT_KG, GRID_ELECTRICITY_KG_PER_KWH, CLOTHING_ITEM_KG,
+--     duplicated into SQL. Flying is the one exception - it reads the
+--     pre-computed flying_yearly_kg column instead of re-implementing the
+--     continent/class lookup here (see computeFlyingYearlyKg() in app.js).
+--     If any of GRID_ELECTRICITY_KG_PER_KWH, CLOTHING_ITEM_KG,
 --     GAS_HEATING_KG_PER_KWH, TRANSPORT_FACTORS.car,
 --     CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR, DOG_KG_PER_YEAR,
 --     CAT_KG_PER_YEAR, WATER_KG_PER_M3, or BANK_KG_PER_POUND_PER_YEAR ever
@@ -423,7 +451,7 @@ as $$
       pu.avg_commute_food_alcohol_kg as avg_commute_food_alcohol_kg,
       pu.avg_commute_food_alcohol_kg
         + (
-            (coalesce(p.short_haul_flights_per_year, 0) * 250 + coalesce(p.long_haul_flights_per_year, 0) * 1600)
+            coalesce(p.flying_yearly_kg, 0)
             + (coalesce(p.household_kwh_per_month, 0) * 12 * 0.2) / greatest(1, coalesce(p.household_people, 1))
             + (coalesce(p.clothes_per_month, 0) * 12 * 10)
             + case when p.annual_gas_kwh is not null then (p.annual_gas_kwh * 0.18) / greatest(1, coalesce(p.household_people, 1)) else 0 end
@@ -504,7 +532,7 @@ as $$
     select
       pu.avg_commute_food_alcohol_kg
         + (
-            (coalesce(p.short_haul_flights_per_year, 0) * 250 + coalesce(p.long_haul_flights_per_year, 0) * 1600)
+            coalesce(p.flying_yearly_kg, 0)
             + (coalesce(p.household_kwh_per_month, 0) * 12 * 0.2) / greatest(1, coalesce(p.household_people, 1))
             + (coalesce(p.clothes_per_month, 0) * 12 * 10)
             + case when p.annual_gas_kwh is not null then (p.annual_gas_kwh * 0.18) / greatest(1, coalesce(p.household_people, 1)) else 0 end
@@ -631,7 +659,12 @@ select
   num_dogs,
   num_cats,
   annual_water_m3,
-  car_fuel_type
+  car_fuel_type,
+  flights,
+  flying_yearly_kg,
+  electricity_bill_from,
+  electricity_bill_to,
+  electricity_bill_kwh
 from public.profiles
 where research_opt_in = true;
 

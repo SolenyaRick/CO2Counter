@@ -85,6 +85,31 @@ const SPIRITS_KG_PER_SHOT_AT_40PCT = 0.15; // per 25ml shot at 40% ABV, scales w
 
 const SHORT_HAUL_FLIGHT_KG = 250; // per short-haul European return flight
 const LONG_HAUL_FLIGHT_KG = 1600; // per long-haul international return flight
+
+// Itemized flight log (This Year page, "Flying"). Rough DEFRA-style
+// average RETURN-trip CO2e per passenger, ECONOMY class, from a UK
+// departure point - one flat figure per destination continent rather
+// than a real point-to-point distance calculator. Europe and North
+// America land close to the SHORT_HAUL_FLIGHT_KG/LONG_HAUL_FLIGHT_KG
+// figures above (still used for the UK-average benchmark, which stays a
+// simple population-wide assumption regardless of how granular the
+// current user's own log gets).
+const FLIGHT_CONTINENT_KG = {
+  europe: 250,
+  northAmerica: 1600,
+  asia: 1900,
+  africa: 1500,
+  southAmerica: 2100,
+  oceania: 3400,
+};
+
+// Cabin class multiplier vs Economy - more legroom/space per passenger
+// means a bigger share of the plane's total emissions. Rough blended
+// DEFRA-style figures (Premium Economy ~1.5-1.6x, Business ~2.5-3x, First
+// ~4x on long-haul routes specifically; applied as one flat multiplier
+// per class here regardless of haul length, for simplicity).
+const FLIGHT_CLASS_MULTIPLIER = { economy: 1, economyPlus: 1.5, business: 2.5, first: 4 };
+
 const GRID_ELECTRICITY_KG_PER_KWH = 0.2; // rough average grid electricity factor
 const CLOTHING_ITEM_KG = 10; // rough blended average per clothing item
 

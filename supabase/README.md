@@ -339,6 +339,31 @@ those aggregate averages indefinitely; no new profile will ever populate it
 going forward, so its influence there only fades as those accounts age out
 of the data, never anything that needs active cleanup.
 
+The latest run adds five columns to `profiles`: `flights` (jsonb array of
+`{ date, continent, class }` objects, default `'[]'::jsonb`) and
+`flying_yearly_kg` (numeric, default 0) for the This Year page's itemized
+flight log, replacing manual entry via `short_haul_flights_per_year`/
+`long_haul_flights_per_year` (left in place, same "harmless unused column"
+pattern as `weekly_noncommute_car_km` above); and `electricity_bill_from`,
+`electricity_bill_to` (both `date`, nullable), `electricity_bill_kwh`
+(numeric, nullable) for the bill-based electricity input, from which
+`household_kwh_per_month` (already existed) is now derived client-side
+(`computeElectricityMonthlyKwh()` in `app.js`) rather than typed in
+directly - that column itself is unchanged, so nothing downstream needed
+to change for it. `flying_yearly_kg` is a precomputed cache of the flight
+log's total (`computeFlyingYearlyKg()`, using the FLIGHT_CONTINENT_KG/
+FLIGHT_CLASS_MULTIPLIER factors in `emission-factors.js`), written
+alongside the raw `flights` array purely so `app_wide_weekly_average()`
+and `university_weekly_average()` can read a plain number instead of
+re-implementing the continent/class lookup in SQL - both functions had
+their duplicated flying formula
+(`short_haul_flights_per_year * 250 + long_haul_flights_per_year * 1600`)
+replaced with `coalesce(p.flying_yearly_kg, 0)`; neither function's output
+columns changed, so no `drop function` was needed first. All five new
+columns are also appended to `research_profiles` (at the end of its
+column list, per the positional-columns constraint noted above) for
+opted-in users.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

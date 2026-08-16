@@ -284,19 +284,36 @@
 
       <section class="card">
         <h2>Flying</h2>
-        <label class="field">
-          Short-haul flights within Europe per year
-          <input type="number" id="flights-short-haul" min="0" step="1" />
-        </label>
-        <label class="field">
-          Long-haul international flights per year (Americas, Australia, Asia, etc.)
-          <input type="number" id="flights-long-haul" min="0" step="1" />
-        </label>
         <p class="assumptions">
-          Counted per return trip: ~250 kg CO2e for a short-haul European flight, ~1,600 kg
-          CO2e for a long-haul international one &mdash; rough averages, actual footprint
-          varies a lot by distance and cabin class.
+          Log each return flight you've taken (or plan to take) this year &mdash; date is
+          optional, but a flight logged with a date over a year old stops counting toward
+          your current yearly total automatically, so it stays representative of how you're
+          flying now rather than growing forever. Counted per return trip, varying by
+          destination continent and cabin class &mdash; rough DEFRA-style averages, not a
+          real distance calculator.
         </p>
+        <ul class="journey-list" id="flight-list"><!-- entries injected by app.js --></ul>
+        <div class="journey-form">
+          <label class="field">
+            Date (optional)
+            <input type="date" id="flight-date" />
+          </label>
+          <div class="chip-toggle" id="flight-continent-toggle" role="tablist" aria-label="Which continent">
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="europe">Europe</button>
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="northAmerica">N. America</button>
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="asia">Asia</button>
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="africa">Africa</button>
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="southAmerica">S. America</button>
+            <button type="button" class="chip-toggle-btn flight-continent-btn" data-continent="oceania">Oceania</button>
+          </div>
+          <div class="chip-toggle" id="flight-class-toggle" role="tablist" aria-label="Cabin class">
+            <button type="button" class="chip-toggle-btn flight-class-btn" data-class="economy">Economy</button>
+            <button type="button" class="chip-toggle-btn flight-class-btn" data-class="economyPlus">Economy Plus</button>
+            <button type="button" class="chip-toggle-btn flight-class-btn" data-class="business">Business</button>
+            <button type="button" class="chip-toggle-btn flight-class-btn" data-class="first">First</button>
+          </div>
+          <button type="button" class="btn-secondary btn-small" id="flight-add-btn">Add flight</button>
+        </div>
       </section>
 
       <section class="card">
@@ -305,14 +322,33 @@
           People in your household
           <input type="number" id="household-people" min="1" step="1" />
         </label>
-        <label class="field">
-          Total household electricity use (kWh per month)
-          <input type="number" id="household-kwh" min="0" step="1" />
-        </label>
+        <p class="electricity-bill-summary" id="electricity-bill-summary">No bill submitted yet.</p>
+        <p class="electricity-bill-stale" id="electricity-bill-stale" hidden>
+          It's been over a year since this bill's end date &mdash; consider submitting an
+          updated one below.
+        </p>
+        <div class="journey-form">
+          <label class="field">
+            Bill from
+            <input type="date" id="electricity-bill-from" />
+          </label>
+          <label class="field">
+            Bill to
+            <input type="date" id="electricity-bill-to" />
+          </label>
+          <label class="field">
+            Total kWh used
+            <input type="number" id="electricity-bill-kwh" min="0" step="1" />
+          </label>
+          <button type="button" class="btn-secondary btn-small" id="electricity-bill-save">Save bill</button>
+        </div>
         <p class="assumptions">
-          Include everyday use like showering (if electric water heating), lighting,
-          heating, and appliances &mdash; check a recent bill if unsure. Uses a rough grid
-          average of ~0.2 kg CO2e/kWh, split evenly across everyone in the household.
+          For the most accurate figure, submit a bill covering a whole year (e.g. 12 months)
+          rather than a single month &mdash; that captures seasonal variation (more
+          heating/lighting in winter) automatically, and you won't need to update it as
+          often. Include everyday use like showering (if electric water heating), lighting,
+          heating, and appliances. Uses a rough grid average of ~0.2 kg CO2e/kWh, split
+          evenly across everyone in the household.
         </p>
         <label class="field">
           Total gas/oil heating &amp; hot water (household kWh per year)

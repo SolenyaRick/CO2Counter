@@ -86,9 +86,12 @@ with accounts and a friends leaderboard backed by Supabase.
   and flights per year - each dropping off the list the moment there's
   something logged for it (yesterday/today check that specific day's
   commute/diet confirm status, wherever that day's data actually lives -
-  this week's or last week's; electricity/flights just check for a
-  non-zero answer, since those two don't have a distinct "unanswered"
-  state the way nullable optional fields do), so the list only ever shows
+  this week's or last week's; electricity is done once a bill's been
+  submitted AND it's still fresh, dropping back to "not done" once its end
+  date is over ~13 months old, so this one nudge doubles as the "submit an
+  updated bill" reminder too; flights is done once at least one has ever
+  been logged, regardless of whether older entries have since aged out of
+  the current yearly total), so the list only ever shows
   what's actually still outstanding rather than a permanent checklist of
   everything. Once every item's dropped off, the list itself is replaced
   by a single "All done" message. Tapping an item jumps to wherever you'd
@@ -233,10 +236,23 @@ with accounts and a friends leaderboard backed by Supabase.
   blended-average fallback used if you leave it as "Prefer not to say" —
   the old "extra non-commute driving km/week" question that used to live
   here is gone; see "Non-commute driving" above for where that figure comes
-  from now), **Flying** (short-haul European vs long-haul international
-  flights per year), **Household energy** (people in your household; total
-  electricity kWh/month; total gas/oil heating + hot water kWh/yr; total
-  household water usage in m&sup3;/yr — the last two optional), **Pets**
+  from now), **Flying** (an itemized log, same "Additional journeys" style
+  as the This Week page's commute card: a date (optional), which continent
+  you flew to, and cabin class, then "Add flight" — each entry shows up in
+  a list immediately, counted in the total unless its date is over a year
+  old, in which case it stays in the list but shows muted with an "(over a
+  year ago – not counted)" note rather than disappearing, and remove with
+  the × button. Replaces the old flat "short-haul/long-haul flights per
+  year" counts — no built-in distance calculator, continent picks one of
+  six rough averages instead), **Household energy** (people in your
+  household; a bill-based electricity form — bill start date, end date,
+  and total kWh used, from which the app derives a kWh/month figure itself
+  rather than you calculating it by hand; a "Save bill" button; a summary
+  line showing the derived monthly figure and the date range it came from;
+  and, once that bill's end date is more than ~13 months old, a red nudge
+  to submit an updated one — replaces the old flat "kWh per month" number
+  input. Also total gas/oil heating + hot water kWh/yr and total household
+  water usage in m&sup3;/yr, both still optional plain numbers), **Pets**
   (number of dogs and cats, optional — their ~770/~310 kg CO2e/yr-each
   footprint is split evenly across everyone in your household, the "People
   in your household" figure above, rather than attributed entirely to you,
@@ -244,11 +260,14 @@ with accounts and a friends leaderboard backed by Supabase.
   **Banking** (which bank you mainly hold money with, plus a balance,
   optional), and **Buying goods** (clothing items bought per month).
   Household energy, pets/water, and banking are all split or weighted by
-  household size the same way, for consistency. The optional extras are
-  skippable: leaving one blank leaves it out of every total on the Home
-  page rather than counting it as zero,
-  so an unanswered question never makes your estimate look artificially
-  low.
+  household size the same way, for consistency. The optional extras
+  (gas/oil heating, water, pets, banking, car ownership) are skippable:
+  leaving one blank leaves it out of every total on the Home page rather
+  than counting it as zero, so an unanswered question never makes your
+  estimate look artificially low. Flying and household energy aren't part
+  of that skippable group any more — an empty flight log or a
+  never-submitted bill both just read as zero, the same way commute/food
+  do, since they're tracked logs rather than one-off optional questions.
 - **Leaderboard** — three cards: "This week" ranks you and your accepted
   friends by this week's *average* kg CO2e per confirmed day so far (lowest
   first), not raw total, with a callout for whoever's winning — this one
@@ -525,11 +544,20 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   0, before Monday had even happened, which made the pace line look
   missed from the very start of the week regardless of your actual
   Monday/Tuesday choices.
-- **Flying** (This Year page, per return trip): ~250 kg CO2e short-haul
-  within Europe, ~1,600 kg CO2e long-haul international.
-- **Home energy** (This Year page): household kWh/month × 12 × ~0.2 kg
-  CO2e/kWh (rough grid average), divided evenly across everyone in the
-  household.
+- **Flying** (This Year page, itemized log): a rough DEFRA-style
+  return-trip figure per destination continent — Europe ~250 kg CO2e,
+  North America ~1,600, Asia ~1,900, Africa ~1,500, South America ~2,100,
+  Oceania ~3,400 — multiplied by a cabin-class factor (Economy ×1, Economy
+  Plus ×1.5, Business ×2.5, First ×4). A flight logged with a date more
+  than 365 days old stops counting toward the current yearly total (still
+  shown in the list, just muted, so the log itself never needs pruning by
+  hand); a flight logged with no date always counts, same as the flat
+  per-year counts this replaced.
+- **Home energy** (This Year page, bill-based): household kWh/month × 12 ×
+  ~0.2 kg CO2e/kWh (rough grid average), divided evenly across everyone in
+  the household. The kWh/month figure itself is derived from a submitted
+  bill (start date, end date, total kWh used) rather than typed in
+  directly — see "Household energy" further down for how.
 - **Buying goods** (This Year page): ~10 kg CO2e per clothing item bought,
   a rough blended average across garment types.
 - **Gas/oil heating** (This Year page, optional): household kWh/year ×

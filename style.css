@@ -361,6 +361,57 @@ body {
   font-weight: 600;
 }
 
+/* Same toggle-button idea as .week-picker, but wraps onto multiple lines
+   instead of staying in one rigid row - for option sets too wide to fit a
+   single row on a phone (e.g. 6 flight continents), unlike .week-picker's
+   handful of fixed short options. */
+.chip-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip-toggle-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.chip-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.journey-item-excluded {
+  opacity: 0.6;
+}
+
+.journey-item-excluded-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.electricity-bill-summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: -6px 0 10px;
+}
+
+.electricity-bill-stale {
+  font-size: 0.8rem;
+  color: var(--danger);
+  margin: -6px 0 10px;
+}
+
 .table-caption {
   text-align: left;
   font-weight: 600;
