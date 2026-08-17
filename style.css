@@ -471,14 +471,16 @@ body {
 
 /* Brand lockup: a small square mark (matching the app icon design) beside
    the "CO2 Tracker" wordmark, used identically on the login screen and the
-   in-app header. Three overlapping circles rising diagonally from a small
-   dark pipe base read as fumes/smoke drifting up from an exhaust - tying
-   the mark to "CO2" - while the soft overlapping-circle, graduated-tone
-   composition (dark at the source, lightening as it rises) echoes the
-   original app icon's organic multi-tone style. Colors are fixed (not
-   theme-aware CSS variables) like a real logo/app-icon asset would be, and
-   the badge keeps a light background in both themes so the darkest puff
-   stays legible against a dark card. */
+   in-app header. A dark pipe base with a soft organic wisp curling upward
+   (an S-curve, not a straight line, so it reads as drifting smoke rather
+   than a ruled diagram) leads into a bold "C" and a small "2" subscript,
+   with the final large light-toned circle standing in for the "O" -
+   together the mark reads as "C₂ ⬤" i.e. "CO2" at a glance, while the
+   dark-at-the-source/light-at-the-top gradient echoes the original app
+   icon's organic multi-tone style. Colors are fixed (not theme-aware CSS
+   variables) like a real logo/app-icon asset would be, and the badge
+   keeps a light background in both themes so the dark letterforms stay
+   legible against a dark card. */
 .brand {
   display: flex;
   align-items: center;
@@ -496,16 +498,34 @@ body {
   fill: #f4f6f5;
 }
 
-.brand-mark-pipe,
-.brand-mark-puff-1 {
+.brand-mark-pipe {
   fill: #1d4a34;
 }
 
-.brand-mark-puff-2 {
-  fill: #2f6f4f;
+.brand-mark-trail {
+  fill: none;
+  stroke: #2f6f4f;
+  stroke-width: 2.3;
+  stroke-linecap: round;
 }
 
-.brand-mark-puff-3 {
+.brand-mark-letter {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  font-size: 6.5px;
+  fill: #1d4a34;
+  text-anchor: middle;
+}
+
+.brand-mark-subscript {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  font-size: 4.1px;
+  fill: #1d4a34;
+  text-anchor: middle;
+}
+
+.brand-mark-o {
   fill: #6fbf94;
 }
 
@@ -1206,6 +1226,41 @@ input, select {
 
 .stat-highlight .stat-value {
   color: var(--accent);
+}
+
+/* This Week page's summary card: one full-width hero total up top, then a
+   3-column row of Commute/Food/Alcohol underneath - deliberately its own
+   markup rather than reusing .summary-totals, since that class's
+   auto-fit grid (shared with the Home page tile carousel) is sized for a
+   variable count of same-weight boxes, not a "one hero, three equal
+   children" layout. */
+.week-summary-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: var(--tile-shadow-highlight);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.week-summary-total .stat-value {
+  font-size: 2.2rem;
+  color: var(--accent);
+}
+
+.week-summary-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.week-summary-breakdown .stat {
+  text-align: center;
 }
 
 /* First-run welcome (see renderOnboardingBanner() in app.js) - only shown

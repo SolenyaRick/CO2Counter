@@ -24,10 +24,11 @@
       <div class="brand">
         <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
           <rect class="brand-mark-bg" x="0" y="0" width="24" height="24" rx="6" />
-          <rect class="brand-mark-pipe" x="4" y="16.5" width="5" height="3.5" rx="1" />
-          <circle class="brand-mark-puff-1" cx="9.5" cy="15" r="3" />
-          <circle class="brand-mark-puff-2" cx="13" cy="11" r="3.6" />
-          <circle class="brand-mark-puff-3" cx="17" cy="6.5" r="4.3" />
+          <rect class="brand-mark-pipe" x="4" y="17" width="4.2" height="3" rx="1" />
+          <path class="brand-mark-trail" d="M7.8 16.3C6 13.5 9.5 11.5 8.2 8.7" />
+          <text class="brand-mark-letter" x="6.3" y="8.5">C</text>
+          <text class="brand-mark-subscript" x="10.6" y="14.3">2</text>
+          <circle class="brand-mark-o" cx="14.3" cy="6.8" r="4.4" />
         </svg>
         <h1>CO2 Tracker</h1>
       </div>
@@ -77,10 +78,11 @@
       <div class="brand">
         <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
           <rect class="brand-mark-bg" x="0" y="0" width="24" height="24" rx="6" />
-          <rect class="brand-mark-pipe" x="4" y="16.5" width="5" height="3.5" rx="1" />
-          <circle class="brand-mark-puff-1" cx="9.5" cy="15" r="3" />
-          <circle class="brand-mark-puff-2" cx="13" cy="11" r="3.6" />
-          <circle class="brand-mark-puff-3" cx="17" cy="6.5" r="4.3" />
+          <rect class="brand-mark-pipe" x="4" y="17" width="4.2" height="3" rx="1" />
+          <path class="brand-mark-trail" d="M7.8 16.3C6 13.5 9.5 11.5 8.2 8.7" />
+          <text class="brand-mark-letter" x="6.3" y="8.5">C</text>
+          <text class="brand-mark-subscript" x="10.6" y="14.3">2</text>
+          <circle class="brand-mark-o" cx="14.3" cy="6.8" r="4.4" />
         </svg>
         <h1>CO2 Tracker</h1>
       </div>
@@ -89,6 +91,35 @@
 
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week" hidden>
+      <section class="card summary-card">
+        <h2>Weekly summary</h2>
+        <div class="week-summary-total">
+          <span class="stat-value" id="total-week">0</span>
+          <span class="stat-label">kg CO2e</span>
+        </div>
+        <div class="week-summary-breakdown">
+          <div class="stat">
+            <span class="stat-value" id="total-commute">0</span>
+            <span class="stat-label">Commute</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="total-food">0</span>
+            <span class="stat-label">Food</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="total-alcohol">0</span>
+            <span class="stat-label">Alcohol</span>
+          </div>
+        </div>
+        <p class="assumptions">
+          Figures are rough estimates for illustration, based on commonly cited average
+          emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
+          style averages). They will not match your actual footprint exactly. See the Home
+          page for a budget-pace chart of this week (and month, and year).
+        </p>
+        <button id="reset-week" class="btn-secondary">Reset this week</button>
+      </section>
+
       <section class="card">
         <h2 id="avg-week-title">Compared to an average week</h2>
         <p class="assumptions">
@@ -202,37 +233,8 @@
         </p>
       </section>
 
-      <section class="card summary-card">
-        <h2>Weekly summary</h2>
-        <div class="summary-totals">
-          <div class="stat">
-            <span class="stat-value" id="total-commute">0</span>
-            <span class="stat-label">kg CO2e &middot; Commute</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="total-food">0</span>
-            <span class="stat-label">kg CO2e &middot; Food</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="total-alcohol">0</span>
-            <span class="stat-label">kg CO2e &middot; Alcohol</span>
-          </div>
-          <div class="stat stat-highlight">
-            <span class="stat-value" id="total-week">0</span>
-            <span class="stat-label">kg CO2e &middot; Total this week</span>
-          </div>
-        </div>
-        <p class="assumptions">
-          Figures are rough estimates for illustration, based on commonly cited average
-          emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
-          style averages). They will not match your actual footprint exactly. See the Home
-          page for a budget-pace chart of this week (and month, and year).
-        </p>
-        <button id="reset-week" class="btn-secondary">Reset this week</button>
-      </section>
-
       <section class="card comparison-card">
-        <h2>This week, in context</h2>
+        <h2>In context</h2>
         <div class="comparison-grid">
           <div class="comparison-item">
             <span class="comparison-value" id="car-km-value">0</span>

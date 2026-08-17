@@ -6,22 +6,28 @@ with accounts and a friends leaderboard backed by Supabase.
 ## Brand mark
 
 The "CO2 Tracker" wordmark is paired with a small square icon (`.brand` in
-`index.html`/`style.css`) on the login screen and the in-app header: three
-overlapping circles rising diagonally from a small dark pipe base, reading
-as fumes/smoke drifting up from an exhaust - a more literal "CO2" mark than
-a generic eco-leaf. The graduated dark-to-light tone (darkest at the pipe,
-lightening as it rises) echoes the original app icon's soft multi-tone
-style while staying a crisp, flat, defined shape rather than a blurred
-blob. Colors are hardcoded (not the theme's CSS variables) like a real
-logo asset would be, and the badge keeps a light background in both themes
-so the darkest circle stays legible against a dark card. The same mark is exported as the actual icon files in `icons/` (favicon,
+`index.html`/`style.css`) on the login screen and the in-app header: a dark
+pipe base with an organic S-curved wisp curling upward (not a straight
+line, so it reads as drifting smoke rather than a ruled diagram) into a
+bold "C" and a small "2" subscript, with a large light-toned circle
+standing in for the "O" - together reading as "C₂ ⬤", i.e. "CO2" at a
+glance, a more literal mark than a generic eco-leaf. The dark-at-the-pipe,
+light-at-the-circle gradient echoes the original app icon's soft
+multi-tone style while staying a crisp, defined shape rather than a
+blurred blob. Colors are hardcoded (not the theme's CSS variables) like a
+real logo asset would be, and the badge keeps a light background in both
+themes so the dark letterforms stay legible against a dark card. The same
+mark is exported as the actual icon files in `icons/` (favicon,
 apple-touch-icon, PWA manifest icons, and the maskable variant with extra
 padding for Android's adaptive-icon safe zone) and as
 `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` for the
 iOS app icon - each was rendered from the same SVG at its target pixel
 size via a one-off headless-browser screenshot, not a checked-in generator
-script, so regenerating any of them after a color/shape tweak means
-re-running that render by hand.
+script, so regenerating any of them after a color/shape/lettering tweak
+means re-running that render by hand. The "C"/"2" text loses legibility
+below about 32px (favicon sizes fall back to reading as just the trail and
+circle), the same graceful-degradation tradeoff any detailed mark makes at
+tiny sizes.
 
 ## Pages
 
@@ -250,7 +256,13 @@ color too with no extra CSS.
   of public infrastructure and government spending runs to roughly 3.3
   tonnes CO2e/yr per person in the UK, real but not something an app like
   this can help you reduce.
-- **This Week** — starts with a "Compared to an average week" card: a UK
+- **This Week** — starts with a "Weekly summary" card: a full-width hero
+  box with the week's running total (just the number and "kg CO2e" - no
+  "Total this week" wording, since the card heading and the page itself
+  already say that), then a row of three equal Commute/Food/Alcohol boxes
+  underneath, each trimmed to just its number and category name rather
+  than repeating "kg CO2e" on every tile. A "Reset this week" button sits
+  at the bottom. Then a "Compared to an average week" card: a UK
   average week (commute + food only, the same bottom-up figures as the
   Home page) shown alongside a savings-framed comparison against your
   week so far — "X kg CO2e saved vs an average week" (green) or "X kg
@@ -303,13 +315,11 @@ color too with no extra CSS.
   figure: tap-to-fill rows of beer/wine icons set a weekly count (tap the
   current count again to clear it), plus an ABV% and shots count for other
   spirits — counts immediately, with no confirm step needed, since every
-  value including 0 is already a real answer. Also shows a
-  "This week, in context" card that converts your confirmed total into an
+  value including 0 is already a real answer. Also shows an
+  "In context" card that converts your confirmed total into an
   equivalent car-km distance (DEFRA-style car factor) and how much CO2e
   you'd have saved if every confirmed meat day had been veggie instead,
-  broken down by meat type (e.g. beef vs chicken). A "Weekly summary" card
-  below that shows your Commute/Food/Alcohol/Total-so-far tiles and a
-  "Reset this week" button - the budget-pace chart itself now lives on the
+  broken down by meat type (e.g. beef vs chicken) - the budget-pace chart itself lives on the
   Home page (its "This week" view), alongside month and year versions of
   the same chart. The week-by-week grid ("Your weeks") that used to sit at
   the bottom of this page now lives on the Account page's History section -
