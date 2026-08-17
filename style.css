@@ -136,7 +136,7 @@ body {
 }
 
 .auth-card h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 1.4rem;
 }
 
@@ -465,8 +465,48 @@ body {
 }
 
 .app-header h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 1.6rem;
+}
+
+/* Brand lockup: a small square mark (matching the app icon design) beside
+   the "CO2 Tracker" wordmark, used identically on the login screen and the
+   in-app header. Three overlapping circles rising diagonally from a small
+   dark pipe base read as fumes/smoke drifting up from an exhaust - tying
+   the mark to "CO2" - while the soft overlapping-circle, graduated-tone
+   composition (dark at the source, lightening as it rises) echoes the
+   original app icon's organic multi-tone style. Colors are fixed (not
+   theme-aware CSS variables) like a real logo/app-icon asset would be, and
+   the badge keeps a light background in both themes so the darkest puff
+   stays legible against a dark card. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.brand-mark-bg {
+  fill: #f4f6f5;
+}
+
+.brand-mark-pipe,
+.brand-mark-puff-1 {
+  fill: #1d4a34;
+}
+
+.brand-mark-puff-2 {
+  fill: #2f6f4f;
+}
+
+.brand-mark-puff-3 {
+  fill: #6fbf94;
 }
 
 .subtitle {
@@ -2015,6 +2055,17 @@ input, select {
   width: var(--pct);
   height: 18px;
   border-radius: 4px;
+}
+
+.domain-legend-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .domain-legend-total {

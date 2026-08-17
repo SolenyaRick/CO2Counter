@@ -3,6 +3,26 @@
 A web app for tracking your weekly carbon footprint from commuting and food,
 with accounts and a friends leaderboard backed by Supabase.
 
+## Brand mark
+
+The "CO2 Tracker" wordmark is paired with a small square icon (`.brand` in
+`index.html`/`style.css`) on the login screen and the in-app header: three
+overlapping circles rising diagonally from a small dark pipe base, reading
+as fumes/smoke drifting up from an exhaust - a more literal "CO2" mark than
+a generic eco-leaf. The graduated dark-to-light tone (darkest at the pipe,
+lightening as it rises) echoes the original app icon's soft multi-tone
+style while staying a crisp, flat, defined shape rather than a blurred
+blob. Colors are hardcoded (not the theme's CSS variables) like a real
+logo asset would be, and the badge keeps a light background in both themes
+so the darkest circle stays legible against a dark card. The same mark is exported as the actual icon files in `icons/` (favicon,
+apple-touch-icon, PWA manifest icons, and the maskable variant with extra
+padding for Android's adaptive-icon safe zone) and as
+`ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png` for the
+iOS app icon - each was rendered from the same SVG at its target pixel
+size via a one-off headless-browser screenshot, not a checked-in generator
+script, so regenerating any of them after a color/shape tweak means
+re-running that render by hand.
+
 ## Pages
 
 Navigation between the five pages below is a fixed bottom tab bar (`#main-tabs`
@@ -117,8 +137,10 @@ color too with no extra CSS.
   zero or unanswered (e.g. gas heating, if that question's been skipped)
   just doesn't get a segment. Segments are separated by a thin gap (not
   just a color change) and every legend row is prefixed with that
-  category's emoji, so a domain is always identifiable by more than its
-  swatch color alone - with up to twelve categories on screen at once and
+  category's small SVG line icon (`DOMAIN_ICON_SVG` in `app.js`, the same
+  per-category icon as the "Your year, estimated" tile badges and the This
+  Year list), so a domain is always identifiable by more than its swatch
+  color alone - with up to twelve categories on screen at once and
   "Rank by size" free to put any two next to each other, no fixed hue
   order can guarantee every pair reads as different colors for every
   viewer (see the palette comment above `--commute-color` etc. in

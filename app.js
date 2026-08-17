@@ -1805,25 +1805,27 @@
   // first, then the Home group, then the Other group.
   const DOMAIN_ORDER = ["food", "commute", "nonCommuteCar", "alcohol", "homeEnergy", "gasHeating", "water", "pets", "flying", "banks", "goods", "carOwnership"];
 
-  // Same emoji as each category's tile badge on "Your year, estimated" (see
-  // index.html's .tile-emoji spans) - shown in the legend text so a
-  // category is always identifiable by more than just its swatch color,
-  // since the categorical palette can't guarantee every pair of the 12
-  // domains is distinguishable once "Rank by size" can put any two next
-  // to each other (see the palette comment in style.css).
-  const DOMAIN_EMOJI = {
-    food: "🍽️",
-    commute: "🚗",
-    nonCommuteCar: "🚙",
-    alcohol: "🍷",
-    homeEnergy: "⚡",
-    gasHeating: "🔥",
-    water: "💧",
-    pets: "🐾",
-    flying: "✈️",
-    banks: "🏦",
-    goods: "🛍️",
-    carOwnership: "🏭",
+  // Same SVG line icon as each category's tile badge on "Your year,
+  // estimated" (see index.html's .tile-icon svgs) - shown in the legend
+  // row so a category is always identifiable by more than just its swatch
+  // color, since the categorical palette can't guarantee every pair of the
+  // 12 domains is distinguishable once "Rank by size" can put any two next
+  // to each other (see the palette comment in style.css). Stored as raw
+  // <path>/<circle>/... markup (not a full <svg>) so it can be dropped
+  // straight into an svg element's innerHTML per legend row.
+  const DOMAIN_ICON_SVG = {
+    food: '<path d="M7 2v6a2 2 0 0 0 4 0V2"/><path d="M9 2v20"/><path d="M17 2c-1.7 0-3 2.2-3 5s1.3 5 3 5v10"/>',
+    commute: '<path d="M5 11l1.5-4h11L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/>',
+    nonCommuteCar: '<path d="M4 11l1-4h4l2-3h4l2 3h2l2 4"/><rect x="2" y="11" width="20" height="6" rx="2"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>',
+    alcohol: '<path d="M8 2h8l-1 7a3 3 0 0 1-6 0z"/><path d="M12 12v7"/><path d="M9 22h6"/>',
+    homeEnergy: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+    gasHeating: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7.5 7.5 0 1 1-15 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    water: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+    pets: '<circle cx="6" cy="9" r="2"/><circle cx="10" cy="5" r="2"/><circle cx="14" cy="5" r="2"/><circle cx="18" cy="9" r="2"/><ellipse cx="12" cy="16" rx="4.5" ry="3.5"/>',
+    flying: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-1 .1-1.3.5l-.4.5c-.4.5-.2 1.2.3 1.5L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.5 1 .7 1.5.3l.5-.4c.4-.3.6-.8.5-1.3z"/>',
+    banks: '<path d="M2 10l10-6 10 6"/><path d="M4 10v11M20 10v11M8 21v-7M12 21v-7M16 21v-7"/><path d="M3 21h18"/>',
+    goods: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    carOwnership: '<path d="M3 21V10l5 3V10l5 3V7l6 4v10z"/><path d="M3 21h18"/>',
   };
 
   // Stacked bar showing what the period's total is made up of, domain by
@@ -1917,9 +1919,15 @@
       // exact same element is the "before" and "after" of the transition
       // rather than two separate elements swapped out.
       swatch.style.setProperty("--pct", `${pct}%`);
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      icon.setAttribute("class", "domain-legend-icon");
+      icon.setAttribute("viewBox", "0 0 24 24");
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = DOMAIN_ICON_SVG[key];
       const text = document.createElement("span");
-      text.textContent = `${DOMAIN_EMOJI[key]} ${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
+      text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
       li.appendChild(swatch);
+      li.appendChild(icon);
       li.appendChild(text);
       legend.appendChild(li);
     });
