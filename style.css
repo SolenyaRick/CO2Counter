@@ -11,17 +11,44 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
   --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   --tile-shadow-highlight: 0 2px 8px rgba(47, 111, 79, 0.16);
-  --commute-color: #3b6ea5;
-  --alcohol-color: #b5842f;
-  --noncommutecar-color: #7a9cc6;
-  --homeenergy-color: #8a5fb0;
-  --gasheating-color: #cc6b4f;
-  --water-color: #2f95a8;
-  --pets-color: #c76b96;
-  --flying-color: #4fa8c9;
-  --banks-color: #6b7280;
-  --goods-color: #a0559e;
-  --carownership-color: #8a6d3b;
+
+  /* Spacing scale - every card/tile/list gap below should reference one of
+     these rather than a one-off pixel value, so the app has one consistent
+     rhythm instead of ad-hoc numbers picked feature-by-feature. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Domain bar/legend categorical palette (12 slots: --accent for "food" is
+     the 1st). Hand-tuned to a 12-way hue wheel and checked against the
+     dataviz skill's OKLab validator (scripts/validate_palette.js) for the
+     fixed DOMAIN_ORDER used in app.js - every hard gate (lightness band,
+     chroma floor, CVD separation, normal-vision floor) passes for every
+     *adjacent* pair in that order, in both themes. Two exceptions are kept
+     on purpose: --accent (food) undershoots the chroma/lightness gates
+     because it's the app's brand color used everywhere else, not just
+     here, and it's already the most distinguishable slot in practice
+     (always slot 1, always paired with the 🍽️ icon). The "Rank by size"
+     toggle can put any two slots next to each other, and one pair
+     (nonCommuteCar/pets in light mode, nonCommuteCar/gasHeating in dark)
+     falls in the 6-8 "legal only with secondary encoding" CVD band under
+     that reordering - mitigated by the emoji + text label every legend
+     row always shows (see renderDomainBarChart() in app.js), so identity
+     never depends on hue alone. */
+  --commute-color: #b931b9;
+  --alcohol-color: #4242cd;
+  --noncommutecar-color: #75b931;
+  --homeenergy-color: #b97531;
+  --gasheating-color: #31b9b9;
+  --water-color: #b93175;
+  --pets-color: #31b931;
+  --flying-color: #7531b9;
+  --banks-color: #b9b931;
+  --goods-color: #3175b9;
+  --carownership-color: #b93131;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,17 +65,21 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
     --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     --tile-shadow-highlight: 0 2px 10px rgba(111, 191, 148, 0.2);
-    --commute-color: #6fa2d8;
-    --alcohol-color: #e0ac54;
-    --noncommutecar-color: #a8c1e0;
-    --homeenergy-color: #b291d9;
-    --gasheating-color: #e0977a;
-    --water-color: #5cc2d4;
-    --pets-color: #e096b4;
-    --flying-color: #7fc4e0;
-    --banks-color: #9aa3b0;
-    --goods-color: #c980c7;
-    --carownership-color: #b89a63;
+    /* Same 12-hue set, re-stepped for the dark surface (validated
+       separately against #1e2422, not just lightened from the light set)
+       - see the light-mode comment above for the palette methodology and
+       the two accepted exceptions. */
+    --commute-color: #cc3ecc;
+    --alcohol-color: #5e5ed4;
+    --noncommutecar-color: #6ba92d;
+    --homeenergy-color: #c98036;
+    --gasheating-color: #21abab;
+    --water-color: #cc3e85;
+    --pets-color: #2da92d;
+    --flying-color: #9456d2;
+    --banks-color: #919127;
+    --goods-color: #4e8fd0;
+    --carownership-color: #ce4646;
   }
 }
 
@@ -201,11 +232,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-3);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   font-size: 0.9rem;
 }
 
@@ -234,12 +265,12 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow);
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
 }
 
 .card h2 {
-  margin: 0 0 14px;
+  margin: 0 0 var(--space-3);
   font-size: 1.05rem;
 }
 
@@ -274,11 +305,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-3);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   font-size: 0.88rem;
 }
 
@@ -328,32 +359,43 @@ body {
   vertical-align: middle;
 }
 
+/* "Pick one of N" toggle-button family - .week-picker (a rigid single-row
+   segmented control, for a handful of fixed short options) and .chip-toggle
+   (wraps onto multiple lines, for option sets too wide for one row on a
+   phone, e.g. 6 flight continents) share this base look and .active state
+   so every toggle in the app reads as the same control; only the
+   container/button shape differs between the two. */
+.week-picker-btn,
+.chip-toggle-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  background: var(--bg);
+  color: var(--text-muted);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.week-picker-btn.active,
+.chip-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
 .week-picker {
   display: inline-flex;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-3);
 }
 
 .week-picker-btn {
-  font: inherit;
-  font-size: 0.85rem;
-  background: var(--bg);
-  color: var(--text-muted);
   border: none;
-  padding: 7px 14px;
-  cursor: pointer;
 }
 
 .week-picker-btn + .week-picker-btn {
   border-left: 1px solid var(--border);
-}
-
-.week-picker-btn.active {
-  background: var(--accent);
-  color: #fff;
-  font-weight: 600;
 }
 
 .row-footprint.counted {
@@ -361,33 +403,20 @@ body {
   font-weight: 600;
 }
 
-/* Same toggle-button idea as .week-picker, but wraps onto multiple lines
-   instead of staying in one rigid row - for option sets too wide to fit a
-   single row on a phone (e.g. 6 flight continents), unlike .week-picker's
-   handful of fixed short options. */
 .chip-toggle {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .chip-toggle-btn {
-  font: inherit;
-  font-size: 0.85rem;
-  background: var(--bg);
-  color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 7px 14px;
-  cursor: pointer;
 }
 
 .chip-toggle-btn.active {
-  background: var(--accent);
-  color: #fff;
   border-color: var(--accent);
-  font-weight: 600;
 }
 
 .journey-item-excluded {
@@ -826,8 +855,8 @@ input, select {
 .summary-totals {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .stat {
@@ -835,7 +864,7 @@ input, select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: var(--space-3) var(--space-4);
   box-shadow: var(--tile-shadow);
 }
 
@@ -879,17 +908,62 @@ input, select {
   color: var(--accent);
 }
 
+/* First-run welcome (see renderOnboardingBanner() in app.js) - only shown
+   while every To Do item is still outstanding, and remembered as
+   dismissed per-device via localStorage once closed. */
+.onboarding-banner {
+  position: relative;
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.onboarding-banner h2 {
+  margin: 0 0 var(--space-2);
+  padding-right: var(--space-5);
+}
+
+.onboarding-banner .assumptions {
+  margin-bottom: var(--space-3);
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.onboarding-dismiss {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.onboarding-dismiss:hover,
+.onboarding-dismiss:focus-visible {
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.4);
+}
+
 .year-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
+  gap: var(--space-1);
   background: var(--accent-light);
   border: 1px solid var(--accent);
   border-radius: 12px;
-  padding: 20px 16px;
-  margin-bottom: 8px;
+  padding: var(--space-5) var(--space-4);
+  margin-bottom: var(--space-2);
   box-shadow: var(--tile-shadow-highlight);
 }
 
@@ -988,11 +1062,11 @@ input, select {
 .section-break {
   border: none;
   border-top: 1px solid var(--border);
-  margin: 18px 0;
+  margin: var(--space-4) 0;
 }
 
 .category-heading {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-2);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1004,7 +1078,7 @@ input, select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .avg-week-savings.avg-week-good {
@@ -1028,11 +1102,11 @@ input, select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .app-average-figure + .app-average-figure {
-  margin-top: 10px;
+  margin-top: var(--space-2);
 }
 
 .stat .week-diff {
@@ -1052,15 +1126,15 @@ input, select {
 .comparison-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .comparison-item {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px;
+  padding: var(--space-4);
 }
 
 .comparison-value {
@@ -1102,12 +1176,12 @@ input, select {
 }
 
 .compact-card {
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
 }
 
 .compact-card h2 {
   font-size: 0.92rem;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2);
 }
 
 .compact-bullets {
@@ -1160,6 +1234,33 @@ input, select {
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+/* Before renderRingStat() has run at all (the window between sign-in and
+   the first full render - see onSignedIn() in app.js), this div is
+   literally empty: no height, so the tile would show only its emoji
+   badge/info button floating over blank space. :empty gives it a
+   reserved-height shimmer placeholder instead, and stops applying itself
+   automatically the instant JS sets any innerHTML (populated or the
+   muted "no data" markup alike), so no JS toggling is needed. */
+.ring-container:empty {
+  min-height: 138px;
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(100deg, var(--border) 30%, var(--surface) 45%, var(--border) 60%);
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -50% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-container:empty {
+    animation: none;
+  }
 }
 
 .ring-wrap {
@@ -1272,8 +1373,8 @@ input, select {
 .todo-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
@@ -1329,6 +1430,14 @@ input, select {
 
 .budget-chart {
   padding-top: 4px;
+}
+
+/* Reserves the chart's rendered height before renderBudgetChart() has run
+   (this div only has a comment child until then, so :empty doesn't apply
+   here the way it does for .ring-container - reserving height directly
+   is the simpler fix for the same "nothing painted yet" flash). */
+.budget-chart:not(:has(svg)) {
+  min-height: 160px;
 }
 
 .budget-chart-svg {
@@ -1447,12 +1556,23 @@ input, select {
   border-radius: 8px;
   overflow: hidden;
   background: var(--border);
-  margin: 4px 0 14px;
+  margin: var(--space-1) 0 var(--space-3);
 }
 
+/* A visible gap between segments (rather than relying purely on hue to
+   mark a boundary) so two adjacent categories with a similar-reading
+   color still read as separate shapes - the categorical palette above
+   (--commute-color etc.) is validated for CVD separation, but a boundary
+   you can see regardless of color is a stronger, order-independent cue,
+   since "Rank by size" can put any two categories next to each other. */
 .domain-bar-segment {
   height: 100%;
   min-width: 3px;
+  border-right: 2px solid var(--surface);
+}
+
+.domain-bar-segment:last-child {
+  border-right: none;
 }
 
 .domain-bar-empty {
@@ -1564,8 +1684,8 @@ input, select {
 .domain-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 0;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
 }
 
 .domain-toolbar-btn {
@@ -1574,6 +1694,10 @@ input, select {
   gap: 5px;
 }
 
+/* Same "selected" look as .week-picker-btn.active/.chip-toggle-btn.active
+   above (accent fill, white text, bold) - kept as its own rule since this
+   button's unselected state is .btn-secondary.btn-small, not the pill-
+   toggle base, but the active state should still read as one language. */
 .domain-toolbar-btn.active,
 .domain-toolbar-btn[aria-pressed="true"] {
   background: var(--accent);
@@ -1738,11 +1862,11 @@ input, select {
 .leaderboard-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: var(--space-2) var(--space-3);
 }
 
 .leaderboard-row.is-current {
@@ -1838,7 +1962,7 @@ input, select {
 .modal {
   background: var(--surface);
   border-radius: 12px;
-  padding: 20px;
+  padding: var(--space-5);
   width: 100%;
   max-width: 340px;
   box-shadow: var(--shadow);

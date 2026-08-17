@@ -7,7 +7,15 @@ with accounts and a friends leaderboard backed by Supabase.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
-- **Home** — the landing page. Opens with a "Total CO2 saved" hero card: a
+- **Home** — the landing page. For a brand-new account (every To Do item
+  below still outstanding - see the "To do" card further down) it opens
+  with a dismissible welcome banner pointing at the two places to start:
+  This Week for day-by-day logging, This Year for the one-off yearly
+  questions. Dismissing it is remembered per-device via `localStorage`
+  (`co2tracker_onboarding_dismissed`), independent of account sync - it's
+  not meaningful data worth a network round trip - and it stops showing
+  itself automatically the moment anything at all has been logged, even
+  without an explicit dismissal. Then a "Total CO2 saved" hero card: a
   two-slide swipeable carousel (native CSS scroll-snap, Instagram-post
   style, with two small dots underneath showing which slide you're on -
   swipe/scroll horizontally on either mobile or desktop to move between
@@ -66,7 +74,15 @@ with accounts and a friends leaderboard backed by Supabase.
   year, estimated" tiles) - the same weekly-equivalent approach the
   all-time weekly average on the Leaderboard already uses. A domain that's
   zero or unanswered (e.g. gas heating, if that question's been skipped)
-  just doesn't get a segment. Two small buttons sit under the legend. "Show
+  just doesn't get a segment. Segments are separated by a thin gap (not
+  just a color change) and every legend row is prefixed with that
+  category's emoji, so a domain is always identifiable by more than its
+  swatch color alone - with up to twelve categories on screen at once and
+  "Rank by size" free to put any two next to each other, no fixed hue
+  order can guarantee every pair reads as different colors for every
+  viewer (see the palette comment above `--commute-color` etc. in
+  `style.css` for how the 12-color set was chosen and validated). Two
+  small buttons sit under the legend. "Show
   full breakdown ▾" doesn't reveal a separate chart underneath; instead,
   the legend's own small colored squares each animate (a plain CSS width
   transition, no library) into a full-length bar sized to that domain's own
@@ -145,7 +161,14 @@ with accounts and a friends leaderboard backed by Supabase.
   others just added noise. Optional categories you haven't answered yet
   fall back to the same muted "–" tile (value, label, "vs UK average"
   caption) used everywhere else in the app, rather than showing a
-  misleadingly "full" ring for an unanswered question. Four tiles - Food,
+  misleadingly "full" ring for an unanswered question. Before the first
+  render completes (the brief window between sign-in and profile/weeks
+  finishing their load - see `onSignedIn()` in `app.js`), each ring tile
+  is a literally-empty `<div>`; a CSS `:empty` rule gives it a
+  reserved-height shimmer placeholder instead, so the tile never flashes
+  its emoji/info-button badges floating over collapsed blank space, and it
+  stops applying itself automatically the instant real markup (populated
+  or muted "no data" alike) is set. Four tiles - Food,
   Home energy, Flying, and Banking
   - additionally have a small ⓘ button in the top-right corner (the emoji
   badge and info button share the tile's two top corners without
@@ -354,6 +377,17 @@ neither file is an ES module) — see "Emission factor assumptions" below.
 Everything else (UI labels/icons, Supabase config, page logic) stays in
 `app.js`. `tile-info.js`, loaded the same way, holds the editable copy for
 the Home page's four tile info popups (see "Pages" above).
+
+`style.css` defines a small spacing scale (`--space-1` through `--space-6`,
+4px to 24px) at the top of `:root` - card/tile/list padding, margins, and
+flex/grid gaps reference these tokens rather than one-off pixel values, so
+the app has one consistent rhythm instead of a different number per
+feature. The three "pick one of N" toggle-button patterns
+(`.week-picker-btn`, a rigid single-row segmented control;
+`.chip-toggle-btn`, the same idea wrapping onto multiple lines for wider
+option sets like the 6 flight continents; and `.domain-toolbar-btn`, a
+`.btn-secondary` with a "selected" state) share one base look and active
+state rather than each declaring its own, for the same reason.
 
 The Account page's owner-only "Download as Excel" button also lazy-loads a
 vendored copy of [SheetJS](https://sheetjs.com) (`vendor/xlsx.js`, the

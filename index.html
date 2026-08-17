@@ -491,6 +491,21 @@
 
     <!-- PAGE 4: Home (Stats / yearly estimate) -->
     <section class="view" id="view-stats">
+      <section class="card onboarding-banner" id="home-onboarding-banner" hidden>
+        <button type="button" class="onboarding-dismiss" id="home-onboarding-dismiss" aria-label="Dismiss">&times;</button>
+        <h2>Welcome to CO2 Tracker &#128075;</h2>
+        <p class="assumptions">
+          Two places to start: log today's commute and meals on <strong>This Week</strong>,
+          or answer a few one-off questions (flights, home energy, and more) on
+          <strong>This Year</strong> to get your full yearly estimate. Either one on its
+          own is useful &mdash; do both for the full picture.
+        </p>
+        <div class="onboarding-actions">
+          <button type="button" class="btn-primary btn-small" data-nav="week">Log this week</button>
+          <button type="button" class="btn-secondary btn-small" data-nav="weeks">Set up your year</button>
+        </div>
+      </section>
+
       <section class="card" id="home-savings-card">
         <h2>Total CO2 saved</h2>
         <div class="carousel" id="home-savings-carousel">

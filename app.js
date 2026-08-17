@@ -1798,6 +1798,27 @@
   // first, then the Home group, then the Other group.
   const DOMAIN_ORDER = ["food", "commute", "nonCommuteCar", "alcohol", "homeEnergy", "gasHeating", "water", "pets", "flying", "banks", "goods", "carOwnership"];
 
+  // Same emoji as each category's tile badge on "Your year, estimated" (see
+  // index.html's .tile-emoji spans) - shown in the legend text so a
+  // category is always identifiable by more than just its swatch color,
+  // since the categorical palette can't guarantee every pair of the 12
+  // domains is distinguishable once "Rank by size" can put any two next
+  // to each other (see the palette comment in style.css).
+  const DOMAIN_EMOJI = {
+    food: "🍽️",
+    commute: "🚗",
+    nonCommuteCar: "🚙",
+    alcohol: "🍷",
+    homeEnergy: "⚡",
+    gasHeating: "🔥",
+    water: "💧",
+    pets: "🐾",
+    flying: "✈️",
+    banks: "🏦",
+    goods: "🛍️",
+    carOwnership: "🏭",
+  };
+
   // Stacked bar showing what the period's total is made up of, domain by
   // domain. Commute/food/alcohol are real tracked totals for [start, today]
   // (same scope as the pace chart above it); the rest (flights, home
@@ -1890,7 +1911,7 @@
       // rather than two separate elements swapped out.
       swatch.style.setProperty("--pct", `${pct}%`);
       const text = document.createElement("span");
-      text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
+      text.textContent = `${DOMAIN_EMOJI[key]} ${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
       li.appendChild(swatch);
       li.appendChild(text);
       legend.appendChild(li);
@@ -2719,6 +2740,7 @@
     renderSavingsTotaliser();
     renderPeriodChart();
     renderHomeTodoList();
+    renderOnboardingBanner();
   }
 
   // Instagram-carousel version of a single "Compared to: X" slide - reuses
@@ -2803,7 +2825,9 @@
   // Each item drops off the list entirely once it's done, rather than
   // sitting there checked off - once everything's done, the list itself
   // is replaced with a single "All done" message.
-  function renderHomeTodoList() {
+  // Shared by renderHomeTodoList() (which items to show) and
+  // renderOnboardingBanner() (whether *nothing* has been logged yet).
+  function todoItemsStatus() {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
@@ -2811,7 +2835,7 @@
     const todayStatus = dayConfirmStatus(today);
     const yesterdayStatus = dayConfirmStatus(yesterday);
 
-    const items = [
+    return [
       ["todo-yesterday-commute", yesterdayStatus.commuteDone],
       ["todo-yesterday-meal", yesterdayStatus.dietDone],
       ["todo-today-commute", todayStatus.commuteDone],
@@ -2819,6 +2843,10 @@
       ["todo-electricity", !!profile.householdKwhPerMonth && electricityBillIsFresh()],
       ["todo-flights", (profile.flights || []).length > 0],
     ];
+  }
+
+  function renderHomeTodoList() {
+    const items = todoItemsStatus();
 
     let allDone = true;
     items.forEach(([id, done]) => {
@@ -2833,6 +2861,38 @@
     if (hint) hint.hidden = allDone;
     if (list) list.hidden = allDone;
     if (doneMessage) doneMessage.hidden = !allDone;
+  }
+
+  const ONBOARDING_DISMISSED_KEY = "co2tracker_onboarding_dismissed";
+
+  // A short "start here" welcome, shown only while every To Do item is
+  // still outstanding (i.e. nothing at all has been logged yet) - once a
+  // single thing is logged the app already has real content to show, so
+  // the normal Home page carries its own weight. Dismissible and
+  // remembered per-device via localStorage, independent of account sync
+  // (skipping it once shouldn't require a network round-trip, and it's not
+  // meaningful data worth syncing across devices).
+  function renderOnboardingBanner() {
+    const banner = document.getElementById("home-onboarding-banner");
+    if (!banner) return;
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1";
+    } catch (e) {
+      // Private browsing / storage disabled - just don't persist the choice.
+    }
+    const nothingLoggedYet = todoItemsStatus().every(([, done]) => !done);
+    banner.hidden = dismissed || !nothingLoggedYet;
+  }
+
+  function dismissOnboardingBanner() {
+    try {
+      localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+    } catch (e) {
+      // Ignore - worst case the banner reappears next load.
+    }
+    const banner = document.getElementById("home-onboarding-banner");
+    if (banner) banner.hidden = true;
   }
 
   function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
@@ -3626,6 +3686,12 @@
     });
 
     document.getElementById("electricity-bill-save").addEventListener("click", saveElectricityBill);
+
+    document.getElementById("home-onboarding-dismiss").addEventListener("click", dismissOnboardingBanner);
+    document.getElementById("home-onboarding-banner").addEventListener("click", (e) => {
+      const navBtn = e.target.closest("[data-nav]");
+      if (navBtn) showTab(navBtn.dataset.nav);
+    });
 
     // Optional extras: unlike bindNumberField above, a blank input maps to
     // null (excluded from every total) rather than being coerced to 0.
