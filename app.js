@@ -307,6 +307,11 @@
     // (the select's "None" option). Used for the Home page's uni-average
     // comparison chip once enough people from the same university opt in.
     university: null,
+    // Home page "Habits" card - { habitId: { startDate, targetDays } },
+    // one entry per habit with an active challenge (see startHabitChallenge()/
+    // cancelHabitChallenge()). Streak counts themselves are never stored
+    // here, only recomputed from the diet/flights data they're derived from.
+    habitChallenges: {},
   };
 
   function blankWeek() {
@@ -612,6 +617,7 @@
         baselineWeekKey: data.baseline_week_key ?? null,
         carFuelType: data.car_fuel_type ?? null,
         university: data.university ?? null,
+        habitChallenges: data.habit_challenges ?? {},
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -645,6 +651,7 @@
       baseline_week_key: profile.baselineWeekKey,
       car_fuel_type: profile.carFuelType,
       university: profile.university,
+      habit_challenges: profile.habitChallenges,
     };
   }
 
@@ -2604,6 +2611,210 @@
     document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
   }
 
+  // ---------- Habits (Home page "Habits" card) ----------
+  // Two streak-based habits, each backed entirely by data the app already
+  // tracks elsewhere - no separate "did you do the habit today" logging
+  // step of its own. A streak is always recomputed from that underlying
+  // data on every render rather than stored, so it can never drift out of
+  // sync with the diet/flights it's derived from.
+  const HABITS = [
+    { id: "meatFree", emoji: "🥦", label: "Meat-free days", singular: "day" },
+    { id: "noFlights", emoji: "✈️", label: "Flight-free", singular: "day" },
+  ];
+  // Real streak/habit apps mark round numbers as small wins - the exact
+  // thresholds matter less than having *some* to celebrate. Kept short
+  // (a year is the last one) since nothing above that is likely to ever
+  // be hit in practice, and an unreachable milestone is just dead code.
+  const STREAK_MILESTONES = [7, 30, 100, 365];
+
+  // Longest run of confirmed, meat-free days ending today - or ending
+  // yesterday if today's diet isn't confirmed yet, so the streak doesn't
+  // visibly reset to 0 first thing in the morning before there's even been
+  // a chance to log today. Walks backward day by day through weeksCache
+  // (already loaded in full - see loadAllWeeks()); stops at the first day
+  // that's either unconfirmed or a meat day, since an unconfirmed day is
+  // "unknown", not "meat-free", and can't extend a streak either way.
+  function meatFreeStreakDays() {
+    let count = 0;
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    if (!dayConfirmStatus(cursor).dietDone) cursor.setDate(cursor.getDate() - 1);
+    for (let i = 0; i < 3650; i++) { // ~10yr cap so a data issue can't hang the render
+      const weekData = weeksCache[weekKeyFor(cursor)];
+      const dayKey = dayKeyFor(cursor);
+      const entry = weekData?.diet?.[dayKey];
+      if (!weekData?.confirmedDiet?.[dayKey] || !entry || entry.type === "meat") break;
+      count++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }
+
+  // The longest meat-free run anywhere in the account's history, not just
+  // the current trailing one - walks every calendar day from the earliest
+  // to the latest week in weeksCache once. Not challenge-scoped: this is
+  // "your personal best ever", the same way a fitness app's best streak
+  // isn't reset by starting a new one.
+  function longestMeatFreeStreakDaysEver() {
+    const weekKeys = Object.keys(weeksCache).sort();
+    if (weekKeys.length === 0) return 0;
+    const cursor = new Date(`${weekKeys[0]}T00:00:00`);
+    const last = new Date(`${weekKeys[weekKeys.length - 1]}T00:00:00`);
+    last.setDate(last.getDate() + 6); // through that week's Sunday
+    let best = 0;
+    let current = 0;
+    for (; cursor <= last; cursor.setDate(cursor.getDate() + 1)) {
+      const weekData = weeksCache[weekKeyFor(cursor)];
+      const dayKey = dayKeyFor(cursor);
+      const entry = weekData?.diet?.[dayKey];
+      if (weekData?.confirmedDiet?.[dayKey] && entry && entry.type !== "meat") {
+        current++;
+        best = Math.max(best, current);
+      } else {
+        current = 0;
+      }
+    }
+    return best;
+  }
+
+  // Days since your last logged (dated) flight - or, if you've never
+  // logged one, since the start of an active "no flights" challenge, so
+  // starting one always gives a real streak to watch even with no flight
+  // history at all. Deliberately NOT "whichever anchor is more recent":
+  // flight history always wins when it exists, so starting a challenge
+  // never resets an already-in-progress streak back to day 0 just because
+  // "today" is more recent than your last flight. Returns null (shown as
+  // a muted "–", same as any other not-yet-established figure in the
+  // app) only when there's truly nothing to anchor to either way.
+  function flightFreeStreakDays() {
+    const dated = (profile.flights || [])
+      .filter((f) => f.date)
+      .map((f) => new Date(`${f.date}T00:00:00`).getTime());
+    if (dated.length > 0) {
+      return Math.max(0, Math.floor((Date.now() - Math.max(...dated)) / DAY_MS));
+    }
+    const challenge = (profile.habitChallenges || {}).noFlights;
+    if (!challenge) return null;
+    const challengeStart = new Date(`${challenge.startDate}T00:00:00`).getTime();
+    return Math.max(0, Math.floor((Date.now() - challengeStart) / DAY_MS));
+  }
+
+  function habitStreakDays(habitId) {
+    return habitId === "meatFree" ? meatFreeStreakDays() : flightFreeStreakDays();
+  }
+
+  function startHabitChallenge(habitId, targetDays) {
+    profile.habitChallenges = profile.habitChallenges || {};
+    profile.habitChallenges[habitId] = { startDate: dateKey(new Date()), targetDays };
+    persistProfile();
+    renderHabitsCard();
+  }
+
+  function cancelHabitChallenge(habitId) {
+    profile.habitChallenges = profile.habitChallenges || {};
+    delete profile.habitChallenges[habitId];
+    persistProfile();
+    renderHabitsCard();
+  }
+
+  // Celebrates a streak crossing a round-number milestone exactly once per
+  // device (localStorage, same "not meaningful enough to sync across
+  // devices" reasoning as the onboarding banner's dismissal flag) -
+  // checked on every render rather than only right after logging, so
+  // e.g. reaching day 7 by simply not having flown is still noticed the
+  // next time the Home page renders, not only on a specific user action.
+  function checkStreakMilestone(habitId, streakDays) {
+    if (streakDays === null || streakDays === undefined) return;
+    const milestone = STREAK_MILESTONES.find((m) => m === streakDays);
+    if (!milestone) return;
+    const seenKey = `co2tracker_streak_seen_${habitId}_${milestone}`;
+    try {
+      if (localStorage.getItem(seenKey) === "1") return;
+      localStorage.setItem(seenKey, "1");
+    } catch (e) {
+      return; // Private browsing / storage disabled - skip rather than re-show every render.
+    }
+    showStreakCongrats(habitId, milestone);
+  }
+
+  function showStreakCongrats(habitId, streakDays) {
+    const habit = HABITS.find((h) => h.id === habitId);
+    document.getElementById("habit-streak-congrats-value").textContent = streakDays.toLocaleString();
+    document.getElementById("habit-streak-congrats-label").textContent = `day streak · ${habit.label}`;
+    document.getElementById("habit-streak-congrats-backdrop").classList.add("open");
+  }
+
+  function renderHabitsCard() {
+    const grid = document.getElementById("habits-grid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    HABITS.forEach((habit) => {
+      const streak = habitStreakDays(habit.id);
+      const challenge = (profile.habitChallenges || {})[habit.id];
+
+      const tile = document.createElement("div");
+      tile.className = "habit-tile";
+
+      const streakHtml = streak === null
+        ? `<span class="stat-value habit-empty-streak">–</span>`
+        : `<span class="habit-streak-value">${streak.toLocaleString()}</span><span class="habit-streak-unit">${streak === 1 ? habit.singular : habit.singular + "s"}</span>`;
+
+      const bestHtml = habit.id === "meatFree"
+        ? `<p class="habit-best">Best: ${longestMeatFreeStreakDaysEver().toLocaleString()} days</p>`
+        : "";
+
+      let challengeHtml;
+      if (challenge) {
+        const daysIn = Math.min(streak ?? 0, challenge.targetDays);
+        const pct = Math.min(100, (daysIn / challenge.targetDays) * 100);
+        const done = daysIn >= challenge.targetDays;
+        challengeHtml = `
+          <div class="habit-challenge">
+            <div class="habit-challenge-bar-track">
+              <div class="habit-challenge-bar-fill" style="width:${pct}%"></div>
+            </div>
+            <p class="habit-challenge-caption">${done ? "Challenge complete! 🎉" : `Day ${daysIn} of ${challenge.targetDays}-day challenge`}</p>
+            <button type="button" class="link-btn habit-cancel-btn" data-habit="${habit.id}">${done ? "Clear" : "Give up"}</button>
+          </div>
+        `;
+      } else {
+        challengeHtml = `
+          <div class="habit-challenge">
+            <p class="habit-challenge-caption">Start a challenge:</p>
+            <div class="habit-challenge-presets">
+              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="7">7d</button>
+              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="30">30d</button>
+              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="90">90d</button>
+            </div>
+          </div>
+        `;
+      }
+
+      tile.innerHTML = `
+        <div class="habit-tile-head">
+          <span class="habit-emoji" aria-hidden="true">${habit.emoji}</span>
+          <span class="habit-label">${habit.label}</span>
+        </div>
+        ${streakHtml}
+        ${bestHtml}
+        ${challengeHtml}
+      `;
+      grid.appendChild(tile);
+
+      // renderStatsPage() (and so renderHabitsCard()) runs from many
+      // mutation points regardless of which tab is currently on screen -
+      // e.g. adding a flight on This Year re-renders Home's numbers in
+      // the background so they're fresh whenever you do switch there.
+      // Only pop the celebration modal when Home is the tab actually
+      // visible right now, so crossing a milestone from an unrelated
+      // action on a different page doesn't ambush you with a full-screen
+      // modal that blocks your next click on whatever you were doing.
+      const homeVisible = document.getElementById("view-stats")?.hidden === false;
+      if (homeVisible) checkStreakMilestone(habit.id, streak);
+    });
+  }
+
   // Apple-Watch-style ring for a single "Your year, estimated" tile:
   // starts as a full green ring (100% of your UK-average "budget" for that
   // domain still unused), and drains anticlockwise from 12 o'clock as your
@@ -2741,6 +2952,7 @@
     renderPeriodChart();
     renderHomeTodoList();
     renderOnboardingBanner();
+    renderHabitsCard();
   }
 
   // Instagram-carousel version of a single "Compared to: X" slide - reuses
@@ -3686,6 +3898,21 @@
     });
 
     document.getElementById("electricity-bill-save").addEventListener("click", saveElectricityBill);
+
+    document.getElementById("habits-grid").addEventListener("click", (e) => {
+      const startBtn = e.target.closest(".habit-start-btn");
+      if (startBtn) { startHabitChallenge(startBtn.dataset.habit, parseInt(startBtn.dataset.days, 10)); return; }
+      const cancelBtn = e.target.closest(".habit-cancel-btn");
+      if (cancelBtn) cancelHabitChallenge(cancelBtn.dataset.habit);
+    });
+    document.getElementById("habit-streak-congrats-close").addEventListener("click", () => {
+      document.getElementById("habit-streak-congrats-backdrop").classList.remove("open");
+    });
+    document.getElementById("habit-streak-congrats-backdrop").addEventListener("click", (e) => {
+      if (e.target.id === "habit-streak-congrats-backdrop") {
+        document.getElementById("habit-streak-congrats-backdrop").classList.remove("open");
+      }
+    });
 
     document.getElementById("home-onboarding-dismiss").addEventListener("click", dismissOnboardingBanner);
     document.getElementById("home-onboarding-banner").addEventListener("click", (e) => {

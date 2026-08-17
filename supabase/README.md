@@ -364,6 +364,21 @@ columns are also appended to `research_profiles` (at the end of its
 column list, per the positional-columns constraint noted above) for
 opted-in users.
 
+The run after that adds one more column to `profiles`: `habit_challenges`
+(jsonb, default `'{}'::jsonb`) for the Home page's "Habits" card - an
+opt-in, time-boxed commitment to a specific behavior change (currently
+"meatFree" or "noFlights"), shaped `{"meatFree": {"startDate": "...",
+"targetDays": 30}}` with one key per habit that has an active challenge.
+Unlike `flights`/`flying_yearly_kg` above, there's no companion
+precomputed-total column here, because there's nothing for SQL to read:
+the habit streaks themselves are never stored anywhere, always
+recomputed client-side from data that already exists (confirmed diet
+days, the `flights` array) - see `meatFreeStreakDays()`/
+`flightFreeStreakDays()` in `app.js`. Deliberately **not** added to
+`research_profiles` - it's a personal commitment/target a user set for
+themselves, not a measured emissions input, same reasoning that already
+excludes `weekly_goal_kg` from that view.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

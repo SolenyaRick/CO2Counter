@@ -15,7 +15,34 @@ with accounts and a friends leaderboard backed by Supabase.
   (`co2tracker_onboarding_dismissed`), independent of account sync - it's
   not meaningful data worth a network round trip - and it stops showing
   itself automatically the moment anything at all has been logged, even
-  without an explicit dismissal. Then a "Total CO2 saved" hero card: a
+  without an explicit dismissal. Next, a "Habits" card - two streak
+  tiles for the changes that move the needle most: meat-free days and
+  flight-free time. Both are derived entirely from data tracked
+  elsewhere (confirmed diet days, the flight log) rather than a separate
+  "log today's habit" step of their own. The meat-free streak
+  (`meatFreeStreakDays()` in `app.js`) counts consecutive confirmed
+  meat-free days ending today, or ending yesterday if today isn't
+  confirmed yet, so it doesn't visibly reset to 0 first thing in the
+  morning; a "Best" figure alongside it (`longestMeatFreeStreakDaysEver()`)
+  is your personal-best run anywhere in your history, not reset by
+  starting a new streak. The flight-free streak (`flightFreeStreakDays()`)
+  counts days since your most recently logged (dated) flight - or, if
+  you've never logged one, since the start of an active "no flights"
+  challenge, so starting one always gives you a real streak to watch.
+  Either tile can start a challenge - 7/30/90-day presets, one active
+  per habit, overwriting whatever was there before - showing a progress
+  bar toward the target and a "Give up" link to cancel; the challenge
+  only remembers what you committed to (`habit_challenges` in
+  `supabase/schema.sql`), never the streak count itself, so it can't
+  drift out of sync with the diet/flights data it's derived from.
+  Crossing a round-number streak milestone (7/30/100/365 days) pops a
+  small celebration modal, shown once per device (`localStorage`) and
+  only while the Home page is actually the one on screen - the same
+  streak numbers get recomputed from many places in the app (e.g. adding
+  a flight on This Year), and popping a blocking modal from one of those
+  unrelated background re-renders while you're looking at a different
+  page would ambush your next click on whatever you were actually doing.
+  Then a "Total CO2 saved" hero card: a
   two-slide swipeable carousel (native CSS scroll-snap, Instagram-post
   style, with two small dots underneath showing which slide you're on -
   swipe/scroll horizontally on either mobile or desktop to move between

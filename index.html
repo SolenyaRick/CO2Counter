@@ -506,6 +506,17 @@
         </div>
       </section>
 
+      <section class="card">
+        <h2>Habits</h2>
+        <p class="assumptions">
+          Streaks for the two changes that move the needle most &mdash; eating less
+          meat and flying less. Meat-free counts confirmed days; flight-free counts
+          days since your last logged flight (or since a challenge started).
+          Start a challenge to give either one a target.
+        </p>
+        <div class="habits-grid" id="habits-grid"><!-- injected by app.js --></div>
+      </section>
+
       <section class="card" id="home-savings-card">
         <h2>Total CO2 saved</h2>
         <div class="carousel" id="home-savings-carousel">
@@ -932,6 +943,19 @@
       </div>
       <div class="modal-actions">
         <button id="journey-congrats-close" class="btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="habit-streak-congrats-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="habit-streak-congrats-title">
+      <h3 id="habit-streak-congrats-title">Nice one! &#127881;</h3>
+      <div class="year-hero">
+        <div class="year-hero-value" id="habit-streak-congrats-value">0</div>
+        <div class="year-hero-label" id="habit-streak-congrats-label">day streak</div>
+      </div>
+      <div class="modal-actions">
+        <button id="habit-streak-congrats-close" class="btn-primary">Close</button>
       </div>
     </div>
   </div>

@@ -999,6 +999,96 @@ input, select {
   font-size: 1.6rem;
 }
 
+/* Home page "Habits" card (see renderHabitsCard() in app.js) - two streak
+   tiles, side by side above ~320px wide, stacked below. */
+.habits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.habit-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.habit-tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.habit-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.habit-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.habit-streak-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  line-height: 1.1;
+}
+
+.habit-streak-unit {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.habit-empty-streak {
+  font-size: 1.8rem;
+}
+
+.habit-best {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 2px 0 var(--space-2);
+}
+
+.habit-challenge {
+  margin-top: var(--space-2);
+}
+
+.habit-challenge-bar-track {
+  background: var(--border);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+}
+
+.habit-challenge-bar-fill {
+  background: var(--accent);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.habit-challenge-caption {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-1);
+}
+
+.habit-challenge-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.habit-cancel-btn {
+  font-size: 0.75rem;
+}
+
 /* Instagram-style swipeable carousel: native scroll-snap, no JS drag
    library needed - works with real touch swipe on mobile and mouse-wheel/
    trackpad scroll on desktop. */
