@@ -374,32 +374,36 @@ indicator's safe area, so it never covers the last card on any page.
   going down the page, rather than swapping out a separate panel; the
   browser remembers each section's open/closed state for free across tab
   switches, since navigating away and back never rebuilds this DOM.
-  - **Account** — just "Delete account": permanently deletes the account
-    itself (login included), not just its data — required for App Store
-    review, since Apple mandates in-app account deletion for any app that
-    supports account creation. Different from "Reset all data" on the Data
+  - **Account** — the two things you'd look for first: a "Profile" card
+    (display name, university - optional, "Not affiliated" or one of a
+    fixed list, powers the Home page's "Uni average" comparison chip once
+    enough people from the same university have signed up - standard
+    commute distance, weekly CO2e goal with three quick-set presets
+    alongside typing your own number: "Match UK average week", "1.5°C
+    2030 (food + commute)" — our own estimate, since there's no official
+    category-level split of the 1.5°C target — and "Match world average
+    week", the roughest of the three since there's no global equivalent
+    of the UK's national travel/diet surveys to build it from; and a
+    food-waste setting, 0–3% / 3–10% / 10–30% / 30%+, scales up food
+    figures everywhere to account for produced-but-wasted food), then
+    "Delete account": permanently deletes the account itself (login
+    included), not just its data — required for App Store review, since
+    Apple mandates in-app account deletion for any app that supports
+    account creation. Different from "Reset all data" on the Data
     section, which clears your data but keeps the account.
-  - **Settings** — every persistent preference, in one place: display
-    name, university (optional — "Not affiliated" or one of a fixed list;
-    powers the Home page's "Uni average" comparison chip once enough
-    people from the same university have signed up), standard commute
-    distance, weekly CO2e goal (with three quick-set presets alongside
-    typing your own number: "Match UK average week", "1.5°C 2030 (food +
-    commute)" — our own estimate, since there's no official category-level
-    split of the 1.5°C target — and "Match world average week", the
-    roughest of the three since there's no global equivalent of the UK's
-    national travel/diet surveys to build it from), a food-waste setting
-    (0–3% / 3–10% / 10–30% / 30%+, scales up food figures everywhere to
-    account for produced-but-wasted food); a **Vehicle** card (whether you
-    own or regularly drive a car, and what type — Diesel, Hybrid, or
-    Electric/EV, which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km
-    diesel, ~0.111 hybrid, ~0.058 electric — used for both every "Car" day
-    you log on This Week and any Car-mode additional journeys; lives here
-    rather than on This Year since it's a persistent characteristic like
-    commute distance, not a yearly one-off input); the "Daily reminder"
-    card (one local notification a day, at a time you pick, nudging you to
-    log today's commute and meals, via `@capacitor/local-notifications` -
-    entirely on-device, no server or push certificates involved, and the
+  - **Settings** — itself a second, smaller accordion nested one level
+    deeper (a separate `name="settings-accordion"` exclusive group,
+    independent of the outer one - expanding "Vehicle" doesn't collapse
+    "Settings" itself), four items: **Vehicle** (whether you own or
+    regularly drive a car, and what type — Diesel, Hybrid, or Electric/EV,
+    which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111
+    hybrid, ~0.058 electric — used for both every "Car" day you log on
+    This Week and any Car-mode additional journeys; lives here rather
+    than on This Year since it's a persistent characteristic like commute
+    distance, not a yearly one-off input); **Daily reminder** (one local
+    notification a day, at a time you pick, nudging you to log today's
+    commute and meals, via `@capacitor/local-notifications` - entirely
+    on-device, no server or push certificates involved, and the
     notification body is always the same generic text, never your data.
     Only actually schedules anything inside the native iOS app
     (`window.Capacitor.isNativePlatform()`) - on the plain web version the
@@ -414,30 +418,32 @@ indicator's safe area, so it never covers the last card on any page.
     always uses the same notification id, so this is a safe no-op cache
     refresh, never a duplicate. Turning it on requests the OS notification
     permission there and then - declining it un-checks the toggle and
-    shows an inline note pointing at iOS Settings); a "Baseline week"
-    picker (a dropdown of your own fully-confirmed weeks — only ones with
-    a "✓ FULL" badge on the History section qualify — to compare the This
-    Week page's card against instead of the UK average; "UK average
-    (default)" switches back); and a "Help improve UK averages" opt-in
-    (off by default — if turned on, everything on the Settings/Home pages
-    except your banking answers becomes visible to the app developer for
-    calibrating the UK-average assumptions against real data; your
-    name/email/account are never included, see `supabase/README.md` for
-    exactly how this is scoped — signed in as the app owner, this card
-    also shows buttons to download every opted-in user's data as either
-    .json or .xlsx (the latter includes each week's actual kg CO2e
-    breakdown by commute/food/alcohol, not just the raw day-by-day
-    choices, an Average/Std Dev row under every numeric column on both
-    sheets, and two extra sheets collating every confirmed day across
-    every opted-in week into an "avg N per week" + kg CO2e breakdown by
-    meal type and by commute mode), gated server-side on the signed-in
-    account's email rather than anything checkable client-side).
+    shows an inline note pointing at iOS Settings); **Baseline week** (a
+    dropdown of your own fully-confirmed weeks — only ones with a "✓
+    FULL" badge on the History section qualify — to compare the This Week
+    page's card against instead of the UK average; "UK average (default)"
+    switches back); and **Data sharing** (renamed from "Help improve UK
+    averages" - the same research opt-in, off by default — if turned on,
+    everything on the Account/Settings/Home pages except your banking
+    answers becomes visible to the app developer for calibrating the
+    UK-average assumptions against real data; your name/email/account are
+    never included, see `supabase/README.md` for exactly how this is
+    scoped — signed in as the app owner, this item also shows buttons to
+    download every opted-in user's data as either .json or .xlsx (the
+    latter includes each week's actual kg CO2e breakdown by commute/food/
+    alcohol, not just the raw day-by-day choices, an Average/Std Dev row
+    under every numeric column on both sheets, and two extra sheets
+    collating every confirmed day across every opted-in week into an "avg
+    N per week" + kg CO2e breakdown by meal type and by commute mode),
+    gated server-side on the signed-in account's email rather than
+    anything checkable client-side).
   - **Friends** — add by email, accept/decline requests, the friends list
     itself; see the Leaderboard section above for what friends can see.
   - **History** — the week-by-week grid that used to sit at the bottom of
     the This Week page ("Your weeks"): one box per week (Mon–Sun), most
     recent first. Each box shows that week's total CO2e, color-coded
-    against your Settings-tab goal, with an over/under-goal indicator. For
+    against your weekly goal (Account section, Profile card), with an
+    over/under-goal indicator. For
     the current, still-in-progress week, the goal itself is prorated to
     how much of the week has elapsed (e.g. Wednesday = 3/7 of the weekly
     goal) so "under goal" is meaningful before the week is actually over,

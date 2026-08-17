@@ -739,6 +739,55 @@
           <summary class="accordion-summary">Account</summary>
           <div class="accordion-content">
             <section class="card">
+              <h2>Profile</h2>
+              <label class="field">
+                Display name
+                <input type="text" id="profile-name" placeholder="Your name" />
+              </label>
+              <label class = "field">
+                University (optional)
+                <select id="profile-university">
+                  <option value="None"> Not affiliated</option>
+                  <option value="UCL">UCL</option>
+                  <option value="Imperial">Imperial</option>
+                  <option value="KCL">KCL</option>
+                </select>
+                </label>
+              <label class="field">
+                Standard commute distance, one-way (km)
+                <input type="number" id="profile-distance" min="0" step="0.5" />
+              </label>
+              <label class="field">
+                Weekly CO2e goal (kg)
+                <input type="number" id="profile-goal" min="0" step="1" />
+              </label>
+              <div class="goal-presets">
+                <button type="button" class="btn-secondary btn-small" id="goal-preset-uk">Match UK average week</button>
+                <button type="button" class="btn-secondary btn-small" id="goal-preset-15c-fc">1.5&deg;C 2030 (food + commute)</button>
+                <button type="button" class="btn-secondary btn-small" id="goal-preset-world">Match world average week</button>
+              </div>
+              <p class="assumptions">
+                All targets are rough assumptions. Feel free to base your goals on any of them.
+              </p>
+              <label class="field">
+                How much food do you waste?
+                <select id="profile-food-waste">
+                  <option value="low">0&ndash;3% &mdash; barely any</option>
+                  <option value="some">3&ndash;10% &mdash; a bit goes off before I use it</option>
+                  <option value="high">10&ndash;30% &mdash; regularly toss unused food</option>
+                  <option value="severe">More than 30% &mdash; a lot goes to waste</option>
+                </select>
+              </label>
+              <p class="assumptions">
+                Wasted food still carries the emissions it took to produce, so this scales up
+                your food figures everywhere (This Week, Stats) to account for it &mdash; e.g.
+                10&ndash;30% waste means buying/producing about 25% more than you actually eat.
+                Your goal colors the boxes on the History section: green at or under goal, amber a
+                bit over, red well over.
+              </p>
+            </section>
+
+            <section class="card">
               <h2>Delete account</h2>
               <p class="assumptions">
                 Permanently deletes your account and everything tied to it &mdash; your login,
@@ -754,158 +803,118 @@
         <details name="account-accordion" class="accordion-item">
           <summary class="accordion-summary">Settings</summary>
           <div class="accordion-content">
-        <section class="card">
-          <h2>Profile</h2>
-          <label class="field">
-            Display name
-            <input type="text" id="profile-name" placeholder="Your name" />
-          </label>
-          <label class = "field">
-            University (optional)
-            <select id="profile-university">
-              <option value="None"> Not affiliated</option>
-              <option value="UCL">UCL</option>
-              <option value="Imperial">Imperial</option>
-              <option value="KCL">KCL</option>
-            </select>
-            </label>
-          <label class="field">
-            Standard commute distance, one-way (km)
-            <input type="number" id="profile-distance" min="0" step="0.5" />
-          </label>
-          <label class="field">
-            Weekly CO2e goal (kg)
-            <input type="number" id="profile-goal" min="0" step="1" />
-          </label>
-          <div class="goal-presets">
-            <button type="button" class="btn-secondary btn-small" id="goal-preset-uk">Match UK average week</button>
-            <button type="button" class="btn-secondary btn-small" id="goal-preset-15c-fc">1.5&deg;C 2030 (food + commute)</button>
-            <button type="button" class="btn-secondary btn-small" id="goal-preset-world">Match world average week</button>
-          </div>
-          <p class="assumptions">
-            All targets are rough assumptions. Feel free to base your goals on any of them.
-          </p>
-          <label class="field">
-            How much food do you waste?
-            <select id="profile-food-waste">
-              <option value="low">0&ndash;3% &mdash; barely any</option>
-              <option value="some">3&ndash;10% &mdash; a bit goes off before I use it</option>
-              <option value="high">10&ndash;30% &mdash; regularly toss unused food</option>
-              <option value="severe">More than 30% &mdash; a lot goes to waste</option>
-            </select>
-          </label>
-          <p class="assumptions">
-            Wasted food still carries the emissions it took to produce, so this scales up
-            your food figures everywhere (This Week, Stats) to account for it &mdash; e.g.
-            10&ndash;30% waste means buying/producing about 25% more than you actually eat.
-            Your goal colors the boxes on the History tab: green at or under goal, amber a
-            bit over, red well over.
-          </p>
-        </section>
+            <div class="settings-accordion">
+              <details name="settings-accordion" class="accordion-item accordion-item-nested">
+                <summary class="accordion-summary accordion-summary-nested">Vehicle <span class="optional-badge">Optional</span></summary>
+                <div class="accordion-content">
+                  <label class="field">
+                    Do you own or regularly drive a car?
+                    <select id="owns-car">
+                      <option value="">Prefer not to say</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </label>
+                  <p class="assumptions">
+                    If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
+                    footprint, amortized over an average ~14-year car lifetime &mdash; separate
+                    from the fuel/charging for trips you log elsewhere in the app.
+                  </p>
+                  <label class="field">
+                    What type of car do you mainly drive?
+                    <select id="car-fuel-type">
+                      <option value="">Prefer not to say (uses a blended average)</option>
+                      <option value="diesel">Diesel</option>
+                      <option value="hybrid">Hybrid</option>
+                      <option value="electric">Electric (EV)</option>
+                    </select>
+                  </label>
+                  <p class="assumptions">
+                    Uses rough DEFRA-style factors: diesel ~0.171 kg CO2e/km (about the same as the
+                    blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
+                    ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
+                    default car factor for both your logged commute days (whenever you pick "Car")
+                    and any Car-mode additional journeys you log on the This Week page.
+                  </p>
+                </div>
+              </details>
 
-        <section class="card">
-          <h2>Vehicle <span class="optional-badge">Optional</span></h2>
-          <label class="field">
-            Do you own or regularly drive a car?
-            <select id="owns-car">
-              <option value="">Prefer not to say</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </label>
-          <p class="assumptions">
-            If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
-            footprint, amortized over an average ~14-year car lifetime &mdash; separate
-            from the fuel/charging for trips you log elsewhere in the app.
-          </p>
-          <label class="field">
-            What type of car do you mainly drive?
-            <select id="car-fuel-type">
-              <option value="">Prefer not to say (uses a blended average)</option>
-              <option value="diesel">Diesel</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="electric">Electric (EV)</option>
-            </select>
-          </label>
-          <p class="assumptions">
-            Uses rough DEFRA-style factors: diesel ~0.171 kg CO2e/km (about the same as the
-            blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
-            ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
-            default car factor for both your logged commute days (whenever you pick "Car")
-            and any Car-mode additional journeys you log on the This Week page.
-          </p>
-        </section>
+              <details name="settings-accordion" class="accordion-item accordion-item-nested">
+                <summary class="accordion-summary accordion-summary-nested">Daily reminder</summary>
+                <div class="accordion-content">
+                  <p class="assumptions" id="reminder-native-note" hidden>
+                    Only available in the iOS app, not the web version &mdash; local
+                    notifications need the native app to actually schedule them.
+                  </p>
+                  <label class="field field-checkbox">
+                    <input type="checkbox" id="reminder-enabled" />
+                    <span>Remind me once a day to log my commute and meals</span>
+                  </label>
+                  <label class="field" id="reminder-time-field">
+                    Reminder time
+                    <input type="time" id="reminder-time" value="19:00" />
+                  </label>
+                  <p class="auth-error" id="reminder-error" hidden></p>
+                  <p class="assumptions">
+                    A single local notification, rescheduled on this device whenever you open
+                    the app &mdash; nothing is sent from a server, and it's always the same
+                    generic nudge, never your data. Stored on this device only, so you'll need
+                    to turn it back on if you reinstall the app or sign in elsewhere.
+                  </p>
+                </div>
+              </details>
 
-        <section class="card">
-          <h2>Daily reminder</h2>
-          <p class="assumptions" id="reminder-native-note" hidden>
-            Only available in the iOS app, not the web version &mdash; local
-            notifications need the native app to actually schedule them.
-          </p>
-          <label class="field field-checkbox">
-            <input type="checkbox" id="reminder-enabled" />
-            <span>Remind me once a day to log my commute and meals</span>
-          </label>
-          <label class="field" id="reminder-time-field">
-            Reminder time
-            <input type="time" id="reminder-time" value="19:00" />
-          </label>
-          <p class="auth-error" id="reminder-error" hidden></p>
-          <p class="assumptions">
-            A single local notification, rescheduled on this device whenever you open
-            the app &mdash; nothing is sent from a server, and it's always the same
-            generic nudge, never your data. Stored on this device only, so you'll need
-            to turn it back on if you reinstall the app or sign in elsewhere.
-          </p>
-        </section>
+              <details name="settings-accordion" class="accordion-item accordion-item-nested">
+                <summary class="accordion-summary accordion-summary-nested">Baseline week</summary>
+                <div class="accordion-content">
+                  <label class="field">
+                    Compare This Week's card against
+                    <select id="baseline-week">
+                      <option value="">UK average (default)</option>
+                    </select>
+                  </label>
+                  <p class="assumptions">
+                    By default, the "Compared to an average week" card on the front page
+                    measures you against a bottom-up UK average. Pick one of your own fully
+                    confirmed weeks here instead to compare against that real week of yours
+                    going forward &mdash; only weeks with a &ldquo;&check; FULL&rdquo; badge on
+                    the History section show up here. Switch back to "UK average" any time.
+                  </p>
+                </div>
+              </details>
 
-        <section class="card">
-          <h2>Baseline week</h2>
-          <label class="field">
-            Compare This Week's card against
-            <select id="baseline-week">
-              <option value="">UK average (default)</option>
-            </select>
-          </label>
-          <p class="assumptions">
-            By default, the "Compared to an average week" card on the front page
-            measures you against a bottom-up UK average. Pick one of your own fully
-            confirmed weeks here instead to compare against that real week of yours
-            going forward &mdash; only weeks with a &ldquo;&check; FULL&rdquo; badge on
-            the History tab show up here. Switch back to "UK average" any time.
-          </p>
-        </section>
-
-        <section class="card">
-          <h2>Help improve UK averages</h2>
-          <label class="field field-checkbox">
-            <input type="checkbox" id="research-opt-in" />
-            <span>Share my anonymous data with the app developer for research</span>
-          </label>
-          <p class="assumptions">
-            Off by default &mdash; nothing is shared unless you turn this on. If enabled,
-            everything on this page and the Stats page becomes visible to the app
-            developer <strong>except</strong> your bank/banking answers, which are always
-            left out. Your name, email, and account are never included &mdash; the
-            developer only ever sees the raw numbers (commute distance, diet mix,
-            flights, home energy, heating, pets, water, etc.), not who they belong to.
-
-          </p>
-          <div id="owner-research-export" hidden>
-            <div class="account-actions">
-              <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
-              <button type="button" class="btn-secondary" id="export-research-data-xlsx">Download as Excel (.xlsx)</button>
+              <details name="settings-accordion" class="accordion-item accordion-item-nested">
+                <summary class="accordion-summary accordion-summary-nested">Data sharing</summary>
+                <div class="accordion-content">
+                  <label class="field field-checkbox">
+                    <input type="checkbox" id="research-opt-in" />
+                    <span>Share my anonymous data with the app developer for research</span>
+                  </label>
+                  <p class="assumptions">
+                    Off by default &mdash; nothing is shared unless you turn this on. If enabled,
+                    everything on this page and the Stats page becomes visible to the app
+                    developer <strong>except</strong> your bank/banking answers, which are always
+                    left out. Your name, email, and account are never included &mdash; the
+                    developer only ever sees the raw numbers (commute distance, diet mix,
+                    flights, home energy, heating, pets, water, etc.), not who they belong to.
+                  </p>
+                  <div id="owner-research-export" hidden>
+                    <div class="account-actions">
+                      <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
+                      <button type="button" class="btn-secondary" id="export-research-data-xlsx">Download as Excel (.xlsx)</button>
+                    </div>
+                    <p class="assumptions">
+                      Only visible signed in as the app owner &mdash; pulls every opted-in
+                      user's data via a server-side check on your account email, same
+                      data as the <code>research_profiles</code>/<code>research_weeks</code>
+                      views in <code>supabase/schema.sql</code>. The Excel version loads
+                      a small spreadsheet library on demand (only when you click it), and
+                      splits the data into a "Profiles" and a "Weeks" sheet.
+                    </p>
+                  </div>
+                </div>
+              </details>
             </div>
-            <p class="assumptions">
-              Only visible signed in as the app owner &mdash; pulls every opted-in
-              user's data via a server-side check on your account email, same
-              data as the <code>research_profiles</code>/<code>research_weeks</code>
-              views in <code>supabase/schema.sql</code>. The Excel version loads
-              a small spreadsheet library on demand (only when you click it), and
-              splits the data into a "Profiles" and a "Weeks" sheet.
-            </p>
-          </div>
-        </section>
           </div>
         </details>
 
