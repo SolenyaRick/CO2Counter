@@ -1524,6 +1524,7 @@ input, select {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .avg-week-savings.avg-week-good {
@@ -1601,15 +1602,6 @@ input, select {
   margin-top: 6px;
 }
 
-.savings-breakdown {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .unaccounted-list {
   margin: 0 0 12px;
   padding-left: 20px;
@@ -1637,21 +1629,6 @@ input, select {
 
 .compact-bullets strong {
   color: var(--text);
-}
-
-.savings-breakdown li {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  max-width: 320px;
-}
-
-.savings-breakdown li span:last-child {
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-  font-weight: 600;
 }
 
 .stat-value {

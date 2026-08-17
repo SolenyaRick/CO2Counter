@@ -256,27 +256,28 @@ color too with no extra CSS.
   of public infrastructure and government spending runs to roughly 3.3
   tonnes CO2e/yr per person in the UK, real but not something an app like
   this can help you reduce.
-- **This Week** — starts with a "Weekly summary" card: a full-width hero
-  box with the week's running total (just the number and "kg CO2e" - no
-  "Total this week" wording, since the card heading and the page itself
-  already say that), then a row of three equal Commute/Food/Alcohol boxes
-  underneath, each trimmed to just its number and category name rather
-  than repeating "kg CO2e" on every tile. A "Reset this week" button sits
-  at the bottom. Then a "Compared to an average week" card: a UK
-  average week (commute + food only, the same bottom-up figures as the
-  Home page) shown alongside a savings-framed comparison against your
-  week so far — "X kg CO2e saved vs an average week" (green) or "X kg
-  over" (red), prorated to how far through the week it is the same way the
-  History section's per-week goal is. The point is you don't need to log every category for
-  this to be meaningful, unlike apps that require comprehensive manual
-  tracking before they'll show you anything. You can swap the UK average
-  out for one of your own fully-confirmed weeks instead (Account page,
-  "Baseline week") — the card then reads "Compared to your baseline week"
-  and compares full totals (commute + food + alcohol) rather than the UK
-  average's commute+food-only figure, since a real week of yours has
-  actual alcohol data on both sides where the UK average doesn't. Below
-  that, the inputs,
-  toggleable between "This week" and "Last week". For each day (M–S) pick
+- **This Week** — deliberately light on explanatory copy: every card here
+  used to carry an "assumptions" paragraph spelling out its emission
+  factors, and the page had a whole separate "In context" card (car-km
+  equivalent + a veggie-savings breakdown by meat type); all of that is
+  gone now, leaving just the inputs and results themselves. Starts with a
+  "Weekly summary" card: a full-width hero box with the week's running
+  total (just the number and "kg CO2e" - no "Total this week" wording,
+  since the card heading and the page itself already say that), then a row
+  of three equal Commute/Food/Alcohol boxes underneath, each trimmed to
+  just its number and category name rather than repeating "kg CO2e" on
+  every tile. Below that, in the same card, a savings-framed comparison
+  against a UK-average week so far (commute + food only, the same
+  bottom-up figures as the Home page) — "X kg CO2e saved vs an average
+  week" (green) or "X kg over" (red), prorated to how far through the week
+  it is the same way the History section's per-week goal is. You can swap
+  the UK average out for one of your own fully-confirmed weeks instead
+  (Account page, "Baseline week") — the box then reads "vs your baseline
+  week" and compares full totals (commute + food + alcohol) rather than
+  the UK average's commute+food-only figure, since a real week of yours
+  has actual alcohol data on both sides where the UK average doesn't. A
+  "Reset this week" button sits at the bottom of the card. Below that, the
+  inputs, toggleable between "This week" and "Last week". For each day (M–S) pick
   how you got to work (Walk, Cycle, Train, Car, or
   Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
   (veggie), then a meat-type emoji per option (🍗 🥓 🥩 🐟 🍖) — the cut/product
@@ -302,7 +303,7 @@ color too with no extra CSS.
   isn't necessarily a round trip), a Cycle/Tube/Train/Car mode toggle, and
   which day. Each addition shows up in a list immediately (no confirm step
   needed, same pattern as alcohol below), and counts toward commute in
-  every total this page shows (Total this week, goal colors, leaderboard) —
+  every total this page shows (the weekly total, goal colors, leaderboard) —
   though on the Home page, Car-mode entries specifically get pulled out
   into their own "Non-commute driving" domain instead of staying folded
   into Commute, so the two pages' commute figures aren't always identical;
@@ -315,11 +316,7 @@ color too with no extra CSS.
   figure: tap-to-fill rows of beer/wine icons set a weekly count (tap the
   current count again to clear it), plus an ABV% and shots count for other
   spirits — counts immediately, with no confirm step needed, since every
-  value including 0 is already a real answer. Also shows an
-  "In context" card that converts your confirmed total into an
-  equivalent car-km distance (DEFRA-style car factor) and how much CO2e
-  you'd have saved if every confirmed meat day had been veggie instead,
-  broken down by meat type (e.g. beef vs chicken) - the budget-pace chart itself lives on the
+  value including 0 is already a real answer. The budget-pace chart itself lives on the
   Home page (its "This week" view), alongside month and year versions of
   the same chart. The week-by-week grid ("Your weeks") that used to sit at
   the bottom of this page now lives on the Account page's History section -

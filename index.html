@@ -111,28 +111,11 @@
             <span class="stat-label">Alcohol</span>
           </div>
         </div>
-        <p class="assumptions">
-          Figures are rough estimates for illustration, based on commonly cited average
-          emission factors per passenger-km and per kg of food (e.g. DEFRA / Our World in Data
-          style averages). They will not match your actual footprint exactly. See the Home
-          page for a budget-pace chart of this week (and month, and year).
-        </p>
-        <button id="reset-week" class="btn-secondary">Reset this week</button>
-      </section>
-
-      <section class="card">
-        <h2 id="avg-week-title">Compared to an average week</h2>
-        <p class="assumptions">
-          <span id="avg-week-desc-lead">An average UK week (commute + food only, the
-          same bottom-up figures used on the Stats page)</span> comes to about
-          <strong id="avg-week-value">0</strong> kg
-          CO2e. You don't need to log every category for this to be useful &mdash;
-          here's how this week is looking against that so far.
-        </p>
         <div class="avg-week-savings" id="avg-week-savings-box">
           <span class="stat-value" id="avg-week-savings-value">0.0</span>
           <span class="stat-label" id="avg-week-savings-label">kg CO2e saved vs an average week</span>
         </div>
+        <button id="reset-week" class="btn-secondary">Reset this week</button>
       </section>
 
       <section class="card">
@@ -141,11 +124,6 @@
           <button type="button" class="week-picker-btn" data-week="last">Last week</button>
         </div>
         <h2 id="week-range-heading">This week <span class="sync-status" id="sync-status"></span></h2>
-        <p class="assumptions">
-          Only confirmed days (the ✓ button) count toward the totals, chart, and
-          leaderboard below — picking an option saves it as a draft, but it won't
-          add to your figures until you confirm it.
-        </p>
         <table class="tracker-table" id="commute-table">
           <caption class="table-caption">How did you get to work?</caption>
           <thead>
@@ -161,12 +139,6 @@
 
         <details class="journeys-inline">
           <summary>Additional journeys (optional)</summary>
-          <p class="assumptions">
-            One-off trips beyond your regular commute above &mdash; a weekend trip, an
-            errand, wherever else you travelled. Enter the distance for the whole journey
-            (not round-trip, since not all of these are), how you got there, and which day
-            &mdash; counted the same as commute in every total on this app.
-          </p>
           <ul class="journey-list" id="journey-list"><!-- entries injected by app.js --></ul>
           <div class="journey-form">
             <label class="field">
@@ -203,10 +175,6 @@
 
       <section class="card">
         <h2>Alcohol this week</h2>
-        <p class="assumptions">
-          For the whole week, not a specific day &mdash; tap a beer/glass to set the
-          count (tap it again to clear). Entirely optional.
-        </p>
         <div class="alcohol-row">
           <div class="alcohol-fill" id="alcohol-beer-fill"><!-- icons injected by app.js --></div>
           <span class="alcohol-count" id="alcohol-beer-count">0 beers</span>
@@ -226,30 +194,6 @@
           </label>
           <span class="alcohol-count" id="alcohol-spirits-total">0.0 kg CO2e</span>
         </div>
-        <p class="assumptions">
-          Rough averages: ~0.5 kg CO2e per beer, ~0.3 kg CO2e per glass of wine, ~0.15 kg
-          CO2e per 25ml shot at 40% ABV (scaled for other strengths) &mdash; covering
-          production, packaging, and transport.
-        </p>
-      </section>
-
-      <section class="card comparison-card">
-        <h2>In context</h2>
-        <div class="comparison-grid">
-          <div class="comparison-item">
-            <span class="comparison-value" id="car-km-value">0</span>
-            <span class="comparison-label">km driven by an average car &mdash; that's how far you'd have to drive to match this week's total CO2e</span>
-          </div>
-          <div class="comparison-item" id="veggie-comparison-item">
-            <span class="comparison-value" id="savings-value">0.0</span>
-            <span class="comparison-label" id="savings-label">kg CO2e &middot; would save if meat days were veggie</span>
-            <ul class="savings-breakdown" id="savings-breakdown"><!-- injected by app.js --></ul>
-          </div>
-        </div>
-        <p class="assumptions">
-          Car-km uses the same ~0.171 kg CO2e/km DEFRA-style average car factor used for your
-          commute days.
-        </p>
       </section>
 
     </section>

@@ -500,17 +500,6 @@
     return base * wasteMultiplier();
   }
 
-  // How much extra a meat choice adds on top of an equivalent veggie day —
-  // the meat portion's own footprint (scaled up the same way by eating out,
-  // since a meat dinner out costs proportionally more than a veggie one
-  // out too), on top of a rest-of-day baseline valued the same either way.
-  function meatExtra(entry) {
-    const meatFactor = MEAT_FACTORS[entry.meat] ?? MEAT_FACTORS.other;
-    const portionKg = PORTION_KG[entry.portion] ?? PORTION_KG.medium;
-    const eatOutMult = entry.eatOut ? EATING_OUT_MULTIPLIER : 1;
-    return meatFactor * portionKg * eatOutMult * wasteMultiplier();
-  }
-
   // Confirmed days count toward totals/chart/leaderboard; picked-but-unconfirmed
   // days are saved as drafts (so nothing is lost) but contribute 0 until confirmed.
   function countedCommuteFootprint(weekData, dayKey) {
@@ -519,20 +508,6 @@
 
   function countedFoodFootprint(weekData, dayKey) {
     return weekData.confirmedDiet?.[dayKey] ? foodFootprint(weekData, dayKey) : 0;
-  }
-
-  function veggieSavings(weekData) {
-    let total = 0;
-    const byType = {};
-    DAYS.forEach((day) => {
-      const entry = weekData.diet[day.key];
-      if (entry && entry.type === "meat" && weekData.confirmedDiet?.[day.key]) {
-        const extra = meatExtra(entry);
-        total += extra;
-        byType[entry.meat] = (byType[entry.meat] || 0) + extra;
-      }
-    });
-    return { total, byType };
   }
 
   // commute stays the combined figure (regular commute + every extra
@@ -1210,7 +1185,6 @@
 
     renderAlcoholSection(weekData);
     renderJourneyList(weekData);
-    renderComparisonCard(weekData, totals);
     renderAverageWeekCard(selectedWeekKey, totals);
   }
 
@@ -1241,12 +1215,6 @@
     // reason to leave it out.
     const fullReferenceKg = usingBaseline ? weekTotals(baselineWeekData).total : UK_AVERAGE_WEEKLY_KG;
     const referenceKg = prorateForCurrentWeek(weekKey, fullReferenceKg);
-
-    document.getElementById("avg-week-title").textContent = usingBaseline ? "Compared to your baseline week" : "Compared to an average week";
-    document.getElementById("avg-week-desc-lead").textContent = usingBaseline
-      ? `Your baseline week (${weekLabel(profile.baselineWeekKey)})`
-      : "An average UK week (commute + food only, the same bottom-up figures used on the Stats page)";
-    document.getElementById("avg-week-value").textContent = fmt(fullReferenceKg);
 
     const saved = referenceKg - totals.total;
     const valueEl = document.getElementById("avg-week-savings-value");
@@ -1376,39 +1344,6 @@
     (weekData.extraJourneys || []).splice(index, 1);
     persistWeek(selectedWeekKey);
     renderFootprints();
-  }
-
-  function renderComparisonCard(weekData, totals) {
-    const carKm = totals.total / TRANSPORT_FACTORS.car;
-    document.getElementById("car-km-value").textContent = Math.round(carKm).toLocaleString();
-
-    const savings = veggieSavings(weekData);
-    const valueEl = document.getElementById("savings-value");
-    const labelEl = document.getElementById("savings-label");
-    const breakdownEl = document.getElementById("savings-breakdown");
-    breakdownEl.innerHTML = "";
-
-    if (savings.total <= 0) {
-      valueEl.textContent = "0.0";
-      labelEl.textContent = "kg CO2e · no confirmed meat days";
-      return;
-    }
-
-    valueEl.textContent = fmt(savings.total);
-    labelEl.textContent = "kg CO2e · would save if meat days were veggie";
-
-    Object.entries(savings.byType)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([meat, kg]) => {
-        const li = document.createElement("li");
-        const label = document.createElement("span");
-        label.textContent = MEAT_LABELS[meat] ?? "Meat";
-        const value = document.createElement("span");
-        value.textContent = `${fmt(kg)} kg`;
-        li.appendChild(label);
-        li.appendChild(value);
-        breakdownEl.appendChild(li);
-      });
   }
 
   // Monzo Trends-style "budget pace" chart: a dashed target line burns down
