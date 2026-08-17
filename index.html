@@ -458,6 +458,18 @@
       </section>
 
       <section class="card">
+        <h2>Leagues</h2>
+        <p class="assumptions">
+          You and your accepted friends who qualify &mdash; membership only, not a
+          ranked total. Vegan/Veggie/Commute reset each week (every confirmed day has
+          to match, so a day you haven't logged yet doesn't disqualify you but doesn't
+          count for you either); Flight-free is an ongoing streak since your last
+          logged flight, so it only includes people who've logged at least one.
+        </p>
+        <div class="leagues-grid" id="leagues-grid"><!-- injected by app.js --></div>
+      </section>
+
+      <section class="card">
         <h2>All-time weekly average</h2>
         <p class="assumptions">
           Average CO2e per week since each person started confirming weeks, lowest first.
@@ -814,6 +826,29 @@
           10&ndash;30% waste means buying/producing about 25% more than you actually eat.
           Your goal colors the boxes on the Weeks page: green at or under goal, amber a
           bit over, red well over.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Daily reminder</h2>
+        <p class="assumptions" id="reminder-native-note" hidden>
+          Only available in the iOS app, not the web version &mdash; local
+          notifications need the native app to actually schedule them.
+        </p>
+        <label class="field field-checkbox">
+          <input type="checkbox" id="reminder-enabled" />
+          <span>Remind me once a day to log my commute and meals</span>
+        </label>
+        <label class="field" id="reminder-time-field">
+          Reminder time
+          <input type="time" id="reminder-time" value="19:00" />
+        </label>
+        <p class="auth-error" id="reminder-error" hidden></p>
+        <p class="assumptions">
+          A single local notification, rescheduled on this device whenever you open
+          the app &mdash; nothing is sent from a server, and it's always the same
+          generic nudge, never your data. Stored on this device only, so you'll need
+          to turn it back on if you reinstall the app or sign in elsewhere.
         </p>
       </section>
 

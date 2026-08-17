@@ -405,6 +405,121 @@ $$;
 revoke all on function public.friend_weekly_average() from public;
 grant execute on function public.friend_weekly_average() to authenticated;
 
+-- ---------- Leaderboard leagues (Vegan / Veggie / Commute / Flight-free) ----------
+-- Three helpers, each "every CONFIRMED day this week matched, and at
+-- least one day was confirmed" (an unconfirmed day is unknown, not a
+-- pass or a fail, and a week with nothing confirmed at all shouldn't
+-- register as a perfect week by default) - same privacy shape as
+-- week_days_confirmed() above: reads the raw diet/commute jsonb, but
+-- only ever returns a single boolean, never the day-by-day detail
+-- itself. week_is_veggie also passes for a fully vegan week (vegan is a
+-- stricter subset of meat-free, not a separate condition), so someone in
+-- the Vegan league is in the Veggie league too, same as real dietary
+-- categories nest.
+drop function if exists public.week_is_vegan(jsonb, jsonb);
+
+create or replace function public.week_is_vegan(diet jsonb, confirmed_diet jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select
+    exists (select 1 from jsonb_each_text(confirmed_diet) kv where kv.value = 'true')
+    and not exists (
+      select 1 from jsonb_each_text(confirmed_diet) kv
+      where kv.value = 'true' and coalesce(diet -> kv.key ->> 'type', '') <> 'vegan'
+    );
+$$;
+
+revoke all on function public.week_is_vegan(jsonb, jsonb) from public;
+grant execute on function public.week_is_vegan(jsonb, jsonb) to authenticated;
+
+drop function if exists public.week_is_veggie(jsonb, jsonb);
+
+create or replace function public.week_is_veggie(diet jsonb, confirmed_diet jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select
+    exists (select 1 from jsonb_each_text(confirmed_diet) kv where kv.value = 'true')
+    and not exists (
+      select 1 from jsonb_each_text(confirmed_diet) kv
+      where kv.value = 'true' and coalesce(diet -> kv.key ->> 'type', '') = 'meat'
+    );
+$$;
+
+revoke all on function public.week_is_veggie(jsonb, jsonb) from public;
+grant execute on function public.week_is_veggie(jsonb, jsonb) to authenticated;
+
+drop function if exists public.week_is_car_free(jsonb, jsonb);
+
+create or replace function public.week_is_car_free(commute jsonb, confirmed_commute jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select
+    exists (select 1 from jsonb_each_text(confirmed_commute) kv where kv.value = 'true')
+    and not exists (
+      select 1 from jsonb_each_text(confirmed_commute) kv
+      where kv.value = 'true' and coalesce(commute ->> kv.key, '') = 'car'
+    );
+$$;
+
+revoke all on function public.week_is_car_free(jsonb, jsonb) from public;
+grant execute on function public.week_is_car_free(jsonb, jsonb) to authenticated;
+
+-- Self + accepted friends' league membership for one week - Vegan/Veggie/
+-- Commute (car-free) from the three helpers above, plus flight_free_days
+-- (days since the most recent DATED flight anywhere in profiles.flights,
+-- null if none logged). Deliberately doesn't fall back to a "no history"
+-- streak the way the personal Habits card's flightFreeStreakDays() does
+-- (that fallback exists so one person always has a number to watch, but
+-- a group ranking should only compare people against their actual logged
+-- history, not a self-declared "starting now"). Same privacy shape as
+-- friend_leaderboard()/friend_weekly_average() above: reads the raw
+-- diet/commute/flights jsonb server-side, returns only the derived
+-- per-person flags a client can safely see.
+drop function if exists public.friend_leagues(text);
+
+create or replace function public.friend_leagues(target_week_key text)
+returns table (
+  user_id uuid, display_name text, is_self boolean,
+  is_vegan_week boolean, is_veggie_week boolean, is_car_free_week boolean,
+  flight_free_days integer
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    p.id as user_id,
+    p.display_name,
+    (p.id = auth.uid()) as is_self,
+    coalesce(public.week_is_vegan(w.diet, w.confirmed_diet), false) as is_vegan_week,
+    coalesce(public.week_is_veggie(w.diet, w.confirmed_diet), false) as is_veggie_week,
+    coalesce(public.week_is_car_free(w.commute, w.confirmed_commute), false) as is_car_free_week,
+    (
+      select (current_date - max((f ->> 'date')::date))::int
+      from jsonb_array_elements(coalesce(p.flights, '[]'::jsonb)) f
+      where f ->> 'date' is not null
+    ) as flight_free_days
+  from public.profiles p
+  left join public.weeks w on w.user_id = p.id and w.week_key = target_week_key
+  where
+    p.id = auth.uid()
+    or exists (
+      select 1 from public.friendships f
+      where f.status = 'accepted'
+        and ((f.requester_id = auth.uid() and f.addressee_id = p.id)
+          or (f.addressee_id = auth.uid() and f.requester_id = p.id))
+    );
+$$;
+
+revoke all on function public.friend_leagues(text) from public;
+grant execute on function public.friend_leagues(text) to authenticated;
+
 -- App-wide averages across every account, not just friends - for the
 -- Leaderboard page's "Everyone on the app" card. Two figures:
 --   avg_commute_food_alcohol_kg - commute + food + alcohol (total_kg), no

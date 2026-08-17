@@ -326,7 +326,25 @@ with accounts and a friends leaderboard backed by Supabase.
   of that skippable group any more — an empty flight log or a
   never-submitted bill both just read as zero, the same way commute/food
   do, since they're tracked logs rather than one-off optional questions.
-- **Leaderboard** — three cards: "This week" ranks you and your accepted
+- **Leaderboard** — four cards. "Leagues" is membership, not a ranked
+  total: four leagues (🌱 Vegan, 🥕 Veggie, 🚲 Commute, ✈️ Flight-free), each
+  listing you and whichever accepted friends currently qualify. Vegan/
+  Veggie/Commute reset with the week — every CONFIRMED day has to match
+  (vegan diet every day, meat-free every day, and no car every day
+  respectively; an unconfirmed day doesn't disqualify you, but doesn't
+  count for you either, and nobody with zero confirmed days that week
+  qualifies for either), so being vegan is automatically also being
+  veggie (a stricter subset, not a separate condition) — computed
+  server-side by `friend_leagues()` in `supabase/schema.sql`, which reads
+  the raw day-by-day diet/commute data but only ever returns the three
+  booleans, never the underlying detail, same privacy shape as the
+  ranked leaderboards below. Flight-free is the odd one out: an ongoing
+  streak (days since your most recently logged, dated flight), sorted
+  longest-first, and only includes people who've logged at least one
+  dated flight ever — no fallback to "started a challenge" the way the
+  personal Habits card gets one, since a league ranking should only
+  compare people's actual logged history, not a self-declared "starting
+  now". "This week" ranks you and your accepted
   friends by this week's *average* kg CO2e per confirmed day so far (lowest
   first), not raw total, with a callout for whoever's winning — this one
   still includes in-progress weeks, same as the This Week page's weeks
@@ -354,7 +372,25 @@ with accounts and a friends leaderboard backed by Supabase.
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
-- **Account** — display name, university (optional — "Not affiliated" or
+- **Account** — a "Daily reminder" card (one local notification a day, at
+  a time you pick, nudging you to log today's commute and meals) via
+  `@capacitor/local-notifications` - entirely on-device, no server or
+  push certificates involved, and the notification body is always the
+  same generic text, never your data. Only actually schedules anything
+  inside the native iOS app (`window.Capacitor.isNativePlatform()`) - on
+  the plain web version the toggle and time picker are disabled with an
+  explanatory note instead of silently doing nothing. The on/off
+  preference and chosen time live in `localStorage`, not synced through
+  Supabase: it's the OS on that specific device that fires it, so a
+  value synced from another device wouldn't mean anything there anyway -
+  same reasoning as the onboarding banner's dismissal flag. Re-applies
+  itself (if already turned on) every time the app opens and you're
+  signed in, so it survives an app update without needing to be manually
+  turned back on; scheduling always uses the same notification id, so
+  this is a safe no-op cache refresh, never a duplicate. Turning it on
+  requests the OS notification permission there and then - declining it
+  un-checks the toggle and shows an inline note pointing at iOS Settings.
+  Everything else on this page: display name, university (optional — "Not affiliated" or
   one of a fixed list; powers the Home page's "Uni average" comparison
   chip once enough people from the same university have signed up), one-way
   commute distance, weekly CO2e goal
@@ -476,6 +512,15 @@ On your Mac:
    development signing certificate.
 5. Pick a simulator or a connected iPhone as the run destination and hit
    **Run** (▶). That's a working native build.
+
+   The Account page's "Daily reminder" (`@capacitor/local-notifications`)
+   needs no extra Xcode capability, entitlement, or Apple Developer
+   account setup beyond what's already here - unlike remote/server push
+   (APNs certificates, a push-sending backend), a *local* notification is
+   scheduled and fired entirely by iOS itself on the device it's running
+   on, so there's nothing else to configure. It does need a real device
+   or the Simulator (either works) and the in-app permission prompt to be
+   accepted once, the first time someone turns the reminder on.
 6. For the App Store: first create the app's record in [App Store
    Connect](https://appstoreconnect.apple.com) using the same bundle ID as
    `capacitor.config.json`'s `appId` (currently `com.solenyarick.co2tracker`

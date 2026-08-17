@@ -379,6 +379,25 @@ days, the `flights` array) - see `meatFreeStreakDays()`/
 themselves, not a measured emissions input, same reasoning that already
 excludes `weekly_goal_kg` from that view.
 
+The run after that adds the Leaderboard page's "Leagues" card:
+`week_is_vegan()`, `week_is_veggie()`, and `week_is_car_free()` (each
+`(diet/commute jsonb, confirmed jsonb) returns boolean`, same
+"immutable, no security definer needed" shape as `week_days_confirmed()`
+above - "every CONFIRMED day this week matched, and at least one day was
+confirmed") plus `friend_leagues(target_week_key text)`, a
+`security definer` function in the same family as `friend_leaderboard()`/
+`friend_weekly_average()`: self + accepted friends only, reads the raw
+diet/commute/flights jsonb server-side but returns only the derived
+per-person flags (`is_vegan_week`, `is_veggie_week`, `is_car_free_week`,
+`flight_free_days`) - never the day-by-day detail itself, so a league
+appearing on someone's Leaderboard reveals nothing about their other
+days. `flight_free_days` (days since the most recent dated flight
+anywhere in `profiles.flights`, null if none logged) deliberately
+doesn't fall back to a challenge-start date the way the personal Habits
+card's `flightFreeStreakDays()` does in `app.js` - a shared ranking
+should only reflect people's actual logged history, not a self-declared
+"starting now".
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

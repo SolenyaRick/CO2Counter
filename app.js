@@ -953,7 +953,7 @@
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
     if (tab === "weeks") renderYearlyInputs();
-    if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
+    if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") { renderWeekPage(); renderWeeksGrid(); }
@@ -2355,6 +2355,87 @@
     });
   }
 
+  // Membership-only "leagues": self + accepted friends who qualify this
+  // week (Vegan/Veggie/Commute) or have an ongoing streak (Flight-free) -
+  // see friend_leagues() in schema.sql, which computes every flag
+  // server-side and never sends the underlying diet/commute/flights data
+  // itself to the client. Not ranked totals like the leaderboards above,
+  // just "who's in" - Vegan/Veggie/Commute reset with the week; Flight-free
+  // only lists people with at least one logged (dated) flight ever, so
+  // "never answered" doesn't masquerade as "flying zero".
+  const WEEKLY_LEAGUES = [
+    { emoji: "🌱", label: "Vegan league", flag: "isVeganWeek" },
+    { emoji: "🥕", label: "Veggie league", flag: "isVeggieWeek" },
+    { emoji: "🚲", label: "Commute league", flag: "isCarFreeWeek" },
+  ];
+
+  function buildLeagueBlock(emoji, label, members) {
+    const block = document.createElement("div");
+    block.className = "league-block";
+    const heading = document.createElement("h3");
+    heading.className = "league-heading";
+    const emojiSpan = document.createElement("span");
+    emojiSpan.setAttribute("aria-hidden", "true");
+    emojiSpan.textContent = emoji;
+    heading.appendChild(emojiSpan);
+    heading.appendChild(document.createTextNode(` ${label}`));
+    block.appendChild(heading);
+
+    if (members.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "league-empty";
+      empty.textContent = "Nobody yet.";
+      block.appendChild(empty);
+      return block;
+    }
+    const ul = document.createElement("ul");
+    ul.className = "league-members";
+    members.forEach(({ name, isSelf, detail }) => {
+      const li = document.createElement("li");
+      if (isSelf) li.classList.add("is-self");
+      li.textContent = detail ? `${name} — ${detail}` : name;
+      ul.appendChild(li);
+    });
+    block.appendChild(ul);
+    return block;
+  }
+
+  async function renderLeagues() {
+    const grid = document.getElementById("leagues-grid");
+    if (!grid || !currentUser) return;
+
+    const { data, error } = await sbClient.rpc("friend_leagues", { target_week_key: CURRENT_WEEK_KEY });
+    grid.innerHTML = "";
+    if (error || !data) {
+      grid.innerHTML = '<p class="empty-note">Could not load leagues right now.</p>';
+      return;
+    }
+
+    const rows = data.map((r) => ({
+      name: r.is_self ? "You" : (r.display_name || "Friend"),
+      isSelf: r.is_self,
+      isVeganWeek: r.is_vegan_week,
+      isVeggieWeek: r.is_veggie_week,
+      isCarFreeWeek: r.is_car_free_week,
+      flightFreeDays: r.flight_free_days,
+    }));
+    // You first, then friends alphabetically - there's no other ranking
+    // signal for a plain membership league.
+    const byNameSelfFirst = (a, b) => (a.isSelf !== b.isSelf ? (a.isSelf ? -1 : 1) : a.name.localeCompare(b.name));
+
+    WEEKLY_LEAGUES.forEach((league) => {
+      const members = rows.filter((r) => r[league.flag]).sort(byNameSelfFirst)
+        .map((r) => ({ name: r.name, isSelf: r.isSelf }));
+      grid.appendChild(buildLeagueBlock(league.emoji, league.label, members));
+    });
+
+    const flightMembers = rows
+      .filter((r) => r.flightFreeDays !== null && r.flightFreeDays !== undefined)
+      .sort((a, b) => b.flightFreeDays - a.flightFreeDays)
+      .map((r) => ({ name: r.name, isSelf: r.isSelf, detail: `${r.flightFreeDays}d` }));
+    grid.appendChild(buildLeagueBlock("✈️", "Flight-free league", flightMembers));
+  }
+
   // Anonymous aggregate across every account, not just friends - see
   // app_wide_weekly_average() in schema.sql for why this is safe to show
   // without a friendship relationship (it's a single aggregate row, never
@@ -2391,6 +2472,7 @@
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
     populateBaselineWeekSelect();
     renderFriendsUI();
+    renderReminderCard();
   }
 
   // Rebuilds the baseline-week dropdown from whichever of the person's own
@@ -3539,6 +3621,137 @@
     }
   }
 
+  // ---------- Daily reminder (native local notification) ----------
+  // A single repeating local notification, scheduled entirely on-device
+  // via @capacitor/local-notifications - no server component, no push
+  // certificates, and it never carries any of the user's data, just a
+  // generic nudge. Deliberately device-local rather than synced through
+  // Supabase: it's the OS on THIS device that fires it, so a preference
+  // synced from another device wouldn't mean anything here anyway - same
+  // "not meaningful enough to sync" reasoning as the onboarding banner's
+  // dismissal flag and the streak-milestone-seen flags.
+  const REMINDER_NOTIFICATION_ID = 1;
+  const REMINDER_ENABLED_KEY = "co2tracker_reminder_enabled";
+  const REMINDER_TIME_KEY = "co2tracker_reminder_time";
+  const REMINDER_DEFAULT_TIME = "19:00";
+
+  function isNativePlatform() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+
+  function localNotificationsPlugin() {
+    return (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || null;
+  }
+
+  function getReminderPrefs() {
+    let enabled = false;
+    let time = REMINDER_DEFAULT_TIME;
+    try {
+      enabled = localStorage.getItem(REMINDER_ENABLED_KEY) === "1";
+      time = localStorage.getItem(REMINDER_TIME_KEY) || REMINDER_DEFAULT_TIME;
+    } catch (e) {
+      // Private browsing / storage disabled - fall back to "off", same as a first run.
+    }
+    return { enabled, time };
+  }
+
+  function setReminderPrefs(enabled, time) {
+    try {
+      localStorage.setItem(REMINDER_ENABLED_KEY, enabled ? "1" : "0");
+      localStorage.setItem(REMINDER_TIME_KEY, time);
+    } catch (e) {
+      // Ignore - worst case the toggle doesn't persist across app restarts.
+    }
+  }
+
+  async function scheduleReminder(time) {
+    const plugin = localNotificationsPlugin();
+    if (!plugin) return;
+    const [hour, minute] = time.split(":").map((n) => parseInt(n, 10));
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
+    await plugin.schedule({
+      notifications: [{
+        id: REMINDER_NOTIFICATION_ID,
+        title: "CO2 Tracker",
+        body: "Don't forget to log today's commute and meals.",
+        schedule: { on: { hour, minute }, repeats: true, allowWhileIdle: true },
+      }],
+    });
+  }
+
+  async function cancelReminder() {
+    const plugin = localNotificationsPlugin();
+    if (!plugin) return;
+    await plugin.cancel({ notifications: [{ id: REMINDER_NOTIFICATION_ID }] });
+  }
+
+  // Re-applies whatever's already saved (if enabled) every time the app is
+  // opened and signed in, so an already-granted reminder survives an app
+  // update without the user needing to re-toggle it - scheduling with the
+  // same fixed id is idempotent (replaces, doesn't duplicate), so calling
+  // this on every launch is harmless.
+  async function applyReminderFromPrefs() {
+    if (!isNativePlatform()) return;
+    const { enabled, time } = getReminderPrefs();
+    if (enabled) await scheduleReminder(time);
+  }
+
+  function renderReminderCard() {
+    const enabledInput = document.getElementById("reminder-enabled");
+    if (!enabledInput) return;
+    const timeInput = document.getElementById("reminder-time");
+    const nativeNote = document.getElementById("reminder-native-note");
+    const native = isNativePlatform();
+
+    if (nativeNote) nativeNote.hidden = native;
+    enabledInput.disabled = !native;
+    timeInput.disabled = !native;
+
+    const { enabled, time } = getReminderPrefs();
+    enabledInput.checked = enabled;
+    timeInput.value = time;
+  }
+
+  async function onReminderToggle(e) {
+    const enabled = e.target.checked;
+    const timeInput = document.getElementById("reminder-time");
+    const time = timeInput.value || REMINDER_DEFAULT_TIME;
+    const errorEl = document.getElementById("reminder-error");
+    if (errorEl) errorEl.hidden = true;
+
+    if (!enabled) {
+      setReminderPrefs(false, time);
+      await cancelReminder();
+      return;
+    }
+
+    const plugin = localNotificationsPlugin();
+    if (!plugin) { e.target.checked = false; return; }
+    let perm;
+    try {
+      perm = await plugin.requestPermissions();
+    } catch (err) {
+      perm = { display: "denied" };
+    }
+    if (perm.display !== "granted") {
+      e.target.checked = false;
+      if (errorEl) {
+        errorEl.textContent = "Notification permission was denied - enable it for CO2 Tracker in iOS Settings to use this.";
+        errorEl.hidden = false;
+      }
+      return;
+    }
+    setReminderPrefs(true, time);
+    await scheduleReminder(time);
+  }
+
+  async function onReminderTimeChange(e) {
+    const time = e.target.value || REMINDER_DEFAULT_TIME;
+    const { enabled } = getReminderPrefs();
+    setReminderPrefs(enabled, time);
+    if (enabled) await scheduleReminder(time);
+  }
+
   // Registers the above only when actually running inside the native app
   // (window.Capacitor is undefined in a normal browser, including the
   // plain web version of this same app) - getLaunchUrl() covers the case
@@ -3707,6 +3920,7 @@
       console.error("Failed to load friends", e);
     }
     showTab(currentTab());
+    applyReminderFromPrefs();
   }
 
   function onSignedOut() {
@@ -3966,6 +4180,9 @@
       persistProfile();
       renderFootprints();
     });
+
+    document.getElementById("reminder-enabled").addEventListener("change", onReminderToggle);
+    document.getElementById("reminder-time").addEventListener("change", onReminderTimeChange);
 
     document.getElementById("add-friend-form").addEventListener("submit", (e) => {
       e.preventDefault();
