@@ -215,7 +215,7 @@ with accounts and a friends leaderboard backed by Supabase.
   Home page) shown alongside a savings-framed comparison against your
   week so far — "X kg CO2e saved vs an average week" (green) or "X kg
   over" (red), prorated to how far through the week it is the same way the
-  Weeks-grid goal is. The point is you don't need to log every category for
+  History tab's per-week goal is. The point is you don't need to log every category for
   this to be meaningful, unlike apps that require comprehensive manual
   tracking before they'll show you anything. You can swap the UK average
   out for one of your own fully-confirmed weeks instead (Account page,
@@ -271,30 +271,14 @@ with accounts and a friends leaderboard backed by Supabase.
   below that shows your Commute/Food/Alcohol/Total-so-far tiles and a
   "Reset this week" button - the budget-pace chart itself now lives on the
   Home page (its "This week" view), alongside month and year versions of
-  the same chart. At the bottom of the page, a "Your weeks" grid shows one box per week
-  (Mon–Sun), most recent first. Each box shows that week's total CO2e,
-  color-coded against your goal from the Account page, with an over/under-goal
-  indicator. For the current, still-in-progress week, the goal itself is
-  prorated to how much of the week has elapsed (e.g. Wednesday = 3/7 of the
-  weekly goal) so "under goal" is meaningful before the week is actually
-  over, rather than trivially true on day one. A week that has every day
-  confirmed for both commute and food gets a "✓ FULL" badge — this is a
-  stricter bar than just having *some* data (which is all that's needed for
-  the box to show a total at all), and is what counts toward the "confirmed
-  week" averages on the Home and Leaderboard pages, so a week where
-  you only logged Monday doesn't drag those averages down as if it were a
-  whole week's worth of data. Tap a box for a day-by-day breakdown.
+  the same chart. The week-by-week grid ("Your weeks") that used to sit at
+  the bottom of this page now lives on the Account page's History tab -
+  see that section below for what it shows.
 - **This Year** — the yearly-estimate inputs, grouped into five cards in a
-  roughly biggest-to-smallest-impact order: **Driving** (whether you own or
-  regularly drive a car; and what type — Diesel, Hybrid, or Electric/EV,
-  which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111
-  hybrid, ~0.058 electric using average UK grid intensity to charge it —
-  used for *both* every "Car" day you log on the This Week page and any
-  Car-mode additional journeys, in place of the ~0.171 kg CO2e/km
-  blended-average fallback used if you leave it as "Prefer not to say" —
-  the old "extra non-commute driving km/week" question that used to live
-  here is gone; see "Non-commute driving" above for where that figure comes
-  from now), **Flying** (an itemized log, same "Additional journeys" style
+  roughly biggest-to-smallest-impact order (car ownership/type moved to the
+  Account page's Settings tab as **Vehicle** - see that section below - since
+  it's a persistent profile attribute like commute distance, not a yearly
+  one-off input): **Flying** (an itemized log, same "Additional journeys" style
   as the This Week page's commute card: a date (optional), which continent
   you flew to, and cabin class, then "Add flight" — each entry shows up in
   a list immediately, counted in the total unless its date is over a year
@@ -354,8 +338,8 @@ with accounts and a friends leaderboard backed by Supabase.
   "confirmed/elapsed days" (e.g. "3/5" on a Friday if only Mon–Wed are
   done) show in small text next to their average; "All-time weekly
   average" ranks everyone by their average CO2e per *fully* confirmed week
-  (every day, both commute and food — see the weeks grid above) since they
-  started, which also folds in a weekly-equivalent share of each person's
+  (every day, both commute and food — see the Account page's History tab
+  below) since they started, which also folds in a weekly-equivalent share of each person's
   yearly Home page figures (flights, home electricity, buying goods, and
   any optional extras they've answered — everything the yearly total on
   the Home page includes besides commute/food/alcohol, divided by 52), so
@@ -372,56 +356,88 @@ with accounts and a friends leaderboard backed by Supabase.
   friends version it can't read individual accounts' profile data
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
-- **Account** — a "Daily reminder" card (one local notification a day, at
-  a time you pick, nudging you to log today's commute and meals) via
-  `@capacitor/local-notifications` - entirely on-device, no server or
-  push certificates involved, and the notification body is always the
-  same generic text, never your data. Only actually schedules anything
-  inside the native iOS app (`window.Capacitor.isNativePlatform()`) - on
-  the plain web version the toggle and time picker are disabled with an
-  explanatory note instead of silently doing nothing. The on/off
-  preference and chosen time live in `localStorage`, not synced through
-  Supabase: it's the OS on that specific device that fires it, so a
-  value synced from another device wouldn't mean anything there anyway -
-  same reasoning as the onboarding banner's dismissal flag. Re-applies
-  itself (if already turned on) every time the app opens and you're
-  signed in, so it survives an app update without needing to be manually
-  turned back on; scheduling always uses the same notification id, so
-  this is a safe no-op cache refresh, never a duplicate. Turning it on
-  requests the OS notification permission there and then - declining it
-  un-checks the toggle and shows an inline note pointing at iOS Settings.
-  Everything else on this page: display name, university (optional — "Not affiliated" or
-  one of a fixed list; powers the Home page's "Uni average" comparison
-  chip once enough people from the same university have signed up), one-way
-  commute distance, weekly CO2e goal
-  (with three quick-set presets alongside typing your own number: "Match UK
-  average week", "1.5°C 2030 (food + commute)" — our own estimate, since
-  there's no official category-level split of the 1.5°C target — and "Match
-  world average week", the roughest of the three since there's no global
-  equivalent of the UK's national travel/diet surveys to build it from), a
-  food-waste setting (0–3% / 3–10% / 10–30% / 30%+, scales up food figures
-  everywhere to account for produced-but-wasted food), a "Baseline week"
-  picker (a dropdown of your own fully-confirmed weeks — only ones with a
-  "✓ FULL" badge on the weeks grid qualify — to compare the This Week
-  page's card against instead of the UK average; "UK average (default)"
-  switches back), a "Help improve UK averages" opt-in (off by default — if turned on, everything on the
-  Account/Home pages except your banking answers becomes visible to the
-  app developer for calibrating the UK-average assumptions against real
-  data; your name/email/account are never included, see
-  `supabase/README.md` for exactly how this is scoped — signed in as the
-  app owner, this card also shows buttons to download every opted-in
-  user's data as either .json or .xlsx (the latter includes each week's
-  actual kg CO2e breakdown by commute/food/alcohol, not just the raw
-  day-by-day choices, an Average/Std Dev row under every numeric column
-  on both sheets, and two extra sheets collating every confirmed day
-  across every opted-in week into an "avg N per week" + kg CO2e
-  breakdown by meal type and by commute mode), gated server-side on the
-  signed-in account's email rather than anything checkable client-side),
-  a friends list (add by email, accept/decline requests), sign-out,
-  export/import/reset for your data, and a separate "Delete account"
-  button that permanently deletes the account itself (login included),
-  not just its data — required for App Store review, since Apple mandates
-  in-app account deletion for any app that supports account creation.
+- **Account** — a persistent "Signed in as X / Sign out" header, then five
+  sub-tabs (a nested `.tabs` bar, same look as the main nav above it,
+  switched client-side via `showAccountSubtab()` in `app.js` - no page
+  reload, no URL change, remembers whichever one you last had open for
+  the rest of the session): **Account**, **Settings**, **Friends**,
+  **History**, **Data**.
+  - **Account** — just "Delete account": permanently deletes the account
+    itself (login included), not just its data — required for App Store
+    review, since Apple mandates in-app account deletion for any app that
+    supports account creation. Different from "Reset all data" on the Data
+    tab, which clears your data but keeps the account.
+  - **Settings** — every persistent preference, in one place: display
+    name, university (optional — "Not affiliated" or one of a fixed list;
+    powers the Home page's "Uni average" comparison chip once enough
+    people from the same university have signed up), standard commute
+    distance, weekly CO2e goal (with three quick-set presets alongside
+    typing your own number: "Match UK average week", "1.5°C 2030 (food +
+    commute)" — our own estimate, since there's no official category-level
+    split of the 1.5°C target — and "Match world average week", the
+    roughest of the three since there's no global equivalent of the UK's
+    national travel/diet surveys to build it from), a food-waste setting
+    (0–3% / 3–10% / 10–30% / 30%+, scales up food figures everywhere to
+    account for produced-but-wasted food); a **Vehicle** card (whether you
+    own or regularly drive a car, and what type — Diesel, Hybrid, or
+    Electric/EV, which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km
+    diesel, ~0.111 hybrid, ~0.058 electric — used for both every "Car" day
+    you log on This Week and any Car-mode additional journeys; lives here
+    rather than on This Year since it's a persistent characteristic like
+    commute distance, not a yearly one-off input); the "Daily reminder"
+    card (one local notification a day, at a time you pick, nudging you to
+    log today's commute and meals, via `@capacitor/local-notifications` -
+    entirely on-device, no server or push certificates involved, and the
+    notification body is always the same generic text, never your data.
+    Only actually schedules anything inside the native iOS app
+    (`window.Capacitor.isNativePlatform()`) - on the plain web version the
+    toggle and time picker are disabled with an explanatory note instead
+    of silently doing nothing. The on/off preference and chosen time live
+    in `localStorage`, not synced through Supabase: it's the OS on that
+    specific device that fires it, so a value synced from another device
+    wouldn't mean anything there anyway - same reasoning as the onboarding
+    banner's dismissal flag. Re-applies itself, if already turned on,
+    every time the app opens and you're signed in, so it survives an app
+    update without needing to be manually turned back on; scheduling
+    always uses the same notification id, so this is a safe no-op cache
+    refresh, never a duplicate. Turning it on requests the OS notification
+    permission there and then - declining it un-checks the toggle and
+    shows an inline note pointing at iOS Settings); a "Baseline week"
+    picker (a dropdown of your own fully-confirmed weeks — only ones with
+    a "✓ FULL" badge on the History tab qualify — to compare the This
+    Week page's card against instead of the UK average; "UK average
+    (default)" switches back); and a "Help improve UK averages" opt-in
+    (off by default — if turned on, everything on the Settings/Home pages
+    except your banking answers becomes visible to the app developer for
+    calibrating the UK-average assumptions against real data; your
+    name/email/account are never included, see `supabase/README.md` for
+    exactly how this is scoped — signed in as the app owner, this card
+    also shows buttons to download every opted-in user's data as either
+    .json or .xlsx (the latter includes each week's actual kg CO2e
+    breakdown by commute/food/alcohol, not just the raw day-by-day
+    choices, an Average/Std Dev row under every numeric column on both
+    sheets, and two extra sheets collating every confirmed day across
+    every opted-in week into an "avg N per week" + kg CO2e breakdown by
+    meal type and by commute mode), gated server-side on the signed-in
+    account's email rather than anything checkable client-side).
+  - **Friends** — add by email, accept/decline requests, the friends list
+    itself; see the Leaderboard section above for what friends can see.
+  - **History** — the week-by-week grid that used to sit at the bottom of
+    the This Week page ("Your weeks"): one box per week (Mon–Sun), most
+    recent first. Each box shows that week's total CO2e, color-coded
+    against your Settings-tab goal, with an over/under-goal indicator. For
+    the current, still-in-progress week, the goal itself is prorated to
+    how much of the week has elapsed (e.g. Wednesday = 3/7 of the weekly
+    goal) so "under goal" is meaningful before the week is actually over,
+    rather than trivially true on day one. A week that has every day
+    confirmed for both commute and food gets a "✓ FULL" badge — this is a
+    stricter bar than just having *some* data (which is all that's needed
+    for the box to show a total at all), and is what counts toward the
+    "confirmed week" averages on the Home and Leaderboard pages, so a week
+    where you only logged Monday doesn't drag those averages down as if
+    it were a whole week's worth of data. Tap a box for a day-by-day
+    breakdown.
+  - **Data** — export/import/reset for your data.
 
 ## Architecture
 

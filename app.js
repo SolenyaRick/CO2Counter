@@ -955,8 +955,8 @@
     if (tab === "weeks") renderYearlyInputs();
     if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
-    if (tab === "account") renderAccountPage();
-    if (tab === "week") { renderWeekPage(); renderWeeksGrid(); }
+    if (tab === "account") { renderAccountPage(); showAccountSubtab(accountSubtab); }
+    if (tab === "week") renderWeekPage();
   }
 
   // ---------- Page 1: This Week ----------
@@ -2460,12 +2460,18 @@
   }
 
   // ---------- Page 4: Account ----------
+  // Renders every subview's data unconditionally, regardless of which
+  // sub-tab (see showAccountSubtab()) happens to be visible right now -
+  // same "keep it all fresh, cheap enough not to bother gating" approach
+  // as every other multi-card page in the app.
   function renderAccountPage() {
     document.getElementById("profile-name").value = profile.name || "";
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
     document.getElementById("profile-goal").value = profile.weeklyGoalKg;
     document.getElementById("profile-food-waste").value = profile.foodWaste;
     document.getElementById("profile-university").value = profile.university || "None";
+    document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
+    document.getElementById("car-fuel-type").value = profile.carFuelType || "";
     document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
     document.getElementById("owner-research-export").hidden =
@@ -2473,6 +2479,21 @@
     populateBaselineWeekSelect();
     renderFriendsUI();
     renderReminderCard();
+    renderWeeksGrid();
+  }
+
+  const ACCOUNT_SUBTABS = ["account", "settings", "friends", "history", "data"];
+  let accountSubtab = "account";
+
+  function showAccountSubtab(subtab) {
+    if (!ACCOUNT_SUBTABS.includes(subtab)) return;
+    accountSubtab = subtab;
+    ACCOUNT_SUBTABS.forEach((s) => {
+      document.getElementById(`account-subview-${s}`).hidden = s !== subtab;
+    });
+    document.querySelectorAll(".account-subtab-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.subtab === subtab);
+    });
   }
 
   // Rebuilds the baseline-week dropdown from whichever of the person's own
@@ -2679,8 +2700,6 @@
   // renderStatsPage() (the results-only Stats page) since the two now
   // live on different tabs.
   function renderYearlyInputs() {
-    document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
-    document.getElementById("car-fuel-type").value = profile.carFuelType || "";
     renderFlightList();
     document.getElementById("household-people").value = profile.householdPeople;
     renderElectricityBillSummary();
@@ -3962,10 +3981,14 @@
     document.getElementById("auth-forgot").addEventListener("click", handleForgotPassword);
     document.getElementById("reset-password-form").addEventListener("submit", handleResetPasswordSubmit);
 
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
+    document.querySelectorAll("#main-tabs .tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
     });
     window.addEventListener("hashchange", () => showTab(currentTab()));
+
+    document.querySelectorAll(".account-subtab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showAccountSubtab(btn.dataset.subtab));
+    });
 
     document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
 
