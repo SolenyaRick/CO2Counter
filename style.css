@@ -101,7 +101,11 @@ body {
      Capacitor iOS wrapper - see capacitor.config.json. */
   padding-top: max(24px, env(safe-area-inset-top));
   padding-right: max(16px, env(safe-area-inset-right));
-  padding-bottom: max(64px, calc(64px + env(safe-area-inset-bottom)));
+  /* Clears the fixed bottom tab bar (see #main-tabs below) - its own
+     height plus the safe-area inset it already pads itself, plus a
+     little breathing room so the last card on any page never sits flush
+     against it. */
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
   padding-left: max(16px, env(safe-area-inset-left));
 }
 
@@ -194,6 +198,77 @@ body {
   gap: 12px;
   flex-wrap: wrap;
   font-size: 0.9rem;
+}
+
+/* Account page sections, stacked as a vertical accordion instead of a
+   horizontal tab bar - native <details>/<summary> (grouped by a shared
+   `name` so opening one closes the others, same "exclusive accordion"
+   idea as a tab bar, but click-to-expand-in-place going down the page
+   instead of swapping panels) - see the "account-accordion" name group
+   in index.html. No JS needed for expand/collapse itself; the browser
+   also remembers each section's open/closed state for free across tab
+   switches, since showTab() only toggles the whole page's `hidden`. */
+.account-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.accordion-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  font-weight: 700;
+  font-size: 1.02rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion-summary::after {
+  content: "\25BE";
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.accordion-item[open] .accordion-summary::after {
+  transform: rotate(180deg);
+}
+
+.accordion-item[open] .accordion-summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.accordion-content {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.accordion-content .card {
+  box-shadow: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+  background: none;
+}
+
+.accordion-content .card + .card {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
 }
 
 .subheading {
@@ -449,28 +524,63 @@ body {
   caption-side: top;
 }
 
+/* Fixed bottom tab bar (native-app convention) rather than a top row -
+   always visible regardless of scroll position, same as .app's own
+   padding-bottom already reserves room for. max-width/margin mirror
+   .app so it stays centered under the content on a wide (desktop
+   browser) viewport instead of stretching edge to edge; on a phone the
+   viewport is already narrower than max-width so this has no effect.
+   grid with a fixed 5-column count (not flex) is what actually
+   guarantees all 5 tabs fit with no horizontal scroll needed, ever,
+   regardless of viewport width - each tab gets an equal fraction of the
+   width no matter how long its label is, rather than sizing to content
+   and potentially overflowing. */
 .tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 20;
 }
 
 .tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   font: inherit;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  padding: 10px 14px;
+  padding: 8px 2px 6px;
   cursor: pointer;
+  font-size: 0.64rem;
+  line-height: 1.15;
+  /* Every label is short by design (see index.html), but this is the
+     backstop that guarantees no label can ever force the tab bar wider
+     than the viewport and reintroduce the horizontal scroll this
+     replaces. */
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+  line-height: 1;
 }
 
 .tab-btn.active {
   color: var(--accent);
-  border-bottom-color: var(--accent);
   font-weight: 600;
 }
 

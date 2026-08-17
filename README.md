@@ -5,6 +5,15 @@ with accounts and a friends leaderboard backed by Supabase.
 
 ## Pages
 
+Navigation between the five pages below is a fixed bottom tab bar (`#main-tabs`
+in `index.html`) - native-app convention rather than a top row, so it stays
+visible regardless of scroll position. Each tab is an icon + a short label
+stacked vertically; a CSS grid with a fixed 5-column count (not
+content-sized flex) guarantees all five always fit an iPhone's width with
+no horizontal scroll, however long a label might otherwise be. `.app`'s
+own bottom padding reserves room for the bar's height plus the iOS home
+indicator's safe area, so it never covers the last card on any page.
+
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
 - **Home** — the landing page. For a brand-new account (every To Do item
@@ -215,7 +224,7 @@ with accounts and a friends leaderboard backed by Supabase.
   Home page) shown alongside a savings-framed comparison against your
   week so far — "X kg CO2e saved vs an average week" (green) or "X kg
   over" (red), prorated to how far through the week it is the same way the
-  History tab's per-week goal is. The point is you don't need to log every category for
+  History section's per-week goal is. The point is you don't need to log every category for
   this to be meaningful, unlike apps that require comprehensive manual
   tracking before they'll show you anything. You can swap the UK average
   out for one of your own fully-confirmed weeks instead (Account page,
@@ -272,11 +281,11 @@ with accounts and a friends leaderboard backed by Supabase.
   "Reset this week" button - the budget-pace chart itself now lives on the
   Home page (its "This week" view), alongside month and year versions of
   the same chart. The week-by-week grid ("Your weeks") that used to sit at
-  the bottom of this page now lives on the Account page's History tab -
+  the bottom of this page now lives on the Account page's History section -
   see that section below for what it shows.
 - **This Year** — the yearly-estimate inputs, grouped into five cards in a
   roughly biggest-to-smallest-impact order (car ownership/type moved to the
-  Account page's Settings tab as **Vehicle** - see that section below - since
+  Account page's Settings section as **Vehicle** - see that section below - since
   it's a persistent profile attribute like commute distance, not a yearly
   one-off input): **Flying** (an itemized log, same "Additional journeys" style
   as the This Week page's commute card: a date (optional), which continent
@@ -338,7 +347,7 @@ with accounts and a friends leaderboard backed by Supabase.
   "confirmed/elapsed days" (e.g. "3/5" on a Friday if only Mon–Wed are
   done) show in small text next to their average; "All-time weekly
   average" ranks everyone by their average CO2e per *fully* confirmed week
-  (every day, both commute and food — see the Account page's History tab
+  (every day, both commute and food — see the Account page's History section
   below) since they started, which also folds in a weekly-equivalent share of each person's
   yearly Home page figures (flights, home electricity, buying goods, and
   any optional extras they've answered — everything the yearly total on
@@ -357,16 +366,19 @@ with accounts and a friends leaderboard backed by Supabase.
   client-side — so its emission-factor constants are a second copy of the
   ones in `app.js` and need to be kept in sync by hand if either changes.
 - **Account** — a persistent "Signed in as X / Sign out" header, then five
-  sub-tabs (a nested `.tabs` bar, same look as the main nav above it,
-  switched client-side via `showAccountSubtab()` in `app.js` - no page
-  reload, no URL change, remembers whichever one you last had open for
-  the rest of the session): **Account**, **Settings**, **Friends**,
-  **History**, **Data**.
+  sections stacked as a vertical accordion (native `<details>`/`<summary>`,
+  grouped by a shared `name="account-accordion"` attribute so opening one
+  automatically closes whichever other was open - an "exclusive accordion",
+  no JS needed for any of it): **Account**, **Settings**, **Friends**,
+  **History**, **Data**. Tapping a section's heading expands it in place,
+  going down the page, rather than swapping out a separate panel; the
+  browser remembers each section's open/closed state for free across tab
+  switches, since navigating away and back never rebuilds this DOM.
   - **Account** — just "Delete account": permanently deletes the account
     itself (login included), not just its data — required for App Store
     review, since Apple mandates in-app account deletion for any app that
     supports account creation. Different from "Reset all data" on the Data
-    tab, which clears your data but keeps the account.
+    section, which clears your data but keeps the account.
   - **Settings** — every persistent preference, in one place: display
     name, university (optional — "Not affiliated" or one of a fixed list;
     powers the Home page's "Uni average" comparison chip once enough
@@ -404,7 +416,7 @@ with accounts and a friends leaderboard backed by Supabase.
     permission there and then - declining it un-checks the toggle and
     shows an inline note pointing at iOS Settings); a "Baseline week"
     picker (a dropdown of your own fully-confirmed weeks — only ones with
-    a "✓ FULL" badge on the History tab qualify — to compare the This
+    a "✓ FULL" badge on the History section qualify — to compare the This
     Week page's card against instead of the UK average; "UK average
     (default)" switches back); and a "Help improve UK averages" opt-in
     (off by default — if turned on, everything on the Settings/Home pages

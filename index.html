@@ -69,14 +69,6 @@
       <p class="subtitle">Track how you commute and eat each day, and see your estimated carbon footprint.</p>
     </header>
 
-    <nav class="tabs" id="main-tabs">
-      <button class="tab-btn" data-tab="stats">Home</button>
-      <button class="tab-btn" data-tab="week">This Week</button>
-      <button class="tab-btn" data-tab="weeks">This Year</button>
-      <button class="tab-btn" data-tab="leaderboard">Leaderboard</button>
-      <button class="tab-btn" data-tab="account">Account</button>
-    </nav>
-
     <!-- PAGE 1: This Week (inputs) -->
     <section class="view" id="view-week" hidden>
       <section class="card">
@@ -742,30 +734,26 @@
         </div>
       </section>
 
-      <nav class="tabs" id="account-subtabs">
-        <button class="tab-btn account-subtab-btn active" data-subtab="account">Account</button>
-        <button class="tab-btn account-subtab-btn" data-subtab="settings">Settings</button>
-        <button class="tab-btn account-subtab-btn" data-subtab="friends">Friends</button>
-        <button class="tab-btn account-subtab-btn" data-subtab="history">History</button>
-        <button class="tab-btn account-subtab-btn" data-subtab="data">Data</button>
-      </nav>
+      <div class="account-accordion">
+        <details name="account-accordion" class="accordion-item" open>
+          <summary class="accordion-summary">Account</summary>
+          <div class="accordion-content">
+            <section class="card">
+              <h2>Delete account</h2>
+              <p class="assumptions">
+                Permanently deletes your account and everything tied to it &mdash; your login,
+                profile settings, every week you've logged, and your friend connections.
+                This is different from &ldquo;Reset all data&rdquo; on the Data section, which only
+                clears your data but keeps your account. <strong> Deleting your account cannot be undone </strong>
+              </p>
+              <button id="delete-account-btn" class="btn-secondary danger">Delete my account</button>
+            </section>
+          </div>
+        </details>
 
-      <!-- SUB-TAB: Account -->
-      <div class="subview" id="account-subview-account">
-        <section class="card">
-          <h2>Delete account</h2>
-          <p class="assumptions">
-            Permanently deletes your account and everything tied to it &mdash; your login,
-            profile settings, every week you've logged, and your friend connections.
-            This is different from &ldquo;Reset all data&rdquo; on the Data tab, which only
-            clears your data but keeps your account. <strong> Deleting your account cannot be undone </strong>
-          </p>
-          <button id="delete-account-btn" class="btn-secondary danger">Delete my account</button>
-        </section>
-      </div>
-
-      <!-- SUB-TAB: Settings -->
-      <div class="subview" id="account-subview-settings" hidden>
+        <details name="account-accordion" class="accordion-item">
+          <summary class="accordion-summary">Settings</summary>
+          <div class="accordion-content">
         <section class="card">
           <h2>Profile</h2>
           <label class="field">
@@ -918,10 +906,12 @@
             </p>
           </div>
         </section>
-      </div>
+          </div>
+        </details>
 
-      <!-- SUB-TAB: Friends -->
-      <div class="subview" id="account-subview-friends" hidden>
+        <details name="account-accordion" class="accordion-item">
+          <summary class="accordion-summary">Friends</summary>
+          <div class="accordion-content">
         <section class="card">
           <h2>Friends</h2>
           <form id="add-friend-form" class="friend-add-form">
@@ -941,19 +931,23 @@
 
           <p class="assumptions">Friends can see your weekly total on the Leaderboard once you've both accepted &mdash; never your day-by-day commute or diet detail.</p>
         </section>
-      </div>
+          </div>
+        </details>
 
-      <!-- SUB-TAB: History -->
-      <div class="subview" id="account-subview-history" hidden>
+        <details name="account-accordion" class="accordion-item">
+          <summary class="accordion-summary">History</summary>
+          <div class="accordion-content">
         <section class="card">
           <h2>Your weeks</h2>
           <p class="assumptions">Each box is one week (Mon&ndash;Sun). Tap a box to see the day-by-day breakdown.</p>
           <div class="weeks-grid" id="weeks-grid"><!-- boxes injected by app.js --></div>
         </section>
-      </div>
+          </div>
+        </details>
 
-      <!-- SUB-TAB: Data -->
-      <div class="subview" id="account-subview-data" hidden>
+        <details name="account-accordion" class="accordion-item">
+          <summary class="accordion-summary">Data</summary>
+          <div class="accordion-content">
         <section class="card">
           <h2>Your data</h2>
           <div class="account-actions">
@@ -969,8 +963,18 @@
             stored in your account, synced across devices you sign in on.
           </p>
         </section>
+          </div>
+        </details>
       </div>
     </section>
+
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn" data-tab="stats"><span class="tab-icon" aria-hidden="true">&#127968;</span><span class="tab-label">Home</span></button>
+      <button class="tab-btn" data-tab="week"><span class="tab-icon" aria-hidden="true">&#128197;</span><span class="tab-label">Week</span></button>
+      <button class="tab-btn" data-tab="weeks"><span class="tab-icon" aria-hidden="true">&#128202;</span><span class="tab-label">Year</span></button>
+      <button class="tab-btn" data-tab="leaderboard"><span class="tab-icon" aria-hidden="true">&#127942;</span><span class="tab-label">Ranks</span></button>
+      <button class="tab-btn" data-tab="account"><span class="tab-icon" aria-hidden="true">&#9881;&#65039;</span><span class="tab-label">Account</span></button>
+    </nav>
   </div>
 
   <div class="modal-backdrop" id="week-detail-backdrop">

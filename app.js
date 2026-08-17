@@ -955,7 +955,7 @@
     if (tab === "weeks") renderYearlyInputs();
     if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
-    if (tab === "account") { renderAccountPage(); showAccountSubtab(accountSubtab); }
+    if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
   }
 
@@ -2460,10 +2460,14 @@
   }
 
   // ---------- Page 4: Account ----------
-  // Renders every subview's data unconditionally, regardless of which
-  // sub-tab (see showAccountSubtab()) happens to be visible right now -
-  // same "keep it all fresh, cheap enough not to bother gating" approach
-  // as every other multi-card page in the app.
+  // Renders every accordion section's data unconditionally, regardless of
+  // which one (if any) is currently expanded - same "keep it all fresh,
+  // cheap enough not to bother gating" approach as every other multi-card
+  // page in the app. Expand/collapse itself is native <details> (see the
+  // "account-accordion" name group in index.html) - no JS needed for that
+  // part, and the browser remembers each section's open/closed state for
+  // free across tab switches, since showTab() only toggles the whole
+  // page's `hidden`, never touches or rebuilds this DOM.
   function renderAccountPage() {
     document.getElementById("profile-name").value = profile.name || "";
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
@@ -2480,20 +2484,6 @@
     renderFriendsUI();
     renderReminderCard();
     renderWeeksGrid();
-  }
-
-  const ACCOUNT_SUBTABS = ["account", "settings", "friends", "history", "data"];
-  let accountSubtab = "account";
-
-  function showAccountSubtab(subtab) {
-    if (!ACCOUNT_SUBTABS.includes(subtab)) return;
-    accountSubtab = subtab;
-    ACCOUNT_SUBTABS.forEach((s) => {
-      document.getElementById(`account-subview-${s}`).hidden = s !== subtab;
-    });
-    document.querySelectorAll(".account-subtab-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.subtab === subtab);
-    });
   }
 
   // Rebuilds the baseline-week dropdown from whichever of the person's own
@@ -3985,10 +3975,6 @@
       btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
     });
     window.addEventListener("hashchange", () => showTab(currentTab()));
-
-    document.querySelectorAll(".account-subtab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => showAccountSubtab(btn.dataset.subtab));
-    });
 
     document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
 
