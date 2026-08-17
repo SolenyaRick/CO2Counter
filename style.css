@@ -316,16 +316,15 @@ body {
 /* This Year page: a list of rows, each drilling into its own full
    .year-detail "page" (shown/hidden via plain [hidden], not an accordion)
    with a back button - a deliberately different pattern from the Account
-   page's accordion, per explicit user direction. */
+   page's accordion, per explicit user direction. Visually though, each row
+   is styled to match .accordion-item/.accordion-summary (same card look:
+   background/border/radius/shadow, same label weight+size) so the two
+   pages read as one consistent design language even though only one of
+   them actually expands in place. */
 .year-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  padding: var(--space-2);
+  gap: var(--space-3);
 }
 
 /* [hidden] and .year-list{display:flex} have equal specificity, so without
@@ -340,11 +339,14 @@ body {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-4) var(--space-3);
-  background: none;
-  border: none;
-  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: var(--space-4) var(--space-5);
   font: inherit;
+  font-weight: 700;
+  font-size: 1.02rem;
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -352,19 +354,23 @@ body {
 
 .year-list-row:hover,
 .year-list-row:focus-visible {
-  background: var(--bg);
+  border-color: var(--accent);
 }
 
 .year-list-icon {
-  font-size: 1.3rem;
-  line-height: 1;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--text-muted);
 }
 
 .year-list-label {
   flex: 1;
-  font-weight: 600;
-  font-size: 1rem;
 }
 
 .year-list-chevron {
@@ -1138,12 +1144,18 @@ input, select {
   background: var(--accent-light);
 }
 
-.tile-emoji {
+.tile-icon {
   position: absolute;
-  top: 8px;
-  left: 10px;
-  font-size: 1.05rem;
-  line-height: 1;
+  top: 9px;
+  left: 11px;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--text-muted);
 }
 
 .stat-highlight {

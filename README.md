@@ -180,7 +180,11 @@ color too with no extra CSS.
   tracked/estimated split above), then "Home" (home energy, gas/oil
   heating, water usage, pets), then "Other" (flying, banking, buying
   goods, car manufacturing). Unlike the This Year input page, these tile
-  labels don't say "(optional)". Every tile except Alcohol (which isn't
+  labels don't say "(optional)". Each tile's top-left badge (`.tile-icon`
+  in `index.html`) is a small SVG line icon in the same style as the
+  bottom nav and the This Year list, one per category (fork+knife, car,
+  wine glass, bolt, flame, droplet, paw, plane, and so on) - replacing what
+  used to be an emoji there. Every tile except Alcohol (which isn't
   modeled in the UK average figure to begin with, so there's nothing to
   ring against) is an Apple-Watch-style ring (`renderRingStat()` in
   `app.js`): starts as a full green ring representing 100% of your UK-average
@@ -299,7 +303,12 @@ color too with no extra CSS.
   accordion like the Account page below, since each category's inputs are
   substantial enough to want the whole screen rather than expanding in
   place. Re-entering the This Year tab always resets back to the list, even
-  if a detail page was left open. The five categories: **Flying** (an
+  if a detail page was left open. Each row is still styled to match the
+  Account page's accordion cards (same background/border/shadow/label
+  weight) so the two pages read as one visual language despite the
+  different interaction, and each has its own small SVG line icon (a
+  plane, bolt, paw, bank, and shopping bag) in the same style as the
+  bottom nav. The five categories: **Flying** (an
   itemized log, same "Additional journeys" style
   as the This Week page's commute card: a date (optional), which continent
   you flew to, and cabin class, then "Add flight" — each entry shows up in
