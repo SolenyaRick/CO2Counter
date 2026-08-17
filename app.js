@@ -952,7 +952,7 @@
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
-    if (tab === "weeks") renderYearlyInputs();
+    if (tab === "weeks") { renderYearlyInputs(); showYearList(); }
     if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
@@ -2702,6 +2702,25 @@
     document.getElementById("clothes-per-month").value = profile.clothesPerMonth;
   }
 
+  // This Year page navigation: a list of categories, each drilling into
+  // its own full-screen detail view with a back button - not an accordion,
+  // matching the list->detail->back pattern the Account accordion doesn't use.
+  const YEAR_DETAIL_IDS = ["flying", "household", "pets", "banking", "goods"];
+
+  function showYearList() {
+    document.getElementById("year-list").hidden = false;
+    YEAR_DETAIL_IDS.forEach((id) => {
+      document.getElementById(`year-detail-${id}`).hidden = true;
+    });
+  }
+
+  function showYearDetail(id) {
+    document.getElementById("year-list").hidden = true;
+    YEAR_DETAIL_IDS.forEach((detailId) => {
+      document.getElementById(`year-detail-${detailId}`).hidden = detailId !== id;
+    });
+  }
+
   // ---------- Habits (Home page "Habits" card) ----------
   // Two streak-based habits, each backed entirely by data the app already
   // tracks elsewhere - no separate "did you do the habit today" logging
@@ -3975,6 +3994,14 @@
       btn.addEventListener("click", () => { location.hash = btn.dataset.tab; });
     });
     window.addEventListener("hashchange", () => showTab(currentTab()));
+
+    document.getElementById("year-list").addEventListener("click", (e) => {
+      const row = e.target.closest(".year-list-row");
+      if (row) showYearDetail(row.dataset.detail);
+    });
+    document.querySelectorAll(".year-detail [data-back]").forEach((btn) => {
+      btn.addEventListener("click", showYearList);
+    });
 
     document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
 

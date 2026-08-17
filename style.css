@@ -313,6 +313,97 @@ body {
   padding: var(--space-3) var(--space-4);
 }
 
+/* This Year page: a list of rows, each drilling into its own full
+   .year-detail "page" (shown/hidden via plain [hidden], not an accordion)
+   with a back button - a deliberately different pattern from the Account
+   page's accordion, per explicit user direction. */
+.year-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: var(--space-2);
+}
+
+/* [hidden] and .year-list{display:flex} have equal specificity, so without
+   this the later rule (this one) would always win and the list would stay
+   visible behind a detail page even when JS sets the hidden attribute. */
+.year-list[hidden] {
+  display: none;
+}
+
+.year-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.year-list-row:hover,
+.year-list-row:focus-visible {
+  background: var(--bg);
+}
+
+.year-list-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.year-list-label {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.year-list-chevron {
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.year-detail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.year-detail-header h2 {
+  margin: 0;
+}
+
+.year-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 1.1rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.year-back-btn:hover {
+  background: var(--border);
+}
+
 .subheading {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -617,8 +708,13 @@ body {
 }
 
 .tab-icon {
-  font-size: 1.2rem;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .tab-btn.active {

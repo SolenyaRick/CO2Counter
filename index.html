@@ -236,8 +236,45 @@
 
     <!-- PAGE 2: This Year (yearly-estimate inputs) -->
     <section class="view" id="view-weeks" hidden>
+      <!-- Landing list - each row drills into its own detail page (see
+           showYearDetail()/showYearList() in app.js); the back arrow in
+           each detail page's header returns here rather than an
+           in-place accordion, since these are long, dense forms better
+           read one at a time than all stacked on one scroll. -->
+      <div class="year-list" id="year-list">
+        <button type="button" class="year-list-row" data-detail="flying">
+          <span class="year-list-icon" aria-hidden="true">&#9992;&#65039;</span>
+          <span class="year-list-label">Flying</span>
+          <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+        </button>
+        <button type="button" class="year-list-row" data-detail="household">
+          <span class="year-list-icon" aria-hidden="true">&#9889;</span>
+          <span class="year-list-label">Household energy</span>
+          <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+        </button>
+        <button type="button" class="year-list-row" data-detail="pets">
+          <span class="year-list-icon" aria-hidden="true">&#128062;</span>
+          <span class="year-list-label">Pets <span class="optional-badge">Optional</span></span>
+          <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+        </button>
+        <button type="button" class="year-list-row" data-detail="banking">
+          <span class="year-list-icon" aria-hidden="true">&#127974;</span>
+          <span class="year-list-label">Banking <span class="optional-badge">Optional</span></span>
+          <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+        </button>
+        <button type="button" class="year-list-row" data-detail="goods">
+          <span class="year-list-icon" aria-hidden="true">&#128717;&#65039;</span>
+          <span class="year-list-label">Buying goods</span>
+          <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+        </button>
+      </div>
+
+      <div class="year-detail" id="year-detail-flying" hidden>
       <section class="card">
-        <h2>Flying</h2>
+        <div class="year-detail-header">
+          <button type="button" class="year-back-btn" data-back aria-label="Back">&#8592;</button>
+          <h2>Flying</h2>
+        </div>
         <p class="assumptions">
           Log each return flight you've taken (or plan to take) this year &mdash; date is
           optional, but a flight logged with a date over a year old stops counting toward
@@ -269,9 +306,14 @@
           <button type="button" class="btn-secondary btn-small" id="flight-add-btn">Add flight</button>
         </div>
       </section>
+      </div>
 
+      <div class="year-detail" id="year-detail-household" hidden>
       <section class="card">
-        <h2>Household energy</h2>
+        <div class="year-detail-header">
+          <button type="button" class="year-back-btn" data-back aria-label="Back">&#8592;</button>
+          <h2>Household energy</h2>
+        </div>
         <label class="field">
           People in your household
           <input type="number" id="household-people" min="1" step="1" />
@@ -324,9 +366,14 @@
           split evenly across your household.
         </p>
       </section>
+      </div>
 
+      <div class="year-detail" id="year-detail-pets" hidden>
       <section class="card">
-        <h2>Pets <span class="optional-badge">Optional</span></h2>
+        <div class="year-detail-header">
+          <button type="button" class="year-back-btn" data-back aria-label="Back">&#8592;</button>
+          <h2>Pets <span class="optional-badge">Optional</span></h2>
+        </div>
         <label class="field">
           Dogs
           <input type="number" id="num-dogs" min="0" step="1" placeholder="Leave blank to skip" />
@@ -343,9 +390,14 @@
           person's footprint. Answering either one counts the other as 0 if left blank.
         </p>
       </section>
+      </div>
 
+      <div class="year-detail" id="year-detail-banking" hidden>
       <section class="card">
-        <h2>Banking <span class="optional-badge">Optional</span></h2>
+        <div class="year-detail-header">
+          <button type="button" class="year-back-btn" data-back aria-label="Back">&#8592;</button>
+          <h2>Banking <span class="optional-badge">Optional</span></h2>
+        </div>
         <label class="field">
           Which bank do you mainly hold money with?
           <select id="bank-name">
@@ -380,9 +432,14 @@
           total, same as any other optional field here.
         </p>
       </section>
+      </div>
 
+      <div class="year-detail" id="year-detail-goods" hidden>
       <section class="card">
-        <h2>Buying goods</h2>
+        <div class="year-detail-header">
+          <button type="button" class="year-back-btn" data-back aria-label="Back">&#8592;</button>
+          <h2>Buying goods</h2>
+        </div>
         <label class="field">
           Clothing items bought per month
           <input type="number" id="clothes-per-month" min="0" step="1" />
@@ -392,6 +449,7 @@
           less, a coat or a pair of jeans much more.
         </p>
       </section>
+      </div>
     </section>
 
     <!-- PAGE 3: Leaderboard -->
@@ -977,12 +1035,31 @@
       </div>
     </section>
 
+    <!-- Minimal line icons (24x24, 2px stroke, currentColor) instead of
+         emoji - a consistent, monochrome icon system that automatically
+         picks up .tab-btn.active's color change, rather than relying on
+         whatever an emoji font happens to render like on a given device. -->
     <nav class="tabs" id="main-tabs">
-      <button class="tab-btn" data-tab="stats"><span class="tab-icon" aria-hidden="true">&#127968;</span><span class="tab-label">Home</span></button>
-      <button class="tab-btn" data-tab="week"><span class="tab-icon" aria-hidden="true">&#128197;</span><span class="tab-label">Week</span></button>
-      <button class="tab-btn" data-tab="weeks"><span class="tab-icon" aria-hidden="true">&#128202;</span><span class="tab-label">Year</span></button>
-      <button class="tab-btn" data-tab="leaderboard"><span class="tab-icon" aria-hidden="true">&#127942;</span><span class="tab-label">Ranks</span></button>
-      <button class="tab-btn" data-tab="account"><span class="tab-icon" aria-hidden="true">&#9881;&#65039;</span><span class="tab-label">Account</span></button>
+      <button class="tab-btn" data-tab="stats">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h3v-6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6h3a1 1 0 0 0 1-1V10"/></svg>
+        <span class="tab-label">Home</span>
+      </button>
+      <button class="tab-btn" data-tab="week">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span class="tab-label">Week</span>
+      </button>
+      <button class="tab-btn" data-tab="weeks">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V14M12 20V4M18 20v-9"/></svg>
+        <span class="tab-label">Year</span>
+      </button>
+      <button class="tab-btn" data-tab="leaderboard">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M8.5 13.5L7 22l5-2.5L17 22l-1.5-8.5"/></svg>
+        <span class="tab-label">Ranks</span>
+      </button>
+      <button class="tab-btn" data-tab="account">
+        <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+        <span class="tab-label">Account</span>
+      </button>
     </nav>
   </div>
 

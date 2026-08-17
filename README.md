@@ -12,7 +12,12 @@ stacked vertically; a CSS grid with a fixed 5-column count (not
 content-sized flex) guarantees all five always fit an iPhone's width with
 no horizontal scroll, however long a label might otherwise be. `.app`'s
 own bottom padding reserves room for the bar's height plus the iOS home
-indicator's safe area, so it never covers the last card on any page.
+indicator's safe area, so it never covers the last card on any page. The
+tab icons are small hand-authored inline SVGs (24x24, `stroke="currentColor"`,
+Feather/Lucide-style line icons - no external icon font/library, matching
+the app's no-build-step approach) rather than emoji, so `stroke="currentColor"`
+alone lets `.tab-btn.active`'s existing text-color rule drive the icon's
+color too with no extra CSS.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
@@ -283,11 +288,19 @@ indicator's safe area, so it never covers the last card on any page.
   the same chart. The week-by-week grid ("Your weeks") that used to sit at
   the bottom of this page now lives on the Account page's History section -
   see that section below for what it shows.
-- **This Year** — the yearly-estimate inputs, grouped into five cards in a
-  roughly biggest-to-smallest-impact order (car ownership/type moved to the
-  Account page's Settings section as **Vehicle** - see that section below - since
-  it's a persistent profile attribute like commute distance, not a yearly
-  one-off input): **Flying** (an itemized log, same "Additional journeys" style
+- **This Year** — the yearly-estimate inputs, opening on a list of five rows
+  (`#year-list` in `index.html`) in a roughly biggest-to-smallest-impact
+  order (car ownership/type moved to the Account page's Settings section as
+  **Vehicle** - see that section below - since it's a persistent profile
+  attribute like commute distance, not a yearly one-off input). Tapping a
+  row drills into its own full-screen `.year-detail` page with a round back
+  button in the top-left (`showYearDetail(id)`/`showYearList()` in
+  `app.js`, toggled via the plain `hidden` attribute) - deliberately not an
+  accordion like the Account page below, since each category's inputs are
+  substantial enough to want the whole screen rather than expanding in
+  place. Re-entering the This Year tab always resets back to the list, even
+  if a detail page was left open. The five categories: **Flying** (an
+  itemized log, same "Additional journeys" style
   as the This Week page's commute card: a date (optional), which continent
   you flew to, and cabin class, then "Add flight" — each entry shows up in
   a list immediately, counted in the total unless its date is over a year
