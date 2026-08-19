@@ -965,7 +965,10 @@
         showYearList();
       }
     }
-    if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); renderHabitsCard(); }
+    // renderLeagues() is temporarily unwired (Leagues card pulled from the
+    // Leaderboard page for now) - the function/RPC call itself is untouched
+    // so this is a one-line change to bring back.
+    if (tab === "leaderboard") { renderLeaderboard(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); renderHabitsCard(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
@@ -1419,21 +1422,29 @@
     renderFootprints();
   }
 
-  // Monzo Trends-style "budget pace" chart: a dashed target line burns down
-  // from a goal to 0 in a straight line across the tracked span, and a solid
-  // line tracks the actual remaining budget (goal minus CO2e confirmed so
-  // far). Falling below the dashed line means CO2e is being used faster than
-  // the goal allows for how far through the span it is; staying above it
-  // means on pace or ahead. The actual line only draws up to the current
-  // point - it doesn't project forward. Shared by the This Week page's
-  // weekly chart and the Stats page's yearly one below, parameterized on
-  // `goal`/`predicted`/`actualPoints`/`xLabels` so both stay pixel-for-pixel
+  // "Budget pace" chart: a dashed target line rises in a straight line from
+  // 0 to the goal across the tracked span, and a stacked area tracks actual
+  // cumulative CO2e confirmed so far, split into one colored band per
+  // domain (commute/food/alcohol, bottom to top) using the exact same
+  // colors as "This week's emissions by domain" (--commute-color/--accent/
+  // --alcohol-color) so the two cards read as one consistent picture.
+  // Rising above the dashed line means CO2e is being used faster than the
+  // goal allows for how far through the span it is; staying under it means
+  // on pace or ahead. The stacked area only draws up to the current point -
+  // it doesn't project forward. Shared by the This Week page's weekly chart
+  // and the Stats page's yearly one below, parameterized on
+  // `goal`/`predicted`/`series`/`xLabels` so both stay pixel-for-pixel
   // consistent and any future tweak to one applies to both automatically.
-  // actualStartJ lets the actual line begin partway along the x-axis instead
-  // of always at j=0 - used by the yearly chart so the stretch before
-  // tracking began is left blank (no line, no green) rather than plotted as
-  // a flat "remaining = goal" run that would misleadingly look on-track.
-  function renderBudgetChart(containerId, { goal, predicted, actualPoints, xLabels, actualStartJ = 0, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
+  // actualStartJ lets the stacked area begin partway along the x-axis
+  // instead of always at j=0 - used by the yearly chart so the stretch
+  // before tracking began is left blank (no bands) rather than plotted as
+  // a fabricated "0 emissions" run that would misleadingly look on-track.
+  // `series` is an array of `{ key, values }`, each `values` the STACKED
+  // (cumulative-inclusive) top edge for that band, aligned to
+  // `actualStartJ` (same length, same indexing) - bands stack in array
+  // order, band i's bottom edge is band i-1's top edge, or `stackBaseline`
+  // (a flat line, defaulting to 0) for the first band.
+  function renderBudgetChart(containerId, { goal, predicted, series, xLabels, actualStartJ = 0, stackBaseline = 0, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
     const chart = document.getElementById(containerId);
     if (!chart) return;
     chart.innerHTML = "";
@@ -1456,9 +1467,12 @@
     const plotW = W - PAD_X * 2;
     const plotH = H - PAD_TOP - PAD_BOTTOM;
 
-    const allValues = predicted.concat(actualPoints);
-    const yMax = Math.max(goal, ...allValues);
-    const yMin = Math.min(0, ...allValues);
+    const topSeries = series[series.length - 1].values;
+    const finalTotal = topSeries[topSeries.length - 1];
+    const lastJ = actualStartJ + topSeries.length - 1;
+
+    const yMax = Math.max(goal, finalTotal, 0.0001);
+    const yMin = 0;
     const yRange = Math.max(0.0001, yMax - yMin);
 
     const xAt = (j) => PAD_X + (j / totalUnits) * plotW;
@@ -1466,12 +1480,7 @@
     const pathFor = (values, startJ = 0) => values.map((v, k) => `${k === 0 ? "M" : "L"}${xAt(startJ + k).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
 
     const predictedPath = pathFor(predicted);
-    const actualPath = pathFor(actualPoints, actualStartJ);
-    const lastJ = actualStartJ + actualPoints.length - 1;
-    const finalActual = actualPoints[actualPoints.length - 1];
-    const onTrack = finalActual >= predicted[lastJ];
-    const zeroY = yAt(0).toFixed(1);
-    const areaPath = `${actualPath} L${xAt(lastJ).toFixed(1)},${zeroY} L${xAt(actualStartJ).toFixed(1)},${zeroY} Z`;
+    const onTrack = finalTotal <= predicted[lastJ];
 
     const svgNS = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(svgNS, "svg");
@@ -1479,31 +1488,7 @@
     svg.style.height = `${H}px`;
     svg.setAttribute("class", `budget-chart-svg ${onTrack ? "on-track" : "over-track"}`);
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `${ariaPrefix}: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(finalActual))} kg CO2e ${finalActual >= 0 ? "remaining" : "over"}`);
-
-    const defs = document.createElementNS(svgNS, "defs");
-    const gradient = document.createElementNS(svgNS, "linearGradient");
-    gradient.setAttribute("id", "budget-area-fill");
-    gradient.setAttribute("x1", "0"); gradient.setAttribute("y1", "0");
-    gradient.setAttribute("x2", "0"); gradient.setAttribute("y2", "1");
-    const stop1 = document.createElementNS(svgNS, "stop");
-    stop1.setAttribute("offset", "0%");
-    stop1.setAttribute("class", "budget-fill-stop-start");
-    const stop2 = document.createElementNS(svgNS, "stop");
-    stop2.setAttribute("offset", "100%");
-    stop2.setAttribute("class", "budget-fill-stop-end");
-    gradient.appendChild(stop1);
-    gradient.appendChild(stop2);
-    defs.appendChild(gradient);
-    svg.appendChild(defs);
-
-    if (yMin < 0) {
-      const zeroLine = document.createElementNS(svgNS, "line");
-      zeroLine.setAttribute("x1", xAt(0)); zeroLine.setAttribute("x2", xAt(totalUnits));
-      zeroLine.setAttribute("y1", zeroY); zeroLine.setAttribute("y2", zeroY);
-      zeroLine.setAttribute("class", "budget-zero-line");
-      svg.appendChild(zeroLine);
-    }
+    svg.setAttribute("aria-label", `${ariaPrefix}: ${onTrack ? "on track" : "over pace"}, ${fmt(Math.abs(predicted[lastJ] - finalTotal))} kg CO2e ${finalTotal <= predicted[lastJ] ? "remaining" : "over"}`);
 
     if (actualStartJ > 0) {
       const startLine = document.createElementNS(svgNS, "line");
@@ -1513,24 +1498,30 @@
       svg.appendChild(startLine);
     }
 
-    const area = document.createElementNS(svgNS, "path");
-    area.setAttribute("d", areaPath);
-    area.setAttribute("class", "budget-area");
-    svg.appendChild(area);
+    // Stacked bands, bottom to top - each one's fill boundary runs along its
+    // own cumulative values left-to-right, then back along the previous
+    // band's values (or the zero line, for the first band) right-to-left.
+    let bottomValues = new Array(topSeries.length).fill(stackBaseline);
+    series.forEach(({ key, values }) => {
+      const topPath = pathFor(values, actualStartJ);
+      const bottomPath = bottomValues.slice().reverse()
+        .map((v, k) => `L${xAt(actualStartJ + (bottomValues.length - 1 - k)).toFixed(1)},${yAt(v).toFixed(1)}`)
+        .join(" ");
+      const band = document.createElementNS(svgNS, "path");
+      band.setAttribute("d", `${topPath} ${bottomPath} Z`);
+      band.setAttribute("class", `budget-band budget-band-${key}`);
+      svg.appendChild(band);
+      bottomValues = values;
+    });
 
     const predictedLine = document.createElementNS(svgNS, "path");
     predictedLine.setAttribute("d", predictedPath);
     predictedLine.setAttribute("class", "budget-predicted-line");
     svg.appendChild(predictedLine);
 
-    const actualLine = document.createElementNS(svgNS, "path");
-    actualLine.setAttribute("d", actualPath);
-    actualLine.setAttribute("class", "budget-actual-line");
-    svg.appendChild(actualLine);
-
     const dot = document.createElementNS(svgNS, "circle");
     dot.setAttribute("cx", xAt(lastJ));
-    dot.setAttribute("cy", yAt(finalActual));
+    dot.setAttribute("cy", yAt(finalTotal));
     dot.setAttribute("r", 3.2);
     dot.setAttribute("class", "budget-actual-dot");
     svg.appendChild(dot);
@@ -1541,15 +1532,6 @@
     goalLabel.setAttribute("y", Math.max(9, yAt(goal) - 5));
     goalLabel.setAttribute("class", "budget-axis-label");
     svg.appendChild(goalLabel);
-
-    if (yMin < 0) {
-      const zeroLabel = document.createElementNS(svgNS, "text");
-      zeroLabel.textContent = "0";
-      zeroLabel.setAttribute("x", xAt(0));
-      zeroLabel.setAttribute("y", Number(zeroY) - 3);
-      zeroLabel.setAttribute("class", "budget-axis-label");
-      svg.appendChild(zeroLabel);
-    }
 
     xLabels.forEach(({ j, text, isCurrent }) => {
       const label = document.createElementNS(svgNS, "text");
@@ -1563,11 +1545,12 @@
 
     chart.appendChild(svg);
 
+    const remainingNow = predicted[lastJ] - finalTotal;
     const legend = document.createElement("div");
     legend.className = "budget-chart-legend";
     legend.innerHTML = `
       <span class="legend-item"><span class="legend-swatch legend-swatch-target"></span>Target pace</span>
-      <span class="legend-item"><span class="legend-swatch legend-swatch-actual ${onTrack ? "on-track" : "over-track"}"></span>${onTrack ? "On pace" : "Over pace"} &middot; ${fmt(Math.abs(finalActual))} kg ${finalActual >= 0 ? "left" : "over goal"}</span>
+      <span class="legend-item"><span class="legend-swatch legend-swatch-actual ${onTrack ? "on-track" : "over-track"}"></span>${onTrack ? "On pace" : "Over pace"} &middot; ${fmt(Math.abs(remainingNow))} kg ${remainingNow >= 0 ? "left" : "over goal"}</span>
     `;
     chart.appendChild(legend);
   }
@@ -1609,6 +1592,36 @@
       });
     });
     return { dailyKg, todayOffset };
+  }
+
+  // Same [start, today] range and per-day granularity as computeRangeDailyKg()
+  // above, but kept split into commute/food/alcohol day-by-day instead of
+  // summed into one daily total - feeds the Budget pace chart's stacked
+  // domain bands (see renderPeriodChart()/renderBudgetChart()), so each
+  // band's day-to-day shape is exactly the same underlying data as the
+  // single combined line used to be, just not pre-summed.
+  function computeRangeDailyKgByDomain(start, today) {
+    const todayOffset = Math.round((today - start) / DAY_MS);
+    const len = Math.max(0, todayOffset) + 1;
+    const commute = new Array(len).fill(0);
+    const food = new Array(len).fill(0);
+    const alcohol = new Array(len).fill(0);
+    Object.keys(weeksCache).forEach((weekKey) => {
+      const weekData = weeksCache[weekKey];
+      const monday = new Date(`${weekKey}T00:00:00`);
+      const alcoholKg = alcoholFootprint(weekData);
+      DAYS.forEach((day, i) => {
+        const dayDate = new Date(monday);
+        dayDate.setDate(dayDate.getDate() + i);
+        if (dayDate < start || dayDate > today) return;
+        const offset = Math.round((dayDate - start) / DAY_MS);
+        if (offset < 0 || offset >= len) return;
+        commute[offset] += countedCommuteFootprint(weekData, day.key) + extraJourneysFootprintForDay(weekData, day.key);
+        food[offset] += countedFoodFootprint(weekData, day.key);
+        alcohol[offset] += alcoholKg / 7;
+      });
+    });
+    return { commute, food, alcohol, todayOffset };
   }
 
   // Same [start, today] range and same counted/confirmed-only data as
@@ -2001,21 +2014,22 @@
     const { start, totalDays, goal, applyTrackingStart } = periodBounds(period);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const { dailyKg, todayOffset } = computeRangeDailyKg(start, today);
+    const { commute: commuteDaily, food: foodDaily, alcohol: alcoholDaily, todayOffset } = computeRangeDailyKgByDomain(start, today);
 
     const predicted = [];
-    for (let j = 0; j <= totalDays; j++) predicted.push(goal * (1 - j / totalDays));
+    for (let j = 0; j <= totalDays; j++) predicted.push(goal * (j / totalDays));
 
     // Untracked days at the start of a month/year (before tracking began)
     // have no data, so there's no way to know what they actually emitted -
     // rather than crediting them as zero-emission (which would make the
-    // actual line jump out artificially ahead of pace), they're assumed to
-    // have used exactly their fair share of the goal at the target rate.
-    // "Remaining budget" at the tracking-start point is therefore the
-    // target line's own value there, with real confirmed emissions
-    // subtracted from that point onward - so the actual line begins exactly
-    // on the dashed target line and only diverges based on what's actually
-    // been tracked since.
+    // stacked bands jump out artificially ahead of pace), they're assumed
+    // to have used exactly their fair share of the goal at the target
+    // rate. The stack's bottom edge at the tracking-start point is
+    // therefore the target line's own value there (budgetAtStart, used as
+    // stackBaseline below) - so the bands begin exactly on the dashed
+    // target line and only diverge based on what's actually been tracked
+    // since, with each domain's own share stacked on top of that shared
+    // starting point rather than from 0.
     let trackingStartOffset = 0;
     if (applyTrackingStart) {
       const trackedStart = new Date(`${firstTrackedWeekKey()}T00:00:00`);
@@ -2023,18 +2037,32 @@
     }
     const budgetAtStart = predicted[trackingStartOffset];
 
-    const cumulative = [0];
-    dailyKg.forEach((d, i) => cumulative.push(cumulative[i] + d));
-    const remaining = cumulative.map((c) => budgetAtStart - c);
-    const actualPoints = remaining.slice(trackingStartOffset, todayOffset + 2);
+    function cumulativeSinceStart(dailyArr) {
+      const out = [0];
+      for (let k = trackingStartOffset; k <= todayOffset; k++) out.push(out[out.length - 1] + (dailyArr[k] || 0));
+      return out;
+    }
+    const cumCommute = cumulativeSinceStart(commuteDaily);
+    const cumFood = cumulativeSinceStart(foodDaily);
+    const cumAlcohol = cumulativeSinceStart(alcoholDaily);
+
+    // Each band's values are the STACKED (cumulative-inclusive) top edge,
+    // ready for renderBudgetChart() to plot directly - band order here is
+    // also the visual bottom-to-top stacking order.
+    const series = [
+      { key: "commute", values: cumCommute.map((v) => budgetAtStart + v) },
+      { key: "food", values: cumFood.map((v, k) => budgetAtStart + cumCommute[k] + v) },
+      { key: "alcohol", values: cumAlcohol.map((v, k) => budgetAtStart + cumCommute[k] + cumFood[k] + v) },
+    ];
 
     const xLabels = periodXLabels(period, start, totalDays, todayOffset);
 
     renderBudgetChart("home-chart", {
       goal,
       predicted,
-      actualPoints,
+      series,
       actualStartJ: trackingStartOffset,
+      stackBaseline: budgetAtStart,
       xLabels,
       goalLabelSuffix: PERIOD_GOAL_SUFFIX[period],
       ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
@@ -2973,7 +3001,7 @@
   // reminder/Baseline week/Data sharing each carry enough fields to want
   // a full screen rather than expanding in place. Nested one level inside
   // the "Settings" <details>, which stays a native accordion item itself.
-  const SETTINGS_DETAIL_IDS = ["vehicle", "reminder", "baseline", "sharing"];
+  const SETTINGS_DETAIL_IDS = ["vehicle", "reminder", "baseline", "sharing", "disclaimer"];
 
   function showSettingsList() {
     document.getElementById("settings-list").hidden = false;
@@ -4866,6 +4894,7 @@
       if (file) importData(file);
       e.target.value = "";
     });
+    document.getElementById("reset-week-account").addEventListener("click", resetWeek);
     document.getElementById("reset-all-data").addEventListener("click", resetAllData);
     document.getElementById("delete-account-btn").addEventListener("click", deleteOwnAccount);
 

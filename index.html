@@ -444,20 +444,6 @@
       </section>
 
       <section class="card">
-        <h2>Leagues</h2>
-        <p class="assumptions">
-          You and your accepted friends who qualify &mdash; membership only, not a
-          ranked total. Vegan/Veggie/Commute/Goal reset each week (every confirmed day has
-          to match, so a day you haven't logged yet doesn't disqualify you but doesn't
-          count for you either); Flight-free is an ongoing streak since your last
-          logged flight, so it only includes people who've logged at least one. Goal league
-          needs at least one confirmed day this week and your running total at or under
-          your own weekly goal, prorated to how far through the week it is.
-        </p>
-        <div class="leagues-grid" id="leagues-grid"><!-- injected by app.js --></div>
-      </section>
-
-      <section class="card">
         <h2>All-time weekly average</h2>
         <p class="assumptions">
           Average CO2e per week since each person started confirming weeks, lowest first.
@@ -756,15 +742,6 @@
         </div>
       </section>
 
-      <section class="card compact-card">
-        <h2>What this doesn't account for</h2>
-        <ul class="unaccounted-list compact-bullets">
-          <li>Travel beyond your logged commute: taxis/rideshare, buses, trains, ferries, cruises</li>
-          <li>Diet + purchases beyond what's tracked: dairy, eggs, snacks, food miles, electronics, subscriptions, household waste</li>
-          <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint (will be available soon...)</li>
-          <li>Your share of public services and infrastructure &mdash; roughly <strong>3.3 tonnes CO2e/yr</strong> per person in the UK</li>
-        </ul>
-      </section>
     </section>
 
     <!-- PAGE 5: Account -->
@@ -872,6 +849,11 @@
               <button type="button" class="year-list-row" data-settings-detail="sharing">
                 <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/></svg>
                 <span class="year-list-label">Data sharing</span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
+              <button type="button" class="year-list-row" data-settings-detail="disclaimer">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="0.5" fill="currentColor"/></svg>
+                <span class="year-list-label">What this doesn't account for</span>
                 <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
               </button>
             </div>
@@ -1041,6 +1023,21 @@
               </div>
             </section>
             </div>
+
+            <div class="year-detail" id="settings-detail-disclaimer" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>What this doesn't account for</h2>
+              </div>
+              <ul class="unaccounted-list">
+                <li>Travel beyond your logged commute: taxis/rideshare, buses, trains, ferries, cruises</li>
+                <li>Diet + purchases beyond what's tracked: dairy, eggs, snacks, food miles, electronics, subscriptions, household waste</li>
+                <li>Investments beyond your bank balance &mdash; stocks, funds, and pensions can carry their own financed-emissions footprint (will be available soon...)</li>
+                <li>Your share of public services and infrastructure &mdash; roughly <strong>3.3 tonnes CO2e/yr</strong> per person in the UK</li>
+              </ul>
+            </section>
+            </div>
           </div>
         </details>
 
@@ -1091,10 +1088,13 @@
               Import data (.json)
               <input type="file" id="import-data" accept="application/json" hidden />
             </label>
+            <button id="reset-week-account" class="btn-secondary danger">Reset this week</button>
             <button id="reset-all-data" class="btn-secondary danger">Reset all data</button>
           </div>
           <p class="assumptions">
-            Resets your weekly logs and profile settings (not your friends). Everything is
+            "Reset this week" clears just whichever week you last had open on
+            This Week (this week or last week). "Reset all data" resets your
+            weekly logs and profile settings (not your friends). Everything is
             stored in your account, synced across devices you sign in on.
           </p>
         </section>

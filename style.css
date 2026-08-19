@@ -2071,18 +2071,6 @@ input, select {
   stroke-dasharray: 4 3;
 }
 
-.budget-actual-line {
-  fill: none;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  stroke: var(--accent);
-}
-
-.budget-chart-svg.over-track .budget-actual-line {
-  stroke: var(--danger);
-}
-
 .budget-actual-dot {
   fill: var(--accent);
   stroke: var(--surface);
@@ -2093,28 +2081,33 @@ input, select {
   fill: var(--danger);
 }
 
-.budget-area {
-  fill: url(#budget-area-fill);
+/* Stacked domain bands for the Budget pace chart - same colors as "This
+   week's emissions by domain" (.domain-commute/.domain-food/.domain-alcohol
+   above use these same variables as a `background`; here it's an SVG
+   `fill` instead) so the two cards read as one consistent picture. A
+   solid-color top stroke over a semi-transparent fill keeps each band's
+   own boundary crisp even where two bands' colors are close in value. */
+.budget-band {
+  stroke-width: 1.6;
+  stroke-linejoin: round;
 }
 
-.budget-fill-stop-start {
-  stop-color: var(--accent);
-  stop-opacity: 0.28;
+.budget-band-commute {
+  fill: var(--commute-color);
+  fill-opacity: 0.55;
+  stroke: var(--commute-color);
 }
 
-.budget-fill-stop-end {
-  stop-color: var(--accent);
-  stop-opacity: 0;
+.budget-band-food {
+  fill: var(--accent);
+  fill-opacity: 0.55;
+  stroke: var(--accent);
 }
 
-.budget-chart-svg.over-track .budget-fill-stop-start {
-  stop-color: var(--danger);
-  stop-opacity: 0.22;
-}
-
-.budget-chart-svg.over-track .budget-fill-stop-end {
-  stop-color: var(--danger);
-  stop-opacity: 0;
+.budget-band-alcohol {
+  fill: var(--alcohol-color);
+  fill-opacity: 0.55;
+  stroke: var(--alcohol-color);
 }
 
 .budget-zero-line {

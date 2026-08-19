@@ -89,27 +89,32 @@ color too with no extra CSS.
   the more accurate it gets — same known approximation the pace chart
   below already makes. Next is a "Budget pace" card: a
   three-way toggle ("This week" / "This month" / "This year") over a
-  single Monzo Trends-style budget-pace chart — a dashed target line burns
-  from your weekly goal down to 0 across whichever span is selected
-  (×1 for a week, roughly ×4.3 for a month, ×52 for a year, so the implied
-  daily rate is the same across all three), plotted against a solid line
-  tracking your actual confirmed commute + food + alcohol day by day
-  (alcohol spread evenly across each week's 7 days, since it's a
-  whole-week figure, not tied to a specific day). Falling below the dashed
-  line means you're using CO2e faster than the goal allows for how far
-  through the span it is; staying above it means you're on pace or ahead.
-  For "This week", the actual line only draws up to today - it doesn't
-  project the rest of the week for you. For "This month" and "This year",
-  it additionally only starts drawing from a light vertical marker - the
-  week you first confirmed a day - and picks up exactly on the dashed
-  target line there rather than at the full goal: the days before that
-  marker have no data, so they're assumed to have used exactly their fair
-  share of the goal at the target rate (neither over nor under), rather
-  than being credited as zero-emission days, which would make the actual
-  line jump out ahead of pace for no real reason. Flights, home energy,
-  and the other yearly-estimate categories below aren't part of any of
-  these lines, since they're fixed annual figures with no day-by-day data
-  to plot a pace against. Below that, an "emissions by domain" card breaks
+  budget-pace chart — a dashed target line rises in a straight line from 0
+  to your weekly goal across whichever span is selected (×1 for a week,
+  roughly ×4.3 for a month, ×52 for a year, so the implied daily rate is
+  the same across all three), plotted against a stacked area tracking your
+  actual confirmed CO2e day by day, split into one colored band per domain
+  (commute, food, alcohol — bottom to top; alcohol spread evenly across
+  each week's 7 days, since it's a whole-week figure, not tied to a
+  specific day) using the exact same colors as the "emissions by domain"
+  card below it (`--commute-color`/`--accent`/`--alcohol-color`), so the
+  two cards read as one consistent picture rather than two independent
+  ones. Rising above the dashed line means you're using CO2e faster than
+  the goal allows for how far through the span it is; staying under it
+  means you're on pace or ahead. For "This week", the stacked area only
+  draws up to today - it doesn't project the rest of the week for you. For
+  "This month" and "This year", it additionally only starts drawing from a
+  light vertical marker - the week you first confirmed a day - and its
+  bottom edge picks up exactly on the dashed target line there rather than
+  at 0: the days before that marker have no data, so they're assumed to
+  have used exactly their fair share of the goal at the target rate
+  (neither over nor under), rather than being credited as zero-emission
+  days, which would make the stacked area jump out ahead of pace for no
+  real reason (`renderBudgetChart()`'s `stackBaseline` in `app.js`).
+  Flights, home energy, and the other yearly-estimate categories below
+  aren't part of any of these bands, since they're fixed annual figures
+  with no day-by-day data to plot a pace against. Below that, an
+  "emissions by domain" card breaks
   the selected timeframe into a stacked bar with up to twelve segments - one
   per domain, sized by share of the total, with a legend giving each
   domain's exact kg and percentage plus a total row. It follows whichever
@@ -262,7 +267,10 @@ color too with no extra CSS.
   and compares full totals (commute + food + alcohol) rather than the UK
   average's commute+food-only figure, since a baseline week has actual
   alcohol data on both sides where the UK average doesn't. A
-  "Reset this week" button sits at the bottom of the card. Below that, the
+  "Reset this week" button sits at the bottom of the card - the same
+  action (whichever week, this or last, was last open here) is also
+  available from Account → Data, next to "Reset all data", for anyone who
+  goes looking for it there instead. Below that, the
   inputs, toggleable between "This week" and "Last week". For each day (M–S) pick
   how you got to work (Walk, Cycle, Train, Car, or
   Didn't travel) and what you ate — a row of tap targets: Ve (vegan), Vg
@@ -356,8 +364,13 @@ color too with no extra CSS.
   of that skippable group any more — an empty flight log or a
   never-submitted bill both just read as zero, the same way commute/food
   do, since they're tracked logs rather than one-off optional questions.
-- **Leaderboard** — five cards, in order: "This week", "Habits", "Leagues",
-  "All-time weekly average", "Everyone on the app". "Habits" is fully
+- **Leaderboard** — four cards, in order: "This week", "Habits",
+  "All-time weekly average", "Everyone on the app". A fifth, "Leagues", is
+  temporarily unwired (pulled from the page, but its markup, styling,
+  `renderLeagues()`, and the server-side `friend_leagues()` function are
+  all still intact - see the comment in `showTab()`'s "leaderboard" branch
+  in `app.js`, right where the `renderLeagues()` call used to sit, for how
+  to bring it back). "Habits" is fully
   opt-in (`renderHabitsCard()` in `app.js`): it starts as a single
   "Would you like to change your habits?" button, not any tile. Clicking
   it opens a 4-option survey — Eating/Commuting/Flying/Banking — ranked by
@@ -398,36 +411,7 @@ color too with no extra CSS.
   to save the planet?" button opens a fuller breakdown — your top 3
   greener alternatives and how switching actually works in the UK (free,
   automatic, ~7 working days via the Current Account Switch Service) — in
-  a modal (`openBankSwitchModal()`). "Leagues" is membership, not a ranked
-  total: five leagues (🌱 Vegan, 🥕 Veggie, 🚲 Commute, 🎯 Goal, ✈️ Flight-free), each
-  listing you and whichever accepted friends currently qualify. Vegan/
-  Veggie/Commute/Goal reset with the week — every CONFIRMED day has to match
-  (vegan diet every day, meat-free every day, and no car every day
-  respectively; an unconfirmed day doesn't disqualify you, but doesn't
-  count for you either, and nobody with zero confirmed days that week
-  qualifies for either), so being vegan is automatically also being
-  veggie (a stricter subset, not a separate condition) — computed
-  server-side by `friend_leagues()` in `supabase/schema.sql`, which reads
-  the raw day-by-day diet/commute/goal data but only ever returns the
-  derived booleans, never the underlying detail, same privacy shape as the
-  ranked leaderboards below. Goal league membership needs at least one
-  confirmed day this week (so a blank week doesn't trivially qualify) and
-  your running total so far at or under your own weekly goal, prorated to
-  how far through the week it is (Monday = 1/7 ... Sunday = 7/7, mirroring
-  `goalForWeek()`'s own client-side proration) — everyone effectively has
-  a goal (`weekly_goal_kg` defaults to 20 kg rather than being unset), so
-  there's no separate "have they set one" gate to check, just whether
-  they're currently on pace for it. The day-of-week fraction is computed
-  client-side (`todayIndexInWeek()`) and passed to the RPC as `day_index`,
-  since the server has no reliable notion of the caller's local day - same
-  reasoning `target_week_key` is already client-supplied for. Flight-free
-  is the odd one out: an ongoing
-  streak (days since your most recently logged, dated flight), sorted
-  longest-first, and only includes people who've logged at least one
-  dated flight ever — no fallback to "started a challenge" the way the
-  Habits card gets one, since a league ranking should only
-  compare people's actual logged history, not a self-declared "starting
-  now". "This week" ranks you and your accepted
+  a modal (`openBankSwitchModal()`). "This week" ranks you and your accepted
   friends by this week's *average* kg CO2e per confirmed day so far (lowest
   first), not raw total, with a callout for whoever's winning — this one
   still includes in-progress weeks, same as the This Week page's weeks
@@ -497,7 +481,7 @@ color too with no extra CSS.
     markup and CSS This Year's drill-down already established, plus a
     small SVG line icon per row matching that page's style) - opening
     "Settings" itself always resets back to the row list, even if a detail
-    screen was left open from before. Four items: **Vehicle** (standard
+    screen was left open from before. Five items: **Vehicle** (standard
     commute distance, one-way in km, used for every commute-footprint
     calculation regardless of mode; whether you own or regularly drive a
     car, and what type — Diesel, Hybrid, or Electric/EV, which swaps in a
@@ -559,7 +543,12 @@ color too with no extra CSS.
     collating every confirmed day across every opted-in week into an "avg
     N per week" + kg CO2e breakdown by meal type and by commute mode),
     gated server-side on the signed-in account's email rather than
-    anything checkable client-side).
+    anything checkable client-side); and **What this doesn't account for**
+    (moved here from the bottom of the Home page - a plain bulleted list of
+    known gaps: commute/transport beyond what's logged, diet and purchases
+    beyond what's tracked, investments beyond a bank balance, and everyone's
+    rough per-person share of shared UK public-services/infrastructure
+    emissions - purely informational, no inputs of its own).
   - **Friends** — add by email, accept/decline requests, the friends list
     itself; see the Leaderboard section above for what friends can see.
   - **History** — the week-by-week grid that used to sit at the bottom of
@@ -578,7 +567,10 @@ color too with no extra CSS.
     where you only logged Monday doesn't drag those averages down as if
     it were a whole week's worth of data. Tap a box for a day-by-day
     breakdown.
-  - **Data** — export/import/reset for your data.
+  - **Data** — export/import/reset for your data, plus a "Reset this week"
+    shortcut (the same action, and same confirm-first behavior, as the
+    button on This Week's own Weekly summary card) alongside "Reset all
+    data".
 
 ## Architecture
 
@@ -857,7 +849,8 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   poultry + 2 veggie days, 3–10% waste, ~1.51 tonnes CO2e/yr on its own —
   narrower than the ~2.2 tonnes/yr sometimes cited, since this only
   covers the meat/veg choice behind each meal, not dairy, eggs, snacks, or
-  packaging/food-miles — see "What this doesn't account for" below), 1
+  packaging/food-miles — see "What this doesn't account for" on Account →
+  Settings), 1
   short-haul + 0.2 long-haul flights/yr, ~2,900 kWh/yr household
   electricity split across ~2.4 people, and 3 clothing items/month —
   rather than a generic "average footprint" statistic, which would cover
