@@ -491,6 +491,25 @@
 
     <!-- PAGE 4: Home (Stats / yearly estimate) -->
     <section class="view" id="view-stats">
+      <section class="card home-snapshot-card">
+        <div class="home-snapshot-logo">
+          <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <rect class="brand-mark-bg" x="0" y="0" width="24" height="24" rx="6" />
+            <rect class="brand-mark-pipe" x="4" y="16.5" width="5" height="3.5" rx="1" />
+            <circle class="brand-mark-puff-1" cx="9.5" cy="15" r="3" />
+            <circle class="brand-mark-puff-2" cx="13" cy="11" r="3.6" />
+            <circle class="brand-mark-puff-3" cx="17" cy="6.5" r="4.3" />
+          </svg>
+        </div>
+        <div class="home-snapshot-goal" id="home-snapshot-goal" hidden>
+          <div class="home-snapshot-goal-bar-track">
+            <div class="home-snapshot-goal-bar-fill" id="home-snapshot-goal-fill"></div>
+          </div>
+          <p class="home-snapshot-goal-caption" id="home-snapshot-goal-caption"></p>
+        </div>
+        <div class="home-snapshot-days" id="home-snapshot-days"><!-- day squares injected by app.js --></div>
+      </section>
+
       <section class="card onboarding-banner" id="home-onboarding-banner" hidden>
         <button type="button" class="onboarding-dismiss" id="home-onboarding-dismiss" aria-label="Dismiss">&times;</button>
         <h2>Welcome to CO2 Tracker &#128075;</h2>

@@ -3588,6 +3588,7 @@
     renderHomeTodoList();
     renderOnboardingBanner();
     renderHabitsCard();
+    renderHomeSnapshot();
   }
 
   // Instagram-carousel version of a single "Compared to: X" slide - reuses
@@ -3719,6 +3720,47 @@
   // remembered per-device via localStorage, independent of account sync
   // (skipping it once shouldn't require a network round-trip, and it's not
   // meaningful data worth syncing across devices).
+  // ---------- Home page snapshot card (logo + weekly goal + day-logged row) ----------
+  // A compact "at a glance" card at the very top of Home: the old
+  // three-circle brand mark (superseded on the header by the current C/O2
+  // one, but reused here purely as a decorative icon), a weekly-goal
+  // progress bar - hidden entirely until at least one day this week is
+  // actually confirmed, so a blank week never shows a misleading "0%
+  // used" - and a Mon-Sun row of filled/empty squares for which days have
+  // any confirmed commute or diet entry, so a week's shape is visible at
+  // a glance without opening This Week.
+  function renderHomeSnapshot() {
+    const weekData = getWeek(CURRENT_WEEK_KEY);
+    const started = hasAnyConfirmed(weekData);
+    const goalEl = document.getElementById("home-snapshot-goal");
+    if (started) {
+      const totals = weekTotals(weekData);
+      const goal = goalForWeek(CURRENT_WEEK_KEY);
+      const pct = goal > 0 ? Math.round((totals.total / goal) * 100) : 0;
+      const status = statusClass(totals.total, started, goal); // "status-good"/"status-warn"/"status-high"
+      const fill = document.getElementById("home-snapshot-goal-fill");
+      fill.style.width = `${Math.min(100, pct)}%`;
+      fill.classList.remove("status-warn", "status-high");
+      if (status === "status-warn" || status === "status-high") fill.classList.add(status);
+      document.getElementById("home-snapshot-goal-caption").textContent = `${pct}% of your weekly goal used so far`;
+      goalEl.hidden = false;
+    } else {
+      goalEl.hidden = true;
+    }
+
+    const todayKey = todayDayKey();
+    document.getElementById("home-snapshot-days").innerHTML = DAYS.map((day) => {
+      const logged = !!(weekData.confirmedCommute[day.key] || weekData.confirmedDiet[day.key]);
+      const isToday = day.key === todayKey;
+      return `
+        <div class="home-snapshot-day${logged ? " logged" : ""}${isToday ? " is-today" : ""}">
+          <span class="home-snapshot-day-square" aria-hidden="true"></span>
+          <span class="home-snapshot-day-label">${day.short}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
   function renderOnboardingBanner() {
     const banner = document.getElementById("home-onboarding-banner");
     if (!banner) return;

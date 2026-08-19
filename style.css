@@ -537,6 +537,103 @@ body {
   fill: #6fbf94;
 }
 
+/* Older three-circle "fumes" mark (superseded on the header by the C/O2
+   lettered one above) - reused here as the Home snapshot card's decorative
+   icon since .brand-mark-bg/.brand-mark-pipe already carry the exact same
+   colors this mark originally used. */
+.brand-mark-puff-1 {
+  fill: #1d4a34;
+}
+
+.brand-mark-puff-2 {
+  fill: #2f6f4f;
+}
+
+.brand-mark-puff-3 {
+  fill: #6fbf94;
+}
+
+.home-snapshot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.home-snapshot-logo .brand-mark {
+  width: 56px;
+  height: 56px;
+}
+
+.home-snapshot-goal {
+  width: 100%;
+}
+
+.home-snapshot-goal-bar-track {
+  background: var(--border);
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: var(--space-1);
+}
+
+.home-snapshot-goal-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+  background: #3a9d5d;
+}
+
+.home-snapshot-goal-bar-fill.status-warn {
+  background: #d0a020;
+}
+
+.home-snapshot-goal-bar-fill.status-high {
+  background: var(--danger);
+}
+
+.home-snapshot-goal-caption {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.home-snapshot-days {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.home-snapshot-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-snapshot-day-square {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.home-snapshot-day.logged .home-snapshot-day-square {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.home-snapshot-day.is-today .home-snapshot-day-square {
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.home-snapshot-day-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
 .subtitle {
   margin: 0 0 24px;
   color: var(--text-muted);

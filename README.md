@@ -47,8 +47,21 @@ color too with no extra CSS.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
   flow), gating the rest of the app.
-- **Home** — the landing page. For a brand-new account (every To Do item
-  below still outstanding - see the "To do" card further down) it opens
+- **Home** — the landing page. The very first thing on it is a compact
+  "snapshot" card (`renderHomeSnapshot()` in `app.js`): the older
+  three-overlapping-circles brand mark (superseded on the header/login
+  screen by the current lettered C/O2 one, but reused here purely as a
+  decorative icon - `.brand-mark-puff-1/2/3` in `style.css`, the exact
+  colors that mark originally used), a weekly-goal progress bar, and a
+  Mon–Sun row of filled/empty squares for which days have any confirmed
+  entry this week. The goal bar is hidden entirely rather than showing a
+  misleading "0% used" until at least one day this week is actually
+  confirmed (`hasAnyConfirmed()`), reusing the exact same prorated-goal
+  math as the History section (`goalForWeek()`) and the same
+  green/amber/red thresholds as its per-week boxes (`statusClass()`) so
+  the color language is consistent across the app. Next, for a brand-new
+  account (every To Do item below still outstanding - see the "To do"
+  card further down) it opens
   with a dismissible welcome banner pointing at the two places to start:
   This Week for day-by-day logging, This Year for the one-off yearly
   questions. Dismissing it is remembered per-device via `localStorage`
