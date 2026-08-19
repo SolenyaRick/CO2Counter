@@ -309,11 +309,17 @@
     // (the select's "None" option). Used for the Home page's uni-average
     // comparison chip once enough people from the same university opt in.
     university: null,
-    // Home page "Habits" card - { habitId: { startDate, targetDays } },
+    // Leaderboard page "Habits" card - { habitId: { startDate, targetDays } },
     // one entry per habit with an active challenge (see startHabitChallenge()/
     // cancelHabitChallenge()). Streak counts themselves are never stored
     // here, only recomputed from the diet/flights data they're derived from.
     habitChallenges: {},
+    // null | "eating" | "commuting" | "flying" | "banking" - which habit
+    // the person opted to focus on via the Habits card's survey. Null
+    // shows the "Would you like to change your habits?" prompt instead of
+    // any tile, so the feature stays fully opt-in rather than always
+    // pushing two streak tiles at everyone regardless of interest.
+    chosenHabit: null,
   };
 
   function blankWeek() {
@@ -595,6 +601,7 @@
         carFuelType: data.car_fuel_type ?? null,
         university: data.university ?? null,
         habitChallenges: data.habit_challenges ?? {},
+        chosenHabit: data.chosen_habit ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -629,6 +636,7 @@
       car_fuel_type: profile.carFuelType,
       university: profile.university,
       habit_challenges: profile.habitChallenges,
+      chosen_habit: profile.chosenHabit,
     };
   }
 
@@ -929,7 +937,16 @@
     document.querySelectorAll(".tab-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
-    if (tab === "weeks") { renderYearlyInputs(); showYearList(); }
+    if (tab === "weeks") {
+      renderYearlyInputs();
+      if (pendingYearDetail) {
+        const id = pendingYearDetail;
+        pendingYearDetail = null;
+        showYearDetail(id);
+      } else {
+        showYearList();
+      }
+    }
     if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); renderHabitsCard(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
@@ -2150,6 +2167,49 @@
     document.getElementById("tile-info-backdrop").classList.remove("open");
   }
 
+  // "Do you want to save the planet?" CTA on the Habits card's Banking
+  // nudge - a fuller breakdown than the one-line saving shown on the tile
+  // itself, plus a plain-English explainer of how switching actually works
+  // in the UK (free, automatic, ~7 working days), so the nudge leads
+  // somewhere concrete rather than just stating a number.
+  function bankSwitchContentHtml() {
+    const factor = BANK_KG_PER_POUND_PER_YEAR[profile.bankName] || 0;
+    const balance = profile.bankBalance || 0;
+    const currentYearlyKg = factor * balance;
+    const alternatives = Object.entries(BANK_KG_PER_POUND_PER_YEAR)
+      .filter(([id]) => id !== profile.bankName)
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 3);
+    const rows = alternatives.map(([id, f]) => {
+      const savings = Math.max(0, currentYearlyKg - f * balance);
+      return `<tr><td>${BANK_LABELS[id]}</td><td>${Math.round(savings).toLocaleString()} kg/yr saved</td></tr>`;
+    }).join("");
+    return `
+      <p>You currently hold &pound;${balance.toLocaleString()} with <strong>${BANK_LABELS[profile.bankName]}</strong>, financing about <strong>${Math.round(currentYearlyKg).toLocaleString()} kg CO2e</strong> a year through what the bank invests deposits in.</p>
+      <table class="week-detail-table">
+        <thead><tr><th>Switch to</th><th>Estimated saving</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p>Some high-street banks finance many times more fossil-fuel extraction than others, purely based on where they invest deposits — your own spending doesn't change at all.</p>
+      <h4>How switching works</h4>
+      <ul>
+        <li>Open an account with the new bank first — most let you do this online in a few minutes.</li>
+        <li>Ask them to move your account using the UK's Current Account Switch Service — it's free.</li>
+        <li>Direct debits, standing orders, and your salary/payments transfer automatically, usually within about 7 working days.</li>
+        <li>Your old account closes automatically once the switch completes — nothing else for you to cancel.</li>
+      </ul>
+    `;
+  }
+
+  function openBankSwitchModal() {
+    document.getElementById("bank-switch-body").innerHTML = bankSwitchContentHtml();
+    document.getElementById("bank-switch-backdrop").classList.add("open");
+  }
+
+  function closeBankSwitchModal() {
+    document.getElementById("bank-switch-backdrop").classList.remove("open");
+  }
+
   // ---------- Page 3: Leaderboard ----------
   // Flights, home electricity, buying goods, and (if answered) the four
   // optional extras are all yearly figures (Stats page inputs), not
@@ -2720,6 +2780,27 @@
     });
   }
 
+  // Jumps straight to a This Year detail section (e.g. from the Habits
+  // card's Banking nudge) from anywhere in the app. Setting location.hash
+  // fires "hashchange" asynchronously, and that handler always calls
+  // showTab("weeks"), which resets to showYearList() - so a plain
+  // `location.hash = "weeks"; showYearDetail(id);` would have the detail
+  // view silently undone a moment later by that reset. pendingYearDetail
+  // is consumed inside showTab()'s "weeks" branch to survive that. When
+  // already on the weeks tab, no hashchange will fire at all, so it's
+  // safe to just call showTab() directly instead.
+  let pendingYearDetail = null;
+
+  function goToYearDetail(id) {
+    if (currentTab() === "weeks") {
+      showTab("weeks");
+      showYearDetail(id);
+    } else {
+      pendingYearDetail = id;
+      location.hash = "weeks";
+    }
+  }
+
   // Account page's Settings section: the same list->detail->back
   // navigation as This Year above (not the outer Account accordion's
   // native <details> toggles), for the same reason - Vehicle/Daily
@@ -2742,70 +2823,115 @@
     });
   }
 
-  // ---------- Habits (Home page "Habits" card) ----------
-  // Two streak-based habits, each backed entirely by data the app already
-  // tracks elsewhere - no separate "did you do the habit today" logging
-  // step of its own. A streak is always recomputed from that underlying
-  // data on every render rather than stored, so it can never drift out of
-  // sync with the diet/flights it's derived from.
-  const HABITS = [
-    { id: "meatFree", emoji: "🥦", label: "Meat-free days", singular: "day" },
-    { id: "noFlights", emoji: "✈️", label: "Flight-free", singular: "day" },
-  ];
+  // ---------- Habits (Leaderboard page "Habits" card) ----------
+  // Fully opt-in: nothing shows until the person picks a domain from a
+  // survey (see renderHabitsCard() below), ranked by which domain is
+  // actually biggest for them (computeHabitDomainSizes()). Only "Flying"
+  // keeps the old streak model (survey -> straight to the tile, no extra
+  // step); Eating and Commuting instead set a weekly day-target (meat
+  // days/car days allowed per week) and show progress against it -
+  // recomputed from the diet/commute data every render, so it can never
+  // drift out of sync with what's actually logged. Banking has no tile at
+  // all, just a savings nudge, since there's no streak/target concept for it.
+  const HABIT_META = {
+    meatFree: { emoji: "🥦", label: "Meat-free days" },
+    carFree: { emoji: "🚲", label: "Car-free commuting" },
+    noFlights: { emoji: "✈️", label: "Flight-free" },
+  };
   // Real streak/habit apps mark round numbers as small wins - the exact
   // thresholds matter less than having *some* to celebrate. Kept short
   // (a year is the last one) since nothing above that is likely to ever
   // be hit in practice, and an unreachable milestone is just dead code.
   const STREAK_MILESTONES = [7, 30, 100, 365];
 
-  // Longest run of confirmed, meat-free days ending today - or ending
-  // yesterday if today's diet isn't confirmed yet, so the streak doesn't
-  // visibly reset to 0 first thing in the morning before there's even been
-  // a chance to log today. Walks backward day by day through weeksCache
-  // (already loaded in full - see loadAllWeeks()); stops at the first day
-  // that's either unconfirmed or a meat day, since an unconfirmed day is
-  // "unknown", not "meat-free", and can't extend a streak either way.
-  function meatFreeStreakDays() {
-    let count = 0;
-    const cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
-    if (!dayConfirmStatus(cursor).dietDone) cursor.setDate(cursor.getDate() - 1);
-    for (let i = 0; i < 3650; i++) { // ~10yr cap so a data issue can't hang the render
-      const weekData = weeksCache[weekKeyFor(cursor)];
-      const dayKey = dayKeyFor(cursor);
-      const entry = weekData?.diet?.[dayKey];
-      if (!weekData?.confirmedDiet?.[dayKey] || !entry || entry.type === "meat") break;
-      count++;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-    return count;
+  // Display names for BANK_KG_PER_POUND_PER_YEAR's keys (emission-factors.js) -
+  // mirrors the #bank-name <select> option labels in index.html.
+  const BANK_LABELS = {
+    barclays: "Barclays", hsbc: "HSBC", firstDirect: "First Direct", chase: "Chase",
+    santander: "Santander", natwest: "NatWest", rbs: "RBS (Royal Bank of Scotland)",
+    monzo: "Monzo", lloyds: "Lloyds", halifax: "Halifax", metroBank: "Metro Bank",
+    starling: "Starling", virginMoney: "Virgin Money", nationwide: "Nationwide",
+    cooperative: "The Co-operative Bank", triodos: "Triodos",
+  };
+
+  // How many of this week's confirmed diet days were meat days - the basis
+  // for the "meat days used / weekly target" progress bar. Resets itself
+  // every Monday for free, just by reading CURRENT_WEEK_KEY rather than
+  // any stored counter.
+  function mealsThisWeekMeatCount() {
+    const weekData = weeksCache[CURRENT_WEEK_KEY];
+    if (!weekData) return 0;
+    return DAYS.reduce((n, day) => (
+      weekData.confirmedDiet?.[day.key] && weekData.diet?.[day.key]?.type === "meat" ? n + 1 : n
+    ), 0);
   }
 
-  // The longest meat-free run anywhere in the account's history, not just
-  // the current trailing one - walks every calendar day from the earliest
-  // to the latest week in weeksCache once. Not challenge-scoped: this is
-  // "your personal best ever", the same way a fitness app's best streak
-  // isn't reset by starting a new one.
-  function longestMeatFreeStreakDaysEver() {
-    const weekKeys = Object.keys(weeksCache).sort();
-    if (weekKeys.length === 0) return 0;
-    const cursor = new Date(`${weekKeys[0]}T00:00:00`);
-    const last = new Date(`${weekKeys[weekKeys.length - 1]}T00:00:00`);
-    last.setDate(last.getDate() + 6); // through that week's Sunday
-    let best = 0;
-    let current = 0;
-    for (; cursor <= last; cursor.setDate(cursor.getDate() + 1)) {
-      const weekData = weeksCache[weekKeyFor(cursor)];
-      const dayKey = dayKeyFor(cursor);
-      const entry = weekData?.diet?.[dayKey];
-      if (weekData?.confirmedDiet?.[dayKey] && entry && entry.type !== "meat") {
-        current++;
-        best = Math.max(best, current);
-      } else {
-        current = 0;
-      }
-    }
-    return best;
+  // Same idea for car commute days this week.
+  function carDaysThisWeekCount() {
+    const weekData = weeksCache[CURRENT_WEEK_KEY];
+    if (!weekData) return 0;
+    return DAYS.reduce((n, day) => (
+      weekData.confirmedCommute?.[day.key] && weekData.commute?.[day.key] === "car" ? n + 1 : n
+    ), 0);
+  }
+
+  // Average meat days/week and the most-eaten meat type over the last ~12
+  // confirmed weeks - purely to personalize the Eating survey's insight
+  // copy ("you eat meat about N days a week"), reusing data already logged
+  // rather than asking the person to self-report it. Null when there's not
+  // enough history yet, so the copy can fall back to something generic.
+  function avgMeatDaysPerWeekRecent() {
+    const cutoff = weekStart(new Date());
+    cutoff.setDate(cutoff.getDate() - 12 * 7);
+    const cutoffKey = dateKey(cutoff);
+    const weeks = Object.keys(weeksCache)
+      .filter((key) => key >= cutoffKey && isFullyConfirmed(weeksCache[key]))
+      .map((key) => weeksCache[key]);
+    if (weeks.length === 0) return null;
+    const totalMeatDays = weeks.reduce((sum, wd) => sum + DAYS.filter((d) => wd.diet?.[d.key]?.type === "meat").length, 0);
+    return totalMeatDays / weeks.length;
+  }
+
+  function mostCommonMeatType() {
+    const counts = {};
+    Object.values(weeksCache).forEach((wd) => {
+      DAYS.forEach((d) => {
+        const entry = wd.diet?.[d.key];
+        if (wd.confirmedDiet?.[d.key] && entry?.type === "meat" && entry.meat) {
+          counts[entry.meat] = (counts[entry.meat] || 0) + 1;
+        }
+      });
+    });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted.length ? sorted[0][0] : null;
+  }
+
+  // Same "recent average" idea as avgMeatDaysPerWeekRecent(), for car days.
+  function avgCarDaysPerWeekRecent() {
+    const cutoff = weekStart(new Date());
+    cutoff.setDate(cutoff.getDate() - 12 * 7);
+    const cutoffKey = dateKey(cutoff);
+    const weeks = Object.keys(weeksCache)
+      .filter((key) => key >= cutoffKey && isFullyConfirmed(weeksCache[key]))
+      .map((key) => weeksCache[key]);
+    if (weeks.length === 0) return null;
+    const totalCarDays = weeks.reduce((sum, wd) => sum + DAYS.filter((d) => wd.commute?.[d.key] === "car").length, 0);
+    return totalCarDays / weeks.length;
+  }
+
+  // Yearly-equivalent size of each of the 4 survey domains, for ranking the
+  // survey options ("Biggest impact" badge) - reuses the exact same
+  // figures the Home page's "Your year, estimated" already shows, so it's
+  // not a second formula that could drift out of sync.
+  function computeHabitDomainSizes() {
+    return {
+      eating: recentAverageConfirmedWeekly("food") * 52,
+      commuting: recentAverageConfirmedWeekly("commuteOnly") * 52,
+      flying: computeFlyingYearlyKg(profile.flights),
+      banking: profile.bankName && profile.bankBalance !== null && profile.bankBalance !== undefined
+        ? (BANK_KG_PER_POUND_PER_YEAR[profile.bankName] || 0) * profile.bankBalance
+        : 0,
+    };
   }
 
   // Days since your last logged (dated) flight - or, if you've never
@@ -2830,10 +2956,6 @@
     return Math.max(0, Math.floor((Date.now() - challengeStart) / DAY_MS));
   }
 
-  function habitStreakDays(habitId) {
-    return habitId === "meatFree" ? meatFreeStreakDays() : flightFreeStreakDays();
-  }
-
   function startHabitChallenge(habitId, targetDays) {
     profile.habitChallenges = profile.habitChallenges || {};
     profile.habitChallenges[habitId] = { startDate: dateKey(new Date()), targetDays };
@@ -2846,6 +2968,18 @@
     delete profile.habitChallenges[habitId];
     persistProfile();
     renderHabitsCard();
+  }
+
+  // Sets/replaces the weekly day-target for meatFree/carFree (the tailored
+  // Eating/Commuting sub-flows) - a different shape from the streak-length
+  // challenges above ({targetPerWeek} vs {targetDays}), since these are
+  // capped-per-week goals, not consecutive-day ones. Re-picking a target
+  // (from renderHabitsCard()'s tier picker) just overwrites it; there's
+  // nothing to "give up" the way a streak challenge has, since the target
+  // resets itself every week for free by reading the current week's data.
+  function setWeeklyTarget(habitId, targetPerWeek) {
+    profile.habitChallenges = profile.habitChallenges || {};
+    profile.habitChallenges[habitId] = { startDate: dateKey(new Date()), targetPerWeek };
   }
 
   // Celebrates a streak crossing a round-number milestone exactly once per
@@ -2869,82 +3003,278 @@
   }
 
   function showStreakCongrats(habitId, streakDays) {
-    const habit = HABITS.find((h) => h.id === habitId);
+    const habit = HABIT_META[habitId];
     document.getElementById("habit-streak-congrats-value").textContent = streakDays.toLocaleString();
     document.getElementById("habit-streak-congrats-label").textContent = `day streak · ${habit.label}`;
     document.getElementById("habit-streak-congrats-backdrop").classList.add("open");
   }
 
+  // In-memory only (not persisted, not synced) - purely "is the survey/tier
+  // picker open right now", reset every time the Leaderboard tab is
+  // (re-)entered, same as any other transient UI state in this app.
+  let habitSurveyOpen = false;
+  let habitSurveyStep = null; // null | "eating" | "commuting" - which tier picker (if any) is showing
+
+  const HABIT_SURVEY_OPTIONS = [
+    { key: "eating", emoji: "🍽️", label: "Eating" },
+    { key: "commuting", emoji: "🚗", label: "Commuting" },
+    { key: "flying", emoji: "✈️", label: "Flying" },
+    { key: "banking", emoji: "🏦", label: "Banking" },
+  ];
+
+  function openHabitSurvey() {
+    habitSurveyOpen = true;
+    habitSurveyStep = null;
+    renderHabitsCard();
+  }
+
+  function reopenHabitSurvey() {
+    profile.chosenHabit = null;
+    habitSurveyOpen = true;
+    habitSurveyStep = null;
+    persistProfile();
+    renderHabitsCard();
+  }
+
+  // Eating/Commuting need one more question (a weekly target) before
+  // they're "chosen" - Flying and Banking finalize immediately instead.
+  function openHabitTierPicker(domain) {
+    habitSurveyStep = domain;
+    renderHabitsCard();
+  }
+
+  function chooseHabitDomain(key) {
+    profile.chosenHabit = key;
+    habitSurveyOpen = false;
+    habitSurveyStep = null;
+    persistProfile();
+    renderHabitsCard();
+  }
+
+  const TIER_HABIT_ID = { eating: "meatFree", commuting: "carFree" };
+
+  function chooseWeeklyTarget(domain, targetPerWeek) {
+    setWeeklyTarget(TIER_HABIT_ID[domain], targetPerWeek);
+    profile.chosenHabit = domain;
+    habitSurveyOpen = false;
+    habitSurveyStep = null;
+    persistProfile();
+    renderHabitsCard();
+  }
+
+  // Builds the small progress-bar block shared by the meatFree/carFree
+  // weekly-target tiles - "N of target used this week", switching to an
+  // over-target caption once the count exceeds it. A target of 0 (the
+  // car-free tier) is handled as its own wording rather than "0 of 0".
+  function weeklyTargetProgressHtml(used, target, dayNoun) {
+    const pct = target > 0 ? Math.min(100, (used / target) * 100) : (used > 0 ? 100 : 0);
+    const over = used > target;
+    let caption;
+    if (target === 0) {
+      caption = used === 0 ? `${dayNoun}-free so far this week! 🎉` : `${used} ${dayNoun} day${used === 1 ? "" : "s"} so far — target was ${dayNoun}-free`;
+    } else if (over) {
+      caption = `${used} ${dayNoun} days so far — over your ${target}-day target`;
+    } else {
+      caption = `${used} of ${target} ${dayNoun} days used this week`;
+    }
+    return `
+      <div class="habit-challenge">
+        <div class="habit-challenge-bar-track">
+          <div class="habit-challenge-bar-fill${over ? " over-target" : ""}" style="width:${pct}%"></div>
+        </div>
+        <p class="habit-challenge-caption">${caption}</p>
+      </div>
+    `;
+  }
+
   function renderHabitsCard() {
     const grid = document.getElementById("habits-grid");
     if (!grid) return;
-    grid.innerHTML = "";
 
-    HABITS.forEach((habit) => {
-      const streak = habitStreakDays(habit.id);
-      const challenge = (profile.habitChallenges || {})[habit.id];
+    // Self-heal: a chosenHabit of "eating"/"commuting" with no matching
+    // weekly-target challenge (e.g. old data from before this shape
+    // existed) falls back to the tier picker instead of rendering a
+    // broken tile.
+    if (profile.chosenHabit === "eating" && profile.habitChallenges?.meatFree?.targetPerWeek === undefined) {
+      profile.chosenHabit = null;
+      habitSurveyOpen = true;
+      habitSurveyStep = "eating";
+    }
+    if (profile.chosenHabit === "commuting" && profile.habitChallenges?.carFree?.targetPerWeek === undefined) {
+      profile.chosenHabit = null;
+      habitSurveyOpen = true;
+      habitSurveyStep = "commuting";
+    }
 
-      const tile = document.createElement("div");
-      tile.className = "habit-tile";
+    const leaderboardVisible = document.getElementById("view-leaderboard")?.hidden === false;
 
-      const streakHtml = streak === null
-        ? `<span class="stat-value habit-empty-streak">–</span>`
-        : `<span class="habit-streak-value">${streak.toLocaleString()}</span><span class="habit-streak-unit">${streak === 1 ? habit.singular : habit.singular + "s"}</span>`;
+    if (!profile.chosenHabit && !habitSurveyOpen) {
+      grid.innerHTML = `<button type="button" class="habit-prompt-btn" id="habit-prompt-btn">Would you like to change your habits?</button>`;
+      return;
+    }
 
-      const bestHtml = habit.id === "meatFree"
-        ? `<p class="habit-best">Best: ${longestMeatFreeStreakDaysEver().toLocaleString()} days</p>`
-        : "";
-
-      let challengeHtml;
-      if (challenge) {
-        const daysIn = Math.min(streak ?? 0, challenge.targetDays);
-        const pct = Math.min(100, (daysIn / challenge.targetDays) * 100);
-        const done = daysIn >= challenge.targetDays;
-        challengeHtml = `
-          <div class="habit-challenge">
-            <div class="habit-challenge-bar-track">
-              <div class="habit-challenge-bar-fill" style="width:${pct}%"></div>
+    if (!profile.chosenHabit && habitSurveyOpen) {
+      if (habitSurveyStep === "eating") {
+        const avg = avgMeatDaysPerWeekRecent();
+        const common = mostCommonMeatType();
+        const insight = avg === null
+          ? "Pick a weekly target for how many days you eat meat:"
+          : `Based on your recent weeks, you eat meat about ${Math.round(avg * 10) / 10} day${avg === 1 ? "" : "s"} a week${common ? `, mostly ${(MEAT_LABELS[common] ?? "meat").toLowerCase()}` : ""}. Pick a weekly target:`;
+        grid.innerHTML = `
+          <div class="habit-survey">
+            <button type="button" class="link-btn habit-survey-back-btn">&#8592; Back</button>
+            <p class="habit-survey-question">${insight}</p>
+            <div class="habit-tier-options">
+              ${[5, 4, 3, 2].map((n) => `<button type="button" class="habit-tier-btn" data-domain="eating" data-target="${n}">Max ${n} days/week</button>`).join("")}
             </div>
-            <p class="habit-challenge-caption">${done ? "Challenge complete! 🎉" : `Day ${daysIn} of ${challenge.targetDays}-day challenge`}</p>
-            <button type="button" class="link-btn habit-cancel-btn" data-habit="${habit.id}">${done ? "Clear" : "Give up"}</button>
           </div>
+        `;
+        return;
+      }
+      if (habitSurveyStep === "commuting") {
+        const avg = avgCarDaysPerWeekRecent();
+        const insight = avg === null
+          ? "Pick a weekly target for how many days you drive:"
+          : `Based on your recent weeks, you drive about ${Math.round(avg * 10) / 10} day${avg === 1 ? "" : "s"} a week. Pick a weekly target:`;
+        grid.innerHTML = `
+          <div class="habit-survey">
+            <button type="button" class="link-btn habit-survey-back-btn">&#8592; Back</button>
+            <p class="habit-survey-question">${insight}</p>
+            <div class="habit-tier-options">
+              ${[0, 1, 2, 3, 4].map((n) => `<button type="button" class="habit-tier-btn" data-domain="commuting" data-target="${n}">${n === 0 ? "Car-free week" : `Max ${n} day${n === 1 ? "" : "s"} of car`}</button>`).join("")}
+            </div>
+          </div>
+        `;
+        return;
+      }
+      const sizes = computeHabitDomainSizes();
+      const options = HABIT_SURVEY_OPTIONS.slice().sort((a, b) => sizes[b.key] - sizes[a.key]);
+      const biggestKey = sizes[options[0]?.key] > 0 ? options[0].key : null;
+      grid.innerHTML = `
+        <div class="habit-survey">
+          <p class="habit-survey-question">What habit would you like to change?</p>
+          <div class="habit-survey-options">
+            ${options.map((opt) => `
+              <button type="button" class="habit-survey-option" data-habit-choice="${opt.key}">
+                <span class="habit-survey-emoji" aria-hidden="true">${opt.emoji}</span>
+                <span class="habit-survey-label">${opt.label}</span>
+                ${opt.key === biggestKey ? '<span class="habit-survey-badge">Biggest impact</span>' : ""}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (profile.chosenHabit === "banking") {
+      const hasBankData = profile.bankName && profile.bankBalance !== null && profile.bankBalance !== undefined;
+      let bodyHtml;
+      if (!hasBankData) {
+        bodyHtml = `
+          <p class="habit-nudge-text">Add your bank details to see how much switching could save the planet.</p>
+          <button type="button" class="btn-secondary btn-small" id="habit-banking-fill-btn">Add your bank</button>
         `;
       } else {
-        challengeHtml = `
-          <div class="habit-challenge">
-            <p class="habit-challenge-caption">Start a challenge:</p>
-            <div class="habit-challenge-presets">
-              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="7">7d</button>
-              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="30">30d</button>
-              <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="${habit.id}" data-days="90">90d</button>
-            </div>
-          </div>
-        `;
+        const factor = BANK_KG_PER_POUND_PER_YEAR[profile.bankName] || 0;
+        const currentYearlyKg = factor * profile.bankBalance;
+        const [bestId, bestFactor] = Object.entries(BANK_KG_PER_POUND_PER_YEAR)
+          .filter(([id]) => id !== profile.bankName)
+          .sort((a, b) => a[1] - b[1])[0];
+        const savingsKg = Math.max(0, currentYearlyKg - bestFactor * profile.bankBalance);
+        bodyHtml = savingsKg > 0
+          ? `
+            <p class="habit-nudge-text">Switching from ${BANK_LABELS[profile.bankName]} to ${BANK_LABELS[bestId]} could save about <strong>${Math.round(savingsKg).toLocaleString()} kg CO2e</strong> a year.</p>
+            <button type="button" class="btn-primary btn-small" id="habit-banking-switch-btn">Do you want to save the planet?</button>
+          `
+          : `<p class="habit-nudge-text">${BANK_LABELS[profile.bankName]} is already one of the greener options on our list — nice.</p>`;
       }
+      grid.innerHTML = `
+        <div class="habit-tile">
+          <div class="habit-tile-head">
+            <span class="habit-emoji" aria-hidden="true">🏦</span>
+            <span class="habit-label">Banking</span>
+          </div>
+          ${bodyHtml}
+          <button type="button" class="link-btn habit-change-btn">Change habit</button>
+        </div>
+      `;
+      return;
+    }
 
-      tile.innerHTML = `
+    if (profile.chosenHabit === "eating" || profile.chosenHabit === "commuting") {
+      const isEating = profile.chosenHabit === "eating";
+      const habitId = isEating ? "meatFree" : "carFree";
+      const meta = HABIT_META[habitId];
+      const challenge = profile.habitChallenges[habitId];
+      const used = isEating ? mealsThisWeekMeatCount() : carDaysThisWeekCount();
+      grid.innerHTML = `
+        <div class="habit-tile">
+          <div class="habit-tile-head">
+            <span class="habit-emoji" aria-hidden="true">${meta.emoji}</span>
+            <span class="habit-label">${meta.label}</span>
+          </div>
+          ${weeklyTargetProgressHtml(used, challenge.targetPerWeek, isEating ? "meat" : "car")}
+          <button type="button" class="link-btn habit-change-btn">Change habit</button>
+        </div>
+      `;
+      return;
+    }
+
+    // profile.chosenHabit === "flying" - the one habit that kept the
+    // original streak/challenge model, since the survey didn't ask for
+    // anything tailored here.
+    const streak = flightFreeStreakDays();
+    const challenge = (profile.habitChallenges || {}).noFlights;
+    const streakHtml = streak === null
+      ? `<span class="stat-value habit-empty-streak">–</span>`
+      : `<span class="habit-streak-value">${streak.toLocaleString()}</span><span class="habit-streak-unit">${streak === 1 ? "day" : "days"}</span>`;
+
+    let challengeHtml;
+    if (challenge) {
+      const daysIn = Math.min(streak ?? 0, challenge.targetDays);
+      const pct = Math.min(100, (daysIn / challenge.targetDays) * 100);
+      const done = daysIn >= challenge.targetDays;
+      challengeHtml = `
+        <div class="habit-challenge">
+          <div class="habit-challenge-bar-track">
+            <div class="habit-challenge-bar-fill" style="width:${pct}%"></div>
+          </div>
+          <p class="habit-challenge-caption">${done ? "Challenge complete! 🎉" : `Day ${daysIn} of ${challenge.targetDays}-day challenge`}</p>
+          <button type="button" class="link-btn habit-cancel-btn" data-habit="noFlights">${done ? "Clear" : "Give up"}</button>
+        </div>
+      `;
+    } else {
+      challengeHtml = `
+        <div class="habit-challenge">
+          <p class="habit-challenge-caption">Start a challenge:</p>
+          <div class="habit-challenge-presets">
+            <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="noFlights" data-days="7">7d</button>
+            <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="noFlights" data-days="30">30d</button>
+            <button type="button" class="btn-secondary btn-small habit-start-btn" data-habit="noFlights" data-days="90">90d</button>
+          </div>
+        </div>
+      `;
+    }
+
+    grid.innerHTML = `
+      <div class="habit-tile">
         <div class="habit-tile-head">
-          <span class="habit-emoji" aria-hidden="true">${habit.emoji}</span>
-          <span class="habit-label">${habit.label}</span>
+          <span class="habit-emoji" aria-hidden="true">✈️</span>
+          <span class="habit-label">Flight-free</span>
         </div>
         ${streakHtml}
-        ${bestHtml}
         ${challengeHtml}
-      `;
-      grid.appendChild(tile);
+        <button type="button" class="link-btn habit-change-btn">Change habit</button>
+      </div>
+    `;
 
-      // renderHabitsCard() runs from many mutation points regardless of
-      // which tab is currently on screen (renderStatsPage() calls it, and
-      // that in turn runs from lots of unrelated background re-renders,
-      // e.g. adding a flight on This Year) - the Habits card itself now
-      // lives on the Leaderboard page, so only pop the celebration modal
-      // when THAT'S the tab actually visible right now, same reasoning as
-      // before: crossing a milestone from an unrelated action on a
-      // different page shouldn't ambush you with a full-screen modal that
-      // blocks your next click on whatever you were doing.
-      const leaderboardVisible = document.getElementById("view-leaderboard")?.hidden === false;
-      if (leaderboardVisible) checkStreakMilestone(habit.id, streak);
-    });
+    // renderHabitsCard() runs from many mutation points regardless of which
+    // tab is currently on screen - only pop the celebration modal when the
+    // Leaderboard tab (where the Habits card lives) is actually visible
+    // right now, so crossing a milestone from an unrelated action on a
+    // different page doesn't ambush you with a full-screen modal.
+    if (leaderboardVisible) checkStreakMilestone("noFlights", streak);
   }
 
   // Apple-Watch-style ring for a single "Your year, estimated" tile:
@@ -4056,6 +4386,11 @@
     document.getElementById("tile-info-backdrop").addEventListener("click", (e) => {
       if (e.target.id === "tile-info-backdrop") closeTileInfo();
     });
+
+    document.getElementById("bank-switch-close").addEventListener("click", closeBankSwitchModal);
+    document.getElementById("bank-switch-backdrop").addEventListener("click", (e) => {
+      if (e.target.id === "bank-switch-backdrop") closeBankSwitchModal();
+    });
     document.querySelectorAll(".tile-info-btn").forEach((btn) => {
       btn.addEventListener("click", () => openTileInfo(btn.dataset.info));
     });
@@ -4195,7 +4530,21 @@
       const startBtn = e.target.closest(".habit-start-btn");
       if (startBtn) { startHabitChallenge(startBtn.dataset.habit, parseInt(startBtn.dataset.days, 10)); return; }
       const cancelBtn = e.target.closest(".habit-cancel-btn");
-      if (cancelBtn) cancelHabitChallenge(cancelBtn.dataset.habit);
+      if (cancelBtn) { cancelHabitChallenge(cancelBtn.dataset.habit); return; }
+      if (e.target.closest("#habit-prompt-btn")) { openHabitSurvey(); return; }
+      const surveyOption = e.target.closest(".habit-survey-option");
+      if (surveyOption) {
+        const key = surveyOption.dataset.habitChoice;
+        if (key === "eating" || key === "commuting") openHabitTierPicker(key);
+        else chooseHabitDomain(key);
+        return;
+      }
+      const tierBtn = e.target.closest(".habit-tier-btn");
+      if (tierBtn) { chooseWeeklyTarget(tierBtn.dataset.domain, parseInt(tierBtn.dataset.target, 10)); return; }
+      if (e.target.closest(".habit-survey-back-btn")) { habitSurveyStep = null; renderHabitsCard(); return; }
+      if (e.target.closest(".habit-change-btn")) { reopenHabitSurvey(); return; }
+      if (e.target.closest("#habit-banking-fill-btn")) { goToYearDetail("banking"); return; }
+      if (e.target.closest("#habit-banking-switch-btn")) openBankSwitchModal();
     });
     document.getElementById("habit-streak-congrats-close").addEventListener("click", () => {
       document.getElementById("habit-streak-congrats-backdrop").classList.remove("open");

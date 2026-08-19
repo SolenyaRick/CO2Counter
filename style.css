@@ -1412,6 +1412,98 @@ input, select {
   font-size: 0.75rem;
 }
 
+.habit-challenge-bar-fill.over-target {
+  background: var(--danger);
+}
+
+.habit-nudge-text {
+  font-size: 0.85rem;
+  margin: 0 0 var(--space-3);
+}
+
+.habit-prompt-btn {
+  width: 100%;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: center;
+}
+
+.habit-survey-question {
+  font-size: 0.9rem;
+  margin: 0 0 var(--space-3);
+}
+
+.habit-survey-back-btn {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+}
+
+.habit-survey-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.habit-survey-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: var(--space-3);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.habit-survey-emoji {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.habit-survey-label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  flex: 1;
+}
+
+.habit-survey-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.habit-tier-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.habit-tier-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 /* Instagram-style swipeable carousel: native scroll-snap, no JS drag
    library needed - works with real touch swipe on mobile and mouse-wheel/
    trackpad scroll on desktop. */

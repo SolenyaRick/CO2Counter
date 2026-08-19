@@ -344,34 +344,48 @@ color too with no extra CSS.
   never-submitted bill both just read as zero, the same way commute/food
   do, since they're tracked logs rather than one-off optional questions.
 - **Leaderboard** — five cards, in order: "This week", "Habits", "Leagues",
-  "All-time weekly average", "Everyone on the app". "Habits" lives here
-  rather than on Home (where it used to be) — two streak tiles for the
-  changes that move the needle most: meat-free days and flight-free time.
-  Both are derived entirely from data tracked elsewhere (confirmed diet
-  days, the flight log) rather than a separate "log today's habit" step of
-  their own. The meat-free streak (`meatFreeStreakDays()` in `app.js`)
-  counts consecutive confirmed meat-free days ending today, or ending
-  yesterday if today isn't confirmed yet, so it doesn't visibly reset to 0
-  first thing in the morning; a "Best" figure alongside it
-  (`longestMeatFreeStreakDaysEver()`) is your personal-best run anywhere in
-  your history, not reset by starting a new streak. The flight-free streak
-  (`flightFreeStreakDays()`) counts days since your most recently logged
-  (dated) flight - or, if you've never logged one, since the start of an
-  active "no flights" challenge, so starting one always gives you a real
-  streak to watch. Either tile can start a challenge - 7/30/90-day
-  presets, one active per habit, overwriting whatever was there before -
-  showing a progress bar toward the target and a "Give up" link to cancel;
-  the challenge only remembers what you committed to (`habit_challenges`
-  in `supabase/schema.sql`), never the streak count itself, so it can't
-  drift out of sync with the diet/flights data it's derived from. Crossing
-  a round-number streak milestone (7/30/100/365 days) pops a small
-  celebration modal, shown once per device (`localStorage`) and only
-  while the Leaderboard page is actually the one on screen - the same
-  streak numbers get recomputed from many places in the app (e.g. adding
-  a flight on This Year), and popping a blocking modal from one of those
-  unrelated background re-renders while you're looking at a different
-  page would ambush your next click on whatever you were actually doing.
-  "Leagues" is membership, not a ranked
+  "All-time weekly average", "Everyone on the app". "Habits" is fully
+  opt-in (`renderHabitsCard()` in `app.js`): it starts as a single
+  "Would you like to change your habits?" button, not any tile. Clicking
+  it opens a 4-option survey — Eating/Commuting/Flying/Banking — ranked by
+  which domain is actually biggest for you (`computeHabitDomainSizes()`,
+  reusing the same yearly-equivalent figures the Home page's "Your year,
+  estimated" already shows), with a "Biggest impact" badge on whichever
+  comes out largest. Picking one shows *only* that habit, never a fixed
+  set — a "Change habit" link on the resulting tile reopens the survey at
+  any time (`profile.chosenHabit` in `supabase/schema.sql`, null until a
+  choice is made). Eating and Commuting are tailored: choosing either asks
+  a follow-up (an insight line built from your own recent logged data —
+  "you eat meat about N days a week", "you drive about N days a week" —
+  computed from diet/commute history, not self-reported) and then a
+  weekly-target picker (meat: max 5/4/3/2 days a week; commuting: car-free
+  up to max 4 days a week). The resulting tile shows a progress bar for
+  "N of target used this week", recomputed from this week's confirmed
+  diet/commute days so it resets for free every Monday — no streak
+  counter for either any more. Flying is the one habit that kept the
+  original streak model: choosing it goes straight to a tile showing days
+  since your most recently logged (dated) flight
+  (`flightFreeStreakDays()`), or since the start of an active "no
+  flights" challenge if you've never logged one. It can start a
+  challenge — 7/30/90-day presets, showing a progress bar toward the
+  target and a "Give up" link to cancel; the challenge only remembers
+  what you committed to (`habit_challenges` in `supabase/schema.sql`),
+  never the streak count itself, so it can't drift out of sync with the
+  flight data it's derived from. Crossing a round-number streak milestone
+  (7/30/100/365 days) pops a small celebration modal, shown once per
+  device (`localStorage`) and only while the Leaderboard page is actually
+  the one on screen — the same streak number gets recomputed from many
+  places in the app (e.g. adding a flight on This Year), and popping a
+  blocking modal from one of those unrelated background re-renders while
+  you're looking at a different page would ambush your next click on
+  whatever you were actually doing. Banking has no tile at all, just a
+  savings nudge: if your bank details are filled in (This Year → Banking),
+  it shows how many kg CO2e/year switching to a greener bank could save
+  (`BANK_KG_PER_POUND_PER_YEAR` in `emission-factors.js`); a "Do you want
+  to save the planet?" button opens a fuller breakdown — your top 3
+  greener alternatives and how switching actually works in the UK (free,
+  automatic, ~7 working days via the Current Account Switch Service) — in
+  a modal (`openBankSwitchModal()`). "Leagues" is membership, not a ranked
   total: five leagues (🌱 Vegan, 🥕 Veggie, 🚲 Commute, 🎯 Goal, ✈️ Flight-free), each
   listing you and whichever accepted friends currently qualify. Vegan/
   Veggie/Commute/Goal reset with the week — every CONFIRMED day has to match

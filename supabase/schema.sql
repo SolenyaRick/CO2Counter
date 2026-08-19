@@ -112,18 +112,34 @@ alter table public.profiles add column if not exists electricity_bill_kwh numeri
 
 -- Home page "Habits" card: an opt-in, time-boxed commitment to a specific
 -- behavior change (currently "meatFree" or "noFlights"), distinct from the
--- passive diet/flights tracking elsewhere in the app. Keyed by habit id
--- rather than a list, since only one challenge per habit can be active at
--- once - starting a new one overwrites whatever was there before (same
--- "starting fresh replaces the old value" pattern as weekly_goal_kg's
--- presets). Shape: {"meatFree": {"startDate": "2026-08-17",
--- "targetDays": 30}, "noFlights": {...}} - a habit with no key means no
--- active challenge for it. Deliberately doesn't store the streak count
--- itself: that's always recomputed client-side from the existing diet/
--- flights data (see meatFreeStreakDays()/flightFreeStreakDays() in
--- app.js), so this column only remembers what was committed to, not
--- ongoing progress, and can't drift out of sync with the real data.
+-- passive diet/flights/commute tracking elsewhere in the app. Keyed by
+-- habit id rather than a list, since only one challenge per habit can be
+-- active at once - starting a new one overwrites whatever was there before
+-- (same "starting fresh replaces the old value" pattern as
+-- weekly_goal_kg's presets). Two shapes coexist: {"noFlights":
+-- {"startDate": "2026-08-17", "targetDays": 30}} is a streak-length
+-- challenge (flying only); {"meatFree": {"startDate": "2026-08-17",
+-- "targetPerWeek": 3}, "carFree": {...}} is a weekly day-cap (Eating/
+-- Commuting's tailored survey flow - see chooseWeeklyTarget()/
+-- setWeeklyTarget() in app.js). A habit with no key means no active
+-- challenge/target for it. Deliberately doesn't store the streak count or
+-- this week's day count itself: those are always recomputed client-side
+-- from the existing diet/flights/commute data (see flightFreeStreakDays()/
+-- mealsThisWeekMeatCount()/carDaysThisWeekCount() in app.js), so this
+-- column only remembers what was committed to, not ongoing progress, and
+-- can't drift out of sync with the real data.
 alter table public.profiles add column if not exists habit_challenges jsonb not null default '{}'::jsonb;
+
+-- Which habit (if any) the person opted into via the Habits card's survey
+-- on the Leaderboard page - null shows the "Would you like to change your
+-- habits?" prompt instead of any tile, keeping the whole feature opt-in.
+-- Banking has no habit_challenges entry (it's a one-off savings nudge, not
+-- a streak/target), so it's included here even though it never appears as
+-- a key in habit_challenges above.
+alter table public.profiles add column if not exists chosen_habit text;
+alter table public.profiles drop constraint if exists profiles_chosen_habit_check;
+alter table public.profiles add constraint profiles_chosen_habit_check
+  check (chosen_habit is null or chosen_habit in ('eating', 'commuting', 'flying', 'banking'));
 
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").

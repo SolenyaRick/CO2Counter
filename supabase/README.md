@@ -426,6 +426,22 @@ across a Monday/Wednesday day-index boundary and confirming
 `is_on_track_for_goal` flips exactly where expected) and a mocked browser
 run.
 
+The run after that adds a `chosen_habit text` column to `profiles`
+(`check`-constrained to `'eating' | 'commuting' | 'flying' | 'banking'` or
+null), backing the Habits card's opt-in survey: null shows a "Would you
+like to change your habits?" prompt instead of any tile, and only ever
+shows the single domain the person picked, not a fixed set. Two of the
+four domains (Eating, Commuting) now set a weekly day-target rather than
+tracking a streak, so `habit_challenges` (see above) gained a second
+shape alongside the streak-length one it already had: `{"meatFree":
+{"startDate": ..., "targetPerWeek": 3}, "carFree": {...}}` for "max N meat/
+car days this week", vs. the existing `{"noFlights": {"startDate": ...,
+"targetDays": 30}}` for flying's streak challenge — both keyed the same
+column, distinguished by which key is present (`targetPerWeek` vs.
+`targetDays`). Banking has no `habit_challenges` entry at all, since it's
+a one-off "switching banks could save you N kg/year" nudge with a
+comparison page, not something with an ongoing streak or weekly cap.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table
