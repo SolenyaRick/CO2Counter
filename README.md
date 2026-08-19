@@ -87,38 +87,46 @@ color too with no extra CSS.
   anything yet. Explicitly illustrative: days you haven't logged count as
   zero on your side of the comparison, so the more consistently you log,
   the more accurate it gets — same known approximation the pace chart
-  below already makes. Next is a "Budget pace" card: a
-  three-way toggle ("This week" / "This month" / "This year") over a
-  budget-pace chart — a dashed target line rises in a straight line from 0
-  to your weekly goal across whichever span is selected (×1 for a week,
-  roughly ×4.3 for a month, ×52 for a year, so the implied daily rate is
-  the same across all three), plotted against a stacked area tracking your
-  actual confirmed CO2e day by day, split into one colored band per domain
-  (commute, food, alcohol — bottom to top; alcohol spread evenly across
-  each week's 7 days, since it's a whole-week figure, not tied to a
-  specific day) using the exact same colors as the "emissions by domain"
-  card below it (`--commute-color`/`--accent`/`--alcohol-color`), so the
-  two cards read as one consistent picture rather than two independent
-  ones. Rising above the dashed line means you're using CO2e faster than
-  the goal allows for how far through the span it is; staying under it
-  means you're on pace or ahead. For "This week", the stacked area only
-  draws up to today - it doesn't project the rest of the week for you. For
-  "This month" and "This year", it additionally only starts drawing from a
-  light vertical marker - the week you first confirmed a day - and its
-  bottom edge picks up exactly on the dashed target line there rather than
-  at 0: the days before that marker have no data, so they're assumed to
-  have used exactly their fair share of the goal at the target rate
-  (neither over nor under), rather than being credited as zero-emission
-  days, which would make the stacked area jump out ahead of pace for no
-  real reason (`renderBudgetChart()`'s `stackBaseline` in `app.js`).
-  Flights, home energy, and the other yearly-estimate categories below
-  aren't part of any of these bands, since they're fixed annual figures
-  with no day-by-day data to plot a pace against. Below that, an
-  "emissions by domain" card breaks
+  below already makes. Next is a single "Budget pace" card: a three-way
+  toggle ("This week" / "This month" / "This year") sits above a swipeable
+  2-slide carousel (the same native-scroll-snap mechanism as every other
+  carousel on this page, with two dots underneath) - swipe or scroll
+  horizontally to move between a line/area chart view and a stacked-bar
+  breakdown view of that same timeframe, rather than showing both as two
+  separate cards stacked on the page. Slide one is the budget-pace chart
+  itself — a dashed target line and a stacked area both rise, in the
+  underlying data, from 0 to your weekly goal across whichever span is
+  selected (×1 for a week, roughly ×4.3 for a month, ×52 for a year, so the
+  implied daily rate is the same across all three) — but the chart is
+  drawn top-to-bottom inverted, so on screen both slope the familiar
+  top-left-to-bottom-right way (0 near the top, goal near the bottom)
+  rather than the opposite. The stacked area tracks your actual confirmed
+  CO2e day by day, split into one colored band per domain (commute, food,
+  alcohol, top-to-bottom on screen; alcohol spread evenly across each
+  week's 7 days, since it's a whole-week figure, not tied to a specific
+  day) using the exact same colors as slide two's domain bar
+  (`--commute-color`/`--accent`/`--alcohol-color`), with a small color key
+  underneath the chart naming each one, so the two slides and the key all
+  read as one consistent picture. Dropping below the dashed line means
+  you're using CO2e faster than the goal allows for how far through the
+  span it is; staying above it means you're on pace or ahead. For "This
+  week", the stacked area only draws up to today - it doesn't project the
+  rest of the week for you. For "This month" and "This year", it
+  additionally only starts drawing from a light vertical marker - the week
+  you first confirmed a day - and picks up exactly on the dashed target
+  line there rather than at 0: the days before that marker have no data,
+  so they're assumed to have used exactly their fair share of the goal at
+  the target rate (neither over nor under), rather than being credited as
+  zero-emission days, which would make the stacked area jump out ahead of
+  pace for no real reason (`renderBudgetChart()`'s `stackBaseline` in
+  `app.js`). Flights, home energy, and the other yearly-estimate categories
+  below aren't part of any of these bands, since they're fixed annual
+  figures with no day-by-day data to plot a pace against. Slide two is the
+  "emissions by domain" bar: it breaks
   the selected timeframe into a stacked bar with up to twelve segments - one
   per domain, sized by share of the total, with a legend giving each
   domain's exact kg and percentage plus a total row. It follows whichever
-  of the three timeframe buttons above the pace chart is currently selected
+  of the three timeframe buttons above the carousel is currently selected
   rather than having its own toggle. Commute, food, alcohol, and
   non-commute driving (the Car-mode slice of logged "Additional journeys",
   pulled out of Commute into its own segment) are real tracked totals, same

@@ -2161,6 +2161,12 @@ input, select {
   background: var(--danger);
 }
 
+.legend-swatch-domain {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
 .domain-bar {
   display: flex;
   width: 100%;

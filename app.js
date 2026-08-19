@@ -1422,16 +1422,20 @@
     renderFootprints();
   }
 
-  // "Budget pace" chart: a dashed target line rises in a straight line from
-  // 0 to the goal across the tracked span, and a stacked area tracks actual
-  // cumulative CO2e confirmed so far, split into one colored band per
-  // domain (commute/food/alcohol, bottom to top) using the exact same
-  // colors as "This week's emissions by domain" (--commute-color/--accent/
-  // --alcohol-color) so the two cards read as one consistent picture.
-  // Rising above the dashed line means CO2e is being used faster than the
-  // goal allows for how far through the span it is; staying under it means
-  // on pace or ahead. The stacked area only draws up to the current point -
-  // it doesn't project forward. Shared by the This Week page's weekly chart
+  // "Budget pace" chart: a dashed target line and a stacked area both rise,
+  // in the underlying data, from 0 to the goal across the tracked span -
+  // but the chart draws top-to-bottom inverted (see yAt() below), so on
+  // screen they slope the same top-left-to-bottom-right way the old
+  // single-line "remaining budget" version used to, rather than bottom-
+  // left-to-top-right. The stacked area is split into one colored band per
+  // domain (commute/food/alcohol, in that order top-to-bottom on screen)
+  // using the exact same colors as "This week's emissions by domain"
+  // (--commute-color/--accent/--alcohol-color) so the two cards read as
+  // one consistent picture. Dropping below the dashed line (i.e. further
+  // down the screen) means CO2e is being used faster than the goal allows
+  // for how far through the span it is; staying above it means on pace or
+  // ahead. The stacked area only draws up to the current point - it
+  // doesn't project forward. Shared by the This Week page's weekly chart
   // and the Stats page's yearly one below, parameterized on
   // `goal`/`predicted`/`series`/`xLabels` so both stay pixel-for-pixel
   // consistent and any future tweak to one applies to both automatically.
@@ -1476,7 +1480,12 @@
     const yRange = Math.max(0.0001, yMax - yMin);
 
     const xAt = (j) => PAD_X + (j / totalUnits) * plotW;
-    const yAt = (v) => PAD_TOP + (1 - (v - yMin) / yRange) * plotH;
+    // Inverted from the "usual" chart convention (higher value = higher on
+    // screen) on purpose: 0 used sits near the top, the goal sits near the
+    // bottom, so the chart still reads top-left-to-bottom-right the same
+    // way the old declining "remaining budget" version did, even though
+    // what's actually being plotted now is rising cumulative consumption.
+    const yAt = (v) => PAD_TOP + ((v - yMin) / yRange) * plotH;
     const pathFor = (values, startJ = 0) => values.map((v, k) => `${k === 0 ? "M" : "L"}${xAt(startJ + k).toFixed(1)},${yAt(v).toFixed(1)}`).join(" ");
 
     const predictedPath = pathFor(predicted);
@@ -1498,9 +1507,12 @@
       svg.appendChild(startLine);
     }
 
-    // Stacked bands, bottom to top - each one's fill boundary runs along its
-    // own cumulative values left-to-right, then back along the previous
-    // band's values (or the zero line, for the first band) right-to-left.
+    // Stacked bands, in array order - each one's fill boundary runs along
+    // its own cumulative values left-to-right, then back along the
+    // previous band's values (or `stackBaseline`, for the first band)
+    // right-to-left. With yAt() inverted (see above), array order reads
+    // top-to-bottom on screen: the first band sits just under the 0 line,
+    // each later one further down toward the goal.
     let bottomValues = new Array(topSeries.length).fill(stackBaseline);
     series.forEach(({ key, values }) => {
       const topPath = pathFor(values, actualStartJ);
@@ -1529,7 +1541,7 @@
     const goalLabel = document.createElementNS(svgNS, "text");
     goalLabel.textContent = `${fmt(goal)} ${goalLabelSuffix}`;
     goalLabel.setAttribute("x", xAt(0));
-    goalLabel.setAttribute("y", Math.max(9, yAt(goal) - 5));
+    goalLabel.setAttribute("y", Math.min(H - PAD_BOTTOM - 3, Math.max(9, yAt(goal) - 5)));
     goalLabel.setAttribute("class", "budget-axis-label");
     svg.appendChild(goalLabel);
 
@@ -1546,11 +1558,18 @@
     chart.appendChild(svg);
 
     const remainingNow = predicted[lastJ] - finalTotal;
+    // Domain key, built generically from `series` rather than hardcoded -
+    // reuses the exact same .domain-<key> background colors as "This
+    // week's emissions by domain", just as small square swatches instead
+    // of that card's full-width bar segments, so the two always match
+    // automatically if the set of tracked domains ever changes.
+    const keyItems = series.map(({ key }) => `<span class="legend-item"><span class="legend-swatch legend-swatch-domain domain-${key}"></span>${DOMAIN_LABELS[key] ?? key}</span>`).join("");
     const legend = document.createElement("div");
     legend.className = "budget-chart-legend";
     legend.innerHTML = `
       <span class="legend-item"><span class="legend-swatch legend-swatch-target"></span>Target pace</span>
       <span class="legend-item"><span class="legend-swatch legend-swatch-actual ${onTrack ? "on-track" : "over-track"}"></span>${onTrack ? "On pace" : "Over pace"} &middot; ${fmt(Math.abs(remainingNow))} kg ${remainingNow >= 0 ? "left" : "over goal"}</span>
+      ${keyItems}
     `;
     chart.appendChild(legend);
   }
@@ -4641,6 +4660,7 @@
     wireCarousel("home-savings-carousel", "home-savings-dots");
     wireCarousel("home-year-groups-carousel", "home-year-groups-dots");
     wireCarousel("home-compare-carousel", "home-compare-dots");
+    wireCarousel("home-budget-carousel", "home-budget-dots");
     wireDomainBreakdownToggle();
 
     document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
