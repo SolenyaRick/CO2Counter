@@ -243,13 +243,11 @@ body {
   transition: transform 0.15s ease;
 }
 
-/* Direct-child combinator, not a plain descendant selector - Settings
-   nests a second accordion inside its own content (see
-   .accordion-item-nested below), and each of ITS items also carries the
-   base .accordion-item/.accordion-summary classes for shared styling. A
-   descendant selector here would flip every nested item's chevron (and
-   add its border) as soon as the outer Settings item is open at all,
-   regardless of whether that particular nested item is itself open. */
+/* Direct-child combinator, not a plain descendant selector - guards
+   against any future nested-accordion structure re-triggering every
+   descendant .accordion-summary's chevron/border just because some
+   ancestor .accordion-item is open, regardless of that descendant's own
+   open state. */
 .accordion-item[open] > .accordion-summary::after {
   transform: rotate(180deg);
 }
@@ -278,49 +276,19 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* Settings is itself a small accordion nested one level deeper than the
-   page's main Account/Settings/Friends/History/Data one (a separate
-   name="settings-accordion" exclusive group - independent of the outer
-   name="account-accordion" one, so expanding e.g. "Vehicle" doesn't
-   collapse "Settings" itself). Visually smaller/lighter than the
-   top-level items (var(--bg) instead of var(--surface), no shadow, a bit
-   less padding) so the hierarchy - which accordion a given click-to-
-   expand row belongs to - stays legible at a glance. */
-.settings-accordion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.accordion-item-nested {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: none;
-}
-
-.accordion-summary-nested {
-  padding: var(--space-3) var(--space-4);
-  font-size: 0.92rem;
-  font-weight: 600;
-}
-
-.accordion-item-nested[open] .accordion-summary-nested {
-  border-bottom: 1px solid var(--border);
-}
-
-.accordion-item-nested .accordion-content {
-  padding: var(--space-3) var(--space-4);
-}
-
-/* This Year page: a list of rows, each drilling into its own full
-   .year-detail "page" (shown/hidden via plain [hidden], not an accordion)
-   with a back button - a deliberately different pattern from the Account
-   page's accordion, per explicit user direction. Visually though, each row
-   is styled to match .accordion-item/.accordion-summary (same card look:
-   background/border/radius/shadow, same label weight+size) so the two
-   pages read as one consistent design language even though only one of
-   them actually expands in place. */
+/* List->detail->back pattern, used by both the This Year page and the
+   Account page's Settings section: a list of rows, each drilling into its
+   own full .year-detail "page" (shown/hidden via plain [hidden], not an
+   accordion) with a back button - a deliberately different pattern from
+   the rest of the Account page's accordion, per explicit user direction.
+   Visually though, each row is styled to match .accordion-item/
+   .accordion-summary (same card look: background/border/radius/shadow,
+   same label weight+size) so every page reads as one consistent design
+   language even though only some of them actually expand in place. Class
+   names keep the "year-" prefix from where this pattern was first built,
+   reused as-is for Settings rather than renamed - same "generic look,
+   borrowed name" convention already used elsewhere in this stylesheet
+   (e.g. .week-picker-btn reused for the journey-mode toggle). */
 .year-list {
   display: flex;
   flex-direction: column;

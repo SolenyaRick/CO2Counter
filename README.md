@@ -55,34 +55,7 @@ color too with no extra CSS.
   (`co2tracker_onboarding_dismissed`), independent of account sync - it's
   not meaningful data worth a network round trip - and it stops showing
   itself automatically the moment anything at all has been logged, even
-  without an explicit dismissal. Next, a "Habits" card - two streak
-  tiles for the changes that move the needle most: meat-free days and
-  flight-free time. Both are derived entirely from data tracked
-  elsewhere (confirmed diet days, the flight log) rather than a separate
-  "log today's habit" step of their own. The meat-free streak
-  (`meatFreeStreakDays()` in `app.js`) counts consecutive confirmed
-  meat-free days ending today, or ending yesterday if today isn't
-  confirmed yet, so it doesn't visibly reset to 0 first thing in the
-  morning; a "Best" figure alongside it (`longestMeatFreeStreakDaysEver()`)
-  is your personal-best run anywhere in your history, not reset by
-  starting a new streak. The flight-free streak (`flightFreeStreakDays()`)
-  counts days since your most recently logged (dated) flight - or, if
-  you've never logged one, since the start of an active "no flights"
-  challenge, so starting one always gives you a real streak to watch.
-  Either tile can start a challenge - 7/30/90-day presets, one active
-  per habit, overwriting whatever was there before - showing a progress
-  bar toward the target and a "Give up" link to cancel; the challenge
-  only remembers what you committed to (`habit_challenges` in
-  `supabase/schema.sql`), never the streak count itself, so it can't
-  drift out of sync with the diet/flights data it's derived from.
-  Crossing a round-number streak milestone (7/30/100/365 days) pops a
-  small celebration modal, shown once per device (`localStorage`) and
-  only while the Home page is actually the one on screen - the same
-  streak numbers get recomputed from many places in the app (e.g. adding
-  a flight on This Year), and popping a blocking modal from one of those
-  unrelated background re-renders while you're looking at a different
-  page would ambush your next click on whatever you were actually doing.
-  Then a "Total CO2 saved" hero card: a
+  without an explicit dismissal. Next, a "Total CO2 saved" hero card: a
   two-slide swipeable carousel (native CSS scroll-snap, Instagram-post
   style, with two small dots underneath showing which slide you're on -
   swipe/scroll horizontally on either mobile or desktop to move between
@@ -92,10 +65,10 @@ color too with no extra CSS.
   same flat linear-rate convention the budget pace chart's own dashed
   target line uses below) - just against two different reference points:
   the first slide is the UK average (`UK_AVERAGE_WEEKLY_KG`, always
-  available); the second is your own baseline week if you've set one on
-  the Account page (the same "your own week instead of the UK average"
-  choice already offered on This Week's "Compared to" card), or a prompt
-  to set one if you haven't. Each slide is green with a positive number if
+  available); the second is your own baseline week if you've described
+  one on the Account page (the same "your own typical week instead of the
+  UK average" choice already offered inside This Week's "Weekly summary"
+  card), or a prompt to set one if you haven't. Each slide is green with a positive number if
   you're under its reference, red/"more than X" if you're over it, and a
   muted placeholder prompting you to confirm a day if you haven't tracked
   anything yet. Explicitly illustrative: days you haven't logged count as
@@ -370,23 +343,62 @@ color too with no extra CSS.
   of that skippable group any more — an empty flight log or a
   never-submitted bill both just read as zero, the same way commute/food
   do, since they're tracked logs rather than one-off optional questions.
-- **Leaderboard** — four cards. "Leagues" is membership, not a ranked
-  total: four leagues (🌱 Vegan, 🥕 Veggie, 🚲 Commute, ✈️ Flight-free), each
+- **Leaderboard** — five cards, in order: "This week", "Habits", "Leagues",
+  "All-time weekly average", "Everyone on the app". "Habits" lives here
+  rather than on Home (where it used to be) — two streak tiles for the
+  changes that move the needle most: meat-free days and flight-free time.
+  Both are derived entirely from data tracked elsewhere (confirmed diet
+  days, the flight log) rather than a separate "log today's habit" step of
+  their own. The meat-free streak (`meatFreeStreakDays()` in `app.js`)
+  counts consecutive confirmed meat-free days ending today, or ending
+  yesterday if today isn't confirmed yet, so it doesn't visibly reset to 0
+  first thing in the morning; a "Best" figure alongside it
+  (`longestMeatFreeStreakDaysEver()`) is your personal-best run anywhere in
+  your history, not reset by starting a new streak. The flight-free streak
+  (`flightFreeStreakDays()`) counts days since your most recently logged
+  (dated) flight - or, if you've never logged one, since the start of an
+  active "no flights" challenge, so starting one always gives you a real
+  streak to watch. Either tile can start a challenge - 7/30/90-day
+  presets, one active per habit, overwriting whatever was there before -
+  showing a progress bar toward the target and a "Give up" link to cancel;
+  the challenge only remembers what you committed to (`habit_challenges`
+  in `supabase/schema.sql`), never the streak count itself, so it can't
+  drift out of sync with the diet/flights data it's derived from. Crossing
+  a round-number streak milestone (7/30/100/365 days) pops a small
+  celebration modal, shown once per device (`localStorage`) and only
+  while the Leaderboard page is actually the one on screen - the same
+  streak numbers get recomputed from many places in the app (e.g. adding
+  a flight on This Year), and popping a blocking modal from one of those
+  unrelated background re-renders while you're looking at a different
+  page would ambush your next click on whatever you were actually doing.
+  "Leagues" is membership, not a ranked
+  total: five leagues (🌱 Vegan, 🥕 Veggie, 🚲 Commute, 🎯 Goal, ✈️ Flight-free), each
   listing you and whichever accepted friends currently qualify. Vegan/
-  Veggie/Commute reset with the week — every CONFIRMED day has to match
+  Veggie/Commute/Goal reset with the week — every CONFIRMED day has to match
   (vegan diet every day, meat-free every day, and no car every day
   respectively; an unconfirmed day doesn't disqualify you, but doesn't
   count for you either, and nobody with zero confirmed days that week
   qualifies for either), so being vegan is automatically also being
   veggie (a stricter subset, not a separate condition) — computed
   server-side by `friend_leagues()` in `supabase/schema.sql`, which reads
-  the raw day-by-day diet/commute data but only ever returns the three
-  booleans, never the underlying detail, same privacy shape as the
-  ranked leaderboards below. Flight-free is the odd one out: an ongoing
+  the raw day-by-day diet/commute/goal data but only ever returns the
+  derived booleans, never the underlying detail, same privacy shape as the
+  ranked leaderboards below. Goal league membership needs at least one
+  confirmed day this week (so a blank week doesn't trivially qualify) and
+  your running total so far at or under your own weekly goal, prorated to
+  how far through the week it is (Monday = 1/7 ... Sunday = 7/7, mirroring
+  `goalForWeek()`'s own client-side proration) — everyone effectively has
+  a goal (`weekly_goal_kg` defaults to 20 kg rather than being unset), so
+  there's no separate "have they set one" gate to check, just whether
+  they're currently on pace for it. The day-of-week fraction is computed
+  client-side (`todayIndexInWeek()`) and passed to the RPC as `day_index`,
+  since the server has no reliable notion of the caller's local day - same
+  reasoning `target_week_key` is already client-supplied for. Flight-free
+  is the odd one out: an ongoing
   streak (days since your most recently logged, dated flight), sorted
   longest-first, and only includes people who've logged at least one
   dated flight ever — no fallback to "started a challenge" the way the
-  personal Habits card gets one, since a league ranking should only
+  Habits card gets one, since a league ranking should only
   compare people's actual logged history, not a self-declared "starting
   now". "This week" ranks you and your accepted
   friends by this week's *average* kg CO2e per confirmed day so far (lowest
@@ -442,10 +454,14 @@ color too with no extra CSS.
     Apple mandates in-app account deletion for any app that supports
     account creation. Different from "Reset all data" on the Data
     section, which clears your data but keeps the account.
-  - **Settings** — itself a second, smaller accordion nested one level
-    deeper (a separate `name="settings-accordion"` exclusive group,
-    independent of the outer one - expanding "Vehicle" doesn't collapse
-    "Settings" itself), four items: **Vehicle** (whether you own or
+  - **Settings** — its own list->detail->back navigation, same pattern as
+    This Year, rather than either a plain toggle list or a second nested
+    accordion (`showSettingsList()`/`showSettingsDetail(id)` in `app.js`,
+    reusing the exact same `.year-list`/`.year-detail`/`.year-back-btn`
+    markup and CSS This Year's drill-down already established, plus a
+    small SVG line icon per row matching that page's style) - opening
+    "Settings" itself always resets back to the row list, even if a detail
+    screen was left open from before. Four items: **Vehicle** (whether you own or
     regularly drive a car, and what type — Diesel, Hybrid, or Electric/EV,
     which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111
     hybrid, ~0.058 electric — used for both every "Car" day you log on
@@ -470,10 +486,23 @@ color too with no extra CSS.
     refresh, never a duplicate. Turning it on requests the OS notification
     permission there and then - declining it un-checks the toggle and
     shows an inline note pointing at iOS Settings); **Baseline week** (a
-    dropdown of your own fully-confirmed weeks — only ones with a "✓
-    FULL" badge on the History section qualify — to compare the This Week
-    page's card against instead of the UK average; "UK average (default)"
-    switches back); and **Data sharing** (renamed from "Help improve UK
+    mini form describing a typical week from before you started tracking
+    — how you usually got to work and how many days a week, what you
+    usually ate, beers/wine glasses per week — rather than picking one of
+    your own past tracked weeks, since someone whose habits changed a lot
+    after they started using the app would have no real week to point at
+    that actually represents "before". The client expands your answers
+    into a synthetic 7-day week (`buildBaselineWeekData()` in `app.js` -
+    the chosen commute mode fills the first N days, matching the
+    days-per-week you gave, the rest "Didn't travel"; the chosen diet
+    entry repeats every day) and runs it through the exact same
+    `weekTotals()` math as a real tracked week, so this comparison stays
+    consistent with every other total in the app rather than a second,
+    possibly-drifting formula. Stored as a single `baseline_week` jsonb
+    column on `profiles` (`{commuteMode, commuteDaysPerWeek, dietType,
+    dietMeat, dietPortion, alcoholBeer, alcoholWine}`), replacing the old
+    `baseline_week_key` column that pointed at a real week; "Use UK
+    average instead" clears it back to null); and **Data sharing** (renamed from "Help improve UK
     averages" - the same research opt-in, off by default — if turned on,
     everything on the Account/Settings/Home pages except your banking
     answers becomes visible to the app developer for calibrating the

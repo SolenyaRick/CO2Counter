@@ -434,13 +434,26 @@
       </section>
 
       <section class="card">
+        <h2>Habits</h2>
+        <p class="assumptions">
+          Streaks for the two changes that move the needle most &mdash; eating less
+          meat and flying less. Meat-free counts confirmed days; flight-free counts
+          days since your last logged flight (or since a challenge started).
+          Start a challenge to give either one a target.
+        </p>
+        <div class="habits-grid" id="habits-grid"><!-- injected by app.js --></div>
+      </section>
+
+      <section class="card">
         <h2>Leagues</h2>
         <p class="assumptions">
           You and your accepted friends who qualify &mdash; membership only, not a
-          ranked total. Vegan/Veggie/Commute reset each week (every confirmed day has
+          ranked total. Vegan/Veggie/Commute/Goal reset each week (every confirmed day has
           to match, so a day you haven't logged yet doesn't disqualify you but doesn't
           count for you either); Flight-free is an ongoing streak since your last
-          logged flight, so it only includes people who've logged at least one.
+          logged flight, so it only includes people who've logged at least one. Goal league
+          needs at least one confirmed day this week and your running total at or under
+          your own weekly goal, prorated to how far through the week it is.
         </p>
         <div class="leagues-grid" id="leagues-grid"><!-- injected by app.js --></div>
       </section>
@@ -492,17 +505,6 @@
           <button type="button" class="btn-primary btn-small" data-nav="week">Log this week</button>
           <button type="button" class="btn-secondary btn-small" data-nav="weeks">Set up your year</button>
         </div>
-      </section>
-
-      <section class="card">
-        <h2>Habits</h2>
-        <p class="assumptions">
-          Streaks for the two changes that move the needle most &mdash; eating less
-          meat and flying less. Meat-free counts confirmed days; flight-free counts
-          days since your last logged flight (or since a challenge started).
-          Start a challenge to give either one a target.
-        </p>
-        <div class="habits-grid" id="habits-grid"><!-- injected by app.js --></div>
       </section>
 
       <section class="card" id="home-savings-card">
@@ -822,120 +824,199 @@
           </div>
         </details>
 
-        <details name="account-accordion" class="accordion-item">
+        <details name="account-accordion" class="accordion-item" id="settings-accordion-item">
           <summary class="accordion-summary">Settings</summary>
           <div class="accordion-content">
-            <div class="settings-accordion">
-              <details name="settings-accordion" class="accordion-item accordion-item-nested">
-                <summary class="accordion-summary accordion-summary-nested">Vehicle <span class="optional-badge">Optional</span></summary>
-                <div class="accordion-content">
-                  <label class="field">
-                    Do you own or regularly drive a car?
-                    <select id="owns-car">
-                      <option value="">Prefer not to say</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </label>
-                  <p class="assumptions">
-                    If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
-                    footprint, amortized over an average ~14-year car lifetime &mdash; separate
-                    from the fuel/charging for trips you log elsewhere in the app.
-                  </p>
-                  <label class="field">
-                    What type of car do you mainly drive?
-                    <select id="car-fuel-type">
-                      <option value="">Prefer not to say (uses a blended average)</option>
-                      <option value="diesel">Diesel</option>
-                      <option value="hybrid">Hybrid</option>
-                      <option value="electric">Electric (EV)</option>
-                    </select>
-                  </label>
-                  <p class="assumptions">
-                    Uses rough DEFRA-style factors: diesel ~0.171 kg CO2e/km (about the same as the
-                    blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
-                    ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
-                    default car factor for both your logged commute days (whenever you pick "Car")
-                    and any Car-mode additional journeys you log on the This Week page.
-                  </p>
-                </div>
-              </details>
+            <div class="year-list" id="settings-list">
+              <button type="button" class="year-list-row" data-settings-detail="vehicle">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11l1.5-4h11L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>
+                <span class="year-list-label">Vehicle <span class="optional-badge">Optional</span></span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
+              <button type="button" class="year-list-row" data-settings-detail="reminder">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M9 20a3 3 0 0 0 6 0"/></svg>
+                <span class="year-list-label">Daily reminder</span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
+              <button type="button" class="year-list-row" data-settings-detail="baseline">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <span class="year-list-label">Baseline week</span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
+              <button type="button" class="year-list-row" data-settings-detail="sharing">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/></svg>
+                <span class="year-list-label">Data sharing</span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
+            </div>
 
-              <details name="settings-accordion" class="accordion-item accordion-item-nested">
-                <summary class="accordion-summary accordion-summary-nested">Daily reminder</summary>
-                <div class="accordion-content">
-                  <p class="assumptions" id="reminder-native-note" hidden>
-                    Only available in the iOS app, not the web version &mdash; local
-                    notifications need the native app to actually schedule them.
-                  </p>
-                  <label class="field field-checkbox">
-                    <input type="checkbox" id="reminder-enabled" />
-                    <span>Remind me once a day to log my commute and meals</span>
-                  </label>
-                  <label class="field" id="reminder-time-field">
-                    Reminder time
-                    <input type="time" id="reminder-time" value="19:00" />
-                  </label>
-                  <p class="auth-error" id="reminder-error" hidden></p>
-                  <p class="assumptions">
-                    A single local notification, rescheduled on this device whenever you open
-                    the app &mdash; nothing is sent from a server, and it's always the same
-                    generic nudge, never your data. Stored on this device only, so you'll need
-                    to turn it back on if you reinstall the app or sign in elsewhere.
-                  </p>
-                </div>
-              </details>
+            <div class="year-detail" id="settings-detail-vehicle" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>Vehicle <span class="optional-badge">Optional</span></h2>
+              </div>
+              <label class="field">
+                Do you own or regularly drive a car?
+                <select id="owns-car">
+                  <option value="">Prefer not to say</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+              <p class="assumptions">
+                If yes, adds a rough ~700 kg CO2e/yr for the car's own manufacturing
+                footprint, amortized over an average ~14-year car lifetime &mdash; separate
+                from the fuel/charging for trips you log elsewhere in the app.
+              </p>
+              <label class="field">
+                What type of car do you mainly drive?
+                <select id="car-fuel-type">
+                  <option value="">Prefer not to say (uses a blended average)</option>
+                  <option value="diesel">Diesel</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="electric">Electric (EV)</option>
+                </select>
+              </label>
+              <p class="assumptions">
+                Uses rough DEFRA-style factors: diesel ~0.171 kg CO2e/km (about the same as the
+                blended average used if you leave this blank), hybrid ~0.111 kg CO2e/km, electric
+                ~0.058 kg CO2e/km (using average UK grid intensity to charge it). Replaces the
+                default car factor for both your logged commute days (whenever you pick "Car")
+                and any Car-mode additional journeys you log on the This Week page.
+              </p>
+            </section>
+            </div>
 
-              <details name="settings-accordion" class="accordion-item accordion-item-nested">
-                <summary class="accordion-summary accordion-summary-nested">Baseline week</summary>
-                <div class="accordion-content">
-                  <label class="field">
-                    Compare This Week's card against
-                    <select id="baseline-week">
-                      <option value="">UK average (default)</option>
-                    </select>
-                  </label>
-                  <p class="assumptions">
-                    By default, the "Compared to an average week" card on the front page
-                    measures you against a bottom-up UK average. Pick one of your own fully
-                    confirmed weeks here instead to compare against that real week of yours
-                    going forward &mdash; only weeks with a &ldquo;&check; FULL&rdquo; badge on
-                    the History section show up here. Switch back to "UK average" any time.
-                  </p>
-                </div>
-              </details>
+            <div class="year-detail" id="settings-detail-reminder" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>Daily reminder</h2>
+              </div>
+              <p class="assumptions" id="reminder-native-note" hidden>
+                Only available in the iOS app, not the web version &mdash; local
+                notifications need the native app to actually schedule them.
+              </p>
+              <label class="field field-checkbox">
+                <input type="checkbox" id="reminder-enabled" />
+                <span>Remind me once a day to log my commute and meals</span>
+              </label>
+              <label class="field" id="reminder-time-field">
+                Reminder time
+                <input type="time" id="reminder-time" value="19:00" />
+              </label>
+              <p class="auth-error" id="reminder-error" hidden></p>
+              <p class="assumptions">
+                A single local notification, rescheduled on this device whenever you open
+                the app &mdash; nothing is sent from a server, and it's always the same
+                generic nudge, never your data. Stored on this device only, so you'll need
+                to turn it back on if you reinstall the app or sign in elsewhere.
+              </p>
+            </section>
+            </div>
 
-              <details name="settings-accordion" class="accordion-item accordion-item-nested">
-                <summary class="accordion-summary accordion-summary-nested">Data sharing</summary>
-                <div class="accordion-content">
-                  <label class="field field-checkbox">
-                    <input type="checkbox" id="research-opt-in" />
-                    <span>Share my anonymous data with the app developer for research</span>
-                  </label>
-                  <p class="assumptions">
-                    Off by default &mdash; nothing is shared unless you turn this on. If enabled,
-                    everything on this page and the Stats page becomes visible to the app
-                    developer <strong>except</strong> your bank/banking answers, which are always
-                    left out. Your name, email, and account are never included &mdash; the
-                    developer only ever sees the raw numbers (commute distance, diet mix,
-                    flights, home energy, heating, pets, water, etc.), not who they belong to.
-                  </p>
-                  <div id="owner-research-export" hidden>
-                    <div class="account-actions">
-                      <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
-                      <button type="button" class="btn-secondary" id="export-research-data-xlsx">Download as Excel (.xlsx)</button>
-                    </div>
-                    <p class="assumptions">
-                      Only visible signed in as the app owner &mdash; pulls every opted-in
-                      user's data via a server-side check on your account email, same
-                      data as the <code>research_profiles</code>/<code>research_weeks</code>
-                      views in <code>supabase/schema.sql</code>. The Excel version loads
-                      a small spreadsheet library on demand (only when you click it), and
-                      splits the data into a "Profiles" and a "Weeks" sheet.
-                    </p>
-                  </div>
+            <div class="year-detail" id="settings-detail-baseline" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>Baseline week</h2>
+              </div>
+              <p class="assumptions">
+                By default, the Weekly summary card on This Week measures you against a
+                bottom-up UK average. Describe a typical week from before you started
+                tracking instead &mdash; useful if your habits were very different back
+                then &mdash; and it'll compare against that going forward. Leave it blank
+                to keep using the UK average.
+              </p>
+              <label class="field">
+                How did you usually get to work?
+                <select id="baseline-commute-mode">
+                  <option value="none">Didn't travel</option>
+                  <option value="walk">Walk</option>
+                  <option value="cycle">Cycle</option>
+                  <option value="train">Train</option>
+                  <option value="tube">Tube</option>
+                  <option value="car">Car</option>
+                </select>
+              </label>
+              <label class="field">
+                Days per week
+                <input type="number" id="baseline-commute-days" min="0" max="7" step="1" />
+              </label>
+              <label class="field">
+                What did you usually eat?
+                <select id="baseline-diet-type">
+                  <option value="vegan">Vegan</option>
+                  <option value="veggie">Veggie</option>
+                  <option value="meat">Meat</option>
+                </select>
+              </label>
+              <div id="baseline-meat-fields">
+                <label class="field">
+                  Usual meat
+                  <select id="baseline-diet-meat">
+                    <option value="chicken">Chicken / poultry</option>
+                    <option value="pork">Pork</option>
+                    <option value="beef">Beef</option>
+                    <option value="fish">Fish / seafood</option>
+                    <option value="lamb">Lamb</option>
+                  </select>
+                </label>
+                <label class="field">
+                  Usual portion
+                  <select id="baseline-diet-portion">
+                    <option value="small">Small (~100g)</option>
+                    <option value="medium">Medium (~150g)</option>
+                    <option value="large">Large (~250g+)</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field">
+                Beers per week
+                <input type="number" id="baseline-alcohol-beer" min="0" step="1" />
+              </label>
+              <label class="field">
+                Glasses of wine per week
+                <input type="number" id="baseline-alcohol-wine" min="0" step="1" />
+              </label>
+              <button type="button" class="btn-secondary" id="baseline-clear-btn">Use UK average instead</button>
+            </section>
+            </div>
+
+            <div class="year-detail" id="settings-detail-sharing" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>Data sharing</h2>
+              </div>
+              <label class="field field-checkbox">
+                <input type="checkbox" id="research-opt-in" />
+                <span>Share my anonymous data with the app developer for research</span>
+              </label>
+              <p class="assumptions">
+                Off by default &mdash; nothing is shared unless you turn this on. If enabled,
+                everything on this page and the Stats page becomes visible to the app
+                developer <strong>except</strong> your bank/banking answers, which are always
+                left out. Your name, email, and account are never included &mdash; the
+                developer only ever sees the raw numbers (commute distance, diet mix,
+                flights, home energy, heating, pets, water, etc.), not who they belong to.
+              </p>
+              <div id="owner-research-export" hidden>
+                <div class="account-actions">
+                  <button type="button" class="btn-secondary" id="export-research-data">Download opted-in research data (.json)</button>
+                  <button type="button" class="btn-secondary" id="export-research-data-xlsx">Download as Excel (.xlsx)</button>
                 </div>
-              </details>
+                <p class="assumptions">
+                  Only visible signed in as the app owner &mdash; pulls every opted-in
+                  user's data via a server-side check on your account email, same
+                  data as the <code>research_profiles</code>/<code>research_weeks</code>
+                  views in <code>supabase/schema.sql</code>. The Excel version loads
+                  a small spreadsheet library on demand (only when you click it), and
+                  splits the data into a "Profiles" and a "Weeks" sheet.
+                </p>
+              </div>
+            </section>
             </div>
           </div>
         </details>

@@ -296,10 +296,12 @@
     // whom (the app owner only, via the Supabase SQL Editor - never
     // readable through the app itself).
     researchOptIn: false,
-    // Optional: a fully-confirmed week_key to compare This Week's card
-    // against instead of the UK average - null means "use the UK average"
-    // (the default for everyone until they pick one on the Account page).
-    baselineWeekKey: null,
+    // Optional: a self-described "typical week from before you started
+    // tracking" to compare This Week's card against instead of the UK
+    // average - null means "use the UK average" (the default for everyone
+    // until they fill this in on the Account page). See
+    // buildBaselineWeekData() for the shape.
+    baselineWeek: null,
     // Optional: "diesel" | "hybrid" | "electric" - null means use the
     // blended-average car factor (TRANSPORT_FACTORS.car) everywhere.
     carFuelType: null,
@@ -589,7 +591,7 @@
         electricityBillTo: data.electricity_bill_to ?? null,
         electricityBillKwh: data.electricity_bill_kwh ?? null,
         researchOptIn: data.research_opt_in ?? false,
-        baselineWeekKey: data.baseline_week_key ?? null,
+        baselineWeek: data.baseline_week ?? null,
         carFuelType: data.car_fuel_type ?? null,
         university: data.university ?? null,
         habitChallenges: data.habit_challenges ?? {},
@@ -623,7 +625,7 @@
       electricity_bill_to: profile.electricityBillTo,
       electricity_bill_kwh: profile.electricityBillKwh,
       research_opt_in: profile.researchOptIn,
-      baseline_week_key: profile.baselineWeekKey,
+      baseline_week: profile.baselineWeek,
       car_fuel_type: profile.carFuelType,
       university: profile.university,
       habit_challenges: profile.habitChallenges,
@@ -928,7 +930,7 @@
       btn.classList.toggle("active", btn.dataset.tab === tab);
     });
     if (tab === "weeks") { renderYearlyInputs(); showYearList(); }
-    if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); }
+    if (tab === "leaderboard") { renderLeaderboard(); renderLeagues(); renderWeeklyAverageLeaderboard(); renderAppWideAverage(); renderHabitsCard(); }
     if (tab === "stats") renderStatsPage();
     if (tab === "account") renderAccountPage();
     if (tab === "week") renderWeekPage();
@@ -1188,15 +1190,38 @@
     renderAverageWeekCard(selectedWeekKey, totals);
   }
 
-  // A fully-confirmed week the person has picked on the Account page to
-  // compare against instead of the UK average - null if they haven't set
-  // one, or if the week they picked is no longer in weeksCache (e.g. after
-  // a data reset). Recomputed live from stored commute/diet choices, same
-  // as any other week's total, so it stays in sync with the current
-  // emission-factor constants rather than being a frozen snapshot.
+  // Expands the "typical week from before you started tracking" described
+  // on the Account page's Baseline week screen into a synthetic 7-day
+  // week - every day gets the same commute mode (for the chosen number of
+  // days/week, the rest "Didn't travel") and the same diet entry - run
+  // through the exact same weekTotals() math as a real tracked week, so
+  // this comparison stays consistent with every other total in the app
+  // rather than a second formula that could drift out of sync. Null if
+  // they haven't described one yet (falls back to the UK average).
+  function buildBaselineWeekData(baseline) {
+    if (!baseline) return null;
+    const commute = {};
+    const confirmedCommute = {};
+    const diet = {};
+    const confirmedDiet = {};
+    const dietEntry = baseline.dietType === "meat"
+      ? { type: "meat", meat: baseline.dietMeat || "chicken", portion: baseline.dietPortion || "medium" }
+      : { type: baseline.dietType || "veggie" };
+    DAYS.forEach((day, i) => {
+      commute[day.key] = i < (baseline.commuteDaysPerWeek || 0) ? (baseline.commuteMode || "none") : "none";
+      confirmedCommute[day.key] = true;
+      diet[day.key] = dietEntry;
+      confirmedDiet[day.key] = true;
+    });
+    return {
+      commute, confirmedCommute, diet, confirmedDiet,
+      alcohol: { beer: baseline.alcoholBeer || 0, wine: baseline.alcoholWine || 0, spiritsShots: 0, spiritsAbv: 40 },
+      extraJourneys: [],
+    };
+  }
+
   function getBaselineWeekData() {
-    if (!profile.baselineWeekKey) return null;
-    return weeksCache[profile.baselineWeekKey] || null;
+    return buildBaselineWeekData(profile.baselineWeek);
   }
 
   // "Compared to an average week" card: a savings-framed comparison against
@@ -2299,17 +2324,24 @@
   }
 
   // Membership-only "leagues": self + accepted friends who qualify this
-  // week (Vegan/Veggie/Commute) or have an ongoing streak (Flight-free) -
-  // see friend_leagues() in schema.sql, which computes every flag
-  // server-side and never sends the underlying diet/commute/flights data
-  // itself to the client. Not ranked totals like the leaderboards above,
-  // just "who's in" - Vegan/Veggie/Commute reset with the week; Flight-free
-  // only lists people with at least one logged (dated) flight ever, so
-  // "never answered" doesn't masquerade as "flying zero".
+  // week (Vegan/Veggie/Commute/Goal) or have an ongoing streak
+  // (Flight-free) - see friend_leagues() in schema.sql, which computes
+  // every flag server-side and never sends the underlying diet/commute/
+  // flights/goal data itself to the client. Not ranked totals like the
+  // leaderboards above, just "who's in" - Vegan/Veggie/Commute/Goal reset
+  // with the week; Flight-free only lists people with at least one logged
+  // (dated) flight ever, so "never answered" doesn't masquerade as "flying
+  // zero". Goal league membership is "on track for your own weekly goal
+  // right now" - everyone effectively has a goal (weekly_goal_kg defaults
+  // to 20 kg rather than being unset), so there's no separate "have they
+  // set one" gate; the meaningful bar is having logged at least one day
+  // this week and being at or under pace, same is_on_track_for_goal flag
+  // the server computes.
   const WEEKLY_LEAGUES = [
     { emoji: "🌱", label: "Vegan league", flag: "isVeganWeek" },
     { emoji: "🥕", label: "Veggie league", flag: "isVeggieWeek" },
     { emoji: "🚲", label: "Commute league", flag: "isCarFreeWeek" },
+    { emoji: "🎯", label: "Goal league", flag: "isOnTrackForGoal" },
   ];
 
   function buildLeagueBlock(emoji, label, members) {
@@ -2347,7 +2379,11 @@
     const grid = document.getElementById("leagues-grid");
     if (!grid || !currentUser) return;
 
-    const { data, error } = await sbClient.rpc("friend_leagues", { target_week_key: CURRENT_WEEK_KEY });
+    // day_index (1=Monday..7=Sunday) is computed client-side and passed
+    // in, same as target_week_key - the server has no reliable notion of
+    // the caller's local day, so is_on_track_for_goal's proration has to
+    // be driven from here (see the SQL function's comment).
+    const { data, error } = await sbClient.rpc("friend_leagues", { target_week_key: CURRENT_WEEK_KEY, day_index: todayIndexInWeek() });
     grid.innerHTML = "";
     if (error || !data) {
       grid.innerHTML = '<p class="empty-note">Could not load leagues right now.</p>';
@@ -2360,6 +2396,7 @@
       isVeganWeek: r.is_vegan_week,
       isVeggieWeek: r.is_veggie_week,
       isCarFreeWeek: r.is_car_free_week,
+      isOnTrackForGoal: r.is_on_track_for_goal,
       flightFreeDays: r.flight_free_days,
     }));
     // You first, then friends alphabetically - there's no other ranking
@@ -2423,42 +2460,61 @@
     document.getElementById("account-email").textContent = currentUser?.email || "";
     document.getElementById("owner-research-export").hidden =
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
-    populateBaselineWeekSelect();
+    renderBaselineWeekForm();
     renderFriendsUI();
     renderReminderCard();
     renderWeeksGrid();
   }
 
-  // Rebuilds the baseline-week dropdown from whichever of the person's own
-  // weeks are currently fully confirmed (matching what renderAverageWeekCard
-  // is willing to use as a baseline) - run every time the Account page
-  // renders, since which weeks qualify can change as more get confirmed.
-  function populateBaselineWeekSelect() {
-    const select = document.getElementById("baseline-week");
-    const fullyConfirmedKeys = Object.keys(weeksCache)
-      .filter((key) => isFullyConfirmed(weeksCache[key]))
-      .sort((a, b) => (a < b ? 1 : -1)); // newest first
+  const BASELINE_DEFAULTS = {
+    commuteMode: "car", commuteDaysPerWeek: 5,
+    dietType: "meat", dietMeat: "chicken", dietPortion: "medium",
+    alcoholBeer: 0, alcoholWine: 0,
+  };
 
-    select.innerHTML = "";
-    const noneOption = document.createElement("option");
-    noneOption.value = "";
-    noneOption.textContent = "UK average (default)";
-    select.appendChild(noneOption);
+  // Populates the Baseline week mini-form from profile.baselineWeek - falls
+  // back to BASELINE_DEFAULTS for any field so the inputs always show a
+  // sensible starting point even before the person has described their own
+  // typical week (the fields only actually take effect once they touch one
+  // and profile.baselineWeek becomes non-null - see the field listeners).
+  function renderBaselineWeekForm() {
+    const b = profile.baselineWeek || BASELINE_DEFAULTS;
+    document.getElementById("baseline-commute-mode").value = b.commuteMode ?? BASELINE_DEFAULTS.commuteMode;
+    document.getElementById("baseline-commute-days").value = b.commuteDaysPerWeek ?? BASELINE_DEFAULTS.commuteDaysPerWeek;
+    document.getElementById("baseline-diet-type").value = b.dietType ?? BASELINE_DEFAULTS.dietType;
+    document.getElementById("baseline-diet-meat").value = b.dietMeat ?? BASELINE_DEFAULTS.dietMeat;
+    document.getElementById("baseline-diet-portion").value = b.dietPortion ?? BASELINE_DEFAULTS.dietPortion;
+    document.getElementById("baseline-alcohol-beer").value = b.alcoholBeer ?? BASELINE_DEFAULTS.alcoholBeer;
+    document.getElementById("baseline-alcohol-wine").value = b.alcoholWine ?? BASELINE_DEFAULTS.alcoholWine;
+    document.getElementById("baseline-meat-fields").hidden = (b.dietType ?? BASELINE_DEFAULTS.dietType) !== "meat";
+  }
 
-    fullyConfirmedKeys.forEach((key) => {
-      const option = document.createElement("option");
-      option.value = key;
-      option.textContent = weekLabel(key);
-      select.appendChild(option);
-    });
+  // Any edit to the mini-form both creates profile.baselineWeek (if this is
+  // the first field touched) and updates it - reads the other fields'
+  // CURRENT values off the DOM rather than merging into a stale
+  // profile.baselineWeek, so filling the form in top-to-bottom order always
+  // ends up with every field reflected, not just the one most recently
+  // changed.
+  function updateBaselineWeekField() {
+    profile.baselineWeek = {
+      commuteMode: document.getElementById("baseline-commute-mode").value,
+      commuteDaysPerWeek: parseInt(document.getElementById("baseline-commute-days").value, 10) || 0,
+      dietType: document.getElementById("baseline-diet-type").value,
+      dietMeat: document.getElementById("baseline-diet-meat").value,
+      dietPortion: document.getElementById("baseline-diet-portion").value,
+      alcoholBeer: parseInt(document.getElementById("baseline-alcohol-beer").value, 10) || 0,
+      alcoholWine: parseInt(document.getElementById("baseline-alcohol-wine").value, 10) || 0,
+    };
+    document.getElementById("baseline-meat-fields").hidden = profile.baselineWeek.dietType !== "meat";
+    persistProfile();
+    renderFootprints();
+  }
 
-    // Falls back to "UK average" if the saved baseline week no longer
-    // qualifies (e.g. it's been un-confirmed or the data was reset) -
-    // renderAverageWeekCard() falls back the same way, so the dropdown and
-    // the actual comparison never disagree about what's in effect.
-    select.value = profile.baselineWeekKey && fullyConfirmedKeys.includes(profile.baselineWeekKey)
-      ? profile.baselineWeekKey
-      : "";
+  function clearBaselineWeek() {
+    profile.baselineWeek = null;
+    persistProfile();
+    renderBaselineWeekForm();
+    renderFootprints();
   }
 
   // ---------- Page: Stats (yearly estimate) ----------
@@ -2664,6 +2720,28 @@
     });
   }
 
+  // Account page's Settings section: the same list->detail->back
+  // navigation as This Year above (not the outer Account accordion's
+  // native <details> toggles), for the same reason - Vehicle/Daily
+  // reminder/Baseline week/Data sharing each carry enough fields to want
+  // a full screen rather than expanding in place. Nested one level inside
+  // the "Settings" <details>, which stays a native accordion item itself.
+  const SETTINGS_DETAIL_IDS = ["vehicle", "reminder", "baseline", "sharing"];
+
+  function showSettingsList() {
+    document.getElementById("settings-list").hidden = false;
+    SETTINGS_DETAIL_IDS.forEach((id) => {
+      document.getElementById(`settings-detail-${id}`).hidden = true;
+    });
+  }
+
+  function showSettingsDetail(id) {
+    document.getElementById("settings-list").hidden = true;
+    SETTINGS_DETAIL_IDS.forEach((detailId) => {
+      document.getElementById(`settings-detail-${detailId}`).hidden = detailId !== id;
+    });
+  }
+
   // ---------- Habits (Home page "Habits" card) ----------
   // Two streak-based habits, each backed entirely by data the app already
   // tracks elsewhere - no separate "did you do the habit today" logging
@@ -2855,16 +2933,17 @@
       `;
       grid.appendChild(tile);
 
-      // renderStatsPage() (and so renderHabitsCard()) runs from many
-      // mutation points regardless of which tab is currently on screen -
-      // e.g. adding a flight on This Year re-renders Home's numbers in
-      // the background so they're fresh whenever you do switch there.
-      // Only pop the celebration modal when Home is the tab actually
-      // visible right now, so crossing a milestone from an unrelated
-      // action on a different page doesn't ambush you with a full-screen
-      // modal that blocks your next click on whatever you were doing.
-      const homeVisible = document.getElementById("view-stats")?.hidden === false;
-      if (homeVisible) checkStreakMilestone(habit.id, streak);
+      // renderHabitsCard() runs from many mutation points regardless of
+      // which tab is currently on screen (renderStatsPage() calls it, and
+      // that in turn runs from lots of unrelated background re-renders,
+      // e.g. adding a flight on This Year) - the Habits card itself now
+      // lives on the Leaderboard page, so only pop the celebration modal
+      // when THAT'S the tab actually visible right now, same reasoning as
+      // before: crossing a milestone from an unrelated action on a
+      // different page shouldn't ambush you with a full-screen modal that
+      // blocks your next click on whatever you were doing.
+      const leaderboardVisible = document.getElementById("view-leaderboard")?.hidden === false;
+      if (leaderboardVisible) checkStreakMilestone(habit.id, streak);
     });
   }
 
@@ -3946,6 +4025,26 @@
       btn.addEventListener("click", showYearList);
     });
 
+    // Settings' own list->detail->back nav - separate data attributes
+    // (data-settings-detail/data-settings-back, not data-detail/data-back)
+    // so this wiring and This Year's above don't pick up each other's
+    // rows/back-buttons, even though both reuse the same .year-list/
+    // .year-detail/.year-back-btn classes for styling.
+    document.getElementById("settings-list").addEventListener("click", (e) => {
+      const row = e.target.closest(".year-list-row");
+      if (row) showSettingsDetail(row.dataset.settingsDetail);
+    });
+    document.querySelectorAll(".year-detail [data-settings-back]").forEach((btn) => {
+      btn.addEventListener("click", showSettingsList);
+    });
+    // Reset to the list every time Settings is (re-)opened, so leaving a
+    // detail screen open and later re-expanding Settings doesn't strand
+    // you somewhere you didn't just choose to be - same reasoning This
+    // Year resets on tab entry.
+    document.getElementById("settings-accordion-item").addEventListener("toggle", (e) => {
+      if (e.target.open) showSettingsList();
+    });
+
     document.getElementById("sign-out-btn").addEventListener("click", () => sbClient.auth.signOut());
 
     document.getElementById("week-detail-close").addEventListener("click", closeWeekDetail);
@@ -4154,11 +4253,10 @@
       persistProfile();
     });
 
-    document.getElementById("baseline-week").addEventListener("change", (e) => {
-      profile.baselineWeekKey = e.target.value || null;
-      persistProfile();
-      renderFootprints();
+    ["baseline-commute-mode", "baseline-commute-days", "baseline-diet-type", "baseline-diet-meat", "baseline-diet-portion", "baseline-alcohol-beer", "baseline-alcohol-wine"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", updateBaselineWeekField);
     });
+    document.getElementById("baseline-clear-btn").addEventListener("click", clearBaselineWeek);
 
     document.getElementById("reminder-enabled").addEventListener("change", onReminderToggle);
     document.getElementById("reminder-time").addEventListener("change", onReminderTimeChange);

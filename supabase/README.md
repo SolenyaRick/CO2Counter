@@ -398,6 +398,34 @@ card's `flightFreeStreakDays()` does in `app.js` - a shared ranking
 should only reflect people's actual logged history, not a self-declared
 "starting now".
 
+The run after that replaces `baseline_week_key` (a real week key picked
+from the person's own tracked history) with a `baseline_week jsonb`
+column: `{commuteMode, commuteDaysPerWeek, dietType, dietMeat,
+dietPortion, alcoholBeer, alcoholWine}`, a self-described "typical week
+from before you started tracking". The old approach broke down for anyone
+whose habits changed a lot after they started using the app - there was
+no real tracked week that represented "before". `app.js`'s
+`buildBaselineWeekData()` expands this into a synthetic 7-day week (the
+chosen commute mode fills the first N days matching
+`commuteDaysPerWeek`, the rest "Didn't travel"; the diet entry repeats
+every day) and runs it through the same `weekTotals()` math as a real
+week, so it's not a second formula that could drift out of sync. Also
+extends `friend_leagues()` with a Goal league: a new `day_index integer
+default 7` parameter (1=Monday..7=Sunday, client-supplied - the server has
+no reliable notion of the caller's local day, same reasoning
+`target_week_key` is already client-supplied for) and a new
+`is_on_track_for_goal` output column, true when the friend has at least
+one confirmed day this week (so a blank week doesn't trivially qualify)
+and their `total_kg` so far is at or under `weekly_goal_kg` prorated to
+`day_index / 7` - mirrors `goalForWeek()`'s client-side proration exactly.
+Since `weekly_goal_kg` always has a value (defaults to 20, never
+null/unset), there's no separate "has a goal" flag to check - the
+meaningful bar is just being on pace for whatever it's currently set to.
+Both changes verified against a real Postgres instance (inserting rows
+across a Monday/Wednesday day-index boundary and confirming
+`is_on_track_for_goal` flips exactly where expected) and a mocked browser
+run.
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table
@@ -410,9 +438,10 @@ if not exists`), so nothing needs cleaning up first.
 `ERROR: 42P13: cannot change return type of existing function` /
 `DETAIL: Row type defined by OUT parameters is different.`**: Postgres
 won't let `create or replace function` change a function's output columns
-- only `friend_weekly_average()` and `app_wide_weekly_average()` have ever
-changed shape (both gained columns over time), and the file now drops
-`app_wide_weekly_average()` before recreating it for exactly this reason.
+or parameter signature - `friend_weekly_average()`, `app_wide_weekly_average()`,
+and `friend_leagues()` have each changed shape over time (gaining columns,
+or in `friend_leagues()`'s case also a new `day_index` parameter), and the
+file drops each one before recreating it for exactly this reason.
 If you still hit this error, you're most likely on an older copy of this
 file from before that fix — pull the latest version and re-run it; nothing
 needs to be cleaned up by hand. (Verified by installing the old function

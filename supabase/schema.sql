@@ -59,15 +59,22 @@ alter table public.profiles add constraint profiles_university_check
 -- actually exposes, and to whom.
 alter table public.profiles add column if not exists research_opt_in boolean not null default false;
 
--- Optional: a fully-confirmed week_key (see weeks below) the person has
--- picked on the Account page to compare This Week's card against instead
--- of the UK average - nullable with no default, same "not answered" =
--- "use the UK average" pattern as the optional Stats-page extras above.
--- Deliberately not a foreign key into weeks (user_id, week_key) - a week
--- getting un-confirmed or deleted later shouldn't fail this column's
--- constraint, it should just make the app fall back to the UK average
--- (handled client-side in getBaselineWeekData()).
-alter table public.profiles add column if not exists baseline_week_key text;
+-- Optional: a short description of a "typical week" from before the person
+-- started tracking (commute mode/days-per-week, typical diet, typical
+-- weekly alcohol), used on the Account page to compare This Week's card
+-- against that instead of the UK average - nullable with no default, same
+-- "not answered" = "use the UK average" pattern as the optional Stats-page
+-- extras above. Used to be a fully-confirmed week_key picked from the
+-- person's own tracked history, but that meant "before I got the app" was
+-- unrepresentable - if their habits were very different before they
+-- started tracking, there was no real week to point at. A small
+-- self-described jsonb blob instead ({commuteMode, commuteDaysPerWeek,
+-- dietType, dietMeat, dietPortion, alcoholBeer, alcoholWine}) lets them
+-- describe that old typical week directly; the client expands it into a
+-- synthetic 7-day week and runs it through the exact same weekTotals()
+-- math as a real week (see buildBaselineWeekData() in app.js).
+alter table public.profiles drop column if exists baseline_week_key;
+alter table public.profiles add column if not exists baseline_week jsonb;
 
 -- Optional: "diesel" | "hybrid" | "electric" - null means use the
 -- blended-average car factor (0.171 kg CO2e/km) for both commute and
@@ -473,21 +480,35 @@ grant execute on function public.week_is_car_free(jsonb, jsonb) to authenticated
 -- Self + accepted friends' league membership for one week - Vegan/Veggie/
 -- Commute (car-free) from the three helpers above, plus flight_free_days
 -- (days since the most recent DATED flight anywhere in profiles.flights,
--- null if none logged). Deliberately doesn't fall back to a "no history"
--- streak the way the personal Habits card's flightFreeStreakDays() does
--- (that fallback exists so one person always has a number to watch, but
--- a group ranking should only compare people against their actual logged
--- history, not a self-declared "starting now"). Same privacy shape as
--- friend_leaderboard()/friend_weekly_average() above: reads the raw
--- diet/commute/flights jsonb server-side, returns only the derived
--- per-person flags a client can safely see.
+-- null if none logged), plus is_on_track_for_goal. Deliberately doesn't
+-- fall back to a "no history" streak the way the personal Habits card's
+-- flightFreeStreakDays() does (that fallback exists so one person always
+-- has a number to watch, but a group ranking should only compare people
+-- against their actual logged history, not a self-declared "starting
+-- now"). Same privacy shape as friend_leaderboard()/friend_weekly_average()
+-- above: reads the raw diet/commute/flights jsonb server-side, returns
+-- only the derived per-person flags a client can safely see.
+--
+-- is_on_track_for_goal mirrors the client's own goalForWeek()/statusClass()
+-- definition: total_kg so far this week at or under weekly_goal_kg
+-- prorated to how much of the week has elapsed (Monday = 1/7 ... Sunday =
+-- 7/7) - trivially true for everyone before anyone's logged anything, so
+-- it also requires at least one confirmed day this week, same gate
+-- friend_leaderboard() uses. day_index is supplied by the client (which
+-- day of the week it is where THEY are, 1=Monday..7=Sunday) rather than
+-- computed from the server's current_date, since the server has no
+-- reliable notion of the caller's local day - same reasoning
+-- target_week_key is already client-supplied for. Defaults to 7 (a full
+-- week, i.e. no proration) so an old client that doesn't pass it yet still
+-- gets a sane, if less precise, answer instead of an error.
 drop function if exists public.friend_leagues(text);
+drop function if exists public.friend_leagues(text, integer);
 
-create or replace function public.friend_leagues(target_week_key text)
+create or replace function public.friend_leagues(target_week_key text, day_index integer default 7)
 returns table (
   user_id uuid, display_name text, is_self boolean,
   is_vegan_week boolean, is_veggie_week boolean, is_car_free_week boolean,
-  flight_free_days integer
+  flight_free_days integer, is_on_track_for_goal boolean
 )
 language sql
 security definer
@@ -504,7 +525,14 @@ as $$
       select (current_date - max((f ->> 'date')::date))::int
       from jsonb_array_elements(coalesce(p.flights, '[]'::jsonb)) f
       where f ->> 'date' is not null
-    ) as flight_free_days
+    ) as flight_free_days,
+    (
+      (
+        exists (select 1 from jsonb_each_text(coalesce(w.confirmed_commute, '{}'::jsonb)) kv where kv.value = 'true')
+        or exists (select 1 from jsonb_each_text(coalesce(w.confirmed_diet, '{}'::jsonb)) kv where kv.value = 'true')
+      )
+      and coalesce(w.total_kg, 0) <= p.weekly_goal_kg * (greatest(1, least(7, day_index))::numeric / 7)
+    ) as is_on_track_for_goal
   from public.profiles p
   left join public.weeks w on w.user_id = p.id and w.week_key = target_week_key
   where
@@ -517,8 +545,8 @@ as $$
     );
 $$;
 
-revoke all on function public.friend_leagues(text) from public;
-grant execute on function public.friend_leagues(text) to authenticated;
+revoke all on function public.friend_leagues(text, integer) from public;
+grant execute on function public.friend_leagues(text, integer) to authenticated;
 
 -- App-wide averages across every account, not just friends - for the
 -- Leaderboard page's "Everyone on the app" card. Two figures:
