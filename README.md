@@ -244,11 +244,11 @@ color too with no extra CSS.
   bottom-up figures as the Home page) — "X kg CO2e saved vs an average
   week" (green) or "X kg over" (red), prorated to how far through the week
   it is the same way the History section's per-week goal is. You can swap
-  the UK average out for one of your own fully-confirmed weeks instead
-  (Account page, "Baseline week") — the box then reads "vs your baseline
-  week" and compares full totals (commute + food + alcohol) rather than
-  the UK average's commute+food-only figure, since a real week of yours
-  has actual alcohol data on both sides where the UK average doesn't. A
+  the UK average out for a custom typical week instead (Account page,
+  Settings, "Baseline week") — the box then reads "vs your baseline week"
+  and compares full totals (commute + food + alcohol) rather than the UK
+  average's commute+food-only figure, since a baseline week has actual
+  alcohol data on both sides where the UK average doesn't. A
   "Reset this week" button sits at the bottom of the card. Below that, the
   inputs, toggleable between "This week" and "Last week". For each day (M–S) pick
   how you got to work (Walk, Cycle, Train, Car, or
@@ -452,10 +452,10 @@ color too with no extra CSS.
   browser remembers each section's open/closed state for free across tab
   switches, since navigating away and back never rebuilds this DOM.
   - **Account** — the two things you'd look for first: a "Profile" card
-    (display name, university - optional, "Not affiliated" or one of a
-    fixed list, powers the Home page's "Uni average" comparison chip once
-    enough people from the same university have signed up - standard
-    commute distance, weekly CO2e goal with three quick-set presets
+    (an optional profile photo, display name, university - optional, "Not
+    affiliated" or one of a fixed list, powers the Home page's "Uni
+    average" comparison chip once enough people from the same university
+    have signed up - weekly CO2e goal with three quick-set presets
     alongside typing your own number: "Match UK average week", "1.5°C
     2030 (food + commute)" — our own estimate, since there's no official
     category-level split of the 1.5°C target — and "Match world average
@@ -467,7 +467,16 @@ color too with no extra CSS.
     included), not just its data — required for App Store review, since
     Apple mandates in-app account deletion for any app that supports
     account creation. Different from "Reset all data" on the Data
-    section, which clears your data but keeps the account.
+    section, which clears your data but keeps the account. The profile
+    photo is a small square JPEG data URL rather than a Supabase Storage
+    object — the browser crops it to a centered square and downsizes it to
+    200×200 client-side on upload (`cropAndResizeImage()` in `app.js`,
+    `<canvas>`-based) before it's ever sent, so it's just one more text
+    column (`avatar_data_url`, length-capped at 300,000 chars as a
+    defense-in-depth backstop) on the same `profiles` row everything else
+    already lives on — no bucket or storage policies to stand up for the
+    app's one and only image. No photo shows an initial-letter placeholder
+    (your display name's first letter) instead of a broken `<img>`.
   - **Settings** — its own list->detail->back navigation, same pattern as
     This Year, rather than either a plain toggle list or a second nested
     accordion (`showSettingsList()`/`showSettingsDetail(id)` in `app.js`,
@@ -475,13 +484,15 @@ color too with no extra CSS.
     markup and CSS This Year's drill-down already established, plus a
     small SVG line icon per row matching that page's style) - opening
     "Settings" itself always resets back to the row list, even if a detail
-    screen was left open from before. Four items: **Vehicle** (whether you own or
-    regularly drive a car, and what type — Diesel, Hybrid, or Electric/EV,
-    which swaps in a DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111
-    hybrid, ~0.058 electric — used for both every "Car" day you log on
-    This Week and any Car-mode additional journeys; lives here rather
-    than on This Year since it's a persistent characteristic like commute
-    distance, not a yearly one-off input); **Daily reminder** (one local
+    screen was left open from before. Four items: **Vehicle** (standard
+    commute distance, one-way in km, used for every commute-footprint
+    calculation regardless of mode; whether you own or regularly drive a
+    car, and what type — Diesel, Hybrid, or Electric/EV, which swaps in a
+    DEFRA-style factor — ~0.171 kg CO2e/km diesel, ~0.111 hybrid, ~0.058
+    electric — used for both every "Car" day you log on This Week and any
+    Car-mode additional journeys; lives here rather than on This Year
+    since it's a persistent characteristic, not a yearly one-off input);
+    **Daily reminder** (one local
     notification a day, at a time you pick, nudging you to log today's
     commute and meals, via `@capacitor/local-notifications` - entirely
     on-device, no server or push certificates involved, and the
@@ -500,23 +511,28 @@ color too with no extra CSS.
     refresh, never a duplicate. Turning it on requests the OS notification
     permission there and then - declining it un-checks the toggle and
     shows an inline note pointing at iOS Settings); **Baseline week** (a
-    mini form describing a typical week from before you started tracking
-    — how you usually got to work and how many days a week, what you
-    usually ate, beers/wine glasses per week — rather than picking one of
-    your own past tracked weeks, since someone whose habits changed a lot
-    after they started using the app would have no real week to point at
-    that actually represents "before". The client expands your answers
-    into a synthetic 7-day week (`buildBaselineWeekData()` in `app.js` -
-    the chosen commute mode fills the first N days, matching the
-    days-per-week you gave, the rest "Didn't travel"; the chosen diet
-    entry repeats every day) and runs it through the exact same
-    `weekTotals()` math as a real tracked week, so this comparison stays
-    consistent with every other total in the app rather than a second,
-    possibly-drifting formula. Stored as a single `baseline_week` jsonb
-    column on `profiles` (`{commuteMode, commuteDaysPerWeek, dietType,
-    dietMeat, dietPortion, alcoholBeer, alcoholWine}`), replacing the old
-    `baseline_week_key` column that pointed at a real week; "Use UK
-    average instead" clears it back to null); and **Data sharing** (renamed from "Help improve UK
+    typical week from before you started tracking, to compare This Week's
+    card against instead of the UK average — a 3-way toggle at the top
+    picks how you set it: **Custom week** reuses the exact same day-by-day
+    commute and diet tables as This Week itself
+    (`buildCommuteTable()`/`buildDietTable()` in `app.js`, refactored to
+    take a target week + options rather than always assuming This Week's
+    own data, so this is literally the same form, not a lookalike) — minus
+    the confirm-tap column, since a hypothetical typical week has no
+    "hasn't happened yet" day to withhold, so every edit counts
+    immediately; **Copy a week** lists your own previously tracked weeks
+    and copies whichever one you pick into that same editable form as a
+    starting point — a one-time snapshot, not a live link back to the real
+    week, so editing that real week afterwards on This Week never shifts
+    an already-set baseline out from under you; **UK average** shows a
+    "Use the UK average instead" button that clears any custom baseline —
+    merely viewing that tab changes nothing on its own. Runs through the
+    exact same `weekTotals()` math as a real tracked week either way (it's
+    stored in the exact same shape as one — `{commute, diet,
+    confirmedCommute, confirmedDiet, alcohol}` — in the `baseline_week`
+    jsonb column on `profiles`), so this comparison stays consistent with
+    every other total in the app rather than a second, possibly-drifting
+    formula); and **Data sharing** (renamed from "Help improve UK
     averages" - the same research opt-in, off by default — if turned on,
     everything on the Account/Settings/Home pages except your banking
     answers becomes visible to the app developer for calibrating the

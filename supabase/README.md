@@ -442,6 +442,39 @@ column, distinguished by which key is present (`targetPerWeek` vs.
 a one-off "switching banks could save you N kg/year" nudge with a
 comparison page, not something with an ongoing streak or weekly cap.
 
+The run after that adds an `avatar_data_url text` column to `profiles`
+for an optional profile photo (Account page), `check`-constrained to at
+most 300,000 characters. That length cap is a defense-in-depth backstop,
+not the primary control: the client (`cropAndResizeImage()` in `app.js`)
+crops the uploaded image to a centered square and downsizes it to 200×200
+before ever encoding it as a JPEG data URL, and `handleAvatarFileSelected()`
+already refuses to save anything longer than the same 300,000-character
+limit client-side, so real uploads land closer to 15–40KB — the schema
+constraint just guarantees the database itself can never be sent
+something wildly oversized, however it got there. No Supabase Storage
+bucket: this is the only image anywhere in the app, so one more text
+column on a row `persistProfile()` already syncs in full is simpler than
+standing up a second upload path with its own bucket and policies.
+
+The run after that changes what shape the existing `baseline_week` jsonb
+column holds - no schema change, since it was always a deliberately
+unstructured blob interpreted entirely client-side. It used to be a small
+self-described "typical week" ({commuteMode, commuteDaysPerWeek,
+dietType, ...}) the client expanded into a synthetic 7-day week; now it's
+the exact same shape as a real tracked week ({commute, diet,
+confirmedCommute, confirmedDiet, alcohol, extraJourneys}), so the Account
+page's Baseline week screen can reuse This Week's actual day-by-day
+commute/diet tables directly (`buildCommuteTable()`/`buildDietTable()` in
+`app.js`, refactored to take a target week + render options instead of
+always assuming This Week's own selected week) rather than a lookalike
+abbreviated form. Filled in by hand-editing that form ("Custom week" tab,
+every day pre-confirmed since a hypothetical typical week has no "hasn't
+happened yet" day to withhold, so there's no confirm step at all) or by
+copying one of the person's own past tracked weeks as an editable
+starting point ("Copy a week" tab, `copyWeekToBaseline()` - a one-time
+snapshot, not a live reference, so editing that real week afterwards on
+This Week never shifts an already-set baseline out from under you).
+
 **If running this on a brand-new/empty database gave you
 `ERROR: 42P01: relation "public.friendships" does not exist`**: that was a
 real ordering bug (a `profiles` policy referenced the `friendships` table

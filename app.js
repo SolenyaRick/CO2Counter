@@ -296,11 +296,18 @@
     // whom (the app owner only, via the Supabase SQL Editor - never
     // readable through the app itself).
     researchOptIn: false,
-    // Optional: a self-described "typical week from before you started
-    // tracking" to compare This Week's card against instead of the UK
-    // average - null means "use the UK average" (the default for everyone
-    // until they fill this in on the Account page). See
-    // buildBaselineWeekData() for the shape.
+    // Optional: a typical week from before you started tracking, to
+    // compare This Week's card against instead of the UK average - null
+    // means "use the UK average" (the default for everyone until they set
+    // one on the Account page's Baseline week screen). Same shape as a
+    // real tracked week (see blankWeek()): {commute, diet,
+    // confirmedCommute, confirmedDiet, alcohol, extraJourneys}, built
+    // either by hand-editing the real day-by-day commute/diet tables
+    // (see the Baseline week screen's "Custom week" tab) or by copying
+    // one of your own past tracked weeks as a starting point ("Copy a
+    // week" tab) - confirmedCommute/confirmedDiet are always all-true
+    // here, since a hypothetical typical week has no "hasn't happened
+    // yet" day to withhold, unlike a real one.
     baselineWeek: null,
     // Optional: "diesel" | "hybrid" | "electric" - null means use the
     // blended-average car factor (TRANSPORT_FACTORS.car) everywhere.
@@ -320,6 +327,15 @@
     // any tile, so the feature stays fully opt-in rather than always
     // pushing two streak tiles at everyone regardless of interest.
     chosenHabit: null,
+    // Optional profile photo (Account page) - a small square JPEG data URL,
+    // resized/compressed client-side on upload (see
+    // handleAvatarFileSelected()) so it stays well within the schema's
+    // length cap. null shows the initial-letter placeholder instead of an
+    // <img>. Deliberately not Supabase Storage: this app has no other use
+    // for a storage bucket, so one more text column on the row already
+    // synced by persistProfile() is simpler than standing up a second
+    // upload path with its own bucket/policies.
+    avatarDataUrl: null,
   };
 
   function blankWeek() {
@@ -602,6 +618,7 @@
         university: data.university ?? null,
         habitChallenges: data.habit_challenges ?? {},
         chosenHabit: data.chosen_habit ?? null,
+        avatarDataUrl: data.avatar_data_url ?? null,
       };
     } else {
       profile = { ...DEFAULT_PROFILE };
@@ -637,6 +654,7 @@
       university: profile.university,
       habit_challenges: profile.habitChallenges,
       chosen_habit: profile.chosenHabit,
+      avatar_data_url: profile.avatarDataUrl,
     };
   }
 
@@ -954,7 +972,16 @@
   }
 
   // ---------- Page 1: This Week ----------
-  function createConfirmButton(weekData, kind, dayKey) {
+  // The default onChange for both tables below - This Week's own
+  // persist-and-refresh. Callers editing a *different* week's data (the
+  // Baseline week screen) pass their own opts.onChange instead.
+  function defaultWeekTableOnChange() {
+    persistWeek(selectedWeekKey);
+    renderFootprints();
+  }
+
+  function createConfirmButton(weekData, kind, dayKey, onChange) {
+    onChange = onChange || defaultWeekTableOnChange;
     const confirmedMap = kind === "commute" ? weekData.confirmedCommute : weekData.confirmedDiet;
     const btn = document.createElement("button");
     btn.type = "button";
@@ -966,17 +993,24 @@
       btn.classList.remove("pop");
       void btn.offsetWidth; // restart the animation if clicked again
       btn.classList.add("confirmed", "pop");
-      persistWeek(selectedWeekKey);
-      renderFootprints();
+      onChange();
     });
     return btn;
   }
 
-  function buildCommuteTable() {
-    const weekData = getWeek(selectedWeekKey);
-    const tbody = document.querySelector("#commute-table tbody");
+  // Builds the day-by-day commute table - This Week's own, by default
+  // (called with no args, exactly as before), or any other week-shaped
+  // data via opts (used by the Baseline week screen's "Custom week" tab
+  // to reuse this exact same form instead of a separate abbreviated one).
+  function buildCommuteTable(weekData, opts) {
+    weekData = weekData || getWeek(selectedWeekKey);
+    opts = opts || {};
+    const showConfirm = opts.showConfirm !== false;
+    const showFootprint = opts.showFootprint !== false;
+    const onChange = opts.onChange || defaultWeekTableOnChange;
+    const tbody = document.querySelector(opts.tbodySelector || "#commute-table tbody");
     tbody.innerHTML = "";
-    const todayKey = selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null;
+    const todayKey = "todayKey" in opts ? opts.todayKey : (selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null);
     DAYS.forEach((day) => {
       const tr = document.createElement("tr");
       if (day.key === todayKey) tr.classList.add("is-today");
@@ -1000,26 +1034,31 @@
         select.appendChild(opt);
       });
       select.value = weekData.commute[day.key];
-      const confirmBtn = createConfirmButton(weekData, "commute", day.key);
+      const confirmBtn = showConfirm ? createConfirmButton(weekData, "commute", day.key, onChange) : null;
       select.addEventListener("change", () => {
         weekData.commute[day.key] = select.value;
-        weekData.confirmedCommute[day.key] = false;
-        confirmBtn.classList.remove("confirmed", "pop");
-        persistWeek(selectedWeekKey);
-        renderFootprints();
+        if (showConfirm) {
+          weekData.confirmedCommute[day.key] = false;
+          confirmBtn.classList.remove("confirmed", "pop");
+        }
+        onChange();
       });
       modeTd.appendChild(select);
       tr.appendChild(modeTd);
 
-      const footTd = document.createElement("td");
-      footTd.className = "row-footprint";
-      footTd.dataset.commuteFootprint = day.key;
-      tr.appendChild(footTd);
+      if (showFootprint) {
+        const footTd = document.createElement("td");
+        footTd.className = "row-footprint";
+        footTd.dataset.commuteFootprint = day.key;
+        tr.appendChild(footTd);
+      }
 
-      const confirmTd = document.createElement("td");
-      confirmTd.className = "day-confirm-cell";
-      confirmTd.appendChild(confirmBtn);
-      tr.appendChild(confirmTd);
+      if (showConfirm) {
+        const confirmTd = document.createElement("td");
+        confirmTd.className = "day-confirm-cell";
+        confirmTd.appendChild(confirmBtn);
+        tr.appendChild(confirmTd);
+      }
 
       tbody.appendChild(tr);
     });
@@ -1033,20 +1072,33 @@
     return parts.join(" · ");
   }
 
-  function setDietEntry(weekData, dayKey, entry, confirmBtn) {
+  function setDietEntry(weekData, dayKey, entry, confirmBtn, opts) {
+    opts = opts || {};
+    const showConfirm = opts.showConfirm !== false;
+    const onChange = opts.onChange || defaultWeekTableOnChange;
+    const rebuild = opts.rebuild || (() => buildDietTable(weekData, opts));
     weekData.diet[dayKey] = entry;
-    weekData.confirmedDiet[dayKey] = false;
-    confirmBtn.classList.remove("confirmed", "pop");
-    persistWeek(selectedWeekKey);
-    buildDietTable();
-    renderFootprints();
+    if (showConfirm) {
+      weekData.confirmedDiet[dayKey] = false;
+      confirmBtn.classList.remove("confirmed", "pop");
+    }
+    onChange();
+    rebuild();
   }
 
-  function buildDietTable() {
-    const weekData = getWeek(selectedWeekKey);
-    const container = document.getElementById("diet-table");
+  // Builds the day-by-day diet table - same "This Week's own by default,
+  // any other week-shaped data via opts" reuse as buildCommuteTable()
+  // above.
+  function buildDietTable(weekData, opts) {
+    weekData = weekData || getWeek(selectedWeekKey);
+    opts = opts || {};
+    const showConfirm = opts.showConfirm !== false;
+    const showFootprint = opts.showFootprint !== false;
+    const onChange = opts.onChange || defaultWeekTableOnChange;
+    const rebuild = () => buildDietTable(weekData, opts);
+    const container = document.querySelector(opts.containerSelector || "#diet-table");
     container.innerHTML = "";
-    const todayKey = selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null;
+    const todayKey = "todayKey" in opts ? opts.todayKey : (selectedWeekKey === CURRENT_WEEK_KEY ? todayDayKey() : null);
     DAYS.forEach((day) => {
       const row = document.createElement("div");
       row.className = "diet-day-row";
@@ -1065,7 +1117,8 @@
       cell.className = "diet-cell";
       const entry = weekData.diet[day.key];
 
-      const confirmBtn = createConfirmButton(weekData, "diet", day.key);
+      const confirmBtn = showConfirm ? createConfirmButton(weekData, "diet", day.key, onChange) : null;
+      const entryOpts = { showConfirm, onChange, rebuild };
 
       const typeRow = document.createElement("div");
       typeRow.className = "diet-type-row";
@@ -1084,9 +1137,9 @@
         btn.addEventListener("click", () => {
           const eatOut = entry?.eatOut || false;
           if (type === "meat") {
-            setDietEntry(weekData, day.key, { type: "meat", meat, portion: entry?.meat === meat ? entry.portion : "medium", eatOut }, confirmBtn);
+            setDietEntry(weekData, day.key, { type: "meat", meat, portion: entry?.meat === meat ? entry.portion : "medium", eatOut }, confirmBtn, entryOpts);
           } else {
-            setDietEntry(weekData, day.key, { type, eatOut }, confirmBtn);
+            setDietEntry(weekData, day.key, { type, eatOut }, confirmBtn, entryOpts);
           }
         });
         return btn;
@@ -1113,7 +1166,7 @@
           btn.setAttribute("aria-label", PORTION_LABELS[portion]);
           btn.classList.toggle("active", entry.portion === portion);
           btn.addEventListener("click", () => {
-            setDietEntry(weekData, day.key, { ...entry, portion }, confirmBtn);
+            setDietEntry(weekData, day.key, { ...entry, portion }, confirmBtn, entryOpts);
           });
           portionRow.appendChild(btn);
         });
@@ -1136,7 +1189,7 @@
           btn.title = value ? "Eating out for dinner" : "Eating in for dinner";
           btn.classList.toggle("active", Boolean(entry.eatOut) === value);
           btn.addEventListener("click", () => {
-            setDietEntry(weekData, day.key, { ...entry, eatOut: value }, confirmBtn);
+            setDietEntry(weekData, day.key, { ...entry, eatOut: value }, confirmBtn, entryOpts);
           });
           eatRow.appendChild(btn);
         });
@@ -1151,11 +1204,13 @@
         }
       }
 
-      const footprint = document.createElement("span");
-      footprint.className = "row-footprint";
-      footprint.dataset.foodFootprint = day.key;
-      head.appendChild(footprint);
-      head.appendChild(confirmBtn);
+      if (showFootprint) {
+        const footprint = document.createElement("span");
+        footprint.className = "row-footprint";
+        footprint.dataset.foodFootprint = day.key;
+        head.appendChild(footprint);
+      }
+      if (showConfirm) head.appendChild(confirmBtn);
 
       row.appendChild(head);
       row.appendChild(cell);
@@ -1207,38 +1262,14 @@
     renderAverageWeekCard(selectedWeekKey, totals);
   }
 
-  // Expands the "typical week from before you started tracking" described
-  // on the Account page's Baseline week screen into a synthetic 7-day
-  // week - every day gets the same commute mode (for the chosen number of
-  // days/week, the rest "Didn't travel") and the same diet entry - run
-  // through the exact same weekTotals() math as a real tracked week, so
-  // this comparison stays consistent with every other total in the app
-  // rather than a second formula that could drift out of sync. Null if
-  // they haven't described one yet (falls back to the UK average).
-  function buildBaselineWeekData(baseline) {
-    if (!baseline) return null;
-    const commute = {};
-    const confirmedCommute = {};
-    const diet = {};
-    const confirmedDiet = {};
-    const dietEntry = baseline.dietType === "meat"
-      ? { type: "meat", meat: baseline.dietMeat || "chicken", portion: baseline.dietPortion || "medium" }
-      : { type: baseline.dietType || "veggie" };
-    DAYS.forEach((day, i) => {
-      commute[day.key] = i < (baseline.commuteDaysPerWeek || 0) ? (baseline.commuteMode || "none") : "none";
-      confirmedCommute[day.key] = true;
-      diet[day.key] = dietEntry;
-      confirmedDiet[day.key] = true;
-    });
-    return {
-      commute, confirmedCommute, diet, confirmedDiet,
-      alcohol: { beer: baseline.alcoholBeer || 0, wine: baseline.alcoholWine || 0, spiritsShots: 0, spiritsAbv: 40 },
-      extraJourneys: [],
-    };
-  }
-
+  // profile.baselineWeek is already in exactly the shape weekTotals() and
+  // the real week-editing widgets expect (see DEFAULT_PROFILE's comment
+  // and the Baseline week screen's setup below) - no synthesis needed, so
+  // this comparison runs through the exact same weekTotals() math as a
+  // real tracked week rather than a second, possibly-drifting formula.
+  // Null if nothing's been set yet (falls back to the UK average).
   function getBaselineWeekData() {
-    return buildBaselineWeekData(profile.baselineWeek);
+    return profile.baselineWeek;
   }
 
   // "Compared to an average week" card: a savings-framed comparison against
@@ -2524,57 +2555,192 @@
     renderFriendsUI();
     renderReminderCard();
     renderWeeksGrid();
+    renderProfileAvatar();
   }
 
-  const BASELINE_DEFAULTS = {
-    commuteMode: "car", commuteDaysPerWeek: 5,
-    dietType: "meat", dietMeat: "chicken", dietPortion: "medium",
-    alcoholBeer: 0, alcoholWine: 0,
-  };
+  // ---------- Profile photo (Account page) ----------
+  // Stored as a small square JPEG data URL (profile.avatarDataUrl) rather
+  // than in Supabase Storage - see the DEFAULT_PROFILE comment for why.
+  // Resized/cropped client-side on upload so what actually gets stored
+  // stays tiny regardless of the source photo's size.
+  const AVATAR_SIZE = 200; // px, square
+  const AVATAR_MAX_DATA_URL_LENGTH = 300000; // matches the schema's check constraint
 
-  // Populates the Baseline week mini-form from profile.baselineWeek - falls
-  // back to BASELINE_DEFAULTS for any field so the inputs always show a
-  // sensible starting point even before the person has described their own
-  // typical week (the fields only actually take effect once they touch one
-  // and profile.baselineWeek becomes non-null - see the field listeners).
-  function renderBaselineWeekForm() {
-    const b = profile.baselineWeek || BASELINE_DEFAULTS;
-    document.getElementById("baseline-commute-mode").value = b.commuteMode ?? BASELINE_DEFAULTS.commuteMode;
-    document.getElementById("baseline-commute-days").value = b.commuteDaysPerWeek ?? BASELINE_DEFAULTS.commuteDaysPerWeek;
-    document.getElementById("baseline-diet-type").value = b.dietType ?? BASELINE_DEFAULTS.dietType;
-    document.getElementById("baseline-diet-meat").value = b.dietMeat ?? BASELINE_DEFAULTS.dietMeat;
-    document.getElementById("baseline-diet-portion").value = b.dietPortion ?? BASELINE_DEFAULTS.dietPortion;
-    document.getElementById("baseline-alcohol-beer").value = b.alcoholBeer ?? BASELINE_DEFAULTS.alcoholBeer;
-    document.getElementById("baseline-alcohol-wine").value = b.alcoholWine ?? BASELINE_DEFAULTS.alcoholWine;
-    document.getElementById("baseline-meat-fields").hidden = (b.dietType ?? BASELINE_DEFAULTS.dietType) !== "meat";
+  function renderProfileAvatar() {
+    const img = document.getElementById("profile-avatar-img");
+    const placeholder = document.getElementById("profile-avatar-placeholder");
+    const removeBtn = document.getElementById("profile-avatar-remove-btn");
+    if (profile.avatarDataUrl) {
+      img.src = profile.avatarDataUrl;
+      img.hidden = false;
+      placeholder.hidden = true;
+      removeBtn.hidden = false;
+    } else {
+      img.hidden = true;
+      img.removeAttribute("src");
+      placeholder.hidden = false;
+      placeholder.textContent = (profile.name || "?").trim().charAt(0).toUpperCase() || "?";
+      removeBtn.hidden = true;
+    }
   }
 
-  // Any edit to the mini-form both creates profile.baselineWeek (if this is
-  // the first field touched) and updates it - reads the other fields'
-  // CURRENT values off the DOM rather than merging into a stale
-  // profile.baselineWeek, so filling the form in top-to-bottom order always
-  // ends up with every field reflected, not just the one most recently
-  // changed.
-  function updateBaselineWeekField() {
-    profile.baselineWeek = {
-      commuteMode: document.getElementById("baseline-commute-mode").value,
-      commuteDaysPerWeek: parseInt(document.getElementById("baseline-commute-days").value, 10) || 0,
-      dietType: document.getElementById("baseline-diet-type").value,
-      dietMeat: document.getElementById("baseline-diet-meat").value,
-      dietPortion: document.getElementById("baseline-diet-portion").value,
-      alcoholBeer: parseInt(document.getElementById("baseline-alcohol-beer").value, 10) || 0,
-      alcoholWine: parseInt(document.getElementById("baseline-alcohol-wine").value, 10) || 0,
-    };
-    document.getElementById("baseline-meat-fields").hidden = profile.baselineWeek.dietType !== "meat";
+  function showAvatarError(message) {
+    const el = document.getElementById("profile-avatar-error");
+    el.textContent = message;
+    el.hidden = !message;
+  }
+
+  // Crops the source image to a centered square, then draws it down to a
+  // fixed small size - so a huge photo straight off a phone camera and a
+  // tiny square icon both end up the same predictable size on disk,
+  // instead of storing whatever resolution/aspect ratio was uploaded.
+  function cropAndResizeImage(imageBitmap, size) {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const srcSize = Math.min(imageBitmap.width, imageBitmap.height);
+    const srcX = (imageBitmap.width - srcSize) / 2;
+    const srcY = (imageBitmap.height - srcSize) / 2;
+    ctx.drawImage(imageBitmap, srcX, srcY, srcSize, srcSize, 0, 0, size, size);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  }
+
+  async function handleAvatarFileSelected(file) {
+    showAvatarError("");
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showAvatarError("That file doesn't look like an image.");
+      return;
+    }
+    try {
+      const bitmap = await createImageBitmap(file);
+      const dataUrl = cropAndResizeImage(bitmap, AVATAR_SIZE);
+      if (dataUrl.length > AVATAR_MAX_DATA_URL_LENGTH) {
+        showAvatarError("That image is too large even after resizing - try a different photo.");
+        return;
+      }
+      profile.avatarDataUrl = dataUrl;
+      renderProfileAvatar();
+      persistProfile();
+    } catch (e) {
+      console.error("Failed to process avatar image", e);
+      showAvatarError("Couldn't read that image - try a different file.");
+    }
+  }
+
+  function removeAvatar() {
+    profile.avatarDataUrl = null;
+    showAvatarError("");
+    renderProfileAvatar();
     persistProfile();
-    renderFootprints();
   }
 
-  function clearBaselineWeek() {
-    profile.baselineWeek = null;
+  // ---------- Baseline week screen (Account > Settings) ----------
+  // Which of the 3 tabs is showing - transient UI state, not persisted
+  // (reset to match the actual data whenever the screen is freshly
+  // entered - see showSettingsDetail()). "copy" is purely an action tab:
+  // picking a week there immediately copies it and flips back to
+  // "custom", it never stays selected on its own.
+  let baselineViewMode = "custom";
+  // The Custom tab's working data - mirrors profile.baselineWeek once
+  // anything real exists, otherwise a fresh blank template that merely
+  // VIEWING the tab must not persist (see onBaselineChange(), the only
+  // place that actually commits it to profile.baselineWeek).
+  let baselineDraft = null;
+
+  function getBaselineDraft() {
+    if (profile.baselineWeek) { baselineDraft = profile.baselineWeek; return baselineDraft; }
+    if (!baselineDraft) baselineDraft = blankWeek();
+    return baselineDraft;
+  }
+
+  // Fires on any edit within the Custom week tab - commits the draft to
+  // profile.baselineWeek on the very first real edit (a bare "viewed the
+  // tab but changed nothing" never gets persisted), and keeps every day
+  // pre-confirmed: a hypothetical typical week has no "hasn't happened
+  // yet" day to withhold the way a real one does, so there's no confirm
+  // step in this form at all (see buildCommuteTable()/buildDietTable()'s
+  // showConfirm:false below) and every edit counts immediately.
+  function onBaselineChange() {
+    if (!profile.baselineWeek) profile.baselineWeek = baselineDraft;
+    DAYS.forEach((d) => {
+      profile.baselineWeek.confirmedCommute[d.key] = true;
+      profile.baselineWeek.confirmedDiet[d.key] = true;
+    });
+    persistProfile();
+    renderBaselineTotal();
+  }
+
+  function renderBaselineTotal() {
+    const el = document.getElementById("baseline-total-value");
+    if (!el) return;
+    el.textContent = fmt(weekTotals(getBaselineDraft()).total);
+  }
+
+  // Copies a real tracked week's data into the baseline as an editable
+  // snapshot - deliberately a one-time copy, not a live reference, so
+  // later editing that real week on This Week never silently shifts an
+  // already-set baseline out from under you.
+  function copyWeekToBaseline(weekKey) {
+    const src = weeksCache[weekKey];
+    if (!src) return;
+    const copy = {
+      commute: { ...src.commute },
+      diet: Object.fromEntries(DAYS.map((d) => [d.key, { ...(src.diet[d.key] || { type: "" }) }])),
+      confirmedCommute: Object.fromEntries(DAYS.map((d) => [d.key, true])),
+      confirmedDiet: Object.fromEntries(DAYS.map((d) => [d.key, true])),
+      alcohol: { ...src.alcohol },
+      extraJourneys: [],
+    };
+    profile.baselineWeek = copy;
+    baselineDraft = copy;
+    baselineViewMode = "custom";
     persistProfile();
     renderBaselineWeekForm();
-    renderFootprints();
+  }
+
+  function useUkAverageBaseline() {
+    profile.baselineWeek = null;
+    baselineDraft = null;
+    persistProfile();
+    renderBaselineWeekForm();
+  }
+
+  function renderBaselineCopyList() {
+    const container = document.getElementById("baseline-copy-list");
+    const weekKeys = Object.keys(weeksCache).sort().reverse();
+    if (weekKeys.length === 0) {
+      container.innerHTML = `<p class="assumptions">You haven't tracked any weeks yet.</p>`;
+      return;
+    }
+    container.innerHTML = weekKeys.map((key) => `
+      <button type="button" class="year-list-row" data-copy-week="${key}">
+        <span class="year-list-label">${weekLabel(key)}</span>
+        <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+      </button>
+    `).join("");
+  }
+
+  function renderBaselineWeekForm() {
+    document.querySelectorAll("#baseline-mode-toggle .week-picker-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.baselineMode === baselineViewMode);
+    });
+    document.getElementById("baseline-mode-custom").hidden = baselineViewMode !== "custom";
+    document.getElementById("baseline-mode-copy").hidden = baselineViewMode !== "copy";
+    document.getElementById("baseline-mode-ukaverage").hidden = baselineViewMode !== "ukAverage";
+
+    if (baselineViewMode === "custom") {
+      const weekData = getBaselineDraft();
+      const opts = { showConfirm: false, showFootprint: false, todayKey: null, onChange: onBaselineChange };
+      buildCommuteTable(weekData, { ...opts, tbodySelector: "#baseline-commute-table tbody" });
+      buildDietTable(weekData, { ...opts, containerSelector: "#baseline-diet-table" });
+      document.getElementById("baseline-alcohol-beer").value = weekData.alcohol.beer || 0;
+      document.getElementById("baseline-alcohol-wine").value = weekData.alcohol.wine || 0;
+      renderBaselineTotal();
+    } else if (baselineViewMode === "copy") {
+      renderBaselineCopyList();
+    }
   }
 
   // ---------- Page: Stats (yearly estimate) ----------
@@ -2821,6 +2987,13 @@
     SETTINGS_DETAIL_IDS.forEach((detailId) => {
       document.getElementById(`settings-detail-${detailId}`).hidden = detailId !== id;
     });
+    // Reset to whichever tab reflects the actual data, rather than
+    // leaving it on "copy" (an action tab, never meant to stick) or on
+    // "custom" from a previous visit if the baseline's since been cleared.
+    if (id === "baseline") {
+      baselineViewMode = profile.baselineWeek ? "custom" : "ukAverage";
+      renderBaselineWeekForm();
+    }
   }
 
   // ---------- Habits (Leaderboard page "Habits" card) ----------
@@ -4464,7 +4637,16 @@
     document.getElementById("profile-name").addEventListener("input", (e) => {
       profile.name = e.target.value;
       persistProfile();
+      renderProfileAvatar(); // keeps the placeholder's initial in sync with the name
     });
+    document.getElementById("profile-avatar-change-btn").addEventListener("click", () => {
+      document.getElementById("profile-avatar-input").click();
+    });
+    document.getElementById("profile-avatar-input").addEventListener("change", (e) => {
+      handleAvatarFileSelected(e.target.files[0]);
+      e.target.value = ""; // allow re-selecting the same file later
+    });
+    document.getElementById("profile-avatar-remove-btn").addEventListener("click", removeAvatar);
     document.getElementById("profile-distance").addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       profile.commuteDistanceKm = Number.isFinite(val) && val >= 0 ? val : 0;
@@ -4602,10 +4784,27 @@
       persistProfile();
     });
 
-    ["baseline-commute-mode", "baseline-commute-days", "baseline-diet-type", "baseline-diet-meat", "baseline-diet-portion", "baseline-alcohol-beer", "baseline-alcohol-wine"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", updateBaselineWeekField);
+    document.querySelectorAll("#baseline-mode-toggle .week-picker-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        baselineViewMode = btn.dataset.baselineMode;
+        renderBaselineWeekForm();
+      });
     });
-    document.getElementById("baseline-clear-btn").addEventListener("click", clearBaselineWeek);
+    document.getElementById("baseline-copy-list").addEventListener("click", (e) => {
+      const row = e.target.closest("[data-copy-week]");
+      if (row) copyWeekToBaseline(row.dataset.copyWeek);
+    });
+    document.getElementById("baseline-use-uk-average-btn").addEventListener("click", useUkAverageBaseline);
+    document.getElementById("baseline-alcohol-beer").addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      getBaselineDraft().alcohol.beer = Number.isFinite(val) && val >= 0 ? val : 0;
+      onBaselineChange();
+    });
+    document.getElementById("baseline-alcohol-wine").addEventListener("input", (e) => {
+      const val = parseInt(e.target.value, 10);
+      getBaselineDraft().alcohol.wine = Number.isFinite(val) && val >= 0 ? val : 0;
+      onBaselineChange();
+    });
 
     document.getElementById("reminder-enabled").addEventListener("change", onReminderToggle);
     document.getElementById("reminder-time").addEventListener("change", onReminderTimeChange);

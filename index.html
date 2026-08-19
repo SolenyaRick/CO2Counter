@@ -763,6 +763,18 @@
           <div class="accordion-content">
             <section class="card">
               <h2>Profile</h2>
+              <div class="avatar-row">
+                <div class="avatar-wrap">
+                  <img id="profile-avatar-img" class="profile-avatar" alt="" hidden />
+                  <span id="profile-avatar-placeholder" class="profile-avatar profile-avatar-placeholder">?</span>
+                </div>
+                <div class="avatar-actions">
+                  <button type="button" class="btn-secondary btn-small" id="profile-avatar-change-btn">Change photo</button>
+                  <button type="button" class="link-btn" id="profile-avatar-remove-btn" hidden>Remove</button>
+                  <input type="file" id="profile-avatar-input" accept="image/*" hidden />
+                </div>
+              </div>
+              <p class="assumptions" id="profile-avatar-error" hidden></p>
               <label class="field">
                 Display name
                 <input type="text" id="profile-name" placeholder="Your name" />
@@ -776,10 +788,6 @@
                   <option value="KCL">KCL</option>
                 </select>
                 </label>
-              <label class="field">
-                Standard commute distance, one-way (km)
-                <input type="number" id="profile-distance" min="0" step="0.5" />
-              </label>
               <label class="field">
                 Weekly CO2e goal (kg)
                 <input type="number" id="profile-goal" min="0" step="1" />
@@ -856,6 +864,10 @@
                 <h2>Vehicle <span class="optional-badge">Optional</span></h2>
               </div>
               <label class="field">
+                Standard commute distance, one-way (km)
+                <input type="number" id="profile-distance" min="0" step="0.5" />
+              </label>
+              <label class="field">
                 Do you own or regularly drive a car?
                 <select id="owns-car">
                   <option value="">Prefer not to say</option>
@@ -923,63 +935,56 @@
               </div>
               <p class="assumptions">
                 By default, the Weekly summary card on This Week measures you against a
-                bottom-up UK average. Describe a typical week from before you started
-                tracking instead &mdash; useful if your habits were very different back
-                then &mdash; and it'll compare against that going forward. Leave it blank
-                to keep using the UK average.
+                bottom-up UK average. Set a typical week from before you started tracking
+                instead &mdash; useful if your habits were very different back then &mdash;
+                and it'll compare against that going forward.
               </p>
-              <label class="field">
-                How did you usually get to work?
-                <select id="baseline-commute-mode">
-                  <option value="none">Didn't travel</option>
-                  <option value="walk">Walk</option>
-                  <option value="cycle">Cycle</option>
-                  <option value="train">Train</option>
-                  <option value="tube">Tube</option>
-                  <option value="car">Car</option>
-                </select>
-              </label>
-              <label class="field">
-                Days per week
-                <input type="number" id="baseline-commute-days" min="0" max="7" step="1" />
-              </label>
-              <label class="field">
-                What did you usually eat?
-                <select id="baseline-diet-type">
-                  <option value="vegan">Vegan</option>
-                  <option value="veggie">Veggie</option>
-                  <option value="meat">Meat</option>
-                </select>
-              </label>
-              <div id="baseline-meat-fields">
-                <label class="field">
-                  Usual meat
-                  <select id="baseline-diet-meat">
-                    <option value="chicken">Chicken / poultry</option>
-                    <option value="pork">Pork</option>
-                    <option value="beef">Beef</option>
-                    <option value="fish">Fish / seafood</option>
-                    <option value="lamb">Lamb</option>
-                  </select>
-                </label>
-                <label class="field">
-                  Usual portion
-                  <select id="baseline-diet-portion">
-                    <option value="small">Small (~100g)</option>
-                    <option value="medium">Medium (~150g)</option>
-                    <option value="large">Large (~250g+)</option>
-                  </select>
-                </label>
+              <div class="week-picker" id="baseline-mode-toggle" role="tablist" aria-label="How to set your baseline">
+                <button type="button" class="week-picker-btn" data-baseline-mode="custom">Custom week</button>
+                <button type="button" class="week-picker-btn" data-baseline-mode="copy">Copy a week</button>
+                <button type="button" class="week-picker-btn" data-baseline-mode="ukAverage">UK average</button>
               </div>
-              <label class="field">
-                Beers per week
-                <input type="number" id="baseline-alcohol-beer" min="0" step="1" />
-              </label>
-              <label class="field">
-                Glasses of wine per week
-                <input type="number" id="baseline-alcohol-wine" min="0" step="1" />
-              </label>
-              <button type="button" class="btn-secondary" id="baseline-clear-btn">Use UK average instead</button>
+
+              <div id="baseline-mode-custom" hidden>
+                <table class="tracker-table" id="baseline-commute-table">
+                  <caption class="table-caption">How did you usually get to work?</caption>
+                  <thead>
+                    <tr>
+                      <th class="day-col">Day</th>
+                      <th>Mode of transport</th>
+                    </tr>
+                  </thead>
+                  <tbody><!-- rows injected by app.js --></tbody>
+                </table>
+                <h3 class="table-caption">What did you usually eat?</h3>
+                <div class="diet-days" id="baseline-diet-table"><!-- rows injected by app.js --></div>
+                <label class="field">
+                  Beers per week
+                  <input type="number" id="baseline-alcohol-beer" min="0" step="1" />
+                </label>
+                <label class="field">
+                  Glasses of wine per week
+                  <input type="number" id="baseline-alcohol-wine" min="0" step="1" />
+                </label>
+                <p class="assumptions">
+                  Baseline weekly total: <strong id="baseline-total-value">0</strong> kg CO2e
+                </p>
+              </div>
+
+              <div id="baseline-mode-copy" hidden>
+                <p class="assumptions">
+                  Pick one of your own tracked weeks to start from &mdash; you can still
+                  tweak individual days afterwards on the Custom week tab.
+                </p>
+                <div class="year-list" id="baseline-copy-list"><!-- rows injected by app.js --></div>
+              </div>
+
+              <div id="baseline-mode-ukaverage" hidden>
+                <p class="assumptions">
+                  Your baseline is the UK average week &mdash; no custom data saved.
+                </p>
+                <button type="button" class="btn-secondary" id="baseline-use-uk-average-btn">Use the UK average instead</button>
+              </div>
             </section>
             </div>
 

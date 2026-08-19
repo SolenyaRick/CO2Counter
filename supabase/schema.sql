@@ -59,20 +59,27 @@ alter table public.profiles add constraint profiles_university_check
 -- actually exposes, and to whom.
 alter table public.profiles add column if not exists research_opt_in boolean not null default false;
 
--- Optional: a short description of a "typical week" from before the person
--- started tracking (commute mode/days-per-week, typical diet, typical
--- weekly alcohol), used on the Account page to compare This Week's card
+-- Optional: a "typical week" from before the person started tracking, used
+-- on the Account page's Baseline week screen to compare This Week's card
 -- against that instead of the UK average - nullable with no default, same
 -- "not answered" = "use the UK average" pattern as the optional Stats-page
 -- extras above. Used to be a fully-confirmed week_key picked from the
 -- person's own tracked history, but that meant "before I got the app" was
 -- unrepresentable - if their habits were very different before they
--- started tracking, there was no real week to point at. A small
--- self-described jsonb blob instead ({commuteMode, commuteDaysPerWeek,
--- dietType, dietMeat, dietPortion, alcoholBeer, alcoholWine}) lets them
--- describe that old typical week directly; the client expands it into a
--- synthetic 7-day week and runs it through the exact same weekTotals()
--- math as a real week (see buildBaselineWeekData() in app.js).
+-- started tracking, there was no real week to point at. Then briefly a
+-- small self-described jsonb blob ({commuteMode, commuteDaysPerWeek,
+-- dietType, ...}) the client expanded into a synthetic week - now it's the
+-- exact same shape as a real tracked week ({commute, diet,
+-- confirmedCommute, confirmedDiet, alcohol, extraJourneys}, see
+-- blankWeek() in app.js), built either by hand-editing the real day-by-day
+-- commute/diet tables directly (the Baseline week screen's "Custom week"
+-- tab reuses buildCommuteTable()/buildDietTable() from This Week) or by
+-- copying one of their own past tracked weeks as an editable starting
+-- point ("Copy a week" tab, copyWeekToBaseline() in app.js - a one-time
+-- snapshot, not a live reference, so editing that real week afterwards on
+-- This Week never silently shifts an already-set baseline). No schema
+-- change needed for that shape change: this has always been a
+-- deliberately unstructured jsonb blob interpreted entirely client-side.
 alter table public.profiles drop column if exists baseline_week_key;
 alter table public.profiles add column if not exists baseline_week jsonb;
 
@@ -140,6 +147,21 @@ alter table public.profiles add column if not exists chosen_habit text;
 alter table public.profiles drop constraint if exists profiles_chosen_habit_check;
 alter table public.profiles add constraint profiles_chosen_habit_check
   check (chosen_habit is null or chosen_habit in ('eating', 'commuting', 'flying', 'banking'));
+
+-- Optional profile photo (Account page) - a small square JPEG data URL,
+-- cropped/resized to 200x200 client-side on upload (see
+-- cropAndResizeImage()/handleAvatarFileSelected() in app.js) rather than a
+-- Supabase Storage object: this is the only image anywhere in the app, so
+-- one more text column on a row already synced by persistProfile() is
+-- simpler than standing up a storage bucket + its own policies for a
+-- single use. The length cap is a defense-in-depth backstop matching the
+-- client-side AVATAR_MAX_DATA_URL_LENGTH check (which rejects an oversized
+-- result before it's ever sent) - comfortably above a typical ~15-40KB
+-- compressed avatar, well below anything that could bloat the row.
+alter table public.profiles add column if not exists avatar_data_url text;
+alter table public.profiles drop constraint if exists profiles_avatar_data_url_check;
+alter table public.profiles add constraint profiles_avatar_data_url_check
+  check (avatar_data_url is null or char_length(avatar_data_url) <= 300000);
 
 -- ---------- weeks ----------
 -- One row per user per week (week_key = that week's Monday, "YYYY-MM-DD").
