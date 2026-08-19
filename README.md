@@ -52,7 +52,10 @@ color too with no extra CSS.
   three-overlapping-circles brand mark (superseded on the header/login
   screen by the current lettered C/O2 one, but reused here purely as a
   decorative icon - `.brand-mark-puff-1/2/3` in `style.css`, the exact
-  colors that mark originally used), a weekly-goal progress bar, and a
+  colors that mark originally used), stacked straight up above the pipe
+  rather than its original diagonal rise, and without a background box
+  behind it - it sits directly on the card rather than in its own boxed
+  badge, unlike the header/login instances, a weekly-goal progress bar, and a
   Mon–Sun row of filled/empty squares for which days have any confirmed
   entry this week. The goal bar is hidden entirely rather than showing a
   misleading "0% used" until at least one day this week is actually
@@ -100,28 +103,35 @@ color too with no extra CSS.
   implied daily rate is the same across all three) — but the chart is
   drawn top-to-bottom inverted, so on screen both slope the familiar
   top-left-to-bottom-right way (0 near the top, goal near the bottom)
-  rather than the opposite. The stacked area tracks your actual confirmed
-  CO2e day by day, split into one colored band per domain (commute, food,
-  alcohol, top-to-bottom on screen; alcohol spread evenly across each
-  week's 7 days, since it's a whole-week figure, not tied to a specific
-  day) using the exact same colors as slide two's domain bar
-  (`--commute-color`/`--accent`/`--alcohol-color`), with a small color key
-  underneath the chart naming each one, so the two slides and the key all
-  read as one consistent picture. Dropping below the dashed line means
-  you're using CO2e faster than the goal allows for how far through the
-  span it is; staying above it means you're on pace or ahead. For "This
-  week", the stacked area only draws up to today - it doesn't project the
-  rest of the week for you. For "This month" and "This year", it
-  additionally only starts drawing from a light vertical marker - the week
-  you first confirmed a day - and picks up exactly on the dashed target
-  line there rather than at 0: the days before that marker have no data,
-  so they're assumed to have used exactly their fair share of the goal at
-  the target rate (neither over nor under), rather than being credited as
-  zero-emission days, which would make the stacked area jump out ahead of
-  pace for no real reason (`renderBudgetChart()`'s `stackBaseline` in
-  `app.js`). Flights, home energy, and the other yearly-estimate categories
-  below aren't part of any of these bands, since they're fixed annual
-  figures with no day-by-day data to plot a pace against. Slide two is the
+  rather than the opposite. The stacked area covers every domain slide
+  two's bar chart can show, not just commute/food/alcohol: those three
+  track your actual confirmed CO2e day by day (alcohol spread evenly
+  across each week's 7 days, since it's a whole-week figure, not tied to a
+  specific day), while flights, home energy, buying goods, and the
+  optional extras (gas heating/car ownership/pets/water/banking) don't
+  have day-by-day logs to plot - each is instead spread evenly across
+  every day at its own flat weekly-equivalent rate, derived from the same
+  yearly profile estimate `weeklyExtrasBreakdownFor()` feeds the bar
+  chart, so the two slides always add up to the same total. A domain
+  you've never answered (or that comes to 0) is left out of the stack and
+  the key entirely, same as slide two. Every band uses the exact same
+  colors as slide two's domain bar (`--commute-color`/`--accent`/
+  `--alcohol-color`/etc., one `--x-color` variable per domain), with a
+  small color key underneath the chart naming each one present, so the
+  two slides and the key all read as one consistent picture. Dropping
+  below the dashed line means you're using CO2e faster than the goal
+  allows for how far through the span it is; staying above it means
+  you're on pace or ahead. For "This week", the stacked area only draws
+  up to today - it doesn't project the rest of the week for you. For
+  "This month" and "This year", it additionally only starts drawing from
+  a light vertical marker - the week you first confirmed a day - and
+  picks up exactly on the dashed target line there rather than at 0
+  (this applies to every band, extras included): the days before that
+  marker have no data, so they're assumed to have used exactly their fair
+  share of the goal at the target rate (neither over nor under), rather
+  than being credited as zero-emission days, which would make the stacked
+  area jump out ahead of pace for no real reason
+  (`renderBudgetChart()`'s `stackBaseline` in `app.js`). Slide two is the
   "emissions by domain" bar: it breaks
   the selected timeframe into a stacked bar with up to twelve segments - one
   per domain, sized by share of the total, with a legend giving each

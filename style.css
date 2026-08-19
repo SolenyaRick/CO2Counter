@@ -539,8 +539,11 @@ body {
 
 /* Older three-circle "fumes" mark (superseded on the header by the C/O2
    lettered one above) - reused here as the Home snapshot card's decorative
-   icon since .brand-mark-bg/.brand-mark-pipe already carry the exact same
-   colors this mark originally used. */
+   icon, stacked straight up over the pipe rather than its original
+   diagonal rise, and without .brand-mark-bg's background box (see
+   index.html) so it sits directly on the card instead of in its own boxed
+   badge. .brand-mark-pipe already carries the exact same color this mark
+   originally used. */
 .brand-mark-puff-1 {
   fill: #1d4a34;
 }
@@ -2083,10 +2086,12 @@ input, select {
 
 /* Stacked domain bands for the Budget pace chart - same colors as "This
    week's emissions by domain" (.domain-commute/.domain-food/.domain-alcohol
-   above use these same variables as a `background`; here it's an SVG
-   `fill` instead) so the two cards read as one consistent picture. A
-   solid-color top stroke over a semi-transparent fill keeps each band's
-   own boundary crisp even where two bands' colors are close in value. */
+   etc. above use these same variables as a `background`; here it's an SVG
+   `fill` instead) so the two cards read as one consistent picture. Covers
+   every domain the bar chart can show, not just commute/food/alcohol - see
+   the extras handling in renderPeriodChart(). A solid-color top stroke
+   over a semi-transparent fill keeps each band's own boundary crisp even
+   where two bands' colors are close in value. */
 .budget-band {
   stroke-width: 1.6;
   stroke-linejoin: round;
@@ -2108,6 +2113,54 @@ input, select {
   fill: var(--alcohol-color);
   fill-opacity: 0.55;
   stroke: var(--alcohol-color);
+}
+
+.budget-band-homeEnergy {
+  fill: var(--homeenergy-color);
+  fill-opacity: 0.55;
+  stroke: var(--homeenergy-color);
+}
+
+.budget-band-gasHeating {
+  fill: var(--gasheating-color);
+  fill-opacity: 0.55;
+  stroke: var(--gasheating-color);
+}
+
+.budget-band-water {
+  fill: var(--water-color);
+  fill-opacity: 0.55;
+  stroke: var(--water-color);
+}
+
+.budget-band-pets {
+  fill: var(--pets-color);
+  fill-opacity: 0.55;
+  stroke: var(--pets-color);
+}
+
+.budget-band-flying {
+  fill: var(--flying-color);
+  fill-opacity: 0.55;
+  stroke: var(--flying-color);
+}
+
+.budget-band-banks {
+  fill: var(--banks-color);
+  fill-opacity: 0.55;
+  stroke: var(--banks-color);
+}
+
+.budget-band-goods {
+  fill: var(--goods-color);
+  fill-opacity: 0.55;
+  stroke: var(--goods-color);
+}
+
+.budget-band-carOwnership {
+  fill: var(--carownership-color);
+  fill-opacity: 0.55;
+  stroke: var(--carownership-color);
 }
 
 .budget-zero-line {

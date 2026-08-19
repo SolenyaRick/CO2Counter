@@ -2017,12 +2017,15 @@
   const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };
   const PERIOD_GOAL_SUFFIX = { week: "kg goal", month: "kg/mo goal", year: "kg/yr goal" };
 
-  // The Home page's single budget-pace chart - a dashed target line burning
-  // from the goal to 0 across whichever period is selected, plotted against
-  // a solid actual line built day by day from real confirmed
-  // commute/food/alcohol data. Replaces what used to be two separate charts
-  // (This Week page's weekly one, Stats page's yearly one) with one, toggled
-  // by the picker above it.
+  // The Home page's single budget-pace chart - a dashed target line and a
+  // stacked actual area, both rising from 0 to the goal across whichever
+  // period is selected. The stack covers every tracked domain, not just
+  // commute/food/alcohol: those three are built day by day from real
+  // confirmed data, and everything else (flights, home energy, buying
+  // goods, and the optional extras) is spread evenly from its own yearly
+  // profile estimate - see the extras handling below. Replaces what used
+  // to be two separate charts (This Week page's weekly one, Stats page's
+  // yearly one) with one, toggled by the picker above it.
   let homeChartPeriod = "week";
   function renderPeriodChart(period = homeChartPeriod) {
     homeChartPeriod = period;
@@ -2065,14 +2068,36 @@
     const cumFood = cumulativeSinceStart(foodDaily);
     const cumAlcohol = cumulativeSinceStart(alcoholDaily);
 
+    // Flights, home energy, buying goods, and the optional extras (gas
+    // heating/car ownership/pets/water/banking) don't have day-by-day logs
+    // the way commute/food/alcohol do - they're yearly profile estimates
+    // (see weeklyExtrasBreakdownFor()), so each is spread evenly across
+    // every day at its own flat weekly-equivalent/7 rate, the same "assume
+    // the steady rate" treatment already used above for days before
+    // tracking began. Domains the person has never answered (or that come
+    // to 0) are left out of both the stack and the legend entirely, same
+    // as renderDomainBarChart() already does.
+    const extras = weeklyExtrasBreakdownFor(profile);
+    const EXTRA_DOMAIN_KEYS = ["homeEnergy", "gasHeating", "water", "pets", "flying", "banks", "goods", "carOwnership"];
+    const extraCumulatives = EXTRA_DOMAIN_KEYS
+      .map((key) => ({ key, cumulative: cumulativeSinceStart(new Array(totalDays + 1).fill((extras[key] || 0) / 7)) }))
+      .filter(({ cumulative }) => cumulative[cumulative.length - 1] > 0);
+
     // Each band's values are the STACKED (cumulative-inclusive) top edge,
     // ready for renderBudgetChart() to plot directly - band order here is
-    // also the visual bottom-to-top stacking order.
+    // also the visual bottom-to-top stacking order. The day-logged domains
+    // (commute/food/alcohol) sit closest to the start line; the flat-rate
+    // extras above stack on top of those.
     const series = [
       { key: "commute", values: cumCommute.map((v) => budgetAtStart + v) },
       { key: "food", values: cumFood.map((v, k) => budgetAtStart + cumCommute[k] + v) },
       { key: "alcohol", values: cumAlcohol.map((v, k) => budgetAtStart + cumCommute[k] + cumFood[k] + v) },
     ];
+    let runningTotal = cumAlcohol.map((v, k) => cumCommute[k] + cumFood[k] + v);
+    extraCumulatives.forEach(({ key, cumulative }) => {
+      series.push({ key, values: cumulative.map((v, k) => budgetAtStart + runningTotal[k] + v) });
+      runningTotal = runningTotal.map((base, k) => base + cumulative[k]);
+    });
 
     const xLabels = periodXLabels(period, start, totalDays, todayOffset);
 
