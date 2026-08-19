@@ -471,11 +471,20 @@ color too with no extra CSS.
     affiliated" or one of a fixed list, powers the Home page's "Uni
     average" comparison chip once enough people from the same university
     have signed up - weekly CO2e goal with three quick-set presets
-    alongside typing your own number: "Match UK average week", "1.5°C
-    2030 (food + commute)" — our own estimate, since there's no official
-    category-level split of the 1.5°C target — and "Match world average
-    week", the roughest of the three since there's no global equivalent
-    of the UK's national travel/diet surveys to build it from; and a
+    alongside typing your own number: "Match UK average", "1.5°C 2030
+    target", and "Match world average", the roughest of the three since
+    there's no global equivalent of the UK's national travel/diet surveys
+    to build it from. All three - and the default a brand-new profile
+    starts with - are full-lifestyle figures (commute, food, flights, home
+    energy, buying goods, plus whichever optional extras you've personally
+    answered for the UK-average one specifically), matching every domain
+    the Home page's Budget pace chart plots (`includeOptionalForProfile()`
+    in `app.js`) rather than a narrower commute+food-only slice, so the
+    chart's dashed target line is a fair comparison against its stacked
+    actual area. `UK_AVERAGE_WEEKLY_KG`/`WORLD_AVERAGE_WEEKLY_KG` (the
+    older commute+food-only figures) are kept only for the This Week
+    page's own "compared to an average week" card, a narrower and
+    intentionally different comparison; and a
     food-waste setting, 0–3% / 3–10% / 10–30% / 30%+, scales up food
     figures everywhere to account for produced-but-wasted food), then
     "Delete account": permanently deletes the account itself (login
@@ -891,12 +900,27 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   converted to miles or personalized to a chosen car type - it's a
   reference unit, not a claim about your actual car); the trees comparison
   uses ~22 kg CO2e absorbed per mature tree per year.
-- **UK average week** (This Week page, and the "Match UK average week" goal
-  preset): the same commute + food UK-average assumptions as above, without
-  the ×52, since this is what a single average week (not year) comes to —
-  roughly 46.2 kg CO2e.
+- **UK average week** (This Week page's "compared to an average week"
+  card only): the same commute + food UK-average assumptions as above,
+  without the ×52, since this is what a single average week (not year)
+  comes to — roughly 46.2 kg CO2e. No longer used for the Account page's
+  "Match UK average" goal preset (see below) - that card is intentionally
+  narrower, commute+food-only, so it stays a fair comparison against This
+  Week's own commute+food-only total.
+- **UK average — full lifestyle, weekly** (default goal for a brand-new
+  profile, and the base the "Match UK average" goal preset builds on):
+  the comprehensive UK-average figure above (commute, food, non-commute
+  driving, flights, home energy, buying goods — roughly 3,570 kg CO2e/yr)
+  ÷52, further widened by the preset button itself to also add the
+  matching UK figure for any optional extra (gas heating/car
+  ownership/pets/water/banking) the clicking profile has personally
+  answered (`includeOptionalForProfile()` in `app.js`) — same ground the
+  UK percentile/ring comparisons above already use, so the Budget pace
+  chart's target line covers the same domains its stacked actual area
+  does.
 - **1.5°C by 2030 target — comprehensive** (Home page, "How your year
-  compares"): 2,500 kg CO2e/yr per capita, the Hot or Cool Institute's
+  compares", and ÷52 for the Account page's "1.5°C 2030 target" goal
+  preset): 2,500 kg CO2e/yr per capita, the Hot or Cool Institute's
   "1.5-Degree Lifestyles" research target (dropping further for 2040/2050)
   as roughly a fair-share pathway for keeping warming under 1.5°C. This
   covers a *whole* lifestyle (mobility, energy, food, shopping, leisure) —
@@ -907,20 +931,25 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   scope. (This previously cited the MyEmission app's 6.3 kg CO2e/day
   figure instead — switched to Hot or Cool's own headline number so this
   and the food+commute preset below cite one consistent source.)
-- **1.5°C by 2030 target — food + commute only** (Account page goal
-  preset): ~20.2 kg CO2e/week. There's no officially published
+- **1.5°C by 2030 target — food + commute only**: ~20.2 kg CO2e/week. No
+  longer used for the Account page goal preset (see the comprehensive
+  target above, ÷52, for that) - kept only in case anything else wants a
+  food+commute-scoped slice. There's no officially published
   category-level split of the comprehensive target above, so this is our
   own estimate: applying published 2030 reduction requirements for
   developed countries (nutrition −47%, mobility −72%, per Hot or Cool
   Institute's "1.5-Degree Lifestyles" research) to the UK-average food and
   commute figures already used elsewhere in this app.
-- **World average week** (Account page goal preset): ~29.0 kg CO2e/week.
-  The roughest figure in the app — there's no global equivalent of the
-  UK's national travel/diet surveys, so this is a lightweight bottom-up
-  estimate (a shorter car-equivalent commute and less meat than the UK
-  figures) rather than being built from real survey data the way the UK
-  figures are.
-- **World average year** (Home page, "Compared to:" chip): a flat 4,700 kg
+- **World average week — commute + food only**: ~29.0 kg CO2e/week. No
+  longer used for the Account page goal preset (see "World average year"
+  below, ÷52, for that) - kept only in case anything else wants a
+  commute+food-only global figure. The roughest figure in the app —
+  there's no global equivalent of the UK's national travel/diet surveys,
+  so this is a lightweight bottom-up estimate (a shorter car-equivalent
+  commute and less meat than the UK figures) rather than being built from
+  real survey data the way the UK figures are.
+- **World average year** (Home page's "Compared to:" chip, and ÷52 for the
+  Account page's "Match world average" goal preset): a flat 4,700 kg
   CO2e/yr — a single commonly-cited global per-capita figure, deliberately
   *not* built bottom-up the way the weekly figure above or the UK average
   are. Same spirit as the "8–10 tonnes CO2e/yr" UK figure already cited

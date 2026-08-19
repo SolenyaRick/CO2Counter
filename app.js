@@ -175,6 +175,23 @@
     return { commute, food, flying, homeEnergy, goods, gasHeating, nonCommuteCar, carOwnership, pets, water, banks, total, commuteWeekly, foodWeekly };
   }
 
+  // The includeOptional shape computeUkAverageBreakdown() expects, derived
+  // from a profile's own answers - "answered" (not null/undefined) rather
+  // than "truthy", so a deliberate 0 (e.g. 0 dogs and 0 cats) still counts
+  // as answered rather than falling back to "not compared". Shared by the
+  // Stats page's per-category UK-average rings and the "Match UK average"
+  // goal preset button, so both compare against exactly the same ground
+  // the person themselves has opted into.
+  function includeOptionalForProfile(p) {
+    return {
+      gasHeating: p.annualGasKwh !== null && p.annualGasKwh !== undefined,
+      carOwnership: p.ownsCar !== null && p.ownsCar !== undefined,
+      pets: (p.numDogs !== null && p.numDogs !== undefined) || (p.numCats !== null && p.numCats !== undefined),
+      water: p.annualWaterM3 !== null && p.annualWaterM3 !== undefined,
+      banks: !!p.bankName && p.bankBalance !== null && p.bankBalance !== undefined,
+    };
+  }
+
   // Weekly UK-average reference for the This Week page's "Compared to an
   // average week" card - just commute + food, since those are the only
   // categories that make up a *weekly* total in this app (flights/home
@@ -201,70 +218,43 @@
 
   // A single commonly-cited global per-capita footprint figure (roughly
   // 4.7 tonnes CO2e/yr), for the Home page's "World average" comparison
-  // chip. Deliberately NOT built bottom-up the rigorous way the UK average
+  // chip and (divided by 52) the "Match world average" goal preset.
+  // Deliberately NOT built bottom-up the rigorous way the UK average
   // above is (there's no single global travel/diet survey to build it
-  // from - see WORLD_AVERAGE_WEEKLY_KG below, "the roughest figure in the
-  // app") - this is a single illustrative reference number, same spirit as
-  // the "8-10 tonnes CO2e/yr" UK figure cited in the app's copy without a
-  // bottom-up model behind it either.
+  // from) - this is a single illustrative reference number, same spirit
+  // as the "8-10 tonnes CO2e/yr" UK figure cited in the app's copy
+  // without a bottom-up model behind it either.
   const WORLD_AVERAGE_YEARLY_KG = 4700;
 
-  // A food+commute-only slice of the 1.5C target, for the weekly goal
-  // preset (which only tracks those two categories, plus alcohol). There's
-  // no official published category-level split of the 2,500 kg/yr target
-  // above, so this isn't Hot or Cool's own number - it's our own estimate,
-  // applying published 2030 reduction requirements for developed countries
-  // (the same research: nutrition footprints need to fall ~47%, mobility
-  // ~72%, by 2030) to our own UK-average commute/food baseline above.
-  const PARIS_1_5C_FOOD_COMMUTE_WEEKLY_KG = (() => {
-    const uk = computeUkAverageBreakdown({});
-    return uk.foodWeekly * (1 - 0.47) + uk.commuteWeekly * (1 - 0.72);
-  })();
-
-  // A lightweight bottom-up "world average" week (commute + food only,
-  // same shape as UK_AVERAGE_ASSUMPTIONS), for the "Match world average
-  // week" goal preset. Much rougher than the UK figures above - there's no
-  // single global survey of commute distances or diets the way the UK has
-  // national travel/diet surveys, so this blends a lower car-commute
-  // distance and less meat than the UK figures, reflecting that most of
-  // the world's population drives less and eats less meat on average than
-  // the UK does. Treat this one as more illustrative than the others.
-  const WORLD_AVERAGE_WEEKLY_KG = (() => {
-    const wasteMult = FOOD_WASTE_MULTIPLIERS.some;
-    // ~4km one-way car-equivalent, reusing the UK figure's 5-day working
-    // week rather than guessing a separate global commuting-frequency
-    // number - the "world drives less" assumption is already captured via
-    // the shorter distance, not via commuting fewer days.
-    const commuteWeekly = TRANSPORT_FACTORS.car * 4 * 2 * UK_AVERAGE_ASSUMPTIONS.commuteDaysPerWeek;
-    const meatDays = [
-      { meat: "chicken", portion: "medium" },
-      { meat: "chicken", portion: "medium" },
-      { meat: "fish", portion: "medium" },
-    ];
-    const meatWeekly = meatDays.reduce((sum, day) => {
-      const meatFactor = MEAT_FACTORS[day.meat] ?? MEAT_FACTORS.other;
-      const portionKg = PORTION_KG[day.portion] ?? PORTION_KG.medium;
-      return sum + (meatFactor * portionKg + MEAT_SIDES_BASELINE) * wasteMult;
-    }, 0);
-    const veggieWeekly = 4 * FOOD_DAY_FACTORS.veggie * wasteMult; // 4 veggie days
-    return commuteWeekly + meatWeekly + veggieWeekly;
-  })();
+  // Full-lifestyle UK-average weekly-equivalent: every category the Budget
+  // pace chart can plot that isn't behind an optional yes/no question
+  // (commute, food, non-commute driving, flights, home energy, buying
+  // goods - see computeUkAverageBreakdown()'s own includeOptional param
+  // for the rest). Used for the default goal a brand-new profile starts
+  // with (nothing optional answered yet, so `{}` is the right comparison)
+  // and as the base for the "Match UK average" preset button, which
+  // widens this further to also include whichever optional extras the
+  // clicking profile has personally answered (see includeOptionalForProfile()).
+  // Distinct from UK_AVERAGE_WEEKLY_KG above, which stays commute+food-only
+  // on purpose for the This Week page's own average-week comparison.
+  const UK_AVERAGE_FULL_WEEKLY_KG = computeUkAverageBreakdown({}).total / 52;
 
   const DEFAULT_PROFILE = {
     name: "",
     commuteDistanceKm: 8,
-    // Matches the "Match UK average week" preset - a brand-new,
-    // unmodified profile starts out neither ahead of nor behind the UK
-    // average, rather than a flat number that can go stale relative to
-    // the underlying emission factors. (This used to be a hardcoded 20,
-    // which looked fine when FOOD_DAY_FACTORS.veggie was 1.5, but after
-    // that moved to 2.6 - see the Rosi et al. update - an all-veggie
-    // week's food alone came to ~93% of that old default before any
-    // commute was even added, making a fully plant-based diet look like
-    // it was barely beating a stale goal instead of clearly beating a
+    // Matches the "Match UK average" preset's own starting point (see
+    // UK_AVERAGE_FULL_WEEKLY_KG) - a brand-new, unmodified profile starts
+    // out neither ahead of nor behind the UK average across every domain
+    // the Budget pace chart plots, rather than a flat number that can go
+    // stale relative to the underlying emission factors. (This used to be
+    // a hardcoded 20, which looked fine when FOOD_DAY_FACTORS.veggie was
+    // 1.5, but after that moved to 2.6 - see the Rosi et al. update - an
+    // all-veggie week's food alone came to ~93% of that old default before
+    // any commute was even added, making a fully plant-based diet look
+    // like it was barely beating a stale goal instead of clearly beating a
     // live one. Existing accounts keep whatever weekly_goal_kg is already
     // saved for them - only brand-new profiles pick this up.)
-    weeklyGoalKg: Math.round(UK_AVERAGE_WEEKLY_KG * 10) / 10,
+    weeklyGoalKg: Math.round(UK_AVERAGE_FULL_WEEKLY_KG * 10) / 10,
     foodWaste: "low",
     // Itemized flight log - see computeFlyingYearlyKg(). flyingYearlyKg is
     // a derived cache of the total, written alongside so the SQL-side
@@ -3599,13 +3589,7 @@
     // Non-commute driving isn't part of this any more - it's tracked (via
     // Additional Journeys), not a skippable question, so it's already
     // folded into yearlyTotal above alongside food/commute/alcohol.
-    const includeOptional = {
-      gasHeating: profile.annualGasKwh !== null && profile.annualGasKwh !== undefined,
-      carOwnership: profile.ownsCar !== null && profile.ownsCar !== undefined,
-      pets: (profile.numDogs !== null && profile.numDogs !== undefined) || (profile.numCats !== null && profile.numCats !== undefined),
-      water: profile.annualWaterM3 !== null && profile.annualWaterM3 !== undefined,
-      banks: !!profile.bankName && profile.bankBalance !== null && profile.bankBalance !== undefined,
-    };
+    const includeOptional = includeOptionalForProfile(profile);
     const yearlyGasHeating = includeOptional.gasHeating ? (profile.annualGasKwh * GAS_HEATING_KG_PER_KWH) / Math.max(1, profile.householdPeople || 1) : null;
     const yearlyCarOwnership = includeOptional.carOwnership ? (profile.ownsCar ? CAR_MANUFACTURING_AMORTIZED_KG_PER_YEAR : 0) : null;
     const yearlyPets = includeOptional.pets
@@ -4778,9 +4762,15 @@
       document.getElementById("profile-goal").value = profile.weeklyGoalKg;
       persistProfile();
     }
-    document.getElementById("goal-preset-uk").addEventListener("click", () => setGoalPreset(UK_AVERAGE_WEEKLY_KG));
-    document.getElementById("goal-preset-15c-fc").addEventListener("click", () => setGoalPreset(PARIS_1_5C_FOOD_COMMUTE_WEEKLY_KG));
-    document.getElementById("goal-preset-world").addEventListener("click", () => setGoalPreset(WORLD_AVERAGE_WEEKLY_KG));
+    // Full-lifestyle targets, matching every domain the Budget pace chart
+    // now plots (see renderPeriodChart()) rather than just commute+food -
+    // "Match UK average" additionally widens to include whichever optional
+    // extras this profile has personally answered (includeOptionalForProfile()),
+    // same ground computeUkAverageBreakdown() already compares Stats page
+    // tiles against.
+    document.getElementById("goal-preset-uk").addEventListener("click", () => setGoalPreset(computeUkAverageBreakdown(includeOptionalForProfile(profile)).total / 52));
+    document.getElementById("goal-preset-15c").addEventListener("click", () => setGoalPreset(PARIS_1_5C_YEARLY_KG / 52));
+    document.getElementById("goal-preset-world").addEventListener("click", () => setGoalPreset(WORLD_AVERAGE_YEARLY_KG / 52));
     document.getElementById("profile-food-waste").addEventListener("change", (e) => {
       profile.foodWaste = e.target.value;
       persistProfile();
