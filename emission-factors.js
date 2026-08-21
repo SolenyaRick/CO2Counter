@@ -149,3 +149,5 @@ const BANK_KG_PER_POUND_PER_YEAR = {
 // ---------- Reference (for comparisons) ----------
 
 const TREE_KG_PER_YEAR = 22; // rough CO2 absorbed by one mature tree per year
+
+const EARTH_CIRCUMFERENCE_KM = 40075; // equatorial circumference - for the car-km comparison's "times around the Earth" visual

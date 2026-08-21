@@ -190,17 +190,38 @@ color too with no extra CSS.
   everything. Once every item's dropped off, the list itself is replaced
   by a single "All done" message. Tapping an item jumps to wherever you'd
   log it (This Week for the day-based ones, This Year for the other two).
-  Then "Your year, estimated" opens with a hero box -
-  your estimated yearly total in large accent-colored type, next to a
-  rough percentile ("lower than ~X%" / "higher than ~X% of people in the
-  UK", worded so it never reads backwards). A "Compared to:" Instagram-style
+  Then "Your year, estimated" opens with its own three-way "This week" /
+  "This month" / "This year" picker (`.yearly-period-btn` in `app.js`,
+  the same `.week-picker` markup/CSS as the Budget pace chart's own
+  picker, but independent state - `yearlyStatsPeriod` vs. that chart's
+  `homeChartPeriod` - so the two cards can sit on different timeframes at
+  once), swapping the card's heading between "Your week/month/year,
+  estimated" and everything below it between kg/wk, kg/mo, and kg/yr.
+  Every figure on the card - the last-52-weeks projection for the
+  day-tracked domains, the already-yearly annual-estimate ones (flights,
+  home energy, buying goods, the optional extras) - is still computed as
+  a true yearly total first (`renderStatsPage()` in `app.js`), then scaled
+  by 1 (year), ÷12 (month), or ÷52 (week) purely for display. Every
+  comparison on the card - the rings below, the UK percentile, the
+  "Compared to:" chips - is ratio-based (your figure ÷ a benchmark), so
+  scaling both sides by the same factor leaves every ring's fill, every
+  percentage, and the percentile line completely unchanged across all
+  three views; only the raw numbers and their units actually move. A hero
+  box comes right after the picker -
+  your estimated total for whichever period's selected, in large
+  accent-colored type, next to that period-invariant rough percentile
+  ("lower than ~X%" / "higher than ~X% of people in the UK", worded so it
+  never reads backwards). A "Compared to:" Instagram-style
   swipeable carousel sits right underneath - one slide per benchmark (1.5°C
   target, UK average, World average, Uni average), each a big ▲/▼ delta
   against that benchmark (same red/green convention as everywhere else on
   this page) with 4 dots below showing which one you're on - swipe or
   scroll horizontally to move between them, same native scroll-snap
   mechanism as the "Total CO2 saved" carousel above. The first three
-  benchmarks are instant; the Uni slide needs your university set on the
+  benchmarks are instant (the two fixed yearly figures, 1.5°C's 2,500 kg
+  and World average's 4,700 kg, are scaled down to match the selected
+  period the same way the personal figures are); the Uni slide needs your
+  university set on the
   Account page and a network round trip (`university_weekly_average()`,
   see `supabase/README.md`) - it reads "Set your university on Account to
   compare" until you've picked one (tapping/pressing Enter on that slide
@@ -210,11 +231,29 @@ color too with no extra CSS.
   at you), and only then shows a real number. Next, two comparison tiles
   convert that total into km driven by an average car and
   mature-trees-of-CO2-absorption equivalents, each with a delta against
-  the UK average. A divider then splits the 12 category tiles into another
+  the UK average, plus a small conceptual visual underneath each
+  (`renderEarthLapsRing()`/`renderTreeIcons()` in `app.js`): the car tile
+  gets a small ring - the same track+progress-arc technique the category
+  rings below use, sized down - showing how far around the Earth
+  (40,075 km) that km figure would take you, filling clockwise from 12
+  o'clock and capping visually at one full lap (a repeated-icon count
+  would read as broken here, since a whole Earth circumference dwarfs
+  even a full year's car-km-equivalent for most people - the ring stays
+  legible at any fraction, down to a barely-there sliver, the same way the
+  category rings stay legible at any ratio), with the exact lap count
+  always spelled out underneath regardless of how full the ring looks. The
+  trees tile gets a row of tiny tree icons instead, one per whole tree -
+  tree counts run naturally large (dozens to low hundreds), so a
+  repeated-icon count works well here, unlike car laps - capped at 30
+  icons with a "+N more" chip past that so a big yearly total doesn't
+  spam the card. A divider then splits the 12 category tiles into another
   swipeable carousel, one slide per group with its own 3-dot indicator:
-  "This week" (food, commute, non-commute driving, alcohol - the four
+  "Travel & food" (food, commute, non-commute driving, alcohol - the four
   domains with real day-by-day tracked data, matching the bar chart's own
-  tracked/estimated split above), then "Home" (home energy, gas/oil
+  tracked/estimated split above; renamed from an earlier "This week" label
+  once the period picker above introduced a real "This week" button
+  elsewhere on the same card, which the old static group label would have
+  read as confusingly duplicating), then "Home" (home energy, gas/oil
   heating, water usage, pets), then "Other" (flying, banking, buying
   goods, car manufacturing). Unlike the This Year input page, these tile
   labels don't say "(optional)". Each tile's top-left badge (`.tile-icon`
@@ -230,7 +269,8 @@ color too with no extra CSS.
   used exactly the UK average, "no budget left". Go over it and the ring
   switches to red, filling back up the same anticlockwise way from empty,
   capped at a full red ring for double the UK average or worse. The ring's
-  centre shows just the figure itself (kg/yr); the percentage of the UK
+  centre shows just the figure itself (kg/wk, kg/mo, or kg/yr, matching
+  the picker above); the percentage of the UK
   average that is sits underneath the category caption below the ring
   instead, colored the same green/red as the ring itself - the same two
   numbers the old delta/caption pairing showed, just laid out as a ring
@@ -900,6 +940,9 @@ Figures are illustrative averages, not a precise personal carbon calculator:
   converted to miles or personalized to a chosen car type - it's a
   reference unit, not a claim about your actual car); the trees comparison
   uses ~22 kg CO2e absorbed per mature tree per year.
+- **Earth circumference** (Home page, car-km comparison's "times around
+  the Earth" ring): 40,075 km, the equatorial circumference -
+  `EARTH_CIRCUMFERENCE_KM` in `emission-factors.js`.
 - **UK average week** (This Week page's "compared to an average week"
   card only): the same commute + food UK-average assumptions as above,
   without the ×52, since this is what a single average week (not year)

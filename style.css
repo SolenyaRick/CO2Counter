@@ -1802,6 +1802,73 @@ input, select {
   margin-top: 6px;
 }
 
+/* Conceptual visuals under each comparison-item (see renderEarthLapsRing()/
+   renderTreeIcons() in app.js) - a small "times around the Earth" ring for
+   the car-km figure, a capped row of tiny tree icons for the trees one. */
+.comparison-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-top: var(--space-2);
+}
+
+.earth-ring-svg {
+  width: 56px;
+  height: 56px;
+}
+
+.earth-ring-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 6;
+}
+
+.earth-ring-progress {
+  fill: none;
+  stroke: var(--commute-color);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.earth-ring-globe {
+  color: var(--commute-color);
+}
+
+.earth-ring-globe circle,
+.earth-ring-globe line,
+.earth-ring-globe path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.comparison-icon-caption {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: var(--space-1) 0 0;
+}
+
+.comparison-tree-icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--accent);
+  flex-shrink: 0;
+}
+
+.comparison-icon-more {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  align-self: center;
+  margin-left: 2px;
+}
+
 .unaccounted-list {
   margin: 0 0 12px;
   padding-left: 20px;

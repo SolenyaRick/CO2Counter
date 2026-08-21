@@ -602,11 +602,16 @@
       </section>
 
       <section class="card">
-        <h2>Your year, estimated</h2>
+        <h2 id="yearly-heading">Your year, estimated</h2>
+        <div class="week-picker" id="yearly-period-picker" role="tablist" aria-label="Which timeframe to estimate">
+          <button type="button" class="week-picker-btn yearly-period-btn" data-period="week">This week</button>
+          <button type="button" class="week-picker-btn yearly-period-btn" data-period="month">This month</button>
+          <button type="button" class="week-picker-btn yearly-period-btn active" data-period="year">This year</button>
+        </div>
 
         <div class="year-hero">
           <span class="year-hero-value" id="yearly-total">0</span>
-          <span class="year-hero-label">📊 kg CO2e/yr &middot; Estimated total</span>
+          <span class="year-hero-label" id="yearly-hero-unit-label">📊 kg CO2e/yr &middot; Estimated total</span>
           <span class="stat-percentile" id="yearly-percentile"></span>
         </div>
 
@@ -651,13 +656,16 @@
         <div class="comparison-grid">
           <div class="comparison-item">
             <span class="comparison-value" id="compare-car-km">0</span>
-            <span class="comparison-label">km driven by an average car &mdash; that's how far you'd have to drive to match your estimated year</span>
+            <span class="comparison-label" id="compare-car-km-label">km driven by an average car &mdash; that's how far you'd have to drive to match your estimated year</span>
             <span class="week-diff" id="compare-car-km-diff"></span>
+            <div class="comparison-icon-row" id="compare-car-icons" aria-hidden="true"></div>
+            <p class="comparison-icon-caption" id="compare-car-laps-caption"></p>
           </div>
           <div class="comparison-item">
             <span class="comparison-value" id="compare-trees">0</span>
-            <span class="comparison-label">mature trees' worth of a year's CO2 absorption</span>
+            <span class="comparison-label" id="compare-trees-label">mature trees' worth of a year's CO2 absorption</span>
             <span class="week-diff" id="compare-trees-diff"></span>
+            <div class="comparison-icon-row" id="compare-trees-icons" aria-hidden="true"></div>
           </div>
         </div>
 
@@ -665,7 +673,7 @@
 
         <div class="carousel" id="home-year-groups-carousel">
           <div class="carousel-slide">
-            <h3 class="category-heading">This week</h3>
+            <h3 class="category-heading">Travel &amp; food</h3>
             <div class="summary-totals">
               <div class="stat">
                 <svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2v6a2 2 0 0 0 4 0V2"/><path d="M9 2v20"/><path d="M17 2c-1.7 0-3 2.2-3 5s1.3 5 3 5v10"/></svg>
@@ -683,7 +691,7 @@
               <div class="stat">
                 <svg class="tile-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-1 7a3 3 0 0 1-6 0z"/><path d="M12 12v7"/><path d="M9 22h6"/></svg>
                 <span class="stat-value" id="yearly-alcohol">0</span>
-                <span class="stat-label">kg CO2e/yr &middot; Alcohol</span>
+                <span class="stat-label" id="yearly-alcohol-unit-label">kg CO2e/yr &middot; Alcohol</span>
               </div>
             </div>
           </div>

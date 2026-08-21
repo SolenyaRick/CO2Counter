@@ -3529,16 +3529,57 @@
   // "–" tile (same markup/classes as every other unanswered optional tile)
   // when there's nothing to compare yet, so an unanswered question never
   // gets a misleadingly "full" ring.
+  // "Your X, estimated" is period-aware (week/month/year - see
+  // yearlyStatsPeriod/renderStatsPage() below): every figure on the card
+  // is computed as a TRUE yearly total first, then scaled by one of these
+  // factors purely for display. Every comparison on the card (rings,
+  // UK percentile, "Compared to:" chips) is ratio-based (value/benchmark),
+  // so scaling both sides by the same factor leaves every ratio - and
+  // therefore every color/fraction/percentage shown - identical across
+  // all three periods; only the raw numbers and their unit labels change.
+  const YEARLY_PERIOD_SCALE = { week: 1 / 52, month: 1 / 12, year: 1 };
+  const YEARLY_PERIOD_HEADING = { week: "Your week, estimated", month: "Your month, estimated", year: "Your year, estimated" };
+  const YEARLY_PERIOD_NOUN = { week: "week", month: "month", year: "year" };
+  // long: the "kg CO2e/yr"-style unit used next to the hero total/alcohol
+  // tile and in each ring's empty-state label; short: the compact "kg/yr"
+  // used inside a ring's center; per: the "per year" phrase in each ring's
+  // aria-label sentence.
+  const YEARLY_PERIOD_UNITS = {
+    week: { long: "kg CO2e/wk", short: "kg/wk", per: "per week" },
+    month: { long: "kg CO2e/mo", short: "kg/mo", per: "per month" },
+    year: { long: "kg CO2e/yr", short: "kg/yr", per: "per year" },
+  };
+
+  // Apple-Watch-style ring for a single "Your year, estimated" tile:
+  // starts as a full green ring (100% of your UK-average "budget" for that
+  // domain still unused), and drains anticlockwise from 12 o'clock as your
+  // own total eats into it - top-left goes first (75% remaining), then
+  // bottom-left (50%), then bottom-right (25%, leaving only the top-right
+  // quarter), empty at exactly the UK average ("no budget left"). Past
+  // that, it switches to a red ring that fills back up the same
+  // anticlockwise way starting from empty (top-left first) to show how far
+  // over you are, capped visually at a full red ring for 2x the average or
+  // worse. See .ring-progress-green/.ring-progress-red in style.css for
+  // the two different CSS transforms this needs - green's "missing" edge
+  // and red's "filling" edge sweep the same visual direction, but starting
+  // from opposite states (full vs empty), so they need mirrored dashoffset
+  // rotations to both read as anticlockwise. Falls back to the plain muted
+  // "–" tile (same markup/classes as every other unanswered optional tile)
+  // when there's nothing to compare yet, so an unanswered question never
+  // gets a misleadingly "full" ring. `units` (a YEARLY_PERIOD_UNITS entry)
+  // controls the tile's own labels - defaults to the yearly one so any
+  // future caller outside the period-aware "Your X, estimated" card still
+  // works unchanged.
   const RING_RADIUS = 42;
   const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-  function renderRingStat(containerId, value, benchmark, label) {
+  function renderRingStat(containerId, value, benchmark, label, units = YEARLY_PERIOD_UNITS.year) {
     const el = document.getElementById(containerId);
     if (!el) return;
     if (value === null || value === undefined || benchmark === null || benchmark === undefined || benchmark <= 0) {
       el.className = "ring-container ring-container-empty";
       el.innerHTML = `
         <span class="stat-value">–</span>
-        <span class="stat-label">kg CO2e/yr &middot; ${label}</span>
+        <span class="stat-label">${units.long} &middot; ${label}</span>
         <span class="week-diff"><span class="diff-value">–</span><span class="diff-caption">vs UK average</span></span>
       `;
       return;
@@ -3550,14 +3591,14 @@
     el.className = "ring-container";
     el.innerHTML = `
       <div class="ring-wrap">
-        <svg viewBox="0 0 100 100" class="ring-svg" role="img" aria-label="${label}: ${fmt(value)} kg CO2e per year, ${Math.round(ratio * 100)}% of the UK average">
+        <svg viewBox="0 0 100 100" class="ring-svg" role="img" aria-label="${label}: ${fmt(value)} kg CO2e ${units.per}, ${Math.round(ratio * 100)}% of the UK average">
           <circle class="ring-track" cx="50" cy="50" r="${RING_RADIUS}"></circle>
           <circle class="ring-progress ${over ? "ring-progress-red" : "ring-progress-green"}" cx="50" cy="50" r="${RING_RADIUS}"
             stroke-dasharray="${RING_CIRCUMFERENCE}" stroke-dashoffset="${offset}"></circle>
         </svg>
         <div class="ring-center">
           <span class="ring-center-value">${Math.round(value).toLocaleString()}</span>
-          <span class="ring-center-unit">kg/yr</span>
+          <span class="ring-center-unit">${units.short}</span>
         </div>
       </div>
       <p class="ring-caption">${label}</p>
@@ -3565,8 +3606,35 @@
     `;
   }
 
-  function renderStatsPage() {
-    // "Your year, estimated": projected from the last 52 weeks only.
+  // "Your X, estimated" card's own timeframe - independent of the Budget
+  // pace chart's homeChartPeriod above, since the two cards can reasonably
+  // be looked at on different timeframes at once.
+  let yearlyStatsPeriod = "year";
+  function renderStatsPage(period = yearlyStatsPeriod) {
+    yearlyStatsPeriod = period;
+    document.querySelectorAll(".yearly-period-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.period === period);
+    });
+    const scale = YEARLY_PERIOD_SCALE[period];
+    const units = YEARLY_PERIOD_UNITS[period];
+    // Scales an already-computed TRUE yearly figure for display - null
+    // passes through untouched so "unanswered" tiles stay unanswered at
+    // every period, not silently become "0".
+    const s = (v) => (v === null || v === undefined ? v : v * scale);
+
+    document.getElementById("yearly-heading").textContent = YEARLY_PERIOD_HEADING[period];
+    document.getElementById("yearly-hero-unit-label").textContent = `📊 ${units.long} · Estimated total`;
+    document.getElementById("yearly-alcohol-unit-label").textContent = `${units.long} · Alcohol`;
+
+    // Every figure below is computed as a TRUE yearly total first (the
+    // last 52 weeks' confirmed average, ×52, for the day-tracked domains;
+    // already-yearly for the annual-estimate ones) - flyingYearlyKg in
+    // particular gets persisted to the profile as-is regardless of which
+    // period is showing, since it's real state other features depend on,
+    // not a display value. Every figure is then scaled via s() just
+    // before rendering - see YEARLY_PERIOD_SCALE's own comment for why
+    // that's safe to do this late, after every ratio-based comparison
+    // below has already been computed against matching true-yearly values.
     const yearlyFood = recentAverageConfirmedWeekly("food") * 52;
     const yearlyCommute = recentAverageConfirmedWeekly("commuteOnly") * 52;
     const yearlyNonCommuteCar = recentAverageConfirmedWeekly("nonCommuteCar") * 52;
@@ -3605,26 +3673,28 @@
 
     // Alcohol has no equivalent in the UK-average model to begin with, so
     // it's the one tile that stays a plain number, no ring possible.
-    document.getElementById("yearly-alcohol").textContent = Math.round(yearlyAlcohol).toLocaleString();
-    document.getElementById("yearly-total").textContent = Math.round(yearlyTotal).toLocaleString();
+    document.getElementById("yearly-alcohol").textContent = Math.round(s(yearlyAlcohol)).toLocaleString();
+    document.getElementById("yearly-total").textContent = Math.round(s(yearlyTotal)).toLocaleString();
 
     const uk = computeUkAverageBreakdown(includeOptional);
 
     // Every other tile: an Apple-Watch-style ring instead of a plain
     // number - falls back to the usual muted "–" tile on its own whenever
     // value or benchmark is null (see renderRingStat() above).
-    renderRingStat("yearly-food", yearlyFood, uk.food, "Food");
-    renderRingStat("yearly-commute", yearlyCommute, uk.commute, "Commute");
-    renderRingStat("yearly-noncommute-car", yearlyNonCommuteCar, uk.nonCommuteCar, "Non-commute driving");
-    renderRingStat("yearly-home-energy", yearlyHomeEnergy, uk.homeEnergy, "Home energy (your share)");
-    renderRingStat("yearly-gas-heating", yearlyGasHeating, uk.gasHeating, "Gas/oil heating");
-    renderRingStat("yearly-water", yearlyWater, uk.water, "Water usage");
-    renderRingStat("yearly-pets", yearlyPets, uk.pets, "Pets");
-    renderRingStat("yearly-flying", yearlyFlying, uk.flying, "Flying");
-    renderRingStat("yearly-banking", yearlyBanks, uk.banks, "Banking");
-    renderRingStat("yearly-goods", yearlyGoods, uk.goods, "Buying goods");
-    renderRingStat("yearly-car-ownership", yearlyCarOwnership, uk.carOwnership, "Car manufacturing");
+    renderRingStat("yearly-food", s(yearlyFood), s(uk.food), "Food", units);
+    renderRingStat("yearly-commute", s(yearlyCommute), s(uk.commute), "Commute", units);
+    renderRingStat("yearly-noncommute-car", s(yearlyNonCommuteCar), s(uk.nonCommuteCar), "Non-commute driving", units);
+    renderRingStat("yearly-home-energy", s(yearlyHomeEnergy), s(uk.homeEnergy), "Home energy (your share)", units);
+    renderRingStat("yearly-gas-heating", s(yearlyGasHeating), s(uk.gasHeating), "Gas/oil heating", units);
+    renderRingStat("yearly-water", s(yearlyWater), s(uk.water), "Water usage", units);
+    renderRingStat("yearly-pets", s(yearlyPets), s(uk.pets), "Pets", units);
+    renderRingStat("yearly-flying", s(yearlyFlying), s(uk.flying), "Flying", units);
+    renderRingStat("yearly-banking", s(yearlyBanks), s(uk.banks), "Banking", units);
+    renderRingStat("yearly-goods", s(yearlyGoods), s(uk.goods), "Buying goods", units);
+    renderRingStat("yearly-car-ownership", s(yearlyCarOwnership), s(uk.carOwnership), "Car manufacturing", units);
 
+    // Ratio-based (see ukPercentileBetterThan()), so unaffected by scale -
+    // computed against the true yearly figures directly, no s() needed.
     const percentileEl = document.getElementById("yearly-percentile");
     const betterThanPct = ukPercentileBetterThan(yearlyTotal, uk.total);
     if (betterThanPct === null) {
@@ -3637,8 +3707,8 @@
       percentileEl.textContent = `~higher than ${Math.round(100 - betterThanPct)}% of people in the UK`;
     }
 
-    renderYearComparison(yearlyTotal, uk.total);
-    renderYearCompareChips(yearlyTotal, uk.total);
+    renderYearComparison(s(yearlyTotal), s(uk.total), period);
+    renderYearCompareChips(s(yearlyTotal), s(uk.total), scale);
     renderSavingsTotaliser();
     renderPeriodChart();
     renderHomeTodoList();
@@ -3677,17 +3747,21 @@
   // constant above (WORLD_AVERAGE_YEARLY_KG); Uni average is the only one
   // needing a network round trip, so it renders as a neutral "loading"
   // slide first and fills in once university_weekly_average() resolves (or
-  // explains why it can't yet).
-  function renderYearCompareChips(yearlyTotal, ukAverageYearlyKg) {
-    setCompareChip("compare-chip-15c", "compare-chip-15c-label", "compare-hero-15c", yearlyTotal, PARIS_1_5C_YEARLY_KG, "1.5°C target");
+  // explains why it can't yet). `yearlyTotal`/`ukAverageYearlyKg` here are
+  // already display-scaled (see renderStatsPage()'s s()) - `scale` is
+  // passed through just to bring the two fixed yearly constants
+  // (PARIS_1_5C_YEARLY_KG/WORLD_AVERAGE_YEARLY_KG) down to the same
+  // timeframe before comparing.
+  function renderYearCompareChips(yearlyTotal, ukAverageYearlyKg, scale) {
+    setCompareChip("compare-chip-15c", "compare-chip-15c-label", "compare-hero-15c", yearlyTotal, PARIS_1_5C_YEARLY_KG * scale, "1.5°C target");
     setCompareChip("compare-chip-uk", "compare-chip-uk-label", "compare-hero-uk", yearlyTotal, ukAverageYearlyKg, "UK average");
-    setCompareChip("compare-chip-world", "compare-chip-world-label", "compare-hero-world", yearlyTotal, WORLD_AVERAGE_YEARLY_KG, "World average");
-    renderUniCompareChip(yearlyTotal);
+    setCompareChip("compare-chip-world", "compare-chip-world-label", "compare-hero-world", yearlyTotal, WORLD_AVERAGE_YEARLY_KG * scale, "World average");
+    renderUniCompareChip(yearlyTotal, scale);
   }
 
   const UNIVERSITY_MIN_PEOPLE = 3;
 
-  async function renderUniCompareChip(yearlyTotal) {
+  async function renderUniCompareChip(yearlyTotal, scale) {
     const valueEl = document.getElementById("compare-chip-uni");
     const labelEl = document.getElementById("compare-chip-uni-label");
     const heroEl = document.getElementById("compare-hero-uni");
@@ -3712,7 +3786,7 @@
       labelEl.textContent = `Not enough people from ${profile.university} yet`;
       return;
     }
-    setCompareChip("compare-chip-uni", "compare-chip-uni-label", "compare-hero-uni", yearlyTotal, row.avg_total_kg * 52, `${profile.university} average`);
+    setCompareChip("compare-chip-uni", "compare-chip-uni-label", "compare-hero-uni", yearlyTotal, row.avg_total_kg * 52 * scale, `${profile.university} average`);
   }
 
   // A lightweight nudge, not a data-completeness tracker: yesterday/today's
@@ -3840,17 +3914,94 @@
     if (banner) banner.hidden = true;
   }
 
-  function renderYearComparison(yearlyTotal, ukAverageYearlyKg) {
+  // Feather-style "globe" glyph (circle + equator + a lens-shaped meridian)
+  // reused both full-size in the Earth-laps ring below and tiny/repeated
+  // nowhere else - trees get their own filled silhouette instead, since a
+  // stroke-only outline disappears at the small repeated size those need.
+  const GLOBE_ICON_PATH = '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>';
+  // A simple two-tier fir tree + trunk, filled rather than outlined (a
+  // thin stroke reads poorly at the ~16px this renders at, repeated many
+  // times over in renderTreeIcons() below).
+  const TREE_ICON_PATH = '<path d="M12 2 6.5 10h3L5 16h4.2L6 21h12l-3.2-5H19l-4.5-6h3z"/><rect x="11" y="20" width="2" height="2"/>';
+
+  // "Times around the Earth" visual for the car-km comparison - a small
+  // ring (same track+progress-arc technique as renderRingStat()'s domain
+  // rings) rather than one globe icon per lap: a whole Earth circumference
+  // (40,075 km) dwarfs even a full year's car-km-equivalent for most
+  // people, so a repeated-icon count would almost always show zero or one
+  // icon and read as broken. A ring instead always shows a proportional
+  // sliver of progress no matter how small the fraction, the same way the
+  // domain rings above stay legible at any ratio - fill caps visually at
+  // one full lap (mirroring those rings' own "cap visually, exact number
+  // in text" treatment for over-100% ratios), with the precise lap count
+  // always spelled out in the caption underneath regardless of how full
+  // the ring itself looks.
+  const EARTH_RING_RADIUS = 22;
+  const EARTH_RING_CIRCUMFERENCE = 2 * Math.PI * EARTH_RING_RADIUS;
+  function renderEarthLapsRing(containerId, captionId, carKm) {
+    const el = document.getElementById(containerId);
+    const captionEl = document.getElementById(captionId);
+    if (!el) return;
+    const laps = carKm / EARTH_CIRCUMFERENCE_KM;
+    if (!(laps > 0)) {
+      el.innerHTML = "";
+      if (captionEl) captionEl.textContent = "";
+      return;
+    }
+    const fraction = Math.min(laps, 1);
+    const offset = EARTH_RING_CIRCUMFERENCE * (1 - fraction);
+    // A whole Earth circumference dwarfs a week's (sometimes even a
+    // year's) car-km-equivalent, so this can easily land under 0.05 -
+    // fmt()'s usual one decimal place would round that to a meaningless
+    // "0.0". Two decimals below that threshold keeps small-but-real
+    // fractions visible without cluttering the common case.
+    const lapsText = laps < 0.1 ? laps.toFixed(2) : fmt(laps);
+    el.innerHTML = `
+      <svg viewBox="0 0 56 56" class="earth-ring-svg" role="img" aria-label="${lapsText} times around the Earth">
+        <circle class="earth-ring-track" cx="28" cy="28" r="${EARTH_RING_RADIUS}"></circle>
+        <circle class="earth-ring-progress" cx="28" cy="28" r="${EARTH_RING_RADIUS}"
+          stroke-dasharray="${EARTH_RING_CIRCUMFERENCE}" stroke-dashoffset="${offset}"></circle>
+        <svg x="16" y="16" width="24" height="24" viewBox="0 0 24 24" class="earth-ring-globe" aria-hidden="true">${GLOBE_ICON_PATH}</svg>
+      </svg>
+    `;
+    if (captionEl) captionEl.textContent = `≈ ${lapsText}× around the Earth (${EARTH_CIRCUMFERENCE_KM.toLocaleString()} km)`;
+  }
+
+  // Tree-equivalent visual for the trees comparison - unlike car laps
+  // above, tree counts are naturally large (often dozens to low hundreds),
+  // so a repeated-icon row works well here: one tiny tree per whole tree,
+  // capped so a big yearly total doesn't spam the card with hundreds of
+  // icons - anything past the cap collapses into a "+N more" chip instead.
+  const TREE_ICON_CAP = 30;
+  function renderTreeIcons(containerId, treeCount) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const whole = Math.round(treeCount);
+    if (whole <= 0) { el.innerHTML = ""; return; }
+    const shown = Math.min(whole, TREE_ICON_CAP);
+    let html = "";
+    for (let i = 0; i < shown; i++) html += `<svg class="comparison-tree-icon" viewBox="0 0 24 24" aria-hidden="true">${TREE_ICON_PATH}</svg>`;
+    if (whole > TREE_ICON_CAP) html += `<span class="comparison-icon-more">+${(whole - TREE_ICON_CAP).toLocaleString()} more</span>`;
+    el.innerHTML = html;
+  }
+
+  function renderYearComparison(yearlyTotal, ukAverageYearlyKg, period) {
     const yourCarKm = yearlyTotal / TRANSPORT_FACTORS.car;
     const ukCarKm = ukAverageYearlyKg / TRANSPORT_FACTORS.car;
     const yourTrees = yearlyTotal / TREE_KG_PER_YEAR;
     const ukTrees = ukAverageYearlyKg / TREE_KG_PER_YEAR;
+    const periodNoun = YEARLY_PERIOD_NOUN[period];
 
     document.getElementById("compare-car-km").textContent = Math.round(yourCarKm).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
+    document.getElementById("compare-car-km-label").textContent = `km driven by an average car — that's how far you'd have to drive to match your estimated ${periodNoun}`;
+    document.getElementById("compare-trees-label").textContent = `mature trees' worth of your estimated ${periodNoun}'s CO2 absorption`;
 
     setComparisonDiff("compare-car-km-diff", yourCarKm, ukCarKm, "km");
     setComparisonDiff("compare-trees-diff", yourTrees, ukTrees, "trees");
+
+    renderEarthLapsRing("compare-car-icons", "compare-car-laps-caption", yourCarKm);
+    renderTreeIcons("compare-trees-icons", yourTrees);
   }
 
   // Two-line layout: a bold, colored delta on top and a small muted "vs
@@ -4703,6 +4854,10 @@
 
     document.querySelectorAll(".home-period-btn").forEach((btn) => {
       btn.addEventListener("click", () => renderPeriodChart(btn.dataset.period));
+    });
+
+    document.querySelectorAll(".yearly-period-btn").forEach((btn) => {
+      btn.addEventListener("click", () => renderStatsPage(btn.dataset.period));
     });
 
     document.querySelectorAll(".todo-item").forEach((item) => {
