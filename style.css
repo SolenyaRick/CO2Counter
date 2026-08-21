@@ -1815,15 +1815,17 @@ input, select {
 
 /* Conceptual visuals to the right of each comparison-item's text (see
    renderEarthLapsRing()/renderTreeIcons() in app.js) - a small "times
-   around the Earth" ring for the car-km figure, a capped row of tiny tree
-   icons for the trees one. Width-capped so the tree-icon grid wraps into
-   a compact block instead of stretching the row. */
+   around the Earth" ring for the car-km figure, a row of tiny tree icons
+   for the trees one. Width-capped so the tree-icon grid wraps into a
+   compact block instead of stretching the row - renderTreeIcons() reads
+   this same width back (TREE_BOX_WIDTH) to size each icon so the whole
+   count fits. */
 .comparison-visual {
   display: flex;
   flex-direction: column;
   align-items: center;
   flex-shrink: 0;
-  max-width: 130px;
+  max-width: 128px;
 }
 
 .comparison-icon-row {
@@ -1875,18 +1877,12 @@ input, select {
   margin: var(--space-1) 0 0;
 }
 
+/* Width/height set inline per render (see renderTreeIcons() in app.js) -
+   the icon shrinks as the tree count grows, so the whole count always
+   fits without an arbitrary cap. */
 .comparison-tree-icon {
-  width: 16px;
-  height: 16px;
   fill: var(--accent);
   flex-shrink: 0;
-}
-
-.comparison-icon-more {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  align-self: center;
-  margin-left: 2px;
 }
 
 .unaccounted-list {

@@ -245,10 +245,17 @@ color too with no extra CSS.
   category rings stay legible at any ratio), with the exact lap count
   always spelled out underneath regardless of how full the ring looks. The
   trees row's visual is a row of tiny tree icons instead, one per whole
-  tree - tree counts run naturally large (dozens to low hundreds), so a
-  repeated-icon count works well here, unlike car laps - capped at 30
-  icons with a "+N more" chip past that so a big yearly total doesn't
-  spam the card. A divider then splits the 12 category tiles into another
+  tree, every one of them always shown - no cap, no "+N more" chip, since
+  the whole point is a true visual sense of the count. What changes
+  instead is the icon's own size (`renderTreeIcons()` in `app.js`): it
+  shrinks - down to a small floor - by however much is needed to keep the
+  whole grid within a fixed-height box once it wraps across the visual
+  column's width, so ten trees and several hundred trees both read as
+  "the box's worth of trees", just at a different density, rather than
+  the box (or the page) growing without limit. If even the smallest icon
+  size can't fit every tree within that height, the box is simply allowed
+  to grow taller instead - showing the true count always wins over
+  hitting the height target. A divider then splits the 12 category tiles into another
   swipeable carousel, one slide per group with its own 3-dot indicator:
   "Travel & food" (food, commute, non-commute driving, alcohol - the four
   domains with real day-by-day tracked data, matching the bar chart's own

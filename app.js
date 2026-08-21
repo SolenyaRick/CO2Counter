@@ -3968,20 +3968,42 @@
   }
 
   // Tree-equivalent visual for the trees comparison - unlike car laps
-  // above, tree counts are naturally large (often dozens to low hundreds),
-  // so a repeated-icon row works well here: one tiny tree per whole tree,
-  // capped so a big yearly total doesn't spam the card with hundreds of
-  // icons - anything past the cap collapses into a "+N more" chip instead.
-  const TREE_ICON_CAP = 30;
+  // above, tree counts are naturally large (often dozens to low
+  // hundreds), so a repeated-icon row works well here: one tiny tree per
+  // whole tree, every one of them always shown (never capped with a "+N
+  // more" chip - the whole point is a true visual sense of the count).
+  // What changes instead is the icon's own size: it starts at
+  // TREE_ICON_MAX for a small count, then shrinks - down to TREE_ICON_MIN
+  // - by however much is needed to keep the whole grid within
+  // TREE_BOX_HEIGHT once it wraps across TREE_BOX_WIDTH, so ten trees and
+  // a thousand trees both read as "the box's worth of trees", just at a
+  // different density, rather than the box growing without limit. If even
+  // TREE_ICON_MIN can't fit every icon within that height, the box is
+  // simply allowed to grow taller - showing the true count always wins
+  // over hitting the height target.
+  const TREE_ICON_MAX = 16;
+  const TREE_ICON_MIN = 3;
+  const TREE_ICON_GAP = 2;
+  const TREE_BOX_WIDTH = 128; // matches .comparison-visual's max-width
+  const TREE_BOX_HEIGHT = 100;
   function renderTreeIcons(containerId, treeCount) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const whole = Math.round(treeCount);
     if (whole <= 0) { el.innerHTML = ""; return; }
-    const shown = Math.min(whole, TREE_ICON_CAP);
+
+    let size = TREE_ICON_MAX;
+    for (; size > TREE_ICON_MIN; size--) {
+      const perRow = Math.max(1, Math.floor((TREE_BOX_WIDTH + TREE_ICON_GAP) / (size + TREE_ICON_GAP)));
+      const rows = Math.ceil(whole / perRow);
+      if (rows * (size + TREE_ICON_GAP) <= TREE_BOX_HEIGHT) break;
+    }
+    el.style.gap = `${TREE_ICON_GAP}px`;
+
     let html = "";
-    for (let i = 0; i < shown; i++) html += `<svg class="comparison-tree-icon" viewBox="0 0 24 24" aria-hidden="true">${TREE_ICON_PATH}</svg>`;
-    if (whole > TREE_ICON_CAP) html += `<span class="comparison-icon-more">+${(whole - TREE_ICON_CAP).toLocaleString()} more</span>`;
+    for (let i = 0; i < whole; i++) {
+      html += `<svg class="comparison-tree-icon" style="width:${size}px;height:${size}px" viewBox="0 0 24 24" aria-hidden="true">${TREE_ICON_PATH}</svg>`;
+    }
     el.innerHTML = html;
   }
 
