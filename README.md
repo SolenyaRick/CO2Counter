@@ -228,13 +228,15 @@ color too with no extra CSS.
   jumps straight to Account), "Not enough people from X yet" until at
   least 3 people from that university have a fully confirmed week (so the
   comparison is never just reflecting one or two other people's data back
-  at you), and only then shows a real number. Next, two comparison tiles
-  convert that total into km driven by an average car and
-  mature-trees-of-CO2-absorption equivalents, each with a delta against
-  the UK average, plus a small conceptual visual underneath each
-  (`renderEarthLapsRing()`/`renderTreeIcons()` in `app.js`): the car tile
-  gets a small ring - the same track+progress-arc technique the category
-  rings below use, sized down - showing how far around the Earth
+  at you), and only then shows a real number. Next, two comparison rows -
+  car first, then trees, always stacked one per line rather than a 2-up
+  grid - convert that total into km driven by an average car and
+  mature-trees-of-CO2-absorption equivalents. Each row lays its number/
+  label/UK-average delta on the left against a small conceptual visual on
+  the right (`.comparison-text`/`.comparison-visual` in `index.html`,
+  `renderEarthLapsRing()`/`renderTreeIcons()` in `app.js`): the car row's
+  visual is a small ring - the same track+progress-arc technique the
+  category rings below use, sized down - showing how far around the Earth
   (40,075 km) that km figure would take you, filling clockwise from 12
   o'clock and capping visually at one full lap (a repeated-icon count
   would read as broken here, since a whole Earth circumference dwarfs
@@ -242,8 +244,8 @@ color too with no extra CSS.
   legible at any fraction, down to a barely-there sliver, the same way the
   category rings stay legible at any ratio), with the exact lap count
   always spelled out underneath regardless of how full the ring looks. The
-  trees tile gets a row of tiny tree icons instead, one per whole tree -
-  tree counts run naturally large (dozens to low hundreds), so a
+  trees row's visual is a row of tiny tree icons instead, one per whole
+  tree - tree counts run naturally large (dozens to low hundreds), so a
   repeated-icon count works well here, unlike car laps - capped at 30
   icons with a "+N more" chip past that so a big yearly total doesn't
   spam the card. A divider then splits the 12 category tiles into another

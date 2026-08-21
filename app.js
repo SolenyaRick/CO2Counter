@@ -3994,7 +3994,7 @@
 
     document.getElementById("compare-car-km").textContent = Math.round(yourCarKm).toLocaleString();
     document.getElementById("compare-trees").textContent = Math.round(yourTrees).toLocaleString();
-    document.getElementById("compare-car-km-label").textContent = `km driven by an average car — that's how far you'd have to drive to match your estimated ${periodNoun}`;
+    document.getElementById("compare-car-km-label").textContent = "km driven by an average car";
     document.getElementById("compare-trees-label").textContent = `mature trees' worth of your estimated ${periodNoun}'s CO2 absorption`;
 
     setComparisonDiff("compare-car-km-diff", yourCarKm, ukCarKm, "km");
