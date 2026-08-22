@@ -2353,6 +2353,24 @@ input, select {
   opacity: 0.92;
 }
 
+/* A box too small for the name+value text (see renderDomainTreemap() in
+   app.js) centers just its category icon instead - padding drops to 0 so
+   a very small box doesn't get squeezed to nothing by the base padding. */
+.domain-treemap-box-icon-only {
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.domain-treemap-icon {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
 .domain-treemap-empty {
   padding: var(--space-4);
   text-align: center;

@@ -142,10 +142,14 @@ color too with no extra CSS.
   readable rather than the smallest few collapsing into slivers the way
   they would in a single row. Domain name and kg value are labeled directly
   inside each box wherever it's big enough to hold them (at least 46×30px);
-  a box too small for that stays just a colored patch, still identifiable
-  via the compact color key underneath (swatch + `DOMAIN_ICON_SVG` line
-  icon + name, no numbers - those live in the boxes now) and via its own
-  hover/long-press tooltip. It follows whichever of the three timeframe
+  a box too small for the full text but still at least 16×16px falls back
+  to just its `DOMAIN_ICON_SVG` category icon, centered - the name and
+  exact value are already in the color key underneath either way (swatch +
+  icon + name, no numbers there - those live in the boxes), so the icon's
+  job at that size is just staying identifiable at a glance, backed up by
+  the box's own hover/long-press tooltip. Only a sliver too small even for
+  a legible icon falls back to a bare colored patch. It follows whichever
+  of the three timeframe
   buttons above the carousel is currently selected rather than having its
   own toggle. Commute, food, alcohol, and non-commute driving (the Car-mode
   slice of logged "Additional journeys", pulled out of Commute into its own

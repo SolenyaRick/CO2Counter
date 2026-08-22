@@ -1995,14 +1995,21 @@
       box.style.width = `${Math.max(0, w - GAP)}px`;
       box.style.height = `${Math.max(0, h - GAP)}px`;
       box.title = `${DOMAIN_LABELS[key]}: ${fmt(value)} kg CO2e (${Math.round(pct)}%)`;
-      // A box too small to hold real text stays just a colored patch
-      // (still identifiable via the key row below, plus its own title
-      // tooltip) rather than a few overflowing pixels of label.
+      // A box too small to hold the name+value text falls back to just its
+      // category icon, centered - the name and value themselves are
+      // already in the key row below either way, so the box's own job at
+      // that size is just staying identifiable at a glance (plus its title
+      // tooltip). Only a box too small even for that stays a bare colored
+      // patch.
       if (w >= 46 && h >= 30) {
         box.innerHTML = `
           <span class="domain-treemap-label">${DOMAIN_LABELS[key]}</span>
           <span class="domain-treemap-value">${fmt(value)} kg</span>
         `;
+      } else if (w >= 16 && h >= 16) {
+        box.classList.add("domain-treemap-box-icon-only");
+        const iconSize = Math.max(12, Math.min(20, Math.min(w, h) * 0.6));
+        box.innerHTML = `<svg class="domain-treemap-icon" style="width:${iconSize}px;height:${iconSize}px" viewBox="0 0 24 24" aria-hidden="true">${DOMAIN_ICON_SVG[key]}</svg>`;
       }
       treemapEl.appendChild(box);
     });
