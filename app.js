@@ -1858,30 +1858,96 @@
     carOwnership: '<path d="M3 21V10l5 3V10l5 3V7l6 4v10z"/><path d="M3 21h18"/>',
   };
 
-  // Stacked bar showing what the period's total is made up of, domain by
-  // domain. Commute/food/alcohol are real tracked totals for [start, today]
-  // (same scope as the pace chart above it); the rest (flights, home
-  // energy, and the other yearly-estimate categories) have no day-by-day
-  // data to draw from, so - same approach as the all-time weekly-average
-  // leaderboard - they're each a weekly-equivalent share (yearly ÷ 52),
-  // scaled up to match whichever timeframe is selected (×1 for a week,
-  // ×totalDays/7 for a month, ×52 for a year).
-  // Whether the legend's rows are sorted biggest-first ("Rank by size") or
-  // left in DOMAIN_ORDER (the default) - persists across re-renders
-  // (period switches, new data) until the toggle is clicked again.
-  let domainLegendRanked = false;
+  // Squarified treemap (Bruls/Huizing/van Wijk): lays out rectangles whose
+  // AREA (not just width) is proportional to value, always keeping each
+  // box as close to square as it can - the standard treemap algorithm,
+  // and the shape used by the domain-by-domain breakdown below instead of
+  // a single-row stacked bar, so a dozen very differently-sized domains
+  // all stay individually readable rather than the smallest ones
+  // collapsing into slivers. `items` must already be sorted descending by
+  // value for the algorithm to produce good (near-square) boxes.
+  function squarifyTreemap(items, x, y, width, height) {
+    const totalValue = items.reduce((sum, d) => sum + d.value, 0);
+    if (totalValue <= 0 || width <= 0 || height <= 0) return [];
+    const scale = (width * height) / totalValue;
+    const scaled = items.map((d) => ({ ...d, area: d.value * scale }));
 
-  function renderDomainBarChart(period, start, today, totalDays) {
+    function worstAspect(row, side) {
+      const sum = row.reduce((s, d) => s + d.area, 0);
+      if (sum <= 0) return Infinity;
+      const maxArea = Math.max(...row.map((d) => d.area));
+      const minArea = Math.min(...row.map((d) => d.area));
+      return Math.max((side * side * maxArea) / (sum * sum), (sum * sum) / (side * side * minArea));
+    }
+
+    const rects = [];
+    let remaining = scaled;
+    let cx = x, cy = y, cw = width, ch = height;
+
+    while (remaining.length) {
+      const side = Math.min(cw, ch);
+      let row = [remaining[0]];
+      let best = worstAspect(row, side);
+      for (let i = 1; i < remaining.length; i++) {
+        const testRow = row.concat(remaining[i]);
+        const testWorst = worstAspect(testRow, side);
+        if (testWorst > best) break;
+        row = testRow;
+        best = testWorst;
+      }
+      const rowArea = row.reduce((s, d) => s + d.area, 0);
+      const rowLength = rowArea / side;
+
+      if (cw >= ch) {
+        let ry = cy;
+        row.forEach((d) => {
+          const rh = d.area / rowLength;
+          rects.push({ key: d.key, value: d.value, x: cx, y: ry, width: rowLength, height: rh });
+          ry += rh;
+        });
+        cx += rowLength;
+        cw -= rowLength;
+      } else {
+        let rx = cx;
+        row.forEach((d) => {
+          const rw = d.area / rowLength;
+          rects.push({ key: d.key, value: d.value, x: rx, y: cy, width: rw, height: rowLength });
+          rx += rw;
+        });
+        cy += rowLength;
+        ch -= rowLength;
+      }
+      remaining = remaining.slice(row.length);
+    }
+    return rects;
+  }
+
+  // Domain-by-domain breakdown, drawn as a treemap rather than the old
+  // single-row stacked bar - each domain's box area (not just its width)
+  // is proportional to its share, with the name and kg value labeled
+  // directly inside the box wherever it's big enough to hold them, so the
+  // chart itself carries the numbers instead of a separate itemized list
+  // underneath. Commute/food/alcohol are real tracked totals for
+  // [start, today] (same scope as the pace chart above it); the rest
+  // (flights, home energy, and the other yearly-estimate categories) have
+  // no day-by-day data to draw from, so - same approach as the all-time
+  // weekly-average leaderboard - they're each a weekly-equivalent share
+  // (yearly ÷ 52), scaled up to match whichever timeframe is selected
+  // (×1 for a week, ×totalDays/7 for a month, ×52 for a year). Always
+  // ranked biggest-first (squarified treemaps need that for good
+  // aspect ratios), so unlike the old bar there's no separate "Rank by
+  // size" toggle any more - and no "Show full breakdown" toggle either,
+  // since every box already shows its own value up front rather than
+  // hiding it behind a tap.
+  function renderDomainTreemap(period, start, today, totalDays) {
     const heading = document.getElementById("home-domain-heading");
     if (heading) heading.textContent = `${PERIOD_LABELS[period]}'s emissions by domain`;
 
-    const bar = document.getElementById("home-domain-bar");
-    const legend = document.getElementById("home-domain-legend");
-    const breakdownToggle = document.getElementById("home-domain-breakdown-toggle");
-    const rankToggle = document.getElementById("home-domain-rank-toggle");
-    if (!bar || !legend) return;
-    bar.innerHTML = "";
-    legend.innerHTML = "";
+    const treemapEl = document.getElementById("home-domain-treemap");
+    const keyEl = document.getElementById("home-domain-key");
+    if (!treemapEl || !keyEl) return;
+    treemapEl.innerHTML = "";
+    keyEl.innerHTML = "";
 
     const { commute, food, alcohol, nonCommuteCar } = computeRangeDomainKg(start, today);
     const extras = weeklyExtrasBreakdownFor(profile);
@@ -1905,103 +1971,64 @@
     const total = DOMAIN_ORDER.reduce((sum, key) => sum + (values[key] || 0), 0);
 
     if (total <= 0) {
-      const empty = document.createElement("div");
-      empty.className = "domain-bar-empty";
-      bar.appendChild(empty);
-      const li = document.createElement("li");
-      li.className = "domain-legend-empty";
-      li.textContent = "No emissions to show for this period yet.";
-      legend.appendChild(li);
-      if (breakdownToggle) breakdownToggle.hidden = true;
-      if (rankToggle) rankToggle.hidden = true;
+      treemapEl.style.height = "";
+      treemapEl.innerHTML = '<div class="domain-treemap-empty">No emissions to show for this period yet.</div>';
       return;
     }
-    if (breakdownToggle) breakdownToggle.hidden = false;
-    if (rankToggle) rankToggle.hidden = false;
 
-    // Bar segments always stay in DOMAIN_ORDER (a fixed visual composition -
-    // reordering it wouldn't mean anything). The legend's rows are what
-    // "Rank by size" reorders, so collect each present domain's figures
-    // here and decide the legend's own iteration order separately below.
-    const present = [];
-    DOMAIN_ORDER.forEach((key) => {
-      const value = values[key];
-      if (!value || value <= 0) return;
+    const present = DOMAIN_ORDER
+      .map((key) => ({ key, value: values[key] || 0 }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    const width = treemapEl.getBoundingClientRect().width || 320;
+    const height = Math.round(width * 0.62);
+    treemapEl.style.height = `${height}px`;
+
+    const GAP = 2;
+    squarifyTreemap(present, 0, 0, width, height).forEach(({ key, value, x, y, width: w, height: h }) => {
       const pct = (value / total) * 100;
-      present.push({ key, value, pct });
-
-      const seg = document.createElement("div");
-      seg.className = `domain-bar-segment domain-${key}`;
-      seg.style.width = `${pct}%`;
-      seg.title = `${DOMAIN_LABELS[key]}: ${fmt(value)} kg CO2e (${Math.round(pct)}%)`;
-      bar.appendChild(seg);
+      const box = document.createElement("div");
+      box.className = `domain-treemap-box domain-${key}`;
+      box.style.left = `${x + GAP / 2}px`;
+      box.style.top = `${y + GAP / 2}px`;
+      box.style.width = `${Math.max(0, w - GAP)}px`;
+      box.style.height = `${Math.max(0, h - GAP)}px`;
+      box.title = `${DOMAIN_LABELS[key]}: ${fmt(value)} kg CO2e (${Math.round(pct)}%)`;
+      // A box too small to hold real text stays just a colored patch
+      // (still identifiable via the key row below, plus its own title
+      // tooltip) rather than a few overflowing pixels of label.
+      if (w >= 46 && h >= 30) {
+        box.innerHTML = `
+          <span class="domain-treemap-label">${DOMAIN_LABELS[key]}</span>
+          <span class="domain-treemap-value">${fmt(value)} kg</span>
+        `;
+      }
+      treemapEl.appendChild(box);
     });
 
-    const legendOrder = domainLegendRanked ? present.slice().sort((a, b) => b.value - a.value) : present;
-    legendOrder.forEach(({ key, value, pct }) => {
+    present.forEach(({ key }) => {
       const li = document.createElement("li");
-      li.className = "domain-legend-item";
+      li.className = "domain-key-item";
       const swatch = document.createElement("span");
-      swatch.className = `domain-legend-swatch domain-${key}`;
-      // Read by the "expanded" state's CSS (see .domain-legend.expanded
-      // .domain-legend-swatch in style.css) - the swatch is a fixed small
-      // square normally, and grows to this width when expanded, so the
-      // exact same element is the "before" and "after" of the transition
-      // rather than two separate elements swapped out.
-      swatch.style.setProperty("--pct", `${pct}%`);
+      swatch.className = `domain-key-swatch domain-${key}`;
       const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      icon.setAttribute("class", "domain-legend-icon");
+      icon.setAttribute("class", "domain-key-icon");
       icon.setAttribute("viewBox", "0 0 24 24");
       icon.setAttribute("aria-hidden", "true");
       icon.innerHTML = DOMAIN_ICON_SVG[key];
       const text = document.createElement("span");
-      text.textContent = `${DOMAIN_LABELS[key]} — ${fmt(value)} kg (${Math.round(pct)}%)`;
+      text.textContent = DOMAIN_LABELS[key];
       li.appendChild(swatch);
       li.appendChild(icon);
       li.appendChild(text);
-      legend.appendChild(li);
+      keyEl.appendChild(li);
     });
 
     const totalLi = document.createElement("li");
-    totalLi.className = "domain-legend-total";
+    totalLi.className = "domain-key-total";
     totalLi.textContent = `Total: ${fmt(total)} kg CO2e`;
-    legend.appendChild(totalLi);
-  }
-
-  // One-time wiring for the two toolbar buttons underneath the domain
-  // bar/legend - the buttons themselves are static elements (only the
-  // legend's row contents get replaced on every renderDomainBarChart()
-  // call), so this only needs to run once at startup, not on every
-  // re-render.
-  function wireDomainBreakdownToggle() {
-    // "Show full breakdown": toggles an "expanded" class on the legend
-    // itself, which CSS uses to grow each swatch from its small square up
-    // to its own percentage-width bar (see --pct above and
-    // .domain-legend.expanded in style.css).
-    const toggle = document.getElementById("home-domain-breakdown-toggle");
-    const legend = document.getElementById("home-domain-legend");
-    const label = document.getElementById("home-domain-breakdown-toggle-label");
-    if (toggle && legend && label) {
-      toggle.addEventListener("click", () => {
-        const open = !legend.classList.contains("expanded");
-        legend.classList.toggle("expanded", open);
-        toggle.setAttribute("aria-expanded", String(open));
-        label.textContent = open ? "Hide full breakdown" : "Show full breakdown";
-      });
-    }
-
-    // "Rank by size": flips domainLegendRanked and re-renders the current
-    // period, which rebuilds the legend's rows biggest-first instead of
-    // DOMAIN_ORDER (bar segments above stay put either way - see
-    // renderDomainBarChart()).
-    const rankToggle = document.getElementById("home-domain-rank-toggle");
-    if (rankToggle) {
-      rankToggle.addEventListener("click", () => {
-        domainLegendRanked = !domainLegendRanked;
-        rankToggle.setAttribute("aria-pressed", String(domainLegendRanked));
-        renderPeriodChart();
-      });
-    }
+    keyEl.appendChild(totalLi);
   }
 
   const PERIOD_LABELS = { week: "This week", month: "This month", year: "This year" };
@@ -2066,7 +2093,7 @@
     // the steady rate" treatment already used above for days before
     // tracking began. Domains the person has never answered (or that come
     // to 0) are left out of both the stack and the legend entirely, same
-    // as renderDomainBarChart() already does.
+    // as renderDomainTreemap() already does.
     const extras = weeklyExtrasBreakdownFor(profile);
     const EXTRA_DOMAIN_KEYS = ["homeEnergy", "gasHeating", "water", "pets", "flying", "banks", "goods", "carOwnership"];
     const extraCumulatives = EXTRA_DOMAIN_KEYS
@@ -2102,7 +2129,7 @@
       ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
     });
 
-    renderDomainBarChart(period, start, today, totalDays);
+    renderDomainTreemap(period, start, today, totalDays);
   }
 
   function renderWeekPage() {
@@ -4843,7 +4870,6 @@
     wireCarousel("home-year-groups-carousel", "home-year-groups-dots");
     wireCarousel("home-compare-carousel", "home-compare-dots");
     wireCarousel("home-budget-carousel", "home-budget-dots");
-    wireDomainBreakdownToggle();
 
     document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {

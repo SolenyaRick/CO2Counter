@@ -2303,35 +2303,61 @@ input, select {
   border-radius: 3px;
 }
 
-.domain-bar {
-  display: flex;
+/* Domain-by-domain treemap (see squarifyTreemap()/renderDomainTreemap()
+   in app.js) - a fixed-height positioning context for the absolutely
+   positioned .domain-treemap-box children the JS computes coordinates
+   for, height set inline per render (proportional to the container's own
+   width, so the whole thing keeps a consistent landscape aspect ratio
+   whatever the screen size). */
+.domain-treemap {
+  position: relative;
   width: 100%;
-  height: 28px;
   border-radius: 8px;
   overflow: hidden;
   background: var(--border);
   margin: var(--space-1) 0 var(--space-3);
 }
 
-/* A visible gap between segments (rather than relying purely on hue to
-   mark a boundary) so two adjacent categories with a similar-reading
-   color still read as separate shapes - the categorical palette above
-   (--commute-color etc.) is validated for CVD separation, but a boundary
-   you can see regardless of color is a stronger, order-independent cue,
-   since "Rank by size" can put any two categories next to each other. */
-.domain-bar-segment {
-  height: 100%;
-  min-width: 3px;
-  border-right: 2px solid var(--surface);
+/* Position/size set inline per render. A visible gap between boxes
+   (baked into those inline coordinates, not a border here) so two
+   adjacent categories with a similar-reading color still read as
+   separate shapes - the categorical palette above (--commute-color etc.)
+   is validated for CVD separation, but a boundary you can see regardless
+   of color is a stronger, order-independent cue. White text with a soft
+   shadow reads reasonably across the whole palette without needing a
+   per-color text-color lookup. */
+.domain-treemap-box {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 6px 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-.domain-bar-segment:last-child {
-  border-right: none;
+.domain-treemap-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.domain-bar-empty {
-  width: 100%;
-  height: 100%;
+.domain-treemap-value {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+}
+
+.domain-treemap-empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
 }
 
 .domain-commute {
@@ -2382,48 +2408,38 @@ input, select {
   background: var(--carownership-color);
 }
 
-.domain-legend {
+/* Compact color key under the treemap - swatch + icon + name only, no
+   kg/percentage (those live inside each box itself now, or its title
+   tooltip for a box too small to hold text) - so this stays a quick
+   color-to-category lookup, matching the small legend row style of the
+   treemap references this was modeled on. */
+.domain-key {
   list-style: none;
   margin: 0 0 4px;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
 }
 
-.domain-legend-item {
+.domain-key-item {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: var(--text);
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
-/* Small square by default; the "Show full breakdown" toggle adds
-   .expanded to the legend itself (see wireDomainBreakdownToggle() in
-   app.js), which grows every swatch from this square up to its own
-   --pct-wide bar (set inline per row in renderDomainBarChart()) - the
-   same element is both the "before" and "after" of the transition, so it
-   reads as the square itself elongating rather than a separate chart
-   appearing underneath. */
-.domain-legend-swatch {
-  width: 12px;
-  height: 12px;
+.domain-key-swatch {
+  width: 10px;
+  height: 10px;
   border-radius: 3px;
   flex-shrink: 0;
-  transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease;
 }
 
-.domain-legend.expanded .domain-legend-swatch {
-  width: var(--pct);
-  height: 18px;
-  border-radius: 4px;
-}
-
-.domain-legend-icon {
-  width: 15px;
-  height: 15px;
+.domain-key-icon {
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
   fill: none;
   stroke: var(--text-muted);
@@ -2432,52 +2448,14 @@ input, select {
   stroke-linejoin: round;
 }
 
-.domain-legend-total {
+.domain-key-total {
+  width: 100%;
   font-weight: 600;
   font-size: 0.85rem;
   margin-top: 4px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
   color: var(--text);
-}
-
-.domain-legend-empty {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.domain-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-1) 0 0;
-}
-
-.domain-toolbar-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-/* Same "selected" look as .week-picker-btn.active/.chip-toggle-btn.active
-   above (accent fill, white text, bold) - kept as its own rule since this
-   button's unselected state is .btn-secondary.btn-small, not the pill-
-   toggle base, but the active state should still read as one language. */
-.domain-toolbar-btn.active,
-.domain-toolbar-btn[aria-pressed="true"] {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  font-weight: 600;
-}
-
-.domain-breakdown-chevron {
-  display: inline-block;
-  transition: transform 0.15s ease;
-}
-
-.domain-toolbar-btn[aria-expanded="true"] .domain-breakdown-chevron {
-  transform: rotate(180deg);
 }
 
 .assumptions {

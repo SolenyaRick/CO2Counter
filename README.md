@@ -111,11 +111,11 @@ color too with no extra CSS.
   optional extras (gas heating/car ownership/pets/water/banking) don't
   have day-by-day logs to plot - each is instead spread evenly across
   every day at its own flat weekly-equivalent rate, derived from the same
-  yearly profile estimate `weeklyExtrasBreakdownFor()` feeds the bar
-  chart, so the two slides always add up to the same total. A domain
+  yearly profile estimate `weeklyExtrasBreakdownFor()` feeds the
+  treemap, so the two slides always add up to the same total. A domain
   you've never answered (or that comes to 0) is left out of the stack and
   the key entirely, same as slide two. Every band uses the exact same
-  colors as slide two's domain bar (`--commute-color`/`--accent`/
+  colors as slide two's domain treemap (`--commute-color`/`--accent`/
   `--alcohol-color`/etc., one `--x-color` variable per domain), with a
   small color key underneath the chart naming each one present, so the
   two slides and the key all read as one consistent picture. Dropping
@@ -132,49 +132,39 @@ color too with no extra CSS.
   than being credited as zero-emission days, which would make the stacked
   area jump out ahead of pace for no real reason
   (`renderBudgetChart()`'s `stackBaseline` in `app.js`). Slide two is the
-  "emissions by domain" bar: it breaks
-  the selected timeframe into a stacked bar with up to twelve segments - one
-  per domain, sized by share of the total, with a legend giving each
-  domain's exact kg and percentage plus a total row. It follows whichever
-  of the three timeframe buttons above the carousel is currently selected
-  rather than having its own toggle. Commute, food, alcohol, and
-  non-commute driving (the Car-mode slice of logged "Additional journeys",
-  pulled out of Commute into its own segment) are real tracked totals, same
-  scope as the pace chart above it; the rest (flights, home energy,
-  gas/oil heating, water, pets, banking, buying goods, car manufacturing)
-  have no day-by-day data, so each is its own weekly-equivalent share
-  (yearly ÷ 52) scaled to match the
-  timeframe - month uses the same ×(days in month/7) the pace chart's own
-  goal line uses, year uses a flat ×52 (not ×365/7, which would inflate
-  every one of these by about 0.3% versus the exact figures on the "Your
-  year, estimated" tiles) - the same weekly-equivalent approach the
-  all-time weekly average on the Leaderboard already uses. A domain that's
-  zero or unanswered (e.g. gas heating, if that question's been skipped)
-  just doesn't get a segment. Segments are separated by a thin gap (not
-  just a color change) and every legend row is prefixed with that
-  category's small SVG line icon (`DOMAIN_ICON_SVG` in `app.js`, the same
-  per-category icon as the "Your year, estimated" tile badges and the This
-  Year list), so a domain is always identifiable by more than its swatch
-  color alone - with up to twelve categories on screen at once and
-  "Rank by size" free to put any two next to each other, no fixed hue
-  order can guarantee every pair reads as different colors for every
-  viewer (see the palette comment above `--commute-color` etc. in
-  `style.css` for how the 12-color set was chosen and validated). Two
-  small buttons sit under the legend. "Show
-  full breakdown ▾" doesn't reveal a separate chart underneath; instead,
-  the legend's own small colored squares each animate (a plain CSS width
-  transition, no library) into a full-length bar sized to that domain's own
-  percentage share (same number as the legend/segment above), with the
-  label and kg/percentage trailing right after it, wrapping onto its own
-  line if the bar's grown wide enough to need it. The same square is the
-  "before" and "after" of the animation - nothing new appears, it just
-  elongates in place - so it reads as one continuous shape rather than two
-  disconnected chart elements swapped by a toggle. Next to it, "Rank by
-  size" re-sorts those same rows biggest-first (an instant re-render, not
-  an animated reorder) instead of the default DOMAIN_ORDER; toggling it off
-  puts them back. Both buttons remember their own on/off state
-  independently across re-renders (period switch, new data) until clicked
-  again. Next, a
+  "emissions by domain" treemap (`renderDomainTreemap()`/`squarifyTreemap()`
+  in `app.js`): up to twelve boxes, one per domain, each one's *area* (not
+  just its width, the way the old single-row stacked bar this replaced
+  worked) proportional to its share of the selected timeframe's total, laid
+  out by a standard squarified treemap algorithm (Bruls/Huizing/van Wijk -
+  the same technique tools like Carbonfact's product-footprint breakdowns
+  use) so a dozen very differently-sized domains all stay individually
+  readable rather than the smallest few collapsing into slivers the way
+  they would in a single row. Domain name and kg value are labeled directly
+  inside each box wherever it's big enough to hold them (at least 46×30px);
+  a box too small for that stays just a colored patch, still identifiable
+  via the compact color key underneath (swatch + `DOMAIN_ICON_SVG` line
+  icon + name, no numbers - those live in the boxes now) and via its own
+  hover/long-press tooltip. It follows whichever of the three timeframe
+  buttons above the carousel is currently selected rather than having its
+  own toggle. Commute, food, alcohol, and non-commute driving (the Car-mode
+  slice of logged "Additional journeys", pulled out of Commute into its own
+  box) are real tracked totals, same scope as the pace chart above it; the
+  rest (flights, home energy, gas/oil heating, water, pets, banking, buying
+  goods, car manufacturing) have no day-by-day data, so each is its own
+  weekly-equivalent share (yearly ÷ 52) scaled to match the timeframe -
+  month uses the same ×(days in month/7) the pace chart's own goal line
+  uses, year uses a flat ×52 (not ×365/7, which would inflate every one of
+  these by about 0.3% versus the exact figures on the "Your year,
+  estimated" tiles) - the same weekly-equivalent approach the all-time
+  weekly average on the Leaderboard already uses. A domain that's zero or
+  unanswered (e.g. gas heating, if that question's been skipped) just
+  doesn't get a box. Always ranked biggest-first (a squarified treemap
+  needs that for good box proportions) - unlike the old bar, there's no
+  separate "Rank by size" toggle any more, and no "Show full breakdown"
+  toggle either, since every box already shows its own value up front
+  rather than hiding it behind a tap. A total row sits under the color key.
+  Next, a
   "To do" card lists up to six quick
   nudges - yesterday's and today's commute and meal, electricity per year,
   and flights per year - each dropping off the list the moment there's
