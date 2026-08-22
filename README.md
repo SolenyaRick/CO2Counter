@@ -46,7 +46,16 @@ alone lets `.tab-btn.active`'s existing text-color rule drive the icon's
 color too with no extra CSS.
 
 - **Login** — email/password sign-in and sign-up (with a "forgot password"
-  flow), gating the rest of the app.
+  flow), gating the rest of the app. Signing up when Supabase's "Confirm
+  email" setting is on (`signUp()` succeeds but returns no session yet)
+  shows "Confirmation email sent - check your inbox to confirm your
+  account, then sign in." and switches the form back to sign-in mode
+  (`handleAuthSubmit()` in `app.js`) - `updateAuthModeUI()`, the helper
+  that resets the form for the new mode, runs *before* that message is
+  set now, not after; it also unconditionally re-hides `#auth-status`
+  (the normal case when switching modes with nothing pending to show),
+  and calling it after used to immediately hide the very confirmation
+  message this branch exists to show.
 - **Home** — the landing page. The very first thing on it is a compact
   "snapshot" card (`renderHomeSnapshot()` in `app.js`): the older
   three-overlapping-circles brand mark (superseded on the header/login

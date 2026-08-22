@@ -4679,10 +4679,16 @@
           errorEl.textContent = describeAuthError(error);
           errorEl.hidden = false;
         } else if (!data.session) {
-          statusEl.textContent = "Check your email to confirm your account, then sign in.";
-          statusEl.hidden = false;
+          // updateAuthModeUI() resets the form for the new mode (button
+          // label, toggle text) but also unconditionally re-hides
+          // auth-status, since it's normally called on a fresh mode
+          // switch with nothing to show yet - call it first, then set the
+          // confirmation message after, so it doesn't immediately hide
+          // the very message this branch exists to show.
           authMode = "signin";
           updateAuthModeUI();
+          statusEl.textContent = "Confirmation email sent - check your inbox to confirm your account, then sign in.";
+          statusEl.hidden = false;
         }
       }
     } finally {
