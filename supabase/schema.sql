@@ -53,11 +53,54 @@ alter table public.profiles drop constraint if exists profiles_university_check;
 alter table public.profiles add constraint profiles_university_check
   check (university is null or university in ('UCL', 'Imperial', 'KCL'));
 
+-- Optional: which country you live in - null means "prefer not to say",
+-- same nullable-optional pattern as university above. Used for the
+-- Account > Settings country picker and, once answered, as one of the
+-- public_leaderboard() filter options below (see COUNTRY_LIST in
+-- app.js, which must be kept in sync with this check constraint's list -
+-- same duplication-by-necessity as university's UCL/Imperial/KCL list
+-- above, one enum spelled out on each side since a SQL CHECK constraint
+-- and an HTML <select>'s <option> list can't share a single source of
+-- truth across a project with no build step).
+alter table public.profiles add column if not exists country text;
+alter table public.profiles drop constraint if exists profiles_country_check;
+alter table public.profiles add constraint profiles_country_check
+  check (country is null or country in (
+    'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria',
+    'Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan',
+    'Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia',
+    'Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo (Brazzaville)','Congo (Kinshasa)',
+    'Costa Rica','Croatia','Cuba','Cyprus','Czechia','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador',
+    'Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France',
+    'Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau',
+    'Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland',
+    'Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait',
+    'Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg',
+    'Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico',
+    'Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru',
+    'Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman',
+    'Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal',
+    'Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe',
+    'Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia',
+    'South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
+    'Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey',
+    'Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu',
+    'Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
+  ));
+
 -- Research opt-in (Account page): off by default, unlike every other column
 -- on this table - nothing is shared until the user actively turns it on.
 -- See the research_profiles / research_weeks views below for what opting in
 -- actually exposes, and to whom.
 alter table public.profiles add column if not exists research_opt_in boolean not null default false;
+
+-- Leaderboard opt-in (Account > Settings): off by default, same "nothing
+-- shared until actively turned on" stance as research_opt_in above. Unlike
+-- friend_leaderboard() (which only ever shows friends to each other),
+-- turning this on makes display_name and this week's total_kg visible to
+-- ANY signed-in user via public_leaderboard() below, filterable by
+-- university/country - so it's opt-in, not opt-out, and off by default.
+alter table public.profiles add column if not exists leaderboard_opt_in boolean not null default false;
 
 -- Optional: a "typical week" from before the person started tracking, used
 -- on the Account page's Baseline week screen to compare This Week's card
@@ -389,6 +432,44 @@ $$;
 
 revoke all on function public.friend_leaderboard(text) from public;
 grant execute on function public.friend_leaderboard(text) to authenticated;
+
+-- Same ranking logic as friend_leaderboard() above (average daily kg,
+-- at-least-one-confirmed-day gate, live in-progress week), but scoped to
+-- everyone with leaderboard_opt_in = true instead of accepted friends -
+-- opting in makes your display_name and this week's total_kg visible to
+-- any signed-in user calling this, filtered by university/country if
+-- given (both optional; null means "everyone opted in, regardless").
+-- is_self is still computed, and your own row is still included whenever
+-- it matches the filters AND you've opted in - not opting in hides you
+-- from this list entirely, including from your own view of it, since the
+-- whole point of the toggle is controlling your own visibility.
+drop function if exists public.public_leaderboard(text, text, text);
+
+create or replace function public.public_leaderboard(target_week_key text, filter_university text default null, filter_country text default null)
+returns table (user_id uuid, display_name text, total_kg numeric, days_confirmed integer, is_self boolean)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    w.user_id, p.display_name, w.total_kg,
+    public.week_days_confirmed(w.confirmed_commute, w.confirmed_diet) as days_confirmed,
+    (w.user_id = auth.uid()) as is_self
+  from public.weeks w
+  join public.profiles p on p.id = w.user_id
+  where w.week_key = target_week_key
+    and p.leaderboard_opt_in = true
+    and (filter_university is null or p.university = filter_university)
+    and (filter_country is null or p.country = filter_country)
+    and (
+      exists (select 1 from jsonb_each_text(w.confirmed_commute) kv where kv.value = 'true')
+      or exists (select 1 from jsonb_each_text(w.confirmed_diet) kv where kv.value = 'true')
+    )
+  order by (w.total_kg / greatest(1, public.week_days_confirmed(w.confirmed_commute, w.confirmed_diet))) asc;
+$$;
+
+revoke all on function public.public_leaderboard(text, text, text) from public;
+grant execute on function public.public_leaderboard(text, text, text) to authenticated;
 
 -- Every day of the week (both commute and diet) confirmed - a stricter bar
 -- than friend_leaderboard()'s "at least one confirmed day", used below for

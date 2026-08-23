@@ -420,7 +420,15 @@
     <section class="view" id="view-leaderboard" hidden>
       <section class="card">
         <h2 id="leaderboard-heading">This week</h2>
-        <p class="assumptions">
+        <div class="week-picker" id="leaderboard-scope-picker" role="tablist" aria-label="Who to rank">
+          <button type="button" class="week-picker-btn leaderboard-scope-btn active" data-scope="friends">Friends</button>
+          <button type="button" class="week-picker-btn leaderboard-scope-btn" data-scope="all">All Members</button>
+        </div>
+        <label class="field" id="leaderboard-group-filter-field" hidden>
+          Group
+          <select id="leaderboard-group-filter"><!-- options injected by app.js (see populateLeaderboardGroupFilter) --></select>
+        </label>
+        <p class="assumptions" id="leaderboard-assumptions">
           You and your accepted friends, ranked by this week's average kg CO2e
           <em>per confirmed day</em> so far, lowest first &mdash; not by raw total,
           so being behind on logging days doesn't make you look artificially
@@ -856,6 +864,11 @@
                 <span class="year-list-label">Baseline week</span>
                 <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
               </button>
+              <button type="button" class="year-list-row" data-settings-detail="country">
+                <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <span class="year-list-label">Country <span class="optional-badge">Optional</span></span>
+                <span class="year-list-chevron" aria-hidden="true">&#8250;</span>
+              </button>
               <button type="button" class="year-list-row" data-settings-detail="sharing">
                 <svg class="year-list-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z"/></svg>
                 <span class="year-list-label">Data sharing</span>
@@ -999,6 +1012,25 @@
             </section>
             </div>
 
+            <div class="year-detail" id="settings-detail-country" hidden>
+            <section class="card">
+              <div class="year-detail-header">
+                <button type="button" class="year-back-btn" data-settings-back aria-label="Back">&#8592;</button>
+                <h2>Country</h2>
+              </div>
+              <label class="field">
+                Which country do you live in?
+                <select id="settings-country"><!-- options injected by app.js (see COUNTRY_LIST) --></select>
+              </label>
+              <p class="assumptions">
+                Optional - "Prefer not to say" leaves it unanswered. Powers the "All
+                Members" Leaderboard's country filter (only for people who've also
+                turned on "Show me on the public leaderboard" under Data sharing) and
+                the Home page's country-average comparison.
+              </p>
+            </section>
+            </div>
+
             <div class="year-detail" id="settings-detail-sharing" hidden>
             <section class="card">
               <div class="year-detail-header">
@@ -1016,6 +1048,17 @@
                 left out. Your name, email, and account are never included &mdash; the
                 developer only ever sees the raw numbers (commute distance, diet mix,
                 flights, home energy, heating, pets, water, etc.), not who they belong to.
+              </p>
+              <label class="field field-checkbox">
+                <input type="checkbox" id="leaderboard-opt-in" />
+                <span>Show me on the public leaderboard</span>
+              </label>
+              <p class="assumptions">
+                Off by default. Turning this on makes your display name and this
+                week's total kg CO2e visible to any signed-in user on the
+                Leaderboard's "All Members" view (filterable by university/country) -
+                unlike Friends, which only ever shows people you've both accepted.
+                Nothing else about your data becomes visible.
               </p>
               <div id="owner-research-export" hidden>
                 <div class="account-actions">

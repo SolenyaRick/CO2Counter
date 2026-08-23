@@ -306,6 +306,18 @@
     // (the select's "None" option). Used for the Home page's uni-average
     // comparison chip once enough people from the same university opt in.
     university: null,
+    // Optional: one of COUNTRY_LIST - null means "prefer not to say", same
+    // pattern as university above. Used for the Leaderboard's "All
+    // Members" country filter and (once answered) a country-average
+    // comparison chip.
+    country: null,
+    // Off by default, same "nothing shared until actively turned on"
+    // stance as researchOptIn - turning this on makes displayName and this
+    // week's total visible to any signed-in user via the Leaderboard's
+    // "All Members" view (public_leaderboard() in supabase/schema.sql),
+    // filterable by university/country. Friends-only visibility (the
+    // default Leaderboard view) is unaffected either way.
+    leaderboardOptIn: false,
     // Leaderboard page "Habits" card - { habitId: { startDate, targetDays } },
     // one entry per habit with an active challenge (see startHabitChallenge()/
     // cancelHabitChallenge()). Streak counts themselves are never stored
@@ -606,6 +618,8 @@
         baselineWeek: data.baseline_week ?? null,
         carFuelType: data.car_fuel_type ?? null,
         university: data.university ?? null,
+        country: data.country ?? null,
+        leaderboardOptIn: data.leaderboard_opt_in ?? false,
         habitChallenges: data.habit_challenges ?? {},
         chosenHabit: data.chosen_habit ?? null,
         avatarDataUrl: data.avatar_data_url ?? null,
@@ -642,6 +656,8 @@
       baseline_week: profile.baselineWeek,
       car_fuel_type: profile.carFuelType,
       university: profile.university,
+      country: profile.country,
+      leaderboard_opt_in: profile.leaderboardOptIn,
       habit_challenges: profile.habitChallenges,
       chosen_habit: profile.chosenHabit,
       avatar_data_url: profile.avatarDataUrl,
@@ -2427,7 +2443,13 @@
     const winnerEl = document.getElementById("leaderboard-winner");
     if (!currentUser) return;
 
-    const { data, error } = await sbClient.rpc("friend_leaderboard", { target_week_key: CURRENT_WEEK_KEY });
+    const { data, error } = leaderboardScope === "all"
+      ? await sbClient.rpc("public_leaderboard", {
+          target_week_key: CURRENT_WEEK_KEY,
+          filter_university: parseLeaderboardGroupFilter(leaderboardGroupFilter).university,
+          filter_country: parseLeaderboardGroupFilter(leaderboardGroupFilter).country,
+        })
+      : await sbClient.rpc("friend_leaderboard", { target_week_key: CURRENT_WEEK_KEY });
     list.innerHTML = "";
     winnerEl.hidden = true;
 
@@ -2436,7 +2458,9 @@
       return;
     }
     if (!data || data.length === 0) {
-      list.innerHTML = '<p class="empty-note">Log this week, then add friends from the Account page to compare.</p>';
+      list.innerHTML = leaderboardScope === "all"
+        ? '<p class="empty-note">No results - try a different filter, or nobody in this group has opted in yet.</p>'
+        : '<p class="empty-note">Log this week, then add friends from the Account page to compare.</p>';
       return;
     }
 
@@ -2635,6 +2659,100 @@
   // part, and the browser remembers each section's open/closed state for
   // free across tab switches, since showTab() only toggles the whole
   // page's `hidden`, never touches or rebuilds this DOM.
+  // Full country list for the Settings "Country" picker and the
+  // Leaderboard's "All Members" country filter - must be kept in sync
+  // with schema.sql's profiles_country_check constraint (same
+  // duplication-by-necessity as UNIVERSITY_LIST/the university check
+  // constraint below: a SQL CHECK constraint and a JS array can't share a
+  // single source of truth in a project with no build step).
+  const COUNTRY_LIST = [
+    "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+    "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+    "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
+    "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
+    "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
+    "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
+    "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau",
+    "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+    "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait",
+    "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
+    "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico",
+    "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru",
+    "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman",
+    "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+    "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe",
+    "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia",
+    "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+    "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey",
+    "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu",
+    "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
+  ];
+
+  // Mirrors the <option> list already hardcoded onto #profile-university
+  // in index.html - kept here too (rather than generating that static
+  // list from this array) purely so the Leaderboard's group filter below
+  // can build its own University optgroup without a second hardcoded copy
+  // of the same 3 names.
+  const UNIVERSITY_LIST = ["UCL", "Imperial", "KCL"];
+
+  // Fills a <select> with "Prefer not to say" + every COUNTRY_LIST entry,
+  // shared by the Settings country picker and (via includeCountryPrefix)
+  // the Leaderboard's "All Members" group filter, so the two country
+  // lists themselves never drift apart from each other.
+  function populateCountrySelect(selectEl, { includeCountryPrefix = false } = {}) {
+    selectEl.innerHTML = "";
+    const noneOpt = document.createElement("option");
+    noneOpt.value = "";
+    noneOpt.textContent = "Prefer not to say";
+    selectEl.appendChild(noneOpt);
+    COUNTRY_LIST.forEach((country) => {
+      const opt = document.createElement("option");
+      opt.value = includeCountryPrefix ? `country:${country}` : country;
+      opt.textContent = country;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  // Fills the Leaderboard's "All Members" group-filter <select> with
+  // "Everyone" plus a University optgroup (UNIVERSITY_LIST as-is) and a
+  // Country optgroup (COUNTRY_LIST prefixed "country:", via
+  // populateCountrySelect) - the prefix is how parseLeaderboardGroupFilter()
+  // tells the two kinds of value apart when calling public_leaderboard().
+  function populateLeaderboardGroupFilter(selectEl) {
+    selectEl.innerHTML = "";
+    const everyoneOpt = document.createElement("option");
+    everyoneOpt.value = "";
+    everyoneOpt.textContent = "Everyone";
+    selectEl.appendChild(everyoneOpt);
+
+    const uniGroup = document.createElement("optgroup");
+    uniGroup.label = "University";
+    UNIVERSITY_LIST.forEach((uni) => {
+      const opt = document.createElement("option");
+      opt.value = uni;
+      opt.textContent = uni;
+      uniGroup.appendChild(opt);
+    });
+    selectEl.appendChild(uniGroup);
+
+    const countryGroup = document.createElement("optgroup");
+    countryGroup.label = "Country";
+    const countrySelectShim = document.createElement("select");
+    populateCountrySelect(countrySelectShim, { includeCountryPrefix: true });
+    Array.from(countrySelectShim.options)
+      .filter((opt) => opt.value.startsWith("country:"))
+      .forEach((opt) => countryGroup.appendChild(opt));
+    selectEl.appendChild(countryGroup);
+  }
+
+  // Splits a leaderboardGroupFilter value into the { university, country }
+  // args public_leaderboard() expects - "" means neither filter applies.
+  function parseLeaderboardGroupFilter(value) {
+    if (!value) return { university: null, country: null };
+    if (value.startsWith("country:")) return { university: null, country: value.slice("country:".length) };
+    return { university: value, country: null };
+  }
+
   function renderAccountPage() {
     document.getElementById("profile-name").value = profile.name || "";
     document.getElementById("profile-distance").value = profile.commuteDistanceKm;
@@ -2644,6 +2762,8 @@
     document.getElementById("owns-car").value = profile.ownsCar === true ? "yes" : profile.ownsCar === false ? "no" : "";
     document.getElementById("car-fuel-type").value = profile.carFuelType || "";
     document.getElementById("research-opt-in").checked = !!profile.researchOptIn;
+    document.getElementById("settings-country").value = profile.country || "";
+    document.getElementById("leaderboard-opt-in").checked = !!profile.leaderboardOptIn;
     document.getElementById("account-email").textContent = currentUser?.email || "";
     document.getElementById("owner-research-export").hidden =
       (currentUser?.email || "").toLowerCase() !== OWNER_EMAIL.toLowerCase();
@@ -2738,6 +2858,15 @@
   // entered - see showSettingsDetail()). "copy" is purely an action tab:
   // picking a week there immediately copies it and flips back to
   // "custom", it never stays selected on its own.
+  // Leaderboard's "This week" card - transient UI state, not persisted.
+  // "friends" mirrors the original friends-only card unchanged; "all"
+  // switches to public_leaderboard() (opted-in members only) and enables
+  // leaderboardGroupFilter, either "" (everyone opted in), a UNIVERSITY_LIST
+  // entry, or "country:<COUNTRY_LIST entry>" (see populateCountrySelect's
+  // includeCountryPrefix, reused for this same dropdown).
+  let leaderboardScope = "friends";
+  let leaderboardGroupFilter = "";
+
   let baselineViewMode = "custom";
   // The Custom tab's working data - mirrors profile.baselineWeek once
   // anything real exists, otherwise a fresh blank template that merely
@@ -3069,7 +3198,7 @@
   // reminder/Baseline week/Data sharing each carry enough fields to want
   // a full screen rather than expanding in place. Nested one level inside
   // the "Settings" <details>, which stays a native accordion item itself.
-  const SETTINGS_DETAIL_IDS = ["vehicle", "reminder", "baseline", "sharing", "disclaimer"];
+  const SETTINGS_DETAIL_IDS = ["vehicle", "reminder", "baseline", "country", "sharing", "disclaimer"];
 
   function showSettingsList() {
     document.getElementById("settings-list").hidden = false;
@@ -4884,6 +5013,26 @@
     wireCarousel("home-compare-carousel", "home-compare-dots");
     wireCarousel("home-budget-carousel", "home-budget-dots");
 
+    populateCountrySelect(document.getElementById("settings-country"));
+    populateLeaderboardGroupFilter(document.getElementById("leaderboard-group-filter"));
+
+    document.querySelectorAll(".leaderboard-scope-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (leaderboardScope === btn.dataset.scope) return;
+        leaderboardScope = btn.dataset.scope;
+        document.querySelectorAll(".leaderboard-scope-btn").forEach((b) => b.classList.toggle("active", b === btn));
+        document.getElementById("leaderboard-group-filter-field").hidden = leaderboardScope !== "all";
+        document.getElementById("leaderboard-assumptions").textContent = leaderboardScope === "all"
+          ? "Everyone who's opted in to the public leaderboard (Settings → Data sharing), ranked by this week's average kg CO2e per confirmed day so far, lowest first. Filter by university or country below."
+          : "You and your accepted friends, ranked by this week's average kg CO2e per confirmed day so far, lowest first — not by raw total, so being behind on logging days doesn't make you look artificially better than someone who's kept every day up to date. The total and how many days you've confirmed (out of how many have happened so far this week) are shown next to each person's average. Add friends from the Account page.";
+        renderLeaderboard();
+      });
+    });
+    document.getElementById("leaderboard-group-filter").addEventListener("change", (e) => {
+      leaderboardGroupFilter = e.target.value;
+      renderLeaderboard();
+    });
+
     document.querySelectorAll(".journey-mode-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         selectedJourneyMode = btn.dataset.mode;
@@ -5102,6 +5251,16 @@
 
     document.getElementById("research-opt-in").addEventListener("change", (e) => {
       profile.researchOptIn = e.target.checked;
+      persistProfile();
+    });
+
+    document.getElementById("settings-country").addEventListener("change", (e) => {
+      profile.country = e.target.value || null;
+      persistProfile();
+    });
+
+    document.getElementById("leaderboard-opt-in").addEventListener("change", (e) => {
+      profile.leaderboardOptIn = e.target.checked;
       persistProfile();
     });
 

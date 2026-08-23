@@ -489,7 +489,20 @@ color too with no extra CSS.
   logging days doesn't make someone look artificially better than a friend
   who's kept every day up to date; each person's raw total and
   "confirmed/elapsed days" (e.g. "3/5" on a Friday if only Mon–Wed are
-  done) show in small text next to their average; "All-time weekly
+  done) show in small text next to their average. A Friends/All Members
+  toggle above the list switches this same ranking to `public_leaderboard()`
+  (see `supabase/schema.sql`), scoped to whoever's turned on "Show me on the
+  public leaderboard" under Account → Settings → Data sharing (off by
+  default — friends-only stays the default view, and nobody appears on "All
+  Members" without opting in themselves). Switching to "All Members" reveals
+  a Group filter (`populateLeaderboardGroupFilter()` in `app.js`) — Everyone,
+  or narrow to one university (mirroring the This Year → University field)
+  or one country (mirroring the new Account → Settings → Country field,
+  `COUNTRY_LIST`/`populateCountrySelect()`) — with a "No results" empty
+  state distinguishing a too-narrow filter from nobody having opted in yet.
+  Both scopes share the same ranking/gating logic (average kg CO2e per
+  confirmed day, only weeks with at least one confirmed day) and the same
+  row rendering; only the RPC and the opt-in gate differ. "All-time weekly
   average" ranks everyone by their average CO2e per *fully* confirmed week
   (every day, both commute and food — see the Account page's History section
   below) since they started, which also folds in a weekly-equivalent share of each person's
@@ -560,7 +573,7 @@ color too with no extra CSS.
     markup and CSS This Year's drill-down already established, plus a
     small SVG line icon per row matching that page's style) - opening
     "Settings" itself always resets back to the row list, even if a detail
-    screen was left open from before. Five items: **Vehicle** (standard
+    screen was left open from before. Six items: **Vehicle** (standard
     commute distance, one-way in km, used for every commute-footprint
     calculation regardless of mode; whether you own or regularly drive a
     car, and what type — Diesel, Hybrid, or Electric/EV, which swaps in a
@@ -608,7 +621,14 @@ color too with no extra CSS.
     confirmedCommute, confirmedDiet, alcohol}` — in the `baseline_week`
     jsonb column on `profiles`), so this comparison stays consistent with
     every other total in the app rather than a second, possibly-drifting
-    formula); and **Data sharing** (renamed from "Help improve UK
+    formula); **Country** (optional, "Prefer not to say" or one of 195
+    countries — `COUNTRY_LIST` in `app.js`, mirrored as a SQL `check`
+    constraint on `profiles.country` in `supabase/schema.sql`, the same
+    duplication-by-necessity pattern already used for `university` since a
+    SQL check constraint and an HTML `<select>` can't share one source of
+    truth in a project with no build step. Powers the Leaderboard's "All
+    Members" country filter for people who've also opted in under Data
+    sharing below); and **Data sharing** (renamed from "Help improve UK
     averages" - the same research opt-in, off by default — if turned on,
     everything on the Account/Settings/Home pages except your banking
     answers becomes visible to the app developer for calibrating the
@@ -622,7 +642,12 @@ color too with no extra CSS.
     collating every confirmed day across every opted-in week into an "avg
     N per week" + kg CO2e breakdown by meal type and by commute mode),
     gated server-side on the signed-in account's email rather than
-    anything checkable client-side); and **What this doesn't account for**
+    anything checkable client-side — plus a second, unrelated toggle in the
+    same section, "Show me on the public leaderboard"
+    (`profile.leaderboardOptIn`/`leaderboard_opt_in`), off by default,
+    which is the only thing that makes a display name and weekly total
+    visible on the Leaderboard's "All Members" view — see the Leaderboard
+    section above); and **What this doesn't account for**
     (moved here from the bottom of the Home page - a plain bulleted list of
     known gaps: commute/transport beyond what's logged, diet and purchases
     beyond what's tracked, investments beyond a bank balance, and everyone's

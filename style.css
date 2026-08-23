@@ -2815,6 +2815,12 @@ input, select {
   margin-bottom: 14px;
 }
 
+/* [hidden] and .field{display:flex} have equal specificity, so without this
+   a hidden .field (e.g. #leaderboard-group-filter-field) stays visible. */
+.field[hidden] {
+  display: none;
+}
+
 .field-checkbox {
   flex-direction: row;
   align-items: center;

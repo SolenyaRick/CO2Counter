@@ -497,6 +497,31 @@ needs to be cleaned up by hand. (Verified by installing the old function
 signature in a scratch database and confirming the current file applies
 over it with no errors.)
 
+The most recent run adds a `country text` column to `profiles`, with a
+`check` constraint listing 195 country names (same nullable-optional,
+duplicated-in-JS-and-SQL pattern as `university` - see that column's own
+changelog entry above for why the duplication is necessary), and a
+`leaderboard_opt_in boolean not null default false` column - off by
+default, so nobody appears on any public ranking without turning it on
+themselves. Backs a new `public_leaderboard(target_week_key text,
+filter_university text default null, filter_country text default null)`
+function, a near-copy of `friend_leaderboard()`'s ranking/gating logic
+(average kg CO2e per confirmed day, ascending, only weeks with at least
+one confirmed day) but scoped to `p.leaderboard_opt_in = true` instead of
+an accepted-friendship join, with the two filter arguments narrowing
+further when provided (both `null` returns everyone opted in). Since it's
+a `security definer` function in the same family as `friend_leaderboard()`
+noted above, it bypasses RLS for its own internal query - the opt-in
+column is the only thing gating who appears, so it was worth double
+checking. Verified against a real Postgres instance: three test profiles
+(two opted in across two different universities/countries, one opted
+out), confirming the opted-out profile never appears regardless of
+filter, an unfiltered call ranks the two opted-in profiles correctly by
+average daily kg, a university filter returns only the matching opted-in
+profile, and a country filter with no opted-in matches returns zero rows
+rather than erroring - alongside a regression check that `friend_leaderboard()`
+itself is unaffected.
+
 The `@supabase/supabase-js` client library is vendored at
 `vendor/supabase.js` rather than loaded from a CDN, so the app doesn't
 depend on a third party being up at runtime. To update it later:
