@@ -105,7 +105,14 @@ color too with no extra CSS.
   carousel on this page, with two dots underneath) - swipe or scroll
   horizontally to move between a line/area chart view and a stacked-bar
   breakdown view of that same timeframe, rather than showing both as two
-  separate cards stacked on the page. Slide one is the budget-pace chart
+  separate cards stacked on the page. This card carries the `.summary-card`
+  class, which trims its side padding down from the standard `.card`
+  inset (`--space-5` to `--space-2`) - both the line chart and the
+  domain treemap it swipes to are already close to the full phone-width
+  card at that point, so the only real way to give either chart more
+  actual plotted length was narrowing the card's own margins rather than
+  the chart itself, which already sizes to fill whatever width its
+  container gives it. Slide one is the budget-pace chart
   itself — a dashed target line and a stacked area both rise, in the
   underlying data, from 0 to your weekly goal across whichever span is
   selected (×1 for a week, roughly ×4.3 for a month, ×52 for a year, so the

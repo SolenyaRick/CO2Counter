@@ -656,6 +656,16 @@ body {
   font-size: 1.05rem;
 }
 
+/* The Budget pace / emissions-by-domain carousel card - narrower side
+   padding than a standard .card so the budget line chart (and the
+   treemap on the carousel's other slide) get more actual plotted width
+   to work with on a phone-width screen, where the card is already close
+   to the full viewport width and there's nowhere else to grow. */
+.summary-card {
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+
 .journeys-inline {
   margin-top: 16px;
   padding-top: 16px;
