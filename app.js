@@ -1454,7 +1454,7 @@
   // `actualStartJ` (same length, same indexing) - bands stack in array
   // order, band i's bottom edge is band i-1's top edge, or `stackBaseline`
   // (a flat line, defaulting to 0) for the first band.
-  function renderBudgetChart(containerId, { goal, predicted, series, xLabels, actualStartJ = 0, stackBaseline = 0, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace" }) {
+  function renderBudgetChart(containerId, { goal, predicted, series, xLabels, actualStartJ = 0, stackBaseline = 0, goalLabelSuffix = "kg goal", ariaPrefix = "Budget pace", minSvgHeight = 0 }) {
     const chart = document.getElementById(containerId);
     if (!chart) return;
     chart.innerHTML = "";
@@ -1470,9 +1470,11 @@
     // recomputed correctly next time this tab is actually shown.
     // Height scales with width (instead of a fixed 160px) so the chart
     // doesn't go flat and thin on wide screens - clamped so it doesn't get
-    // absurdly tall either.
+    // absurdly tall either; minSvgHeight (see renderPeriodChart()'s
+    // second pass) can push it past that clamp so the whole slide grows to
+    // match the carousel's other slide instead of leaving blank space.
     const W = chart.getBoundingClientRect().width || 340;
-    const H = Math.max(140, Math.min(230, W / 2.3));
+    const H = Math.max(140, Math.min(230, W / 2.3), minSvgHeight);
     const PAD_TOP = 14, PAD_BOTTOM = 26, PAD_X = 6;
     const plotW = W - PAD_X * 2;
     const plotH = H - PAD_TOP - PAD_BOTTOM;
@@ -1578,6 +1580,7 @@
       ${keyItems}
     `;
     chart.appendChild(legend);
+    return H;
   }
 
   // The Monday of whichever week you first confirmed at least one day (commute
@@ -1712,6 +1715,25 @@
     });
   }
 
+  // A slide's own scrollHeight/offsetHeight can't be trusted for measuring
+  // its true content height: .carousel-slide is a flex item under
+  // .carousel's default align-items:stretch, so its box (and therefore
+  // scrollHeight, which is defined as never less than the element's own
+  // box height) reads back whatever height the row currently happens to
+  // be stretched to, not what the slide's own content actually needs. A
+  // plain, non-flex-item CHILD's height is governed purely by its own
+  // content regardless of how tall its parent slide got stretched, so
+  // measuring top-to-bottom across the slide's children gives its true,
+  // un-stretched content height instead.
+  function measureSlideContentHeight(slideEl) {
+    const children = Array.from(slideEl?.children || []);
+    if (!children.length) return 0;
+    const rects = children.map((c) => c.getBoundingClientRect());
+    const top = Math.min(...rects.map((r) => r.top));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    return bottom - top;
+  }
+
   // A native scroll-snap carousel lays every slide out in one flex row, so
   // by default the row (and every slide in it, via flex's stretch-to-tallest
   // behavior) sizes itself to whichever slide has the most content - e.g.
@@ -1723,30 +1745,19 @@
   // clipped rather than forcing the row - and thus every slide - taller).
   // Called on every swipe (from wireCarousel's scroll handler above) and
   // whenever a carousel's slide content is re-rendered, since either can
-  // change which slide is tallest.
+  // change which slide is tallest. (The budget carousel additionally
+  // equalizes its two slides' *content* heights up front - see
+  // renderPeriodChart() - so in practice this rarely has anything to
+  // reconcile there; it still matters for every other carousel, and as a
+  // fallback if that equalizing ever falls short.)
   function syncCarouselHeight(carouselId) {
     const carousel = document.getElementById(carouselId);
     if (!carousel) return;
     const slides = carousel.querySelectorAll(".carousel-slide");
     if (!slides.length) return;
     const index = Math.min(slides.length - 1, Math.round(carousel.scrollLeft / Math.max(1, carousel.clientWidth)));
-    const children = Array.from(slides[index].children);
-    if (!children.length) return;
-    // Measured from the active slide's own CHILDREN, not the slide
-    // element itself - .carousel-slide is a flex item under .carousel's
-    // default align-items:stretch, so its own scrollHeight/offsetHeight
-    // can never read smaller than whatever height the row is currently
-    // stretched to (scrollHeight is defined as never less than the
-    // element's own box height) - that made every measurement just echo
-    // back the previous stretch, so the carousel could grow but never
-    // shrink again. A plain, non-flex-item child's height is governed
-    // purely by its own content regardless of how tall its parent slide
-    // got stretched, so measuring top-to-bottom across the children
-    // gives the slide's true, un-stretched content height instead.
-    const rects = children.map((c) => c.getBoundingClientRect());
-    const top = Math.min(...rects.map((r) => r.top));
-    const bottom = Math.max(...rects.map((r) => r.bottom));
-    carousel.style.height = `${Math.ceil(bottom - top)}px`;
+    const height = measureSlideContentHeight(slides[index]);
+    if (height > 0) carousel.style.height = `${Math.ceil(height)}px`;
   }
 
   function renderSavingsSlide(heroId, valueId, labelId, hasTrackedData, noDataMessage, referenceWeeklyKg, totalDays, actualTotal, referenceLabel) {
@@ -2180,7 +2191,7 @@
 
     const xLabels = periodXLabels(period, start, totalDays, todayOffset);
 
-    renderBudgetChart("home-chart", {
+    const budgetChartArgs = {
       goal,
       predicted,
       series,
@@ -2189,9 +2200,29 @@
       xLabels,
       goalLabelSuffix: PERIOD_GOAL_SUFFIX[period],
       ariaPrefix: `${PERIOD_LABELS[period]} budget pace`,
-    });
-
+    };
+    const chartSvgHeight = renderBudgetChart("home-chart", budgetChartArgs);
     renderDomainTreemap(period, start, today, totalDays);
+
+    // The two Budget-pace carousel slides should read as one consistent
+    // box, not the line chart looking cramped next to a visibly taller
+    // treemap - so if the treemap slide (heading + boxes + color key)
+    // comes out taller than the chart slide (chart + legend), re-render
+    // the chart with its SVG grown by exactly that difference, rather
+    // than just padding the gap with blank space (which is what letting
+    // the carousel itself stretch the shorter slide would do). Legend
+    // height is unaffected by SVG height, so this one extra pass lands
+    // on an exact match.
+    const budgetSlide = document.querySelector("#home-budget-carousel .carousel-slide:first-child");
+    const treemapSlide = document.querySelector("#home-budget-carousel .carousel-slide:last-child");
+    if (budgetSlide && treemapSlide) {
+      const chartSlideHeight = measureSlideContentHeight(budgetSlide);
+      const treemapSlideHeight = measureSlideContentHeight(treemapSlide);
+      const shortfall = treemapSlideHeight - chartSlideHeight;
+      if (shortfall > 1) {
+        renderBudgetChart("home-chart", { ...budgetChartArgs, minSvgHeight: chartSvgHeight + shortfall });
+      }
+    }
     syncCarouselHeight("home-budget-carousel");
   }
 
