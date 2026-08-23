@@ -2015,16 +2015,17 @@
       // category icon, centered - the name and value themselves are
       // already in the key row below either way, so the box's own job at
       // that size is just staying identifiable at a glance (plus its title
-      // tooltip). Only a box too small even for that stays a bare colored
-      // patch.
+      // tooltip). Every box gets at least the icon, however small - the
+      // box's own overflow:hidden clips it gracefully rather than leaving
+      // a bare, unidentifiable colored patch.
       if (w >= 46 && h >= 30) {
         box.innerHTML = `
           <span class="domain-treemap-label">${DOMAIN_LABELS[key]}</span>
           <span class="domain-treemap-value">${fmt(value)} kg</span>
         `;
-      } else if (w >= 16 && h >= 16) {
+      } else {
         box.classList.add("domain-treemap-box-icon-only");
-        const iconSize = Math.max(12, Math.min(20, Math.min(w, h) * 0.6));
+        const iconSize = Math.max(10, Math.min(20, Math.min(w, h) * 0.6));
         box.innerHTML = `<svg class="domain-treemap-icon" style="width:${iconSize}px;height:${iconSize}px" viewBox="0 0 24 24" aria-hidden="true">${DOMAIN_ICON_SVG[key]}</svg>`;
       }
       treemapEl.appendChild(box);
