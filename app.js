@@ -1706,9 +1706,47 @@
       requestAnimationFrame(() => {
         const index = Math.round(carousel.scrollLeft / Math.max(1, carousel.clientWidth));
         dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
+        syncCarouselHeight(carouselId);
         ticking = false;
       });
     });
+  }
+
+  // A native scroll-snap carousel lays every slide out in one flex row, so
+  // by default the row (and every slide in it, via flex's stretch-to-tallest
+  // behavior) sizes itself to whichever slide has the most content - e.g.
+  // the budget-pace line chart slide ending up with a tall blank gap under
+  // it just because the domain treemap slide next to it happens to be
+  // taller. This instead sets the carousel's own height to match only the
+  // *currently visible* slide's actual content height (`.carousel-slide`'s
+  // own `overflow: hidden` in style.css lets a taller sibling's excess get
+  // clipped rather than forcing the row - and thus every slide - taller).
+  // Called on every swipe (from wireCarousel's scroll handler above) and
+  // whenever a carousel's slide content is re-rendered, since either can
+  // change which slide is tallest.
+  function syncCarouselHeight(carouselId) {
+    const carousel = document.getElementById(carouselId);
+    if (!carousel) return;
+    const slides = carousel.querySelectorAll(".carousel-slide");
+    if (!slides.length) return;
+    const index = Math.min(slides.length - 1, Math.round(carousel.scrollLeft / Math.max(1, carousel.clientWidth)));
+    const children = Array.from(slides[index].children);
+    if (!children.length) return;
+    // Measured from the active slide's own CHILDREN, not the slide
+    // element itself - .carousel-slide is a flex item under .carousel's
+    // default align-items:stretch, so its own scrollHeight/offsetHeight
+    // can never read smaller than whatever height the row is currently
+    // stretched to (scrollHeight is defined as never less than the
+    // element's own box height) - that made every measurement just echo
+    // back the previous stretch, so the carousel could grow but never
+    // shrink again. A plain, non-flex-item child's height is governed
+    // purely by its own content regardless of how tall its parent slide
+    // got stretched, so measuring top-to-bottom across the children
+    // gives the slide's true, un-stretched content height instead.
+    const rects = children.map((c) => c.getBoundingClientRect());
+    const top = Math.min(...rects.map((r) => r.top));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    carousel.style.height = `${Math.ceil(bottom - top)}px`;
   }
 
   function renderSavingsSlide(heroId, valueId, labelId, hasTrackedData, noDataMessage, referenceWeeklyKg, totalDays, actualTotal, referenceLabel) {
@@ -2154,6 +2192,7 @@
     });
 
     renderDomainTreemap(period, start, today, totalDays);
+    syncCarouselHeight("home-budget-carousel");
   }
 
   function renderWeekPage() {

@@ -1669,10 +1669,18 @@ input, select {
   display: none;
 }
 
+/* overflow:hidden (rather than the default visible) disables a flex item's
+   automatic min-height:auto floor, so JS (see syncCarouselHeight() in
+   app.js) can actually shrink .carousel's own height down to match
+   whichever slide is currently visible - without it, a taller sibling
+   slide would keep forcing the whole row (and every slide in it) back up
+   to its own content height regardless of what height gets set. */
 .carousel-slide {
   flex: 0 0 100%;
   scroll-snap-align: start;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .carousel-slide .year-hero {

@@ -112,7 +112,14 @@ color too with no extra CSS.
   card at that point, so the only real way to give either chart more
   actual plotted length was narrowing the card's own margins rather than
   the chart itself, which already sizes to fill whatever width its
-  container gives it. Slide one is the budget-pace chart
+  container gives it. The carousel's own height, meanwhile, is kept in
+  sync with whichever slide is actually visible (`syncCarouselHeight()` in
+  `app.js`, called after every re-render and on every swipe) rather than
+  the native flex row's default behavior of stretching every slide to
+  match whichever one has the most content - without it, the shorter
+  slide (typically the line chart) would sit inside a box tall enough for
+  the taller one (typically the treemap plus its color key), leaving a
+  block of dead space underneath. Slide one is the budget-pace chart
   itself — a dashed target line and a stacked area both rise, in the
   underlying data, from 0 to your weekly goal across whichever span is
   selected (×1 for a week, roughly ×4.3 for a month, ×52 for a year, so the
