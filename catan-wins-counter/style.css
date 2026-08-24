@@ -1,0 +1,217 @@
+:root {
+  --bg: #f4ede2;
+  --surface: #fffaf3;
+  --ink: #2b2013;
+  --ink-muted: #7a6a52;
+  --accent: #b5651d;
+  --accent-dark: #8a4a13;
+  --gold: #d4a017;
+  --border: #e0cfa9;
+  --danger: #a8412f;
+  --shadow: 0 2px 8px rgba(60, 40, 10, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1610;
+    --surface: #2a2118;
+    --ink: #f2e8d8;
+    --ink-muted: #b8a888;
+    --accent: #d98c3d;
+    --accent-dark: #f0a259;
+    --gold: #e8bd52;
+    --border: #453824;
+    --danger: #e0685a;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px 60px;
+}
+
+.app {
+  width: 100%;
+  max-width: 480px;
+}
+
+.app__header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.app__header h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+}
+
+.app__subtitle {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.95rem;
+}
+
+.add-player {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.add-player input {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.add-player input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.add-player button {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.add-player button:hover {
+  background: var(--accent-dark);
+}
+
+.player-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+
+.player-card__rank {
+  font-size: 1.1rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.player-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-card__name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-card__wins {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+.player-card__wins strong {
+  color: var(--gold);
+  font-size: 1rem;
+}
+
+.player-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+}
+
+.icon-btn:hover {
+  background: var(--border);
+}
+
+.icon-btn--win {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.icon-btn--win:hover {
+  background: var(--accent-dark);
+}
+
+.icon-btn--danger:hover {
+  color: var(--danger);
+}
+
+.empty-state {
+  display: none;
+  text-align: center;
+  color: var(--ink-muted);
+  padding: 24px 0;
+}
+
+.empty-state--visible {
+  display: block;
+}
+
+.app__footer {
+  text-align: center;
+}
+
+.reset-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--danger);
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.reset-btn:hover {
+  background: var(--border);
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catan Wins Counter</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="app__header">
+      <h1>🏆 Catan Wins Counter</h1>
+      <p class="app__subtitle">Track who's winning game night</p>
+    </header>
+
+    <form id="add-player-form" class="add-player">
+      <input
+        id="player-name-input"
+        type="text"
+        placeholder="Add a player…"
+        maxlength="30"
+        autocomplete="off"
+        required
+      >
+      <button type="submit">Add Player</button>
+    </form>
+
+    <ul id="player-list" class="player-list"></ul>
+
+    <p id="empty-state" class="empty-state">No players yet. Add someone above to get started.</p>
+
+    <footer class="app__footer">
+      <button id="reset-btn" class="reset-btn" type="button">Reset All Wins</button>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
