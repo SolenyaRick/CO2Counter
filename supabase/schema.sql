@@ -1102,7 +1102,8 @@ as $$
     );
 $$;
 
-create or replace function public.membership_status()
+drop function if exists public.membership_status();
+create function public.membership_status()
 returns table (has_access boolean, is_owner boolean, status text, current_period_end timestamptz)
 language sql
 stable
