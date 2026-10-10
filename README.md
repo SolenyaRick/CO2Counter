@@ -1,4 +1,4 @@
-# EcoImpact (Prototype 2)
+# CO2 Counter (Prototype 2)
 
 A carbon-footprint survey and habit tracker. Answer six short sections
 about your week and it estimates your yearly footprint, shows where it

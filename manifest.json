@@ -1,7 +1,7 @@
 {
-  "name": "EcoImpact Tracker",
-  "short_name": "EcoImpact",
-  "description": "Work out your monthly carbon footprint and find your biggest opportunities to cut it.",
+  "name": "CO2 Counter",
+  "short_name": "CO2 Counter",
+  "description": "Work out your yearly carbon footprint and find your biggest opportunities to cut it.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

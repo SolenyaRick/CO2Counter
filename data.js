@@ -1,4 +1,4 @@
-// Survey options, emission factors and reduction guidance for EcoImpact
+// Survey options, emission factors and reduction guidance for CO2 Counter
 // (Prototype 2). Ported verbatim from the Base44 prototype so the numbers
 // and wording match it exactly. Loaded before app.js as a plain script.
 (function () {
