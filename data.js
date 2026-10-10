@@ -63,11 +63,19 @@
   //    trends) for 69.3m people, most by air: about one return European
   //    flight each, modelled as London-Barcelona and back in economy.
   //  - Pets: 15.5m dogs and 13.1m cats (UK Pet Food 2026) for 69.3m people.
-  //  - Food: no official "main meal per day" data exists, so this is an
-  //    assumed typical meat-eating week: two chicken, one beef, one pork,
-  //    one fish and two vegetarian days, eating out once, some food waste.
+  //  - Food: Defra Family Food 2023/24, household purchases per person per
+  //    week: chicken & poultry 230 g, pork incl. bacon, ham & sausages
+  //    137 g, fish 120 g, beef 84 g, lamb 23 g. At the survey's 150 g
+  //    portion that's the main-meal days below, with the rest of the week
+  //    vegetarian. Eating out once a week and "some" food waste are
+  //    assumptions.
   const UK_TYPICAL_SURVEY = {
-    meals: { diet: "meat_eater", eatOut: 1, foodWaste: "some", Mon: "chicken", Tue: "veggie", Wed: "chicken", Thu: "beef", Fri: "fish", Sat: "pork", Sun: "veggie" },
+    meals: {
+      diet: "meat_eater",
+      eatOut: 1,
+      foodWaste: "some",
+      weekMix: { chicken: 230 / 150, pork: 137 / 150, fish: 120 / 150, beef: 84 / 150, lamb: 23 / 150, veggie: 7 - 594 / 150 },
+    },
     commute: { distance: 3.1, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
     flights: [{ from: "LHR", to: "BCN", cabin: "economy" }, { from: "BCN", to: "LHR", cabin: "economy" }],
     energy: { electricityKwh: 2500 / 12, gasKwh: 9500 / 12, greenTariff: false, household: 2.4 },

@@ -345,7 +345,11 @@
     const household = Math.max(1, (s.energy && s.energy.household) || 1);
     const meals = s.meals || {};
 
-    const mealBase = DAYS.reduce((sum, day) => sum + factorOf(D.MEAL_OPTIONS, meals[day]), 0);
+    // meals.weekMix ({ mealKey: days per week }) allows fractional days; it's
+    // only used for the typical UK resident, whose week comes from averages.
+    const mealBase = meals.weekMix
+      ? Object.keys(meals.weekMix).reduce((sum, k) => sum + factorOf(D.MEAL_OPTIONS, k) * meals.weekMix[k], 0)
+      : DAYS.reduce((sum, day) => sum + factorOf(D.MEAL_OPTIONS, meals[day]), 0);
     const eatOut = Math.min(7, Math.max(0, meals.eatOut || 0));
     const eatOutMult = (7 + (D.EAT_OUT_MULTIPLIER - 1) * eatOut) / 7;
     const waste = byKey(D.FOOD_WASTE, meals.foodWaste || "low");
@@ -554,15 +558,14 @@
           2 *
           D.WEEKS_PER_YEAR,
       }),
+      // Flying is optional, so the potential saving is all of it: what you'd
+      // save by holidaying by train or closer to home instead.
       flights: () => {
-        const flights = s.flights || [];
-        const upgradeSaving =
-          flights.reduce((sum, f) => sum + flightKm(f.from, f.to) * Math.max(0, cabinFactor(f.cabin) - 0.255), 0);
-        const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
+        const total = (s.flights || []).reduce((sum, f) => sum + flightKg(f), 0);
         return {
           title: "Cut back on flying",
-          body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Fewer flights, direct routes, economy class, or swapping a trip for a train can dramatically lower your emissions.",
-          saving: Math.max(upgradeSaving, total * 0.5),
+          body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Every flight you swap for a train, a closer destination or a video call removes its emissions entirely — and if you can't avoid flying, economy and direct routes keep it lower.",
+          saving: total,
         };
       },
       energy: () => ({

@@ -92,8 +92,9 @@ and both sides cover only food, commuting, flights, home energy, water and
 pets. Shopping, services, coffee, alcohol and the like aren't counted
 because the survey doesn't measure them, and banking and pensions are left
 out of the comparison because there is no reliable UK per-person figure.
-The typical-week diet is an assumption (no official data exists). The
-typical resident comes to about 4.6 t a year on these categories.
+The typical diet comes from Defra's Family Food survey (average
+purchases of each meat and fish per person per week); eating out once a
+week and "some" food waste are assumptions.
 
 ## Pension figures
 
