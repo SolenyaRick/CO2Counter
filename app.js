@@ -1248,7 +1248,7 @@
     html +=
       '<div class="btn-row"><a class="btn btn-outline" href="#/">' + icon("refresh") + ' Retake survey</a>' +
       '<button type="button" class="btn btn-green" data-action="top-opportunity">' + icon("arrowRight") + " Show my top opportunity</button></div>" +
-      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact.</p></div>';
+      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
   }
 
@@ -1498,6 +1498,98 @@
       .join("");
     html += "</div></div>" + (c.seeNote ? '<p class="xs muted italic center">' + esc(c.seeNote) + "</p>" : "");
     return html + "</div>";
+  }
+
+  // ==================== How we calculate page ====================
+
+  // Public, free page explaining sources and approach. It deliberately
+  // describes the method in words without exact factors or formulas.
+  function renderMethod() {
+    const section = (title, body) =>
+      '<div class="section-card static fade-up"><h2 class="fw-600 mb-2">' + esc(title) + '</h2><div class="sm muted lh method">' + body + "</div></div>";
+    const list = (items) => "<ul>" + items.map((i) => "<li>" + i + "</li>").join("") + "</ul>";
+    return (
+      '<div class="container narrow">' + pageHeader("How we calculate", "Where the numbers come from", "info") +
+      '<p class="muted lh mb-8">CO2 Counter estimates your yearly carbon footprint from a short survey about how you live. ' +
+      "Every figure is an estimate built from published data. It's designed to show where your biggest opportunities are, not to audit your exact emissions.</p>" +
+      '<div class="stack-6 mb-10">' +
+      section(
+        "What we measure",
+        "<p>Seven areas of everyday life:</p>" +
+          list([
+            "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
+            "<strong>Commuting</strong>: how you travel to work each day and how far, counting the journey there and back",
+            "<strong>Flights</strong>: each flight's distance between airports and the cabin class",
+            "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
+            "<strong>Water</strong>: household water use, shared across your household",
+            "<strong>Pets</strong>: the footprint of feeding dogs and cats",
+            "<strong>Banking and pensions</strong>: the emissions your bank and pension fund finance with your money",
+          ]) +
+          "<p>Some things aren't measured yet, including shopping (clothes, electronics, furniture), leisure travel by car or train, other heating fuels, " +
+          "drinks and snacks, and public services. Your total covers only the areas above.</p>"
+      ) +
+      section(
+        "How your estimate is worked out",
+        "<p>For each answer we take the activity (a kilowatt-hour of gas, a kilometre by car, a beef meal, a long-haul flight in economy) and multiply it by a " +
+          "typical published emission factor for that activity, measured in kilograms of CO₂-equivalent. CO₂-equivalent includes other greenhouse gases " +
+          "such as methane from livestock.</p>" +
+          "<p>Weekly habits are scaled up to a year, and household energy, water and pets are shared between the people you live with. " +
+          "Flight distances are calculated between the two airports, with an allowance for real-world routing.</p>"
+      ) +
+      section(
+        "Banking and pensions",
+        "<p>Banks lend out your savings, and pension funds invest in companies. A share of those companies' emissions is counted as yours, in proportion to the money involved. " +
+          "This is known as financed emissions.</p>" +
+          "<p>Pension figures come from each provider's own climate report (TCFD report), using the carbon footprint of its default fund, the fund most savers are in. " +
+          "These cover the companies' direct and energy-related emissions (Scope 1 and 2). " +
+          "Where we couldn't get a provider's current figure, or you're not sure who your provider is, we use an average across the largest UK workplace pension schemes. " +
+          "We refresh these figures as providers publish new reports.</p>"
+      ) +
+      section(
+        "Comparing you with the UK average",
+        "<p>Many UK-average figures include things this survey doesn't ask about, so comparing your total with them would be misleading. " +
+          "Instead we build a typical UK resident's answers to the same survey from official statistics, and run them through exactly the same calculations:</p>" +
+          list([
+            "Home energy: Ofgem's typical household gas and electricity use, and ONS household sizes",
+            "Food: Defra's Family Food survey of what households buy each week",
+            "Commuting: the Department for Transport's National Travel Survey",
+            "Flights: ONS figures on trips abroad by UK residents",
+            "Water: Consumer Council for Water figures on daily use per person",
+            "Pets: UK Pet Food's pet population figures",
+          ]) +
+          "<p>The comparison covers food, commuting, flights, home energy, water and pets. Banking and pensions aren't included, because there's no reliable " +
+          "per-person UK figure for them. Where official data doesn't exist (for example, how often people eat out), we use a reasonable assumption.</p>"
+      ) +
+      section(
+        "The 1.5°C budget",
+        "<p>To keep global warming to 1.5°C, average emissions need to fall to roughly 2.5 tonnes of CO₂-equivalent per person per year. " +
+          "We show your footprint as a share of that, as a sense of scale.</p>"
+      ) +
+      section(
+        "Potential savings",
+        "<p>For each area we estimate what one realistic change would save, not the most extreme option:</p>" +
+          list([
+            "Flights: swapping flights for trains, closer destinations or video calls. Flying is optional, so the full amount counts",
+            "Commuting: replacing car days with walking, cycling, public transport or working from home",
+            "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
+            "Home energy: switching to a renewable electricity tariff",
+            "Water and pets: using less hot water, and choosing lower-impact pet food",
+            "Banking and pensions: moving savings to a bank that doesn't fund fossil fuels, and choosing a climate-focused pension fund",
+          ]) +
+          "<p>Savings are capped so no area can save more than it emits.</p>"
+      ) +
+      section(
+        "Limitations",
+        list([
+          "These are estimates from typical factors, not measurements of your actual bills, journeys or purchases.",
+          "Financed emissions are counted using the industry's standard approach, which also counts them in other people's footprints, so they're best read on their own.",
+          "Pension figures cover only companies' direct and energy emissions, not their supply chains or the use of their products, which can be much larger.",
+          "Published data is updated over time. We review sources regularly, and figures may change as better data becomes available.",
+        ])
+      ) +
+      "</div>" +
+      '<div class="center"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a></div></div>"
+    );
   }
 
   // ==================== Habits page ====================
@@ -1859,7 +1951,7 @@
       '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
       '<div class="max-sm">' + joinAction() + "</div></div>" +
       '<div class="btn-row"><a class="btn btn-outline" href="#/">' + icon("refresh") + " Change my answers</a></div>" +
-      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors.</p></div>'
+      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
     );
   }
 
@@ -1900,6 +1992,7 @@
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
     else if (ui.recovery) html = renderLogin();
     else if (path === "/") html = renderSurvey();
+    else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
     else if (path === "/check-in") html = member ? renderCheckIn() : renderLocked();
