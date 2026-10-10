@@ -37,7 +37,6 @@
   // Savings assumptions (see tipFor).
   const ACTIVE_TRAVEL_MAX_KM = 10; // one-way; beyond this, train/bus is the realistic swap
   const MOTOR_MODES = ["car_petrol", "car_diesel", "ev", "motorcycle"];
-  const RAIL_REPLACEABLE_KM = 800; // routes like London–Paris/Edinburgh/Amsterdam
   const TRAIN_TO_FLIGHT_RATIO = 4 / 123; // Eurostar vs flight, London–Paris
   const HEAT_PUMP_COP = 3;
   const MEDIUM_HAUL_KM = 4000;
@@ -308,7 +307,15 @@
 
   // kg CO2e per year from a pension pot at a given t CO2e per £1m invested.
   const pensionKg = (pot, tPerMillion) => ((pot || 0) * tPerMillion) / 1000;
-  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin);
+  // A ticked "Return trip" counts the distance both ways. Flights saved
+  // before the box existed have no flag and stay one-way.
+  const legs = (f) => (f.returnTrip ? 2 : 1);
+  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin) * legs(f);
+  const routeLabel = (f) => {
+    const a = airport(f.from);
+    const b = airport(f.to);
+    return ((a && a.city) || f.from) + (f.returnTrip ? " ⇄ " : " → ") + ((b && b.city) || f.to);
+  };
 
   function flightTier(s) {
     const flights = s.flights || [];
@@ -317,9 +324,9 @@
     let longHaul = 0;
     flights.forEach((f) => {
       const km = flightKm(f.from, f.to);
-      if (km < SHORT_HAUL_KM) shortHaul++;
-      else if (km < MEDIUM_HAUL_KM) mediumHaul++;
-      else longHaul++;
+      if (km < SHORT_HAUL_KM) shortHaul += legs(f);
+      else if (km < MEDIUM_HAUL_KM) mediumHaul += legs(f);
+      else longHaul += legs(f);
     });
     let tier;
     if (flights.length === 0) tier = 1;
@@ -332,10 +339,8 @@
   function flightTotals(s) {
     const items = (s.flights || []).map((f) => {
       const co2 = flightKg(f);
-      const a = airport(f.from);
-      const b = airport(f.to);
       return {
-        label: ((a && a.city) || f.from) + " → " + ((b && b.city) || f.to),
+        label: routeLabel(f),
         co2,
         pctOfTarget: (co2 / D.BUDGET_YEARLY) * 100,
       };
@@ -393,7 +398,7 @@
       label: "Flights",
       icon: "✈️",
       yearly: flights.reduce((sum, f) => sum + flightKg(f), 0),
-      detail: flights.length + " flight(s) / year",
+      detail: flights.length + (flights.length === 1 ? " trip" : " trips") + " / year",
     });
 
     const energy = s.energy || {};
@@ -578,23 +583,47 @@
       },
       // Flying is optional, so the potential saving is all of it: what you'd
       // save by holidaying by train or closer to home instead.
-      // Realistic: take the train for short routes (rail emits ~97% less) and
-      // fly economy on the rest. Maximum: not flying at all.
+      // Realistic (keeps some flying, swaps the rest):
+      //  - more than one long-haul flight -> one long-haul flight in economy
+      //  - exactly one long-haul flight   -> one short-haul flight in economy
+      //  - three or more short-haul       -> one short-haul in economy, the rest by train
+      //  - one or two short-haul          -> all by train
+      // Long-haul and short-haul are handled separately. Maximum: not flying.
       flights: () => {
         const flights = s.flights || [];
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
-        const realistic = flights.reduce((sum, f) => {
+        const economyKg = (f) => flightKm(f.from, f.to) * cabinFactor("economy") * legs(f);
+        const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
+        const long = flights.filter((f) => flightKm(f.from, f.to) > MEDIUM_HAUL_KM);
+        const short = flights.filter((f) => {
           const km = flightKm(f.from, f.to);
-          if (km > 0 && km <= RAIL_REPLACEABLE_KM) return sum + flightKg(f) * (1 - TRAIN_TO_FLIGHT_RATIO);
-          return sum + km * Math.max(0, cabinFactor(f.cabin) - cabinFactor("economy"));
-        }, 0);
+          return km > 0 && km <= MEDIUM_HAUL_KM;
+        });
+        const typicalShortKg =
+          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * cabinFactor("economy") * (long.length === 1 ? legs(long[0]) : 1);
+        let remaining = 0;
+        const parts = [];
+        if (long.length > 1) {
+          remaining += avg(long, economyKg);
+          parts.push("one long-haul trip in economy");
+        } else if (long.length === 1) {
+          remaining += typicalShortKg;
+          parts.push("a short-haul trip in economy instead of long-haul");
+        }
+        if (short.length >= 3) {
+          remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          parts.push("one short-haul trip in economy, the rest by train");
+        } else if (short.length > 0) {
+          remaining += short.length * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          parts.push("short trips by train");
+        }
         return {
-          realisticLabel: "train for short routes, economy for the rest",
+          realisticLabel: parts.join(", ") || "no change needed",
           maxLabel: "not flying",
           maxSaving: total,
+          saving: Math.max(0, total - remaining),
           title: "Cut back on flying",
           body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Every flight you swap for a train, a closer destination or a video call removes its emissions entirely — and if you can't avoid flying, economy and direct routes keep it lower.",
-          saving: realistic,
         };
       },
       // Realistic: green electricity tariff. Maximum: green tariff plus a heat
@@ -1058,7 +1087,7 @@
   function renderFlightsStep() {
     const flights = survey.flights;
     let html =
-      '<p class="muted sm mb-6">This is your standing <span class="fw-500 fg">flight checklist</span> — add flights as you book them and they stay saved, so you only enter each one once. Pick a start and end airport and when you flew; we\'ll work out the distance.</p>' +
+      '<p class="muted sm mb-6">This is your standing <span class="fw-500 fg">flight checklist</span> — add trips as you book them and they stay saved, so you only enter each one once. Pick a start and end airport and when you flew; we\'ll work out the distance. Tick <span class="fw-500 fg">Return trip</span> for there-and-back journeys.</p>' +
       '<div class="stack-3 max-2xl">';
     if (!flights.length) {
       html +=
@@ -1079,8 +1108,10 @@
           '<div class="grow minw-160"><label class="xs">Cabin class</label><select class="input mt-1" data-flight="' + i + '" data-flight-field="cabin">' +
           D.CABINS.map((c) => '<option value="' + c.key + '"' + (c.key === (f.cabin || "economy") ? " selected" : "") + ">" + c.emoji + " " + esc(c.label) + "</option>").join("") +
           "</select></div>" +
+          '<label class="check-label"><input type="checkbox" data-flight="' + i + '" data-flight-field="returnTrip"' + (f.returnTrip ? " checked" : "") +
+          " /> Return trip</label>" +
           (km > 0
-            ? '<div class="sm"><span class="muted">' + km.toFixed(0) + ' km · </span><span class="fw-500">' + (km * cabin.factor).toFixed(0) + " kg CO₂e</span></div>"
+            ? '<div class="sm"><span class="muted">' + (km * legs(f)).toFixed(0) + ' km · </span><span class="fw-500">' + (km * cabin.factor * legs(f)).toFixed(0) + " kg CO₂e</span></div>"
             : "") +
           '<button type="button" class="icon-btn danger-hover" data-action="remove-flight" data-index="' + i + '" aria-label="Remove flight">' + icon("trash") + "</button>" +
           "</div></div>"
@@ -1504,10 +1535,8 @@
         return km > 0 && km < MEDIUM_HAUL_KM;
       })
       .map((f) => {
-        const a = airport(f.from);
-        const b = airport(f.to);
         const kg = flightKg(f);
-        return { label: ((a && a.city) || f.from) + " → " + ((b && b.city) || f.to), flightKg: kg, trainKg: kg * ratio };
+        return { label: routeLabel(f), flightKg: kg, trainKg: kg * ratio };
       });
     return {
       isTrainPopup: true,
@@ -1657,7 +1686,7 @@
         "<p>For each area we show two figures: what a <strong>realistic</strong> change would save, and the most you could save <strong>going all the way</strong>.</p>" +
           "<p>Realistic changes:</p>" +
           list([
-            "Flights: taking the train on short routes, and flying economy on the rest",
+            "Flights: if you take several long-haul flights, keeping one in economy; swapping a single long-haul trip for a short-haul one; and taking the train for short-haul trips, keeping one short-haul flight if you take three or more",
             "Commuting: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones",
             "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
             "Home energy: switching to a renewable electricity tariff",
@@ -2176,7 +2205,7 @@
       render();
     },
     "add-flight": () => {
-      survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", date: new Date().toISOString().slice(0, 10) });
+      survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", returnTrip: true, date: new Date().toISOString().slice(0, 10) });
       surveyChanged();
       render();
     },
@@ -2361,7 +2390,8 @@
       if (t.dataset.rerender) render();
     } else if (t.dataset.flight) {
       const i = Number(t.dataset.flight);
-      survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: t.value } : f));
+      const value = t.type === "checkbox" ? t.checked : t.value;
+      survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: value } : f));
       surveyChanged();
       render();
     } else if (t.dataset.goal) {
