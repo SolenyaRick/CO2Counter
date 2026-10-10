@@ -34,6 +34,12 @@
   const KEY_STREAKS = "ecoimpact_goal_streaks";
 
   const SHORT_HAUL_KM = 1500;
+  // Savings assumptions (see tipFor).
+  const ACTIVE_TRAVEL_MAX_KM = 10; // one-way; beyond this, train/bus is the realistic swap
+  const MOTOR_MODES = ["car_petrol", "car_diesel", "ev", "motorcycle"];
+  const RAIL_REPLACEABLE_KM = 800; // routes like London–Paris/Edinburgh/Amsterdam
+  const TRAIN_TO_FLIGHT_RATIO = 4 / 123; // Eurostar vs flight, London–Paris
+  const HEAT_PUMP_COP = 3;
   const MEDIUM_HAUL_KM = 4000;
   const STAGE_DAYS = 7;
   const DAY_MS = 864e5;
@@ -548,27 +554,59 @@
   function tipFor(key, s) {
     const tips = {
       meals: () => mealsTip(s),
-      commute: () => ({
-        title: "Rethink your daily commute",
-        body: "Driving a petrol car is one of the largest personal emission sources. Switching to public transit, cycling, or an EV — or working from home 1–2 days a week — can significantly reduce your weekly travel emissions.",
-        saving:
-          DAYS.filter((d) => ["car_petrol", "car_diesel"].includes(s.commute && s.commute[d])).length *
-          0.20751 *
-          ((s.commute && s.commute.distance) || 0) *
-          2 *
-          D.WEEKS_PER_YEAR,
-      }),
-      // Flying is optional, so the potential saving is all of it: what you'd
-      // save by holidaying by train or closer to home instead.
-      flights: () => {
-        const total = (s.flights || []).reduce((sum, f) => sum + flightKg(f), 0);
+      // Realistic: each car/motorbike day becomes walking or cycling for
+      // trips up to 10 km, or train/bus for longer ones. Maximum: no commuting
+      // emissions at all (working from home, or active travel).
+      commute: () => {
+        const c = s.commute || {};
+        const distance = c.distance || 0;
+        const long = distance > ACTIVE_TRAVEL_MAX_KM;
+        const replacement = long ? publicTransportFactor() : 0;
+        const perDay = (mode) => Math.max(0, factorOf(D.COMMUTE_MODES, mode) - replacement) * distance * 2;
+        const saving =
+          DAYS.filter((d) => MOTOR_MODES.includes(c[d])).reduce((sum, d) => sum + perDay(c[d]), 0) * D.WEEKS_PER_YEAR;
         return {
-          title: "Cut back on flying",
-          body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Every flight you swap for a train, a closer destination or a video call removes its emissions entirely — and if you can't avoid flying, economy and direct routes keep it lower.",
-          saving: total,
+          title: "Rethink your daily commute",
+          body: long
+            ? "Driving is one of the largest personal emission sources. For a commute of more than 10 km, taking the train or bus instead of the car on your driving days cuts most of it — and working from home or cycling some days takes it to zero."
+            : "Driving is one of the largest personal emission sources. For a commute of 10 km or less, walking or cycling instead of driving removes those emissions completely — an e-bike makes longer or hillier trips easy.",
+          saving,
+          maxSaving: categoryYearly("commute", s),
+          realisticLabel: long ? "train or bus on driving days" : "walking or cycling on driving days",
+          maxLabel: "no commuting emissions, by working from home or walking and cycling",
         };
       },
+      // Flying is optional, so the potential saving is all of it: what you'd
+      // save by holidaying by train or closer to home instead.
+      // Realistic: take the train for short routes (rail emits ~97% less) and
+      // fly economy on the rest. Maximum: not flying at all.
+      flights: () => {
+        const flights = s.flights || [];
+        const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
+        const realistic = flights.reduce((sum, f) => {
+          const km = flightKm(f.from, f.to);
+          if (km > 0 && km <= RAIL_REPLACEABLE_KM) return sum + flightKg(f) * (1 - TRAIN_TO_FLIGHT_RATIO);
+          return sum + km * Math.max(0, cabinFactor(f.cabin) - cabinFactor("economy"));
+        }, 0);
+        return {
+          realisticLabel: "train for short routes, economy for the rest",
+          maxLabel: "not flying",
+          maxSaving: total,
+          title: "Cut back on flying",
+          body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Every flight you swap for a train, a closer destination or a video call removes its emissions entirely — and if you can't avoid flying, economy and direct routes keep it lower.",
+          saving: realistic,
+        };
+      },
+      // Realistic: green electricity tariff. Maximum: green tariff plus a heat
+      // pump replacing gas (about a third of the energy, as electricity).
       energy: () => ({
+        realisticLabel: "a green electricity tariff",
+        maxLabel: "a green tariff and a heat pump instead of gas",
+        maxSaving: (() => {
+          const e = s.energy || {};
+          const after = (12 * ((e.electricityKwh || 0) + (e.gasKwh || 0) / HEAT_PUMP_COP) * D.GREEN_ELECTRICITY_FACTOR) / householdOf(s);
+          return Math.max(0, categoryYearly("energy", s) - after);
+        })(),
         title: "Switch to a green energy tariff",
         body: "Grid electricity emits ~0.23 kg CO₂e per kWh. A green/renewable tariff can cut that by over 80%, instantly lowering one of your biggest contributors.",
         saving:
@@ -581,6 +619,9 @@
         title: "Reduce your water usage",
         body: "Heating and treating water uses energy. Shorter showers, fixing leaks, and water-efficient fixtures can cut your water footprint meaningfully over a year.",
         saving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.2) / householdOf(s),
+        maxSaving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.4) / householdOf(s),
+        realisticLabel: "using a fifth less water",
+        maxLabel: "using 40% less, with efficient fittings and short showers",
       }),
       pets: () => {
         const p = s.pets || {};
@@ -589,6 +630,10 @@
           body: "A medium dog's food can emit as much as a small car over a year. Choosing lower-meat or sustainable pet food brands can reduce their footprint without compromising nutrition.",
           saving:
             (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * 0.25) / householdOf(s),
+          maxSaving:
+            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * 0.5) / householdOf(s),
+          realisticLabel: "lower-impact pet food",
+          maxLabel: "by-product or alternative-protein pet food",
         };
       },
       banking: () => {
@@ -613,16 +658,39 @@
               ". Ask your provider or HR how to switch; it usually takes a few minutes online." +
               (bankSaving > 0 ? " " + bankBody : ""),
             saving: bankSaving + pensionSaving,
+            realisticLabel: "a greener bank and a climate-focused pension fund",
           };
         }
         return {
+          realisticLabel: "a greener bank and a climate-focused pension fund",
           title: "Move your money to a greener bank",
           body: bankBody + (pensionSaving > 0 ? " Switching your pension to a climate-focused fund helps too." : ""),
           saving: bankSaving + pensionSaving,
         };
       },
     };
-    return (tips[key] || tips.meals)();
+    const tip = (tips[key] || tips.meals)();
+    if (key === "meals" || !tips[key]) {
+      // Maximum for food: a fully plant-based week with little waste.
+      const vegan = { ...s, meals: { ...(s.meals || {}), weekMix: { vegan: 7 }, foodWaste: "low" } };
+      tip.maxSaving = Math.max(0, categoryYearly("meals", s) - categoryYearly("meals", vegan));
+      tip.realisticLabel = "swapping your highest-impact meals";
+      tip.maxLabel = "a fully plant-based diet with little waste";
+    }
+    const total = categoryYearly(key, s);
+    tip.saving = Math.min(Math.max(0, tip.saving || 0), total);
+    tip.maxSaving = Math.min(Math.max(tip.saving, tip.maxSaving || 0), total);
+    return tip;
+  }
+
+  // Train or bus: the average of the two modes' factors.
+  function publicTransportFactor() {
+    return (factorOf(D.COMMUTE_MODES, "train") + factorOf(D.COMMUTE_MODES, "bus")) / 2;
+  }
+
+  function categoryYearly(key, s) {
+    const item = footprint(s).breakdown.find((b) => b.key === key);
+    return item ? item.yearly : 0;
   }
 
   // Like-for-like comparison with a typical UK resident: both sides cover
@@ -1140,26 +1208,36 @@
     );
   }
 
+  function savingSummary(tip) {
+    let html = "";
+    if (tip.saving > 0.5)
+      html += '<div class="saving-pill">' + icon("trendDown") + "<span>Realistic: could save ~" + tip.saving.toFixed(0) + " kg CO₂e / year</span></div>";
+    if (tip.maxSaving > tip.saving + 0.5)
+      html +=
+        '<p class="xs muted mt-2">Going all the way, up to ~' + tip.maxSaving.toFixed(0) + " kg a year: " + esc(tip.maxLabel || "") + ".</p>";
+    return "<div>" + html + "</div>";
+  }
+
   function compareBar(label, value, max, tone) {
     const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
     return (
       '<div><div class="row-between xs mb-1"><span class="muted">' + label + '</span><span class="fw-500">' + value.toFixed(0) +
-      ' kg CO₂e/yr</span></div><div class="progress"><div class="' + (tone === "emerald" ? "" : "grey") + '" style="width:' + pct + '%"></div></div></div>'
+      ' kg CO₂e/yr</span></div><div class="progress"><div class="' + (tone === "emerald" ? "" : tone === "deep" ? "deep" : "grey") + '" style="width:' + pct + '%"></div></div></div>'
     );
   }
 
   function renderResults() {
     const fp = footprint(survey);
-    const savings = fp.breakdown
-      .map((b) => {
-        const saving = tipFor(b.key, survey).saving;
-        return { key: b.key, saving: saving > 0 ? Math.min(b.yearly, saving) : 0 };
-      })
-      .filter((s) => s.saving > 0.5);
+    const savings = fp.breakdown.map((b) => {
+      const t = tipFor(b.key, survey);
+      return { key: b.key, saving: t.saving, max: t.maxSaving };
+    });
     const totalSaving = savings.reduce((sum, s) => sum + s.saving, 0);
+    const totalMax = savings.reduce((sum, s) => sum + s.max, 0);
     const after = Math.max(0, fp.totalYearly - totalSaving);
-    const savingPct = fp.totalYearly ? Math.round((totalSaving / fp.totalYearly) * 100) : 0;
-    const savingFor = (key) => ((savings.find((s) => s.key === key) || {}).saving || 0);
+    const afterMax = Math.max(0, fp.totalYearly - totalMax);
+    const pct = (v) => (fp.totalYearly ? Math.round((v / fp.totalYearly) * 100) : 0);
+    const savingFor = (key) => savings.find((s) => s.key === key) || { saving: 0, max: 0 };
     const cmp = ukComparison(fp);
     const budgetPct = Math.round((fp.totalYearly / D.BUDGET_YEARLY) * 100);
     const selected = ui.selectedCategory || fp.biggest.key;
@@ -1193,29 +1271,33 @@
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + "</span>" +
       '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
       '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
-      (tip.saving > 0 ? '<div class="saving-pill">' + icon("trendDown") + "<span>Could save ~" + tip.saving.toFixed(0) + " kg CO₂e / year</span></div>" : "") +
+      (tip.saving > 0.5 || tip.maxSaving > 0.5 ? savingSummary(tip) : "") +
       (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
       '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
 
-    if (totalSaving > 0) {
+    if (totalMax > 0.5) {
       html +=
         '<div class="card fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + '</span><h2 class="card-title">If you build these habits</h2></div>' +
-        '<p class="sm muted mb-6 max-2xl">Adopting the recommended changes across your categories could cut your footprint by about <span class="fw-600 green-dark">' +
-        savingPct + "%</span> — roughly " + totalSaving.toFixed(0) + ' kg CO₂e less per year.</p><div class="stack-3">' +
-        compareBar("Now", fp.totalYearly, fp.totalYearly, "muted") + compareBar("After habits", after, fp.totalYearly, "emerald") +
+        '<p class="sm muted mb-6 max-2xl">Realistic changes across your categories could cut your footprint by about <span class="fw-600 green-dark">' +
+        pct(totalSaving) + "%</span> (" + totalSaving.toFixed(0) + " kg CO₂e a year). Going all the way, it could fall by up to <span class=\"fw-600 green-dark\">" +
+        pct(totalMax) + "%</span> (" + totalMax.toFixed(0) + ' kg).</p><div class="stack-3">' +
+        compareBar("Now", fp.totalYearly, fp.totalYearly, "muted") +
+        compareBar("With realistic changes", after, fp.totalYearly, "emerald") +
+        compareBar("Going all the way", afterMax, fp.totalYearly, "deep") +
         "</div></div>";
     }
 
     html += '<div class="grid-2 gap-3 mb-8">';
     html += fp.breakdown
       .map((b) => {
-        const s = savingFor(b.key);
+        const sv = savingFor(b.key);
         return (
           '<div class="cat-row' + (selected === b.key ? " selected" : "") + '"><button type="button" class="cat-main" data-action="select-category" data-key="' + b.key + '">' +
           '<span class="emoji-row">' + b.icon + '</span><span class="min0"><span class="fw-500 sm block">' + esc(b.label) + '</span><span class="xs muted block truncate">' +
           esc(b.detail) + "</span></span></button>" +
           '<div class="cat-side"><div class="right"><p class="fw-600">' + b.yearly.toFixed(0) + '</p><p class="xs muted">kg/yr</p>' +
-          (s > 0 ? '<p class="tiny green">−' + s.toFixed(0) + " possible</p>" : "") +
+          (sv.saving > 0.5 ? '<p class="tiny green">−' + sv.saving.toFixed(0) + " realistic</p>" : "") +
+          (sv.max > sv.saving + 0.5 ? '<p class="tiny muted">up to −' + sv.max.toFixed(0) + "</p>" : "") +
           '</div><a class="icon-btn round" href="#/explainer/' + b.key + '" aria-label="Learn how to reduce ' + esc(b.label) + '">' + icon("arrowRight") + "</a></div></div>"
         );
       })
@@ -1273,7 +1355,12 @@
       '</h1></div><p class="muted lh">' + esc(ex.why) + "</p></div>" +
       '<div class="grid-2 gap-3 mb-8">' +
       '<div class="panel green p-5"><div class="eyebrow-sm green-dark">' + icon("trendDown") + ' Your potential saving</div><p class="stat">' +
-      (tip.saving > 0 ? "~" + tip.saving.toFixed(0) : "—") + '<span class="sm muted normal"> kg CO₂e / year</span></p><p class="xs muted mt-1">' + esc(tip.title) + "</p></div>" +
+      (tip.saving > 0.5 ? "~" + tip.saving.toFixed(0) : "—") + '<span class="sm muted normal"> kg CO₂e / year</span></p><p class="xs muted mt-1">Realistic: ' +
+      esc(tip.realisticLabel || tip.title) + "</p>" +
+      (tip.maxSaving > tip.saving + 0.5
+        ? '<p class="xs muted mt-1">Up to ~' + tip.maxSaving.toFixed(0) + " kg going all the way: " + esc(tip.maxLabel || "") + "</p>"
+        : "") +
+      "</div>" +
       (budgetPct !== null
         ? '<div class="panel p-5"><div class="eyebrow-sm muted">' + icon("target") + ' vs 1.5°C budget</div><p class="stat">' + budgetPct +
           '%<span class="sm muted normal"> of yearly target</span></p><p class="xs muted mt-1">Target is 2,500 kg a year (2.5 t)</p></div>'
@@ -1567,14 +1654,23 @@
       ) +
       section(
         "Potential savings",
-        "<p>For each area we estimate what one realistic change would save, not the most extreme option:</p>" +
+        "<p>For each area we show two figures: what a <strong>realistic</strong> change would save, and the most you could save <strong>going all the way</strong>.</p>" +
+          "<p>Realistic changes:</p>" +
           list([
-            "Flights: swapping flights for trains, closer destinations or video calls. Flying is optional, so the full amount counts",
-            "Commuting: replacing car days with walking, cycling, public transport or working from home",
+            "Flights: taking the train on short routes, and flying economy on the rest",
+            "Commuting: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones",
             "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
             "Home energy: switching to a renewable electricity tariff",
-            "Water and pets: using less hot water, and choosing lower-impact pet food",
+            "Water and pets: using less water, and choosing lower-impact pet food",
             "Banking and pensions: moving savings to a bank that doesn't fund fossil fuels, and choosing a climate-focused pension fund",
+          ]) +
+          "<p>Going all the way:</p>" +
+          list([
+            "Flights: not flying",
+            "Commuting: no commuting emissions, by working from home or walking and cycling",
+            "Food: a fully plant-based diet with little waste",
+            "Home energy: a renewable tariff plus a heat pump instead of gas",
+            "Water and pets: bigger cuts in water use, and alternative-protein pet food",
           ]) +
           "<p>Savings are capped so no area can save more than it emits.</p>"
       ) +
