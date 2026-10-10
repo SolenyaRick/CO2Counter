@@ -1656,6 +1656,7 @@
         "Banking and pensions",
         "<p>Banks lend out your savings, and pension funds invest in companies. A share of those companies' emissions is counted as yours, in proportion to the money involved. " +
           "This is known as financed emissions.</p>" +
+          "<p>Bank figures come from MotherTree's 2021 analysis of UK banks' financed emissions.</p>" +
           "<p>Pension figures come from each provider's own climate report (TCFD report), using the carbon footprint of its default fund, the fund most savers are in. " +
           "These cover the companies' direct and energy-related emissions (Scope 1 and 2). " +
           "Where we couldn't get a provider's current figure, or you're not sure who your provider is, we use an average across the largest UK workplace pension schemes. " +
@@ -1892,7 +1893,38 @@
       '<div class="card"><div class="label-row mb-1">' + icon("trash", "red") + '<span class="sm fw-500 upper red">Data management</span></div>' +
       '<p class="xs muted mb-4">Clear stored data from this device. This can\'t be undone.</p><div class="chip-row">' +
       '<button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">' + icon("trash") + " Clear habits</button>" +
-      '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">' + icon("trash") + " Clear everything</button></div></div></div>"
+      '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">' + icon("trash") + " Clear everything</button></div></div>" +
+      deleteAccountCard() + "</div>"
+    );
+  }
+
+  // Deleting removes the login; survey answers and membership go with it
+  // (they reference auth.users with on delete cascade). Stripe isn't told,
+  // so members are asked to cancel their subscription first.
+  function deleteAccountCard() {
+    const m = membership || {};
+    const subscribed = !m.owner && m.status === "active";
+    let body;
+    if (!ui.confirmDelete) {
+      body =
+        '<p class="xs muted mb-4">Permanently delete your account and everything saved with it: your survey answers and membership. This can\'t be undone.</p>' +
+        '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="delete-account">' + icon("trash") + " Delete my account</button>";
+    } else {
+      body =
+        (subscribed
+          ? '<p class="sm mb-3"><span class="fw-600">Cancel your subscription first.</span> Deleting your account doesn\'t stop Stripe charging your card next year.' +
+            (STRIPE_PORTAL_URL && !isNativeApp()
+              ? ' <a class="link-btn" href="' + esc(STRIPE_PORTAL_URL) + '" target="_blank" rel="noopener">Manage subscription</a>'
+              : "") +
+            "</p>"
+          : "") +
+        '<label class="xs">Type <span class="fw-600">DELETE</span> to confirm<input class="input mt-1" type="text" id="delete-confirm" autocomplete="off" /></label>' +
+        (ui.deleteErr ? '<p class="xs red mt-2">' + esc(ui.deleteErr) + "</p>" : "") +
+        '<div class="chip-row mt-3"><button type="button" class="btn btn-sm btn-delete" data-action="confirm-delete">Delete my account permanently</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
+    }
+    return (
+      '<div class="card"><div class="label-row mb-1">' + icon("user", "red") + '<span class="sm fw-500 upper red">Delete account</span></div>' + body + "</div>"
     );
   }
 
@@ -2053,7 +2085,10 @@
       "Join CO2 Counter",
       "Signed in as " + (currentUser.email || ""),
       '<div class="price"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() + joinAction() +
-        '<div class="center mt-5"><button type="button" class="link-btn muted-link" data-action="sign-out">Sign out</button></div>'
+        '<div class="center mt-5"><button type="button" class="link-btn muted-link" data-action="sign-out">Sign out</button>' +
+        (ui.confirmDelete ? "" : ' · <button type="button" class="link-btn muted-link" data-action="delete-account">Delete account</button>') +
+        "</div>" +
+        (ui.confirmDelete ? '<div class="mt-5">' + deleteAccountCard() + "</div>" : "")
     );
   }
 
@@ -2323,6 +2358,43 @@
     "clear-habits": () => {
       CATEGORIES.forEach((c) => lsRemove(KEY_HABITS + c));
       render();
+    },
+    "delete-account": () => {
+      ui.confirmDelete = true;
+      ui.deleteErr = "";
+      render();
+    },
+    "cancel-delete": () => {
+      ui.confirmDelete = false;
+      ui.deleteErr = "";
+      render();
+    },
+    "confirm-delete": async () => {
+      const typed = (document.getElementById("delete-confirm") || {}).value || "";
+      if (typed.trim().toUpperCase() !== "DELETE") {
+        ui.deleteErr = "Type DELETE to confirm.";
+        return render();
+      }
+      const { error } = await sb.rpc("delete_own_account");
+      if (error) {
+        ui.deleteErr = "Couldn't delete your account. Please try again.";
+        return render();
+      }
+      await sb.auth.signOut().catch(() => {});
+      [KEY_SURVEY, KEY_SNAPSHOTS, KEY_GOALS, KEY_STREAKS].forEach(lsRemove);
+      CATEGORIES.forEach((c) => {
+        lsRemove(KEY_HABITS + c);
+        lsRemove(KEY_STAGE + c);
+      });
+      currentUser = null;
+      membership = null;
+      ui.confirmDelete = false;
+      ui.userName = "";
+      survey = normaliseSurvey(null);
+      ui.step = 0;
+      location.hash = "#/";
+      render();
+      alert("Your account has been deleted.");
     },
     "clear-all": async () => {
       if (!confirm("Clear your survey answers and habits? This can't be undone.")) return;
