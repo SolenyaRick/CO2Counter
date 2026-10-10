@@ -101,6 +101,16 @@ The typical diet comes from Defra's Family Food survey (average
 purchases of each meat and fish per person per week); eating out once a
 week and "some" food waste are assumptions.
 
+## Friends
+
+`#/friends` (members only) reuses Prototype 1's `friendships` table,
+`profiles.display_name` and `find_user_by_email()`, so existing friendships
+carry over. People add friends by email, accept or decline requests, and
+see a leaderboard of yearly totals for themselves and accepted friends.
+The app saves each member's yearly total in `survey_responses.total_yearly`,
+and `friends_footprints()` returns only names and totals, never answers.
+Run the "Friends (Prototype 2)" section of `supabase/schema.sql` once.
+
 ## Giving people free access
 
 Add their email address to the `free_access` table in Supabase (Table

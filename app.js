@@ -223,12 +223,12 @@
 
   async function saveSurveyRemote(s) {
     if (!currentUser || !sb) return;
+    const row = { user_id: currentUser.id, survey_data: s, updated_at: new Date().toISOString() };
     try {
-      await sb.from("survey_responses").upsert({
-        user_id: currentUser.id,
-        survey_data: s,
-        updated_at: new Date().toISOString(),
-      });
+      // total_yearly lets friends see your total (friends_footprints()).
+      // If the database doesn't have that column yet, save without it.
+      const { error } = await sb.from("survey_responses").upsert({ ...row, total_yearly: Math.round(footprint(s).totalYearly) });
+      if (error && /total_yearly/.test(error.message || "")) await sb.from("survey_responses").upsert(row);
     } catch (e) {}
   }
 
@@ -1415,11 +1415,27 @@
       "</div>";
 
     html +=
+      habitsComingSoonCard() +
+      '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
+    return html;
+  }
+
+  function habitsComingSoonCard() {
+    return (
       '<div class="card callout strong"><div class="label-row mb-4"><span class="round-badge sm">' + icon("leaf") + '</span><span class="eyebrow">Build these habits</span>' +
       '<span class="tag amber ml-auto">Coming Soon</span></div><div class="coming-soon"><div class="soon-icon">' + icon("leaf") + "</div>" +
       '<h2 class="soon-title">Habit tracking is on the way</h2><p class="sm muted max-sm">We\'re putting the finishing touches on the habit commitment and streak-tracking feature. Check back soon to build greener habits, one step at a time.</p></div></div>' +
-      '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
-    return html;
+      ""
+    );
+  }
+
+  // Habit tracking isn't built yet: the Habits tab shows the same
+  // "coming soon" card as the guides, for everyone.
+  function renderHabitsPending() {
+    return (
+      '<div class="container narrow">' + pageHeader("My Habits", "Coming soon") + habitsComingSoonCard() +
+      '<div class="center mt-8"><a class="btn btn-outline" href="#/results">' + icon("arrowLeft") + " Back to results</a></div></div>"
+    );
   }
 
   function openSectionDialog(cat, index) {
@@ -1721,6 +1737,129 @@
       "</div>" +
       '<div class="center"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a></div></div>"
     );
+  }
+
+  // ==================== Friends page ====================
+
+  const friends = { loaded: false, loading: false, rows: [], board: [], myName: "", error: "", msg: "" };
+
+  async function loadFriends() {
+    if (!currentUser || !sb || friends.loading) return;
+    friends.loading = true;
+    const me = currentUser.id;
+    try {
+      const [{ data: rows }, { data: board }, { data: mine }] = await Promise.all([
+        sb.from("friendships").select("*").or("requester_id.eq." + me + ",addressee_id.eq." + me),
+        sb.rpc("friends_footprints"),
+        sb.from("profiles").select("display_name").eq("id", me).maybeSingle(),
+      ]);
+      const list = rows || [];
+      const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
+      const names = {};
+      if (otherIds.length) {
+        const { data: profs } = await sb.from("profiles").select("id, display_name").in("id", otherIds);
+        (profs || []).forEach((p) => (names[p.id] = p.display_name || "Friend"));
+      }
+      friends.rows = list.map((r) => {
+        const otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
+        return { id: r.id, status: r.status, otherId, name: names[otherId] || "Someone", iAsked: r.requester_id === me };
+      });
+      friends.board = (board || []).slice().sort((a, b) => a.total_yearly - b.total_yearly);
+      friends.myName = (mine && mine.display_name) || "";
+    } catch (e) {
+      friends.error = "Couldn't load your friends. Check your connection and try again.";
+    }
+    friends.loaded = true;
+    friends.loading = false;
+    if (currentPath() === "/friends") render();
+  }
+
+  function renderFriends() {
+    if (!friends.loaded) {
+      loadFriends();
+      return spinner;
+    }
+    const incoming = friends.rows.filter((f) => f.status === "pending" && !f.iAsked);
+    const outgoing = friends.rows.filter((f) => f.status === "pending" && f.iAsked);
+    const accepted = friends.rows.filter((f) => f.status === "accepted");
+    const row = (f, buttons) =>
+      '<div class="friend-row"><span class="sm fw-500 truncate">' + esc(f.name) + '</span><span class="chip-row">' +
+      buttons.map(([label, action, cls]) => '<button type="button" class="btn btn-sm ' + cls + '" data-action="' + action + '" data-id="' + f.id + '">' + label + "</button>").join("") +
+      "</span></div>";
+    const section = (title, body) => '<div class="card"><h2 class="card-title mb-4">' + title + "</h2>" + body + "</div>";
+    let html = '<div class="container narrow">' + pageHeader("Friends", "Compare footprints with people you know", "user");
+    if (friends.error) html += '<p class="sm red mb-4">' + esc(friends.error) + "</p>";
+
+    // Leaderboard
+    const meOnBoard = friends.board.find((b) => b.is_self);
+    let board;
+    if (!accepted.length) board = '<p class="sm muted">Add friends below to compare your yearly footprints.</p>';
+    else {
+      board =
+        '<div class="stack-2">' +
+        friends.board
+          .map(
+            (b, i) =>
+              '<div class="month-row' + (b.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge">' + (i + 1) + '</span><span class="sm fw-500 truncate">' +
+              esc(b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name) + '</span></div><div class="label-row shrink0"><span class="fw-600">' +
+              (b.total_yearly / 1000).toFixed(1) + '</span><span class="xs muted">t / yr</span></div></div>'
+          )
+          .join("") +
+        "</div>" +
+        (!meOnBoard ? '<p class="xs muted mt-3">Finish the survey to appear on the leaderboard.</p>' : "") +
+        (accepted.length > friends.board.filter((b) => !b.is_self).length
+          ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey as members yet won\'t appear until they do.</p>'
+          : "");
+    }
+    html += section("Leaderboard", board + '<p class="xs muted mt-3">Lowest footprint first. Friends only ever see each other\'s yearly totals, never your answers.</p>');
+
+    // Your name
+    html += section(
+      "Your name",
+      '<p class="xs muted mb-3">This is what your friends see.</p><form id="name-form" class="chip-row"><input class="input grow" id="display-name" maxlength="40" placeholder="e.g. Sam" value="' +
+        esc(friends.myName) + '" /><button type="submit" class="btn btn-outline">Save</button></form>'
+    );
+
+    // Add a friend
+    html += section(
+      "Add a friend",
+      '<form id="friend-form" class="chip-row"><input class="input grow" type="email" id="friend-email" placeholder="Their email address" required /><button type="submit" class="btn btn-green">Send request</button></form>' +
+        '<p class="xs muted mt-2">They need a CO2 Counter account with that email.</p>' +
+        (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
+    );
+
+    if (incoming.length)
+      html += section("Requests for you", '<div class="stack-2">' + incoming.map((f) => row(f, [["Accept", "friend-accept", "btn-green"], ["Decline", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    if (outgoing.length)
+      html += section("Waiting for a reply", '<div class="stack-2">' + outgoing.map((f) => row(f, [["Cancel", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    if (accepted.length)
+      html += section("Your friends", '<div class="stack-2">' + accepted.map((f) => row(f, [["Remove", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    return html + "</div>";
+  }
+
+  async function addFriend(email) {
+    friends.msg = "";
+    friends.msgOk = false;
+    const clean = email.trim().toLowerCase();
+    if (!clean) return;
+    const { data: foundId, error } = await sb.rpc("find_user_by_email", { lookup_email: clean });
+    const existing = friends.rows.find((f) => f.otherId === foundId);
+    if (error) friends.msg = "Something went wrong looking that up.";
+    else if (!foundId) friends.msg = "No CO2 Counter account uses that email.";
+    else if (foundId === currentUser.id) friends.msg = "That's your own account.";
+    else if (existing && existing.status === "accepted") friends.msg = "You're already friends.";
+    else if (existing && existing.iAsked) friends.msg = "You've already sent them a request.";
+    else if (existing) {
+      await sb.from("friendships").update({ status: "accepted" }).eq("id", existing.id);
+      friends.msg = "They'd already asked you, so you're now friends.";
+      friends.msgOk = true;
+    } else {
+      const { error: insertError } = await sb.from("friendships").insert({ requester_id: currentUser.id, addressee_id: foundId, status: "pending" });
+      friends.msg = insertError ? "Couldn't send the request." : "Request sent.";
+      friends.msgOk = !insertError;
+    }
+    friends.loaded = false;
+    await loadFriends();
   }
 
   // ==================== Privacy & Terms pages ====================
@@ -2288,8 +2427,8 @@
     else if (path === "/terms") html = renderTerms();
     else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
-    else if (path === "/check-in") html = member ? renderCheckIn() : renderLocked();
-    else if (path === "/habits") html = member ? renderHabits() : renderLocked();
+    else if (path === "/check-in" || path === "/habits") html = renderHabitsPending();
+    else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
     setNav(parts[0] === "explainer" ? "" : path);
@@ -2300,6 +2439,10 @@
 
   function onRouteChange() {
     closeModal();
+    if (currentPath() === "/friends") {
+      friends.loaded = false;
+      friends.msg = "";
+    }
     ui.commuteOpen = null;
     ui.airport = null;
     if (currentPath() !== "/results") ui.selectedCategory = null;
@@ -2458,6 +2601,9 @@
       if (sb) await sb.auth.signOut();
       currentUser = null;
       membership = null;
+      friends.loaded = false;
+      friends.rows = [];
+      friends.board = [];
       ui.userName = "";
       ui.authMode = "signin";
       // The next person to use this device shouldn't see these answers.
@@ -2491,6 +2637,16 @@
     "clear-habits": () => {
       CATEGORIES.forEach((c) => lsRemove(KEY_HABITS + c));
       render();
+    },
+    "friend-accept": async (el) => {
+      await sb.from("friendships").update({ status: "accepted" }).eq("id", el.dataset.id);
+      friends.loaded = false;
+      await loadFriends();
+    },
+    "friend-remove": async (el) => {
+      await sb.from("friendships").delete().eq("id", el.dataset.id);
+      friends.loaded = false;
+      await loadFriends();
     },
     "delete-account": () => {
       ui.confirmDelete = true;
@@ -2606,6 +2762,21 @@
   });
 
   document.addEventListener("submit", async (e) => {
+    if (e.target.id === "friend-form") {
+      e.preventDefault();
+      addFriend(document.getElementById("friend-email").value);
+      return;
+    }
+    if (e.target.id === "name-form") {
+      e.preventDefault();
+      const name = document.getElementById("display-name").value.trim().slice(0, 40);
+      const { error } = await sb.from("profiles").upsert({ id: currentUser.id, display_name: name });
+      friends.msg = error ? "Couldn't save your name." : "";
+      friends.myName = error ? friends.myName : name;
+      ui.userName = name || ui.userName;
+      render();
+      return;
+    }
     if (e.target.id === "auth-form") {
       e.preventDefault();
       submitAuth();

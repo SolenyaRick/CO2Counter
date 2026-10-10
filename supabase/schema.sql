@@ -1201,3 +1201,44 @@ revoke all on function public.has_free_access() from public;
 revoke all on function public.membership_status() from public;
 grant execute on function public.has_free_access() to authenticated;
 grant execute on function public.membership_status() to authenticated;
+
+-- ---------- Friends (Prototype 2) ----------
+-- Reuses Prototype 1's friendships table, profiles.display_name and
+-- find_user_by_email() above, so existing friendships carry over. The app
+-- saves each member's yearly total alongside their answers, and
+-- friends_footprints() returns only names and totals for you and your
+-- accepted friends, never anyone's answers.
+
+alter table public.survey_responses add column if not exists total_yearly numeric;
+
+drop function if exists public.friends_footprints();
+create function public.friends_footprints()
+returns table (user_id uuid, display_name text, total_yearly numeric, updated_at timestamptz, is_self boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    s.user_id,
+    coalesce(nullif(p.display_name, ''), 'Friend'),
+    s.total_yearly,
+    s.updated_at,
+    s.user_id = auth.uid()
+  from public.survey_responses s
+  left join public.profiles p on p.id = s.user_id
+  where public.has_access()
+    and s.total_yearly is not null
+    and (
+      s.user_id = auth.uid()
+      or exists (
+        select 1 from public.friendships f
+        where f.status = 'accepted'
+          and ((f.requester_id = auth.uid() and f.addressee_id = s.user_id)
+            or (f.addressee_id = auth.uid() and f.requester_id = s.user_id))
+      )
+    );
+$$;
+
+revoke all on function public.friends_footprints() from public;
+grant execute on function public.friends_footprints() to authenticated;
