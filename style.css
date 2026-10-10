@@ -1948,3 +1948,9 @@ label {
 .btn-delete:hover {
   background: #b91c1c;
 }
+
+.footer-sep {
+  color: var(--muted-fg);
+  margin: 0 6px;
+  font-size: 12px;
+}

@@ -1129,3 +1129,75 @@ drop policy if exists "survey_responses: members full access" on public.survey_r
 create policy "survey_responses: members full access" on public.survey_responses
   for all using (auth.uid() = user_id and public.has_access())
   with check (auth.uid() = user_id and public.has_access());
+
+-- ---------- Free access list ----------
+-- Email addresses listed here get full access without paying (friends,
+-- testers, partners). Add or remove rows in the Supabase Table Editor.
+-- expires_at is optional; leave it empty for no end date. Nobody can read
+-- or change this table from the app (RLS on, no policies); only the
+-- functions below, which run as the database owner, look at it.
+
+create table if not exists public.free_access (
+  email text primary key,
+  note text,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.free_access enable row level security;
+
+create or replace function public.has_free_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.free_access
+    where lower(email) = lower(auth.jwt() ->> 'email')
+      and (expires_at is null or expires_at > now())
+  );
+$$;
+
+create or replace function public.has_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(lower(auth.jwt() ->> 'email') = 'jack.s.brown@outlook.com', false)
+    or public.has_free_access()
+    or exists (
+      select 1 from public.memberships
+      where user_id = auth.uid()
+        and status in ('active', 'trialing', 'past_due')
+        and current_period_end > now()
+    );
+$$;
+
+-- Adds is_free (on the free access list); the return type changes, so the
+-- old version is dropped first.
+drop function if exists public.membership_status();
+create function public.membership_status()
+returns table (has_access boolean, is_owner boolean, is_free boolean, status text, current_period_end timestamptz)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.has_access(),
+    coalesce(lower(auth.jwt() ->> 'email') = 'jack.s.brown@outlook.com', false),
+    public.has_free_access(),
+    m.status,
+    m.current_period_end
+  from (select 1) as one
+  left join public.memberships m on m.user_id = auth.uid();
+$$;
+
+revoke all on function public.has_free_access() from public;
+revoke all on function public.membership_status() from public;
+grant execute on function public.has_free_access() to authenticated;
+grant execute on function public.membership_status() to authenticated;

@@ -101,6 +101,21 @@ The typical diet comes from Defra's Family Food survey (average
 purchases of each meat and fish per person per week); eating out once a
 week and "some" food waste are assumptions.
 
+## Giving people free access
+
+Add their email address to the `free_access` table in Supabase (Table
+Editor → free_access → Insert row). `note` is for your own reference, and
+`expires_at` is optional (leave empty for no end date). They get full
+access as soon as they sign in with that email; delete the row to remove
+it. Run the "Free access list" section of `supabase/schema.sql` once first.
+
+## Privacy policy and terms
+
+`#/privacy` and `#/terms`, linked from the footer and the sign-up and join
+screens. Set `OPERATOR_NAME` and `CONTACT_EMAIL` near the top of `app.js`;
+until then the pages show placeholders. This isn't legal advice, so have
+them checked if you can.
+
 ## Bank figures
 
 The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held

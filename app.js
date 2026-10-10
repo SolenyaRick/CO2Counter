@@ -21,6 +21,10 @@
   const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00";
   const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/9B6eVd0a4g2X4Gbc2K5EY00";
   const WEBSITE_URL = "https://co2counter.co.uk/";
+  // Shown on the Privacy and Terms pages. Fill these in before publishing.
+  const OPERATOR_NAME = "";
+  const CONTACT_EMAIL = "";
+  const LEGAL_UPDATED = "10 October 2026";
 
   const D = window.ECO_DATA;
   const DAYS = D.DAYS;
@@ -154,6 +158,7 @@
       if (row) {
         result.access = !!row.has_access;
         result.owner = !!row.is_owner;
+        result.free = !!row.is_free;
         result.status = row.status || "";
         result.until = row.current_period_end ? new Date(row.current_period_end) : null;
       }
@@ -1718,6 +1723,127 @@
     );
   }
 
+  // ==================== Privacy & Terms pages ====================
+
+  function contactLink() {
+    return CONTACT_EMAIL ? '<a class="link-btn" href="mailto:' + esc(CONTACT_EMAIL) + '">' + esc(CONTACT_EMAIL) + "</a>" : "[contact email to be added]";
+  }
+
+  function legalPage(title, intro, sections) {
+    return (
+      '<div class="container narrow">' + pageHeader(title, "Last updated " + LEGAL_UPDATED, "info") +
+      '<p class="muted lh mb-8">' + intro + '</p><div class="stack-6 mb-10">' +
+      sections
+        .map(([h, body]) => '<div class="section-card static"><h2 class="fw-600 mb-2">' + esc(h) + '</h2><div class="sm muted lh method">' + body + "</div></div>")
+        .join("") +
+      "</div></div>"
+    );
+  }
+
+  const ul = (items) => "<ul>" + items.map((i) => "<li>" + i + "</li>").join("") + "</ul>";
+  const operator = () => (OPERATOR_NAME ? esc(OPERATOR_NAME) : "[operator name to be added]");
+
+  function renderPrivacy() {
+    return legalPage(
+      "Privacy policy",
+      "This policy explains what personal data CO2 Counter (co2counter.co.uk) collects, why, who it's shared with, and your rights. CO2 Counter is run by " +
+        operator() + ' ("we", "us"), who is the data controller. Questions or requests: ' + contactLink() + ".",
+      [
+        [
+          "What we collect",
+          ul([
+            "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
+            "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
+            "<strong>Membership details</strong>: whether you have a membership, its status and renewal date, and a reference to your customer record at Stripe. We never see or store your card details.",
+            "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
+          ])
+        ],
+        [
+          "Why we use it",
+          ul([
+            "To work out and show your footprint, save your answers to your account, and provide the membership you've paid for. The legal basis is performing our contract with you.",
+            "To keep the service secure and working. The legal basis is our legitimate interests.",
+            "To keep payment records, as the law requires. The legal basis is legal obligation.",
+          ]) +
+            "<p>We don't sell your data, show adverts, or use tracking or analytics cookies.</p>",
+        ],
+        [
+          "Who we share it with",
+          "<p>Only the providers that run the service for us:</p>" +
+            ul([
+              "<strong>Supabase</strong>: sign-in and database (your account, saved answers and membership status).",
+              "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
+              "<strong>GitHub Pages</strong>: hosting the website.",
+            ]) +
+            "<p>Some of these providers may process data outside the UK. Where they do, they rely on safeguards recognised under UK data protection law, such as adequacy regulations or standard contractual clauses.</p>",
+        ],
+        [
+          "Storage on your device",
+          "<p>The site stores your survey answers, habits, check-ins and sign-in session in your browser's local storage so it can work. These aren't tracking cookies. Clearing your browser's site data removes them, and signing out or deleting your account clears them on that device.</p>",
+        ],
+        [
+          "How long we keep it",
+          "<p>We keep your account data until you delete your account. Deleting it removes your account, saved answers and membership record straight away. Stripe keeps payment records for as long as the law requires.</p>",
+        ],
+        [
+          "Your rights",
+          "<p>Under UK data protection law you can ask to access, correct or delete your data, receive a copy of it, or object to or restrict how we use it. You can delete your account at any time from the Account page. For anything else, email " +
+            contactLink() +
+            `. If you're unhappy with how we've handled your data, you can complain to the Information Commissioner's Office (<a class="link-btn" href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a>).</p>`,
+        ],
+        ["Children", "<p>CO2 Counter is intended for people aged 16 and over.</p>"],
+        ["Changes", "<p>If we change this policy, we'll update this page and the date above. Significant changes will be highlighted on the site.</p>"],
+      ]
+    );
+  }
+
+  function renderTerms() {
+    return legalPage(
+      "Terms of use",
+      "These terms apply when you use CO2 Counter (co2counter.co.uk), run by " + operator() + ' ("we", "us"). By using the site you agree to them. Contact: ' + contactLink() + ".",
+      [
+        [
+          "What CO2 Counter is",
+          "<p>CO2 Counter estimates your carbon footprint from your answers to a survey, and suggests ways to reduce it. Results are estimates based on typical published figures, not measurements. They're for general information and aren't financial, investment or professional advice. Check with a qualified adviser before making financial decisions, such as moving a pension.</p>",
+        ],
+        [
+          "Your account",
+          "<p>You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
+        ],
+        [
+          "Membership and payment",
+          ul([
+            "The survey and your headline result are free. Membership unlocks the full results, tips and guides, and costs <strong>£2 a year</strong>, paid through Stripe.",
+            "Membership <strong>renews automatically each year</strong> until you cancel. You can cancel at any time with <em>Manage subscription</em> on the Account page. You keep access until the end of the year you've paid for.",
+            "If we change the price, we'll tell you at least 30 days before your next renewal, and you can cancel before it applies.",
+            "<strong>Refunds:</strong> if you change your mind, email us within 14 days of joining or renewing and we'll refund that payment in full.",
+            "Deleting your account doesn't cancel your subscription. Please cancel it first.",
+          ]),
+        ],
+        [
+          "Using the site fairly",
+          "<p>Please don't misuse the service: no attempts to break or overload it, get around the membership, access other people's data, or copy and resell its content. We may suspend accounts that do.</p>",
+        ],
+        [
+          "Our content",
+          "<p>The site's text, design, calculations and guides belong to us or our licensors. You're welcome to use your own results however you like.</p>",
+        ],
+        [
+          "Availability and changes",
+          "<p>We'll try to keep the site available and accurate, but we can't promise it will always be uninterrupted or error-free. We may update features, data sources and estimates over time. If we ever close the service, we'll give members notice and refund any unused part of their membership.</p>",
+        ],
+        [
+          "Our liability",
+          "<p>Nothing in these terms limits liability that can't legally be limited, such as for death or personal injury caused by negligence, or for fraud, and your statutory consumer rights are unaffected. Otherwise, we're not responsible for decisions you make based on estimates from the site, and our total liability to you is limited to the amount you've paid us in the previous 12 months.</p>",
+        ],
+        [
+          "Changes and law",
+          "<p>We may update these terms. If a change affects your membership, we'll let you know in advance. These terms are governed by the law of England and Wales, and you can bring a claim in the courts where you live in the UK.</p>",
+        ],
+      ]
+    );
+  }
+
   // ==================== Habits page ====================
 
   function renderHabits() {
@@ -1869,6 +1995,7 @@
     const m = membership || {};
     let plan;
     if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
+    else if (m.free && m.status !== "active") plan = '<p class="fw-600">Free access</p><p class="sm muted">You\'ve been given full access, free of charge.</p>';
     else {
       const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
       plan =
@@ -1946,6 +2073,9 @@
       (ui.authErr ? '<p class="xs red">' + esc(ui.authErr) + "</p>" : "") +
       (ui.authMsg ? '<p class="xs green-dark">' + esc(ui.authMsg) + "</p>" : "") +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
+      (signup
+        ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>'
+        : "") +
       '<div class="chip-row"><button type="button" class="link-btn" data-action="toggle-auth-mode">' + (signup ? "Have an account? Sign in" : "Need an account? Sign up") + "</button>" +
       (signup ? "" : '<button type="button" class="link-btn" data-action="forgot">Forgot password?</button>') + "</div></form>"
     );
@@ -2070,7 +2200,8 @@
     } else {
       action =
         '<a class="btn btn-green btn-block" href="' + esc(paymentUrl()) + '">Join for £2 a year</a>' +
-        '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time.</p>' +
+        '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time. By joining you agree to our ' +
+        '<a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>' +
         '<button type="button" class="link-btn mt-3" data-action="recheck-membership">Already paid? Check again</button>';
     }
     if (ui.paymentTimedOut && !ui.confirmingPayment) {
@@ -2153,6 +2284,8 @@
     else if (ui.recovery) html = renderLogin();
     else if (path === "/") html = renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
+    else if (path === "/privacy") html = renderPrivacy();
+    else if (path === "/terms") html = renderTerms();
     else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
     else if (path === "/check-in") html = member ? renderCheckIn() : renderLocked();
