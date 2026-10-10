@@ -1,16 +1,24 @@
-// EcoImpact (Prototype 2): monthly carbon-footprint survey, results,
+// EcoImpact (Prototype 2): yearly carbon-footprint survey, results,
 // reduction guides, habits and daily check-ins.
 //
-// Ported from the Base44 prototype. Everything works without an account
-// (saved in this browser's localStorage); signing in also keeps the survey
-// answers in Supabase (survey_responses table, see supabase/schema.sql) so
-// they follow the user between devices.
+// Ported from the Base44 prototype. People must sign in, and then need an
+// active £2/year membership (paid through Stripe, recorded by the
+// stripe-webhook Edge Function) unless they are the owner. Survey answers
+// are kept in Supabase (survey_responses, see supabase/schema.sql) and
+// cached in localStorage; habits and streaks stay on the device.
 (function () {
   "use strict";
 
   const SUPABASE_URL = "https://fbgfylfnbtxzbwgilktt.supabase.co";
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiZ2Z5bGZuYnR4emJ3Z2lsa3R0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTg1MjUsImV4cCI6MjEwMDY3NDUyNX0.S-c144dilgUwf8saEjuIQMAp4q-B86R2TRkLV6l9Ym0";
+
+  // Stripe Payment Link for the £2/year membership, and the Stripe customer
+  // portal login link (for cancelling or updating a card). Both come from
+  // the Stripe dashboard; see README "Payments". Leave empty until set up.
+  const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_eVqcN4dPS0QVcB98m483C00";
+  const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/test_eVqcN4dPS0QVcB98m483C00";
+  const WEBSITE_URL = "https://co2counter.co.uk/";
 
   const D = window.ECO_DATA;
   const DAYS = D.DAYS;
@@ -123,6 +131,34 @@
     return currentUser;
   }
 
+  // { access, owner, status, until } once checked; null while unknown.
+  let membership = null;
+
+  async function checkMembership() {
+    if (!currentUser || !sb) {
+      membership = null;
+      return null;
+    }
+    const result = { access: false, owner: false, status: "", until: null, error: false };
+    try {
+      const { data, error } = await sb.rpc("membership_status");
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        result.access = !!row.has_access;
+        result.owner = !!row.is_owner;
+        result.status = row.status || "";
+        result.until = row.current_period_end ? new Date(row.current_period_end) : null;
+      }
+    } catch (e) {
+      result.error = true;
+    }
+    membership = result;
+    return result;
+  }
+
+  const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
   async function displayName(user) {
     const meta = (user && user.user_metadata) || {};
     if (meta.full_name) return meta.full_name;
@@ -213,10 +249,13 @@
 
   const getSnapshots = () => lsGet(KEY_SNAPSHOTS, []);
 
-  function saveSnapshot(totalMonthly) {
+  // Snapshots saved before the switch to yearly figures hold totalMonthly.
+  const snapshotYearly = (s) => (s.totalYearly != null ? s.totalYearly : (s.totalMonthly || 0) * 12);
+
+  function saveSnapshot(totalYearly) {
     const month = monthKey();
     const list = getSnapshots();
-    const entry = { month, totalMonthly, savedAt: new Date().toISOString() };
+    const entry = { month, totalYearly, savedAt: new Date().toISOString() };
     const i = list.findIndex((s) => s.month === month);
     if (i >= 0) list[i] = entry;
     else list.push(entry);
@@ -285,6 +324,8 @@
     return { items, total, pctOfTarget: (total / D.BUDGET_YEARLY) * 100 };
   }
 
+  // Every category is returned as kg CO2e per year. The survey asks for
+  // weekly habits and monthly bills, so those are scaled up here.
   function footprint(s) {
     const items = [];
     const household = Math.max(1, (s.energy && s.energy.household) || 1);
@@ -305,7 +346,7 @@
       key: "meals",
       label: "Meals & Diet",
       icon: "🍽️",
-      monthly: mealsWeekly * D.WEEKS_PER_MONTH,
+      yearly: mealsWeekly * D.WEEKS_PER_YEAR,
       detail: "~" + mealsWeekly.toFixed(1) + " kg CO₂e per week" + (mealNotes ? " · " + mealNotes : ""),
     });
 
@@ -318,7 +359,7 @@
       key: "commute",
       label: "Commute & Travel",
       icon: "🚗",
-      monthly: commuteWeekly * D.WEEKS_PER_MONTH,
+      yearly: commuteWeekly * D.WEEKS_PER_YEAR,
       detail: "~" + commuteWeekly.toFixed(1) + " kg CO₂e per week",
     });
 
@@ -327,7 +368,7 @@
       key: "flights",
       label: "Flights",
       icon: "✈️",
-      monthly: flights.reduce((sum, f) => sum + flightKg(f), 0) / 12,
+      yearly: flights.reduce((sum, f) => sum + flightKg(f), 0),
       detail: flights.length + " flight(s) / year",
     });
 
@@ -337,7 +378,7 @@
       key: "energy",
       label: "Home Energy",
       icon: "⚡",
-      monthly: ((energy.electricityKwh || 0) * elecFactor + (energy.gasKwh || 0) * D.GAS_FACTOR) / household,
+      yearly: (12 * ((energy.electricityKwh || 0) * elecFactor + (energy.gasKwh || 0) * D.GAS_FACTOR)) / household,
       detail: energy.greenTariff
         ? "Green tariff · split across household"
         : "Standard electricity + gas · split across household",
@@ -348,7 +389,7 @@
       key: "water",
       label: "Water",
       icon: "💧",
-      monthly: ((liters / 1000) * D.WATER_FACTOR) / household,
+      yearly: (12 * (liters / 1000) * D.WATER_FACTOR) / household,
       detail: (liters / household).toFixed(0) + " L per person / month",
     });
 
@@ -357,7 +398,7 @@
       key: "pets",
       label: "Pets",
       icon: "🐾",
-      monthly: ((pets.dogs || 0) * (D.DOG_YEARLY / 12) + (pets.cats || 0) * (D.CAT_YEARLY / 12)) / household,
+      yearly: ((pets.dogs || 0) * D.DOG_YEARLY + (pets.cats || 0) * D.CAT_YEARLY) / household,
       detail: (pets.dogs || 0) + (pets.cats || 0) + " pet(s)",
     });
 
@@ -367,13 +408,13 @@
       key: "banking",
       label: "Banking",
       icon: "🏦",
-      monthly: ((banking.amount || 0) * factorOf(D.BANKS, banking.bank)) / 12,
+      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank),
       detail: bank ? bank.label : "",
     });
 
-    const totalMonthly = items.reduce((sum, i) => sum + i.monthly, 0);
-    items.sort((a, b) => b.monthly - a.monthly);
-    return { totalMonthly, totalYearly: totalMonthly * 12, breakdown: items, biggest: items[0] };
+    const totalYearly = items.reduce((sum, i) => sum + i.yearly, 0);
+    items.sort((a, b) => b.yearly - a.yearly);
+    return { totalYearly, breakdown: items, biggest: items[0] };
   }
 
   // Classifies the week of meals so the Meals tip and explainer can be
@@ -404,12 +445,12 @@
     const veggieKg = 2.45;
     const chickenKg = D.MEAT_PER_KG.chicken * D.PORTION;
     const fishKg = D.MEAT_PER_KG.fish * D.PORTION;
-    const W = D.WEEKS_PER_MONTH;
+    const W = D.WEEKS_PER_YEAR;
     switch (dietType(s)) {
       case "red_meat_high":
         return {
           title: "Cut back on red meat (>2×/week)",
-          body: "Beef and lamb are the most carbon-intensive foods by far — a single beef portion emits over 8× more than chicken and ~17× more than a vegan day. With red meat on more than two days a week, this is your biggest food lever. Drop to 1–2 red-meat days and swap the rest for chicken, fish or plant-based meals to cut well over 150 kg CO₂e per month.",
+          body: "Beef and lamb are the most carbon-intensive foods by far — a single beef portion emits over 8× more than chicken and ~17× more than a vegan day. With red meat on more than two days a week, this is your biggest food lever. Drop to 1–2 red-meat days and swap the rest for chicken, fish or plant-based meals to cut well over 1,800 kg CO₂e a year.",
           saving: redMeatSaving(s),
         };
       case "red_meat_low":
@@ -427,7 +468,7 @@
             (chicken + fish) +
             " of your chicken/fish day(s) a week for a vegan meal could save ~" +
             saving.toFixed(0) +
-            " kg CO₂e per month.",
+            " kg CO₂e a year.",
           saving,
         };
       }
@@ -440,7 +481,7 @@
             fish +
             " fish day(s) a week for a vegan meal could save ~" +
             saving.toFixed(0) +
-            " kg CO₂e per month.",
+            " kg CO₂e a year.",
           saving,
         };
       }
@@ -476,7 +517,7 @@
         if (m === "beef") return sum + (beef - chicken);
         if (m === "lamb") return sum + (lamb - chicken);
         return sum;
-      }, 0) * D.WEEKS_PER_MONTH
+      }, 0) * D.WEEKS_PER_YEAR
     );
   }
 
@@ -494,13 +535,13 @@
           DAYS.filter((d) => ["car_petrol", "car_diesel"].includes(s.commute && s.commute[d])).length *
           0.20751 *
           ((s.commute && s.commute.distance) || 0) *
-          D.WEEKS_PER_MONTH,
+          D.WEEKS_PER_YEAR,
       }),
       flights: () => {
         const flights = s.flights || [];
         const upgradeSaving =
-          flights.reduce((sum, f) => sum + flightKm(f.from, f.to) * Math.max(0, cabinFactor(f.cabin) - 0.255), 0) / 12;
-        const total = flights.reduce((sum, f) => sum + flightKg(f), 0) / 12;
+          flights.reduce((sum, f) => sum + flightKm(f.from, f.to) * Math.max(0, cabinFactor(f.cabin) - 0.255), 0);
+        const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
         return {
           title: "Cut back on flying",
           body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Fewer flights, direct routes, economy class, or swapping a trip for a train can dramatically lower your emissions.",
@@ -509,17 +550,17 @@
       },
       energy: () => ({
         title: "Switch to a green energy tariff",
-        body: "Grid electricity emits ~0.23 kg CO₂e per kWh. A green/renewable tariff can cut that by over 80%, instantly lowering one of your biggest monthly contributors.",
+        body: "Grid electricity emits ~0.23 kg CO₂e per kWh. A green/renewable tariff can cut that by over 80%, instantly lowering one of your biggest contributors.",
         saving:
           s.energy && s.energy.greenTariff
             ? 0
-            : (((s.energy && s.energy.electricityKwh) || 0) * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR)) /
+            : (12 * ((s.energy && s.energy.electricityKwh) || 0) * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR)) /
               householdOf(s),
       }),
       water: () => ({
         title: "Reduce your water usage",
         body: "Heating and treating water uses energy. Shorter showers, fixing leaks, and water-efficient fixtures can cut your water footprint meaningfully over a year.",
-        saving: ((((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.2) / householdOf(s),
+        saving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.2) / householdOf(s),
       }),
       pets: () => {
         const p = s.pets || {};
@@ -527,7 +568,7 @@
           title: "Consider your pets' diet",
           body: "A medium dog's food can emit as much as a small car over a year. Choosing lower-meat or sustainable pet food brands can reduce their footprint without compromising nutrition.",
           saving:
-            (((p.dogs || 0) * (D.DOG_YEARLY / 12) + (p.cats || 0) * (D.CAT_YEARLY / 12)) * 0.25) / householdOf(s),
+            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * 0.25) / householdOf(s),
         };
       },
       banking: () => {
@@ -537,7 +578,7 @@
           title: "Move your money to a greener bank",
           body: "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.",
           saving:
-            !bank || bank.factor <= greenest ? 0 : (((s.banking && s.banking.amount) || 0) * (bank.factor - greenest)) / 12,
+            !bank || bank.factor <= greenest ? 0 : ((s.banking && s.banking.amount) || 0) * (bank.factor - greenest),
         };
       },
     };
@@ -691,12 +732,14 @@
     airport: null, // { index, field } of the open airport picker
     airportQuery: "",
     selectedCategory: null, // Results page bar/tip selection
-    showAuth: false,
     authMode: "signin",
+    authEmail: "",
     authMsg: "",
     authErr: "",
     userName: "",
     recovery: false,
+    confirmingPayment: false,
+    paymentTimedOut: false,
   };
 
   const app = document.getElementById("app");
@@ -945,8 +988,8 @@
     return (
       '<p class="muted sm mb-6">How many pets do you have? Their diet adds to your footprint.</p>' +
       '<div class="grid-2 gap-4 max-xl">' +
-      numberCard("🐕 Dogs", "pets.dogs", p.dogs == null ? 0 : p.dogs, "~64 kg CO₂e / month each") +
-      numberCard("🐈 Cats", "pets.cats", p.cats == null ? 0 : p.cats, "~26 kg CO₂e / month each") +
+      numberCard("🐕 Dogs", "pets.dogs", p.dogs == null ? 0 : p.dogs, "~770 kg CO₂e / year each") +
+      numberCard("🐈 Cats", "pets.cats", p.cats == null ? 0 : p.cats, "~310 kg CO₂e / year each") +
       "</div>"
     );
   }
@@ -975,12 +1018,12 @@
     const left = 40;
     const bottom = 70;
     const top = 10;
-    const max = Math.max(1, ...breakdown.map((b) => b.monthly));
+    const max = Math.max(1, ...breakdown.map((b) => b.yearly));
     const niceMax = niceCeil(max);
     const plotH = H - top - bottom;
     const slot = (W - left - 10) / breakdown.length;
     const barW = slot * 0.7;
-    let svg = '<svg class="bar-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Monthly emissions by category">';
+    let svg = '<svg class="bar-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Yearly emissions by category">';
     for (let i = 0; i <= 4; i++) {
       const v = (niceMax / 4) * i;
       const y = top + plotH - (v / niceMax) * plotH;
@@ -988,13 +1031,13 @@
       svg += '<line x1="' + left + '" x2="' + W + '" y1="' + y + '" y2="' + y + '" class="grid-line" />';
     }
     breakdown.forEach((b, i) => {
-      const h = Math.max(0, (b.monthly / niceMax) * plotH);
+      const h = Math.max(0, (b.yearly / niceMax) * plotH);
       const x = left + i * slot + (slot - barW) / 2;
       const y = top + plotH - h;
       const op = selectedKey === b.key ? 1 : 0.45;
       svg +=
-        '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.monthly.toFixed(1) +
-        ' kg CO₂e / month</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
+        '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.yearly.toFixed(0) +
+        ' kg CO₂e / year</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
         '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + BAR_COLORS[i % BAR_COLORS.length] + '" opacity="' + op + '" /></g>';
       const lx = x + barW / 2;
       const ly = top + plotH + 12;
@@ -1024,7 +1067,7 @@
     const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
     return (
       '<div><div class="row-between xs mb-1"><span class="muted">' + label + '</span><span class="fw-500">' + value.toFixed(0) +
-      ' kg CO₂e/mo</span></div><div class="progress"><div class="' + (tone === "emerald" ? "" : "grey") + '" style="width:' + pct + '%"></div></div></div>'
+      ' kg CO₂e/yr</span></div><div class="progress"><div class="' + (tone === "emerald" ? "" : "grey") + '" style="width:' + pct + '%"></div></div></div>'
     );
   }
 
@@ -1033,16 +1076,16 @@
     const savings = fp.breakdown
       .map((b) => {
         const saving = tipFor(b.key, survey).saving;
-        return { key: b.key, saving: saving > 0 ? Math.min(b.monthly, saving) : 0 };
+        return { key: b.key, saving: saving > 0 ? Math.min(b.yearly, saving) : 0 };
       })
       .filter((s) => s.saving > 0.5);
     const totalSaving = savings.reduce((sum, s) => sum + s.saving, 0);
-    const after = Math.max(0, fp.totalMonthly - totalSaving);
-    const savingPct = fp.totalMonthly ? Math.round((totalSaving / fp.totalMonthly) * 100) : 0;
+    const after = Math.max(0, fp.totalYearly - totalSaving);
+    const savingPct = fp.totalYearly ? Math.round((totalSaving / fp.totalYearly) * 100) : 0;
     const savingFor = (key) => ((savings.find((s) => s.key === key) || {}).saving || 0);
-    const vsUk = fp.totalMonthly - D.UK_AVERAGE_MONTHLY;
-    const vsUkPct = Math.abs(Math.round((vsUk / D.UK_AVERAGE_MONTHLY) * 100));
-    const budgetPct = Math.round((fp.totalMonthly / D.BUDGET_MONTHLY) * 100);
+    const vsUk = fp.totalYearly - D.UK_AVERAGE_YEARLY;
+    const vsUkPct = Math.abs(Math.round((vsUk / D.UK_AVERAGE_YEARLY) * 100));
+    const budgetPct = Math.round((fp.totalYearly / D.BUDGET_YEARLY) * 100);
     const selected = ui.selectedCategory || fp.biggest.key;
     const tip = tipFor(selected, survey);
     const snapshots = getSnapshots();
@@ -1052,8 +1095,8 @@
     html +=
       '<div class="card hero fade-up"><div class="glow"></div><div class="rel">' +
       '<p class="sm muted">Your estimated footprint</p>' +
-      '<div class="big-number"><span class="num">' + fp.totalMonthly.toFixed(0) + '</span><span class="unit">kg CO₂e / month</span></div>' +
-      '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes per year</p>" +
+      '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '</span><span class="unit">kg CO₂e / year</span></div>' +
+      '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
       '<div class="chip-row mt-5"><span class="stat-pill">' +
       (vsUk > 0 ? '<span class="red">' + vsUkPct + "% above</span>" : '<span class="green">' + vsUkPct + "% below</span>") +
       ' the UK average</span><span class="stat-pill solid">' + icon("target", "sm") + budgetPct + "% of the 1.5°C budget</span></div></div></div>";
@@ -1075,7 +1118,7 @@
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + "</span>" +
       '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
       '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
-      (tip.saving > 0 ? '<div class="saving-pill">' + icon("trendDown") + "<span>Could save ~" + tip.saving.toFixed(0) + " kg CO₂e / month</span></div>" : "") +
+      (tip.saving > 0 ? '<div class="saving-pill">' + icon("trendDown") + "<span>Could save ~" + tip.saving.toFixed(0) + " kg CO₂e / year</span></div>" : "") +
       (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
       '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
 
@@ -1083,8 +1126,8 @@
       html +=
         '<div class="card fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + '</span><h2 class="card-title">If you build these habits</h2></div>' +
         '<p class="sm muted mb-6 max-2xl">Adopting the recommended changes across your categories could cut your footprint by about <span class="fw-600 green-dark">' +
-        savingPct + "%</span> — roughly " + totalSaving.toFixed(0) + ' kg CO₂e less per month.</p><div class="stack-3">' +
-        compareBar("Now", fp.totalMonthly, fp.totalMonthly, "muted") + compareBar("After habits", after, fp.totalMonthly, "emerald") +
+        savingPct + "%</span> — roughly " + totalSaving.toFixed(0) + ' kg CO₂e less per year.</p><div class="stack-3">' +
+        compareBar("Now", fp.totalYearly, fp.totalYearly, "muted") + compareBar("After habits", after, fp.totalYearly, "emerald") +
         "</div></div>";
     }
 
@@ -1096,7 +1139,7 @@
           '<div class="cat-row' + (selected === b.key ? " selected" : "") + '"><button type="button" class="cat-main" data-action="select-category" data-key="' + b.key + '">' +
           '<span class="emoji-row">' + b.icon + '</span><span class="min0"><span class="fw-500 sm block">' + esc(b.label) + '</span><span class="xs muted block truncate">' +
           esc(b.detail) + "</span></span></button>" +
-          '<div class="cat-side"><div class="right"><p class="fw-600">' + b.monthly.toFixed(0) + '</p><p class="xs muted">kg/mo</p>' +
+          '<div class="cat-side"><div class="right"><p class="fw-600">' + b.yearly.toFixed(0) + '</p><p class="xs muted">kg/yr</p>' +
           (s > 0 ? '<p class="tiny green">−' + s.toFixed(0) + " possible</p>" : "") +
           '</div><a class="icon-btn round" href="#/explainer/' + b.key + '" aria-label="Learn how to reduce ' + esc(b.label) + '">' + icon("arrowRight") + "</a></div></div>"
         );
@@ -1107,18 +1150,18 @@
     if (snapshots.length) {
       const recent = snapshots.slice(-6).reverse();
       html +=
-        '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Monthly progress</h2></div><div class="stack-2">' +
+        '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div><div class="stack-2">' +
         recent
           .map((s, i) => {
             const prev = recent[i + 1];
-            const diff = prev ? s.totalMonthly - prev.totalMonthly : null;
+            const diff = prev ? snapshotYearly(s) - snapshotYearly(prev) : null;
             const cls = diff > 0 ? "red" : diff < 0 ? "green" : "muted";
             return (
               '<div class="month-row"><div class="label-row min0"><span class="sm fw-500 truncate">' + esc(monthLabel(s.month)) + "</span>" +
               (s.month === monthKey() ? '<span class="tag green">This month</span>' : "") +
               '</div><div class="label-row shrink0">' +
               (diff !== null ? '<span class="xs fw-500 ' + cls + '">' + (diff > 0 ? "▲" : diff < 0 ? "▼" : "—") + " " + Math.abs(diff).toFixed(0) + " kg</span>" : "") +
-              '<span class="fw-600">' + fixed(s.totalMonthly) + '</span><span class="xs muted">kg/mo</span></div></div>'
+              '<span class="fw-600">' + fixed(snapshotYearly(s)) + '</span><span class="xs muted">kg/yr</span></div></div>'
             );
           })
           .join("") +
@@ -1147,7 +1190,7 @@
     const diet = cat === "meals" ? D.DIET_EXPLAINERS[dietType(survey)] : null;
     const sections = (diet && diet.sections) || ex.sections;
     const item = fp.breakdown.find((b) => b.key === cat);
-    const budgetPct = item ? Math.round((item.monthly / D.BUDGET_MONTHLY) * 100) : null;
+    const budgetPct = item ? Math.round((item.yearly / D.BUDGET_YEARLY) * 100) : null;
 
     let html =
       '<div class="container narrow"><a class="btn btn-ghost btn-sm back-link" href="#/results">' + icon("arrowLeft") + " Back</a>" +
@@ -1155,10 +1198,10 @@
       '</h1></div><p class="muted lh">' + esc(ex.why) + "</p></div>" +
       '<div class="grid-2 gap-3 mb-8">' +
       '<div class="panel green p-5"><div class="eyebrow-sm green-dark">' + icon("trendDown") + ' Your potential saving</div><p class="stat">' +
-      (tip.saving > 0 ? "~" + tip.saving.toFixed(0) : "—") + '<span class="sm muted normal"> kg CO₂e / month</span></p><p class="xs muted mt-1">' + esc(tip.title) + "</p></div>" +
+      (tip.saving > 0 ? "~" + tip.saving.toFixed(0) : "—") + '<span class="sm muted normal"> kg CO₂e / year</span></p><p class="xs muted mt-1">' + esc(tip.title) + "</p></div>" +
       (budgetPct !== null
         ? '<div class="panel p-5"><div class="eyebrow-sm muted">' + icon("target") + ' vs 1.5°C budget</div><p class="stat">' + budgetPct +
-          '%<span class="sm muted normal"> of monthly target</span></p><p class="xs muted mt-1">Target is ~' + D.BUDGET_MONTHLY.toFixed(0) + " kg/month (2.5 t/yr)</p></div>"
+          '%<span class="sm muted normal"> of yearly target</span></p><p class="xs muted mt-1">Target is 2,500 kg a year (2.5 t)</p></div>'
         : "") +
       "</div>";
 
@@ -1527,25 +1570,30 @@
   function renderAccount() {
     const fp = footprint(survey);
     const habitCount = CATEGORIES.reduce((sum, c) => sum + committedHabits(c).length, 0);
-    let profile;
-    if (!authChecked) profile = '<p class="sm muted">Checking account…</p>';
-    else if (ui.recovery) profile = authForm();
-    else if (currentUser)
-      profile =
-        '<div class="row-between gap-3"><div class="min0 grow"><p class="fw-600 truncate">' + esc(ui.userName || "App user") + '</p><p class="sm muted truncate">' +
-        esc(currentUser.email) + '</p></div><button type="button" class="btn btn-outline btn-sm" data-action="sign-out">' + icon("logOut") + " Sign out</button></div>";
-    else if (ui.showAuth) profile = authForm();
-    else
-      profile =
-        '<div class="row-between gap-3"><div class="min0 grow"><p class="fw-600">Guest</p><p class="sm muted">Your data is saved on this device only.</p></div>' +
-        '<button type="button" class="btn btn-green btn-sm" data-action="show-auth">' + icon("logIn") + " Sign in</button></div>";
+    const profile =
+      '<div class="row-between gap-3"><div class="min0 grow"><p class="fw-600 truncate">' + esc(ui.userName || "App user") + '</p><p class="sm muted truncate">' +
+      esc(currentUser.email) + '</p></div><button type="button" class="btn btn-outline btn-sm" data-action="sign-out">' + icon("logOut") + " Sign out</button></div>";
+    const m = membership || {};
+    let plan;
+    if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
+    else {
+      const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
+      plan =
+        '<p class="fw-600">EcoImpact membership · £2 a year</p><p class="sm muted">' +
+        (m.status === "active" && until ? "Renews on " + esc(until) + "." : until ? "Access until " + esc(until) + "." : "Active.") +
+        "</p>" +
+        (STRIPE_PORTAL_URL && !isNativeApp()
+          ? '<a class="btn btn-outline btn-sm mt-3" href="' + esc(STRIPE_PORTAL_URL) + '" target="_blank" rel="noopener">Manage subscription</a>'
+          : "");
+    }
 
     return (
       '<div class="container narrow">' + pageHeader("Account", "Your profile & saved data", "user") +
       '<div class="card"><div class="label-row mb-4">' + icon("user", "green") + '<span class="sm fw-500 upper green-dark">Profile</span></div>' + profile + "</div>" +
+      '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<span class="sm fw-500 upper green-dark">Membership</span></div>' + plan + "</div>" +
       '<div class="card"><div class="label-row mb-4">' + icon("database", "green") + '<span class="sm fw-500 upper green-dark">Your saved data</span></div>' +
-      '<div class="grid-2 gap-3"><div class="data-box"><p class="xs muted">Footprint</p><p class="stat-num">' + fp.totalMonthly.toFixed(0) +
-      '</p><p class="xs muted">kg CO₂e / month</p></div><div class="data-box"><p class="xs muted">Committed habits</p><p class="stat-num">' + habitCount +
+      '<div class="grid-2 gap-3"><div class="data-box"><p class="xs muted">Footprint</p><p class="stat-num">' + fp.totalYearly.toFixed(0) +
+      '</p><p class="xs muted">kg CO₂e / year</p></div><div class="data-box"><p class="xs muted">Committed habits</p><p class="stat-num">' + habitCount +
       '</p><p class="xs muted">across ' + CATEGORIES.length + " categories</p></div></div>" +
       '<div class="chip-row mt-5"><a class="btn btn-outline btn-sm" href="#/">' + icon("leaf") + ' Retake survey</a><a class="btn btn-outline btn-sm" href="#/results">' +
       icon("chart") + " View results</a></div></div>" +
@@ -1567,14 +1615,13 @@
     }
     const signup = ui.authMode === "signup";
     return (
-      '<form id="auth-form" class="auth-form"><p class="sm muted">Sign in to keep your survey on every device. Existing CO2 Tracker accounts work here too.</p>' +
-      '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" /></label>' +
+      '<form id="auth-form" class="auth-form"><p class="sm muted">Existing CO2 Tracker accounts work here too.</p>' +
+      '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" value="' + esc(ui.authEmail) + '" /></label>' +
       '<label class="xs">Password<input class="input mt-1" type="password" id="auth-password" minlength="6" required autocomplete="' +
       (signup ? "new-password" : "current-password") + '" /></label>' +
       (ui.authErr ? '<p class="xs red">' + esc(ui.authErr) + "</p>" : "") +
       (ui.authMsg ? '<p class="xs green-dark">' + esc(ui.authMsg) + "</p>" : "") +
-      '<div class="chip-row"><button type="submit" class="btn btn-green">' + (signup ? "Create account" : "Sign in") + "</button>" +
-      '<button type="button" class="btn btn-ghost" data-action="hide-auth">Cancel</button></div>' +
+      '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
       '<div class="chip-row"><button type="button" class="link-btn" data-action="toggle-auth-mode">' + (signup ? "Have an account? Sign in" : "Need an account? Sign up") + "</button>" +
       (signup ? "" : '<button type="button" class="link-btn" data-action="forgot">Forgot password?</button>') + "</div></form>"
     );
@@ -1597,6 +1644,7 @@
     }
     const email = document.getElementById("auth-email").value.trim();
     const password = document.getElementById("auth-password").value;
+    ui.authEmail = email; // keep it filled in if the form re-renders with an error
     ui.authErr = "";
     ui.authMsg = "";
     try {
@@ -1621,15 +1669,100 @@
 
   async function afterSignIn() {
     await refreshUser();
-    ui.showAuth = false;
     ui.authMsg = "";
     ui.authErr = "";
     ui.userName = currentUser ? await displayName(currentUser) : "";
-    // Keep whatever was entered as a guest if this account has nothing saved
-    // yet; otherwise the account's saved survey wins.
-    const local = survey;
-    survey = await loadSurvey();
-    if (currentUser && JSON.stringify(survey) === JSON.stringify(local)) saveSurveyRemote(survey);
+    await checkMembership();
+    if (membership && membership.access) {
+      // Answers entered on this device before accounts were required are
+      // uploaded if the account has nothing saved yet.
+      survey = await loadSurvey();
+      saveSurveyRemote(survey);
+    }
+    render();
+  }
+
+  // ==================== login & paywall screens ====================
+
+  function gateShell(title, subtitle, body) {
+    return (
+      '<div class="gate"><div class="gate-card fade-up"><div class="gate-brand"><span class="page-badge">' + icon("leaf") +
+      '</span><span class="brand-name lg">EcoImpact</span></div><h1 class="gate-title">' + esc(title) + "</h1>" +
+      (subtitle ? '<p class="sm muted mb-5">' + esc(subtitle) + "</p>" : "") + body + "</div></div>"
+    );
+  }
+
+  function renderLogin() {
+    if (ui.recovery) return gateShell("Set a new password", "", authForm());
+    const signup = ui.authMode === "signup";
+    return gateShell(
+      signup ? "Create your account" : "Sign in",
+      "Work out your carbon footprint and find your biggest wins.",
+      authForm()
+    );
+  }
+
+  function paymentUrl() {
+    const params = new URLSearchParams({ client_reference_id: currentUser.id, prefilled_email: currentUser.email || "" });
+    return STRIPE_PAYMENT_LINK + (STRIPE_PAYMENT_LINK.includes("?") ? "&" : "?") + params.toString();
+  }
+
+  function renderPaywall() {
+    const m = membership || {};
+    let action;
+    if (ui.confirmingPayment) {
+      action = '<div class="label-row center-row"><div class="spinner sm"></div><span class="sm muted">Confirming your payment…</span></div>';
+    } else if (m.error) {
+      action =
+        '<p class="sm red mb-3">We couldn\'t check your membership. Check your connection and try again.</p>' +
+        '<button type="button" class="btn btn-green btn-block" data-action="recheck-membership">Try again</button>';
+    } else if (isNativeApp()) {
+      // App Store rules: no purchase button or link to an outside payment
+      // page inside the iOS app.
+      action =
+        '<p class="sm">To join, visit <span class="fw-600">co2counter.co.uk</span> in your web browser and sign in with this account. Then come back here.</p>' +
+        '<button type="button" class="btn btn-outline btn-block mt-4" data-action="recheck-membership">I\'ve joined, check again</button>';
+    } else if (!STRIPE_PAYMENT_LINK) {
+      action = '<p class="sm muted">Payments aren\'t switched on yet. Please check back soon.</p>';
+    } else {
+      action =
+        '<a class="btn btn-green btn-block" href="' + esc(paymentUrl()) + '">Join for £2 a year</a>' +
+        '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time.</p>' +
+        '<button type="button" class="link-btn mt-3" data-action="recheck-membership">Already paid? Check again</button>';
+    }
+    if (ui.paymentTimedOut && !ui.confirmingPayment) {
+      action =
+        '<p class="sm mb-3">Your payment is still being confirmed. This usually takes a few seconds.</p>' + action;
+    }
+    const perks = [
+      "Your yearly carbon footprint, broken down by category",
+      "Personal tips with the savings each one could make",
+      "Step-by-step guides to cut each part of your footprint",
+      "Your answers saved across all your devices",
+    ];
+    return gateShell(
+      "Join EcoImpact",
+      "Signed in as " + (currentUser.email || ""),
+      '<div class="price"><span class="price-num">£2</span><span class="muted"> / year</span></div><ul class="perks">' +
+        perks.map((p) => "<li>" + icon("check") + "<span>" + esc(p) + "</span></li>").join("") +
+        "</ul>" + action +
+        '<div class="center mt-5"><button type="button" class="link-btn muted-link" data-action="sign-out">Sign out</button></div>'
+    );
+  }
+
+  // After Stripe checkout the webhook may land a moment after the person is
+  // sent back here, so poll briefly before giving up.
+  async function waitForPayment() {
+    ui.confirmingPayment = true;
+    render();
+    for (let i = 0; i < 15; i++) {
+      await checkMembership();
+      if (membership && membership.access) break;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    ui.confirmingPayment = false;
+    ui.paymentTimedOut = !(membership && membership.access);
+    if (membership && membership.access) survey = await loadSurvey();
     render();
   }
 
@@ -1644,7 +1777,12 @@
     const path = currentPath();
     const parts = path.split("/").filter(Boolean);
     let html;
-    if (!survey) html = spinner;
+    const gated = !authChecked || !currentUser || ui.recovery || !membership || !membership.access;
+    document.body.classList.toggle("gated", gated);
+    if (!authChecked || (currentUser && !membership)) html = spinner;
+    else if (!currentUser || ui.recovery) html = renderLogin();
+    else if (!membership.access) html = renderPaywall();
+    else if (!survey) html = spinner;
     else if (path === "/") html = renderSurvey();
     else if (path === "/results") html = renderResults();
     else if (parts[0] === "explainer" && parts[1]) html = renderExplainer(parts[1]);
@@ -1693,7 +1831,7 @@
         render();
         window.scrollTo(0, 0);
       } else {
-        saveSnapshot(footprint(survey).totalMonthly);
+        saveSnapshot(footprint(survey).totalYearly);
         location.hash = "#/results";
       }
     },
@@ -1793,16 +1931,6 @@
       updateGoal(id, { done: !goalFor(id).done });
       render();
     },
-    "show-auth": () => {
-      ui.showAuth = true;
-      ui.authErr = "";
-      ui.authMsg = "";
-      render();
-    },
-    "hide-auth": () => {
-      ui.showAuth = false;
-      render();
-    },
     "toggle-auth-mode": () => {
       ui.authMode = ui.authMode === "signup" ? "signin" : "signup";
       ui.authErr = "";
@@ -1825,8 +1953,19 @@
     "sign-out": async () => {
       if (sb) await sb.auth.signOut();
       currentUser = null;
+      membership = null;
       ui.userName = "";
-      survey = await loadSurvey();
+      ui.authMode = "signin";
+      // The next person to sign in on this device shouldn't see these answers.
+      lsRemove(KEY_SURVEY);
+      survey = null;
+      render();
+    },
+    "recheck-membership": async () => {
+      membership = null;
+      render();
+      await checkMembership();
+      if (membership && membership.access) survey = await loadSurvey();
       render();
     },
     "clear-habits": () => {
@@ -1919,8 +2058,9 @@
         ui.authErr = error.message;
       } else {
         ui.recovery = false;
-        ui.showAuth = false;
         ui.authErr = "";
+        await checkMembership();
+        survey = await loadSurvey();
       }
       render();
     }
@@ -1951,22 +2091,23 @@
     // Links from sign-up confirmation and password-reset emails land with
     // Supabase's tokens in the hash; supabase-js consumes them on startup.
     const fromEmail = /access_token|error_description|type=recovery/.test(location.hash + location.search);
-    if (/type=recovery/.test(location.hash + location.search)) {
-      ui.recovery = true;
-      ui.showAuth = true;
-    }
+    if (/type=recovery/.test(location.hash + location.search)) ui.recovery = true;
+    // Stripe sends people back to ?checkout=success after paying.
+    const fromCheckout = /checkout=success/.test(location.search);
     render();
     await refreshUser();
-    if (fromEmail) history.replaceState(null, "", location.pathname + "#/account");
-    if (currentUser) ui.userName = await displayName(currentUser);
-    survey = await loadSurvey();
+    if (fromEmail || fromCheckout) history.replaceState(null, "", location.pathname + "#/");
+    if (currentUser) {
+      ui.userName = await displayName(currentUser);
+      await checkMembership();
+      if (membership.access) survey = await loadSurvey();
+    }
     render();
+    if (currentUser && !membership.access && fromCheckout) waitForPayment();
     if (sb) {
       sb.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY") {
           ui.recovery = true;
-          ui.showAuth = true;
-          location.hash = "#/account";
           render();
         }
       });
