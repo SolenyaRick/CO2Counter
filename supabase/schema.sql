@@ -1043,3 +1043,21 @@ $$;
 
 revoke all on function public.delete_own_account() from public;
 grant execute on function public.delete_own_account() to authenticated;
+
+-- ==================== EcoImpact (Prototype 2) ====================
+-- The current app keeps each signed-in user's survey answers as one JSON
+-- document. Self-contained (only references auth.users), so it can be run
+-- on its own against a database that already has everything above.
+-- The tables above stay in place so no Prototype 1 data is lost.
+
+create table if not exists public.survey_responses (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  survey_data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.survey_responses enable row level security;
+
+drop policy if exists "survey_responses: owner full access" on public.survey_responses;
+create policy "survey_responses: owner full access" on public.survey_responses
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
