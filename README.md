@@ -40,6 +40,11 @@ untouched.
 - **Account** (`#/account`): sign out, membership status (with a link to
   Stripe to manage or cancel), a summary of saved data, and options to clear
   habits or everything.
+- **How we calculate** (`#/how-we-calculate`): a free public page linked
+  from results and the footer. It explains the sources and approach in
+  plain English, but deliberately leaves out the exact factors and
+  formulas (those live in `data.js`/`app.js`, which are still public to
+  anyone who reads the code).
 - **Sign-in and membership screens**: guests see the free results (total
   and UK-average comparison) with a "Create an account and join" prompt;
   the members-only pages ask guests to sign in and non-members to join.

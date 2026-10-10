@@ -1884,3 +1884,39 @@ label {
   height: 20px;
   border-width: 3px;
 }
+
+/* ---------- how we calculate ---------- */
+
+.section-card.static {
+  cursor: default;
+}
+
+.section-card.static:hover {
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+}
+
+.method p + p,
+.method ul + p,
+.method p + ul {
+  margin-top: 10px;
+}
+
+.method ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.method li + li {
+  margin-top: 6px;
+}
+
+.method strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.site-footer {
+  text-align: center;
+  padding: 0 16px calc(24px + env(safe-area-inset-bottom));
+}
