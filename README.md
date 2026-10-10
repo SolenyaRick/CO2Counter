@@ -101,6 +101,11 @@ The typical diet comes from Defra's Family Food survey (average
 purchases of each meat and fish per person per week); eating out once a
 week and "some" food waste are assumptions.
 
+## Bank figures
+
+The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held
+per year) come from MotherTree's 2021 analysis of UK banks.
+
 ## Pension figures
 
 The Banking & Pension step multiplies the pension pot by the provider's

@@ -743,6 +743,8 @@
     "lon": -70.7858
   }
 ];
+  // Financed emissions per £ held with each bank (kg CO2e per £ per year),
+  // from MotherTree's 2021 analysis of UK banks.
   const BANKS = [
   {
     "key": "triodos",

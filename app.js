@@ -1656,6 +1656,7 @@
         "Banking and pensions",
         "<p>Banks lend out your savings, and pension funds invest in companies. A share of those companies' emissions is counted as yours, in proportion to the money involved. " +
           "This is known as financed emissions.</p>" +
+          "<p>Bank figures come from MotherTree's 2021 analysis of UK banks' financed emissions.</p>" +
           "<p>Pension figures come from each provider's own climate report (TCFD report), using the carbon footprint of its default fund, the fund most savers are in. " +
           "These cover the companies' direct and energy-related emissions (Scope 1 and 2). " +
           "Where we couldn't get a provider's current figure, or you're not sure who your provider is, we use an average across the largest UK workplace pension schemes. " +
