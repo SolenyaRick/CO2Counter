@@ -82,6 +82,19 @@ Then open http://localhost:8000.
 "EcoImpact (Prototype 2)" section at the end of `supabase/schema.sql`
 (the `survey_responses` and `memberships` parts). It's safe to re-run.
 
+## UK average comparison
+
+Results compare the person with a typical UK resident like for like: the
+typical resident's answers (`UK_TYPICAL_SURVEY` in `data.js`, each input
+sourced there: Ofgem, ONS, Consumer Council for Water, DfT National Travel
+Survey, ONS Travel trends, UK Pet Food) are run through the same factors,
+and both sides cover only food, commuting, flights, home energy, water and
+pets. Shopping, services, coffee, alcohol and the like aren't counted
+because the survey doesn't measure them, and banking and pensions are left
+out of the comparison because there is no reliable UK per-person figure.
+The typical-week diet is an assumption (no official data exists). The
+typical resident comes to about 4.6 t a year on these categories.
+
 ## Pension figures
 
 The Banking & Pension step multiplies the pension pot by the provider's

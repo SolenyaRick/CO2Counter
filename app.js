@@ -366,7 +366,7 @@
 
     const commute = s.commute || {};
     const commuteWeekly = DAYS.reduce(
-      (sum, day) => sum + factorOf(D.COMMUTE_MODES, commute[day]) * (commute.distance || 0),
+      (sum, day) => sum + factorOf(D.COMMUTE_MODES, commute[day]) * (commute.distance || 0) * 2,
       0
     );
     items.push({
@@ -551,6 +551,7 @@
           DAYS.filter((d) => ["car_petrol", "car_diesel"].includes(s.commute && s.commute[d])).length *
           0.20751 *
           ((s.commute && s.commute.distance) || 0) *
+          2 *
           D.WEEKS_PER_YEAR,
       }),
       flights: () => {
@@ -619,6 +620,33 @@
       },
     };
     return (tips[key] || tips.meals)();
+  }
+
+  // Like-for-like comparison with a typical UK resident: both sides cover
+  // only the categories in D.UK_COMPARISON_KEYS (banking/pension excluded).
+  function ukComparison(fp) {
+    const sumKeys = (f) => f.breakdown.filter((b) => D.UK_COMPARISON_KEYS.includes(b.key)).reduce((t, b) => t + b.yearly, 0);
+    const mine = sumKeys(fp);
+    const uk = sumKeys(footprint(D.UK_TYPICAL_SURVEY));
+    const diff = mine - uk;
+    return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)) };
+  }
+
+  function ukPill(cmp) {
+    if (cmp.pct < 5) return '<span class="stat-pill">About the same as the UK average</span>';
+    return (
+      '<span class="stat-pill">' +
+      (cmp.above ? '<span class="red">' + cmp.pct + "% above</span>" : '<span class="green">' + cmp.pct + "% below</span>") +
+      " the UK average</span>"
+    );
+  }
+
+  function ukNote(cmp) {
+    return (
+      '<p class="xs muted mt-3">Compared on food, commuting, flights, home energy, water and pets, where you come to ' +
+      (cmp.mine / 1000).toFixed(1) + " t and a typical UK resident about " + (cmp.uk / 1000).toFixed(1) +
+      " t a year. Banking and pensions aren't included in this comparison.</p>"
+    );
   }
 
   function equivalents(kg) {
@@ -907,7 +935,7 @@
         '<button type="button" class="day-row" data-action="toggle-commute" data-day="' + day + '">' +
         '<span class="day-label">' + day + '</span><span class="emoji-row">' + (mode ? mode.emoji : "➕") + "</span>" +
         '<span class="grow"><span class="sm fw-500 block truncate">' + (mode ? esc(mode.label) : "Tap to choose") + "</span>" +
-        (mode && distance > 0 ? '<span class="xs muted block">' + (mode.factor * distance).toFixed(2) + " kg CO₂e / day</span>" : "") +
+        (mode && distance > 0 ? '<span class="xs muted block">' + (mode.factor * distance * 2).toFixed(2) + " kg CO₂e / day (there and back)</span>" : "") +
         '</span><span class="xs muted">change</span></button></div>';
       if (open) {
         row +=
@@ -1129,8 +1157,7 @@
     const after = Math.max(0, fp.totalYearly - totalSaving);
     const savingPct = fp.totalYearly ? Math.round((totalSaving / fp.totalYearly) * 100) : 0;
     const savingFor = (key) => ((savings.find((s) => s.key === key) || {}).saving || 0);
-    const vsUk = fp.totalYearly - D.UK_AVERAGE_YEARLY;
-    const vsUkPct = Math.abs(Math.round((vsUk / D.UK_AVERAGE_YEARLY) * 100));
+    const cmp = ukComparison(fp);
     const budgetPct = Math.round((fp.totalYearly / D.BUDGET_YEARLY) * 100);
     const selected = ui.selectedCategory || fp.biggest.key;
     const tip = tipFor(selected, survey);
@@ -1143,9 +1170,8 @@
       '<p class="sm muted">Your estimated footprint</p>' +
       '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '</span><span class="unit">kg CO₂e / year</span></div>' +
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
-      '<div class="chip-row mt-5"><span class="stat-pill">' +
-      (vsUk > 0 ? '<span class="red">' + vsUkPct + "% above</span>" : '<span class="green">' + vsUkPct + "% below</span>") +
-      ' the UK average</span><span class="stat-pill solid">' + icon("target", "sm") + budgetPct + "% of the 1.5°C budget</span></div></div></div>";
+      '<div class="chip-row mt-5">' + ukPill(cmp) + '<span class="stat-pill solid">' + icon("target", "sm") + budgetPct +
+      "% of the 1.5°C budget</span></div>" + ukNote(cmp) + "</div></div>";
 
     if (checkInDue()) {
       html +=
@@ -1815,9 +1841,7 @@
   // average, then an invitation to unlock the rest.
   function renderResultsPreview() {
     const fp = footprint(survey);
-    const vsUk = fp.totalYearly - D.UK_AVERAGE_YEARLY;
-    const vsUkPct = Math.abs(Math.round((vsUk / D.UK_AVERAGE_YEARLY) * 100));
-    const ukTonnes = (D.UK_AVERAGE_YEARLY / 1000).toFixed(1);
+    const cmp = ukComparison(fp);
     return (
       '<div class="container narrow">' + pageHeader("Your Carbon Footprint") +
       '<div class="card hero fade-up"><div class="glow"></div><div class="rel">' +
@@ -1825,10 +1849,7 @@
       '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
       '</span><span class="unit">kg CO₂e / year</span></div>' +
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
-      '<div class="chip-row mt-5"><span class="stat-pill">' +
-      (vsUk > 0 ? '<span class="red">' + vsUkPct + "% above</span>" : '<span class="green">' + vsUkPct + "% below</span>") +
-      " the UK average</span></div>" +
-      '<p class="xs muted mt-3">The UK average used here is about ' + ukTonnes + " tonnes per person per year.</p></div></div>" +
+      '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + "</div></div>" +
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("lock") +
       '</span><span class="eyebrow">Unlock your full results</span></div>' +
       '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
