@@ -1939,3 +1939,12 @@ label {
   height: 18px;
   accent-color: var(--em-600);
 }
+
+.btn-delete {
+  background: var(--red-600);
+  color: #fff;
+}
+
+.btn-delete:hover {
+  background: #b91c1c;
+}
