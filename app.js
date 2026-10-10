@@ -1,9 +1,11 @@
 // CO2 Counter (Prototype 2): yearly carbon-footprint survey, results,
 // reduction guides, habits and daily check-ins.
 //
-// Ported from the Base44 prototype. People must sign in, and then need an
-// active £2/year membership (paid through Stripe, recorded by the
-// stripe-webhook Edge Function) unless they are the owner. Survey answers
+// Ported from the Base44 prototype. Anyone can take the survey and see
+// their yearly total against the UK average; everything else (breakdown,
+// tips, guides, habits, sync) needs a signed-in account with an active
+// £2/year membership (paid through Stripe, recorded by the stripe-webhook
+// Edge Function), unless they are the owner. Survey answers
 // are kept in Supabase (survey_responses, see supabase/schema.sql) and
 // cached in localStorage; habits and streaks stay on the device.
 (function () {
@@ -200,6 +202,10 @@
           lsSet(KEY_SURVEY, s);
           return s;
         }
+        // A member with nothing saved yet keeps the answers they gave on
+        // this device as a guest, now stored on their account.
+        const local = lsGet(KEY_SURVEY, null);
+        if (!error && local && membership && membership.access) saveSurveyRemote(normaliseSurvey(local));
       } catch (e) {}
     }
     return normaliseSurvey(lsGet(KEY_SURVEY, null));
@@ -1714,10 +1720,11 @@
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
     if (membership && membership.access) {
-      // Answers entered on this device before accounts were required are
-      // uploaded if the account has nothing saved yet.
+      // Answers entered on this device as a guest are uploaded if the
+      // account has nothing saved yet.
       survey = await loadSurvey();
       saveSurveyRemote(survey);
+      if (currentPath() === "/account") location.hash = "#/results";
     }
     render();
   }
@@ -1747,7 +1754,25 @@
     return STRIPE_PAYMENT_LINK + (STRIPE_PAYMENT_LINK.includes("?") ? "&" : "?") + params.toString();
   }
 
-  function renderPaywall() {
+  const MEMBER_PERKS = [
+    "Where your footprint comes from, category by category",
+    "Personal tips with the savings each one could make",
+    "Step-by-step guides to cut each part of your footprint",
+    "Your answers saved across all your devices",
+  ];
+
+  const perksList = () =>
+    '<ul class="perks">' + MEMBER_PERKS.map((p) => "<li>" + icon("check") + "<span>" + esc(p) + "</span></li>").join("") + "</ul>";
+
+  // The join button (or the reason it can't be shown) for a signed-in
+  // non-member, or a sign-up prompt for a guest.
+  function joinAction() {
+    if (!currentUser) {
+      return (
+        '<button type="button" class="btn btn-green btn-block" data-action="start-signup">Create an account and join</button>' +
+        '<p class="xs muted mt-2 center">Already have an account? <button type="button" class="link-btn" data-action="start-signin">Sign in</button></p>'
+      );
+    }
     const m = membership || {};
     let action;
     if (ui.confirmingPayment) {
@@ -1774,20 +1799,50 @@
       action =
         '<p class="sm mb-3">Your payment is still being confirmed. This usually takes a few seconds.</p>' + action;
     }
-    const perks = [
-      "Your yearly carbon footprint, broken down by category",
-      "Personal tips with the savings each one could make",
-      "Step-by-step guides to cut each part of your footprint",
-      "Your answers saved across all your devices",
-    ];
+    return action;
+  }
+
+  function renderPaywall() {
     return gateShell(
       "Join CO2 Counter",
       "Signed in as " + (currentUser.email || ""),
-      '<div class="price"><span class="price-num">£2</span><span class="muted"> / year</span></div><ul class="perks">' +
-        perks.map((p) => "<li>" + icon("check") + "<span>" + esc(p) + "</span></li>").join("") +
-        "</ul>" + action +
+      '<div class="price"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() + joinAction() +
         '<div class="center mt-5"><button type="button" class="link-btn muted-link" data-action="sign-out">Sign out</button></div>'
     );
+  }
+
+  // Free results: the yearly total and how it compares with the UK
+  // average, then an invitation to unlock the rest.
+  function renderResultsPreview() {
+    const fp = footprint(survey);
+    const vsUk = fp.totalYearly - D.UK_AVERAGE_YEARLY;
+    const vsUkPct = Math.abs(Math.round((vsUk / D.UK_AVERAGE_YEARLY) * 100));
+    const ukTonnes = (D.UK_AVERAGE_YEARLY / 1000).toFixed(1);
+    return (
+      '<div class="container narrow">' + pageHeader("Your Carbon Footprint") +
+      '<div class="card hero fade-up"><div class="glow"></div><div class="rel">' +
+      '<p class="sm muted">Your estimated footprint</p>' +
+      '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
+      '</span><span class="unit">kg CO₂e / year</span></div>' +
+      '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
+      '<div class="chip-row mt-5"><span class="stat-pill">' +
+      (vsUk > 0 ? '<span class="red">' + vsUkPct + "% above</span>" : '<span class="green">' + vsUkPct + "% below</span>") +
+      " the UK average</span></div>" +
+      '<p class="xs muted mt-3">The UK average used here is about ' + ukTonnes + " tonnes per person per year.</p></div></div>" +
+      '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("lock") +
+      '</span><span class="eyebrow">Unlock your full results</span></div>' +
+      '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
+      '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
+      '<div class="max-sm">' + joinAction() + "</div></div>" +
+      '<div class="btn-row"><a class="btn btn-outline" href="#/">' + icon("refresh") + " Change my answers</a></div>" +
+      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors.</p></div>'
+    );
+  }
+
+  // Members-only pages: guests are asked to sign in, non-members to join.
+  function renderLocked() {
+    if (!currentUser) return renderLogin();
+    return renderPaywall();
   }
 
   // After Stripe checkout the webhook may land a moment after the person is
@@ -1817,20 +1872,19 @@
     const path = currentPath();
     const parts = path.split("/").filter(Boolean);
     let html;
-    const gated = !authChecked || !currentUser || ui.recovery || !membership || !membership.access;
-    document.body.classList.toggle("gated", gated);
-    if (!authChecked || (currentUser && !membership)) html = spinner;
-    else if (!currentUser || ui.recovery) html = renderLogin();
-    else if (!membership.access) html = renderPaywall();
-    else if (!survey) html = spinner;
+    const member = !!(currentUser && membership && membership.access);
+    if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
+    else if (ui.recovery) html = renderLogin();
     else if (path === "/") html = renderSurvey();
-    else if (path === "/results") html = renderResults();
-    else if (parts[0] === "explainer" && parts[1]) html = renderExplainer(parts[1]);
-    else if (path === "/check-in") html = renderCheckIn();
-    else if (path === "/habits") html = renderHabits();
-    else if (path === "/account") html = renderAccount();
+    else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
+    else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
+    else if (path === "/check-in") html = member ? renderCheckIn() : renderLocked();
+    else if (path === "/habits") html = member ? renderHabits() : renderLocked();
+    else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
     setNav(parts[0] === "explainer" ? "" : path);
+    const accountLink = document.querySelector('#nav a[data-route="/account"]');
+    if (accountLink) accountLink.textContent = currentUser ? "Account" : "Sign in";
     app.innerHTML = html;
   }
 
@@ -1996,9 +2050,25 @@
       membership = null;
       ui.userName = "";
       ui.authMode = "signin";
-      // The next person to sign in on this device shouldn't see these answers.
+      // The next person to use this device shouldn't see these answers.
       lsRemove(KEY_SURVEY);
-      survey = null;
+      survey = normaliseSurvey(null);
+      ui.step = 0;
+      location.hash = "#/";
+      render();
+    },
+    "start-signup": () => {
+      ui.authMode = "signup";
+      ui.authErr = "";
+      ui.authMsg = "";
+      location.hash = "#/account";
+      render();
+    },
+    "start-signin": () => {
+      ui.authMode = "signin";
+      ui.authErr = "";
+      ui.authMsg = "";
+      location.hash = "#/account";
       render();
     },
     "recheck-membership": async () => {
@@ -2136,12 +2206,13 @@
     const fromCheckout = /checkout=success/.test(location.search);
     render();
     await refreshUser();
-    if (fromEmail || fromCheckout) history.replaceState(null, "", location.pathname + "#/");
+    if (fromEmail || fromCheckout) history.replaceState(null, "", location.pathname + (fromCheckout ? "#/results" : "#/"));
     if (currentUser) {
       ui.userName = await displayName(currentUser);
       await checkMembership();
-      if (membership.access) survey = await loadSurvey();
     }
+    // Members get their saved answers; everyone else uses this device's.
+    survey = await loadSurvey();
     render();
     if (currentUser && !membership.access && fromCheckout) waitForPayment();
     if (sb) {
