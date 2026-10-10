@@ -269,6 +269,8 @@
           .maybeSingle();
         if (!error && data) {
           const s = normaliseSurvey(data.survey_data);
+          // Saved before completedAt existed: they've been seeing results.
+          if (!s.completedAt) s.completedAt = data.survey_data && data.survey_data.completedAt ? data.survey_data.completedAt : "earlier";
           lsSet(KEY_SURVEY, s);
           return s;
         }
@@ -278,7 +280,11 @@
         if (!error && local && membership && membership.access) saveSurveyRemote(normaliseSurvey(local));
       } catch (e) {}
     }
-    return normaliseSurvey(lsGet(KEY_SURVEY, null));
+    const local = normaliseSurvey(lsGet(KEY_SURVEY, null));
+    // Finished before completedAt existed: a monthly snapshot is the tell.
+    const snaps = getSnapshots();
+    if (!local.completedAt && lsGet(KEY_SURVEY, null) && snaps.length) local.completedAt = snaps[snaps.length - 1].savedAt || "earlier";
+    return local;
   }
 
   async function saveSurveyRemote(s) {
@@ -983,6 +989,7 @@
     recovery: false,
     confirmingPayment: false,
     paymentTimedOut: false,
+    editing: false, // editing a completed survey (from Results)
   };
 
   const app = document.getElementById("app");
@@ -999,7 +1006,25 @@
     { key: "banking", title: "Banking & Pension", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
   ];
 
+  // Shown on the Survey tab once a survey is complete. Small edits happen
+  // from "Edit my answers" on the Results page instead.
+  function renderSurveyDone() {
+    const when = Date.parse(survey.completedAt);
+    const date = isNaN(when) ? "" : " on " + new Date(when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+    return (
+      '<div class="container narrow">' + pageHeader("Carbon Footprint Survey") +
+      '<div class="card center fade-up"><div class="round-badge center-block mb-4">' + icon("check") + "</div>" +
+      '<h2 class="card-title mb-2">You\'ve already completed your survey</h2>' +
+      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Would you like to take a new survey? " +
+      "Your new answers will replace your current ones. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
+      '<div class="chip-row" style="justify-content:center">' +
+      '<button type="button" class="btn btn-green" data-action="new-survey">' + icon("refresh") + " Take a new survey</button>" +
+      '<a class="btn btn-outline" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
+    );
+  }
+
   function renderSurvey() {
+    if (survey.completedAt && !ui.editing) return renderSurveyDone();
     const step = STEPS[ui.step];
     const pct = ((ui.step + 1) / STEPS.length) * 100;
     const chips = STEPS.map((s, i) => {
@@ -1022,7 +1047,7 @@
       '<button type="button" class="btn btn-ghost" data-action="prev-step"' + (ui.step === 0 ? " disabled" : "") + ">" +
       icon("chevronLeft") + " Back</button>" +
       '<button type="button" class="btn btn-green" data-action="next-step">' +
-      (last ? "See my results" : "Continue") + " " + icon("chevronRight") + "</button>" +
+      (last ? (ui.editing ? "Save and see results" : "See my results") : "Continue") + " " + icon("chevronRight") + "</button>" +
       "</div></div></div>"
     );
   }
@@ -1437,7 +1462,7 @@
     }
 
     html +=
-      '<div class="btn-row"><a class="btn btn-outline" href="#/">' + icon("refresh") + ' Retake survey</a>' +
+      '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
       '<button type="button" class="btn btn-green" data-action="top-opportunity">' + icon("arrowRight") + " Show my top opportunity</button></div>" +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
@@ -2454,7 +2479,7 @@
       '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
       '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
       '<div class="max-sm">' + joinAction() + "</div></div>" +
-      '<div class="btn-row"><a class="btn btn-outline" href="#/">' + icon("refresh") + " Change my answers</a></div>" +
+      '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
     );
   }
@@ -2490,6 +2515,8 @@
 
   function render() {
     const path = currentPath();
+    // Leaving the survey ends an edit; the Survey tab asks again next time.
+    if (path !== "/") ui.editing = false;
     const parts = path.split("/").filter(Boolean);
     let html;
     const member = !!(currentUser && membership && membership.access);
@@ -2552,6 +2579,9 @@
         render();
         window.scrollTo(0, 0);
       } else {
+        survey.completedAt = new Date().toISOString();
+        surveyChanged();
+        ui.editing = false;
         saveSnapshot(footprint(survey).totalYearly);
         location.hash = "#/results";
       }
@@ -2758,6 +2788,22 @@
       location.hash = "#/";
       render();
       alert("Your account has been deleted.");
+    },
+    // Starts from blank answers. Nothing is saved until they change
+    // something, so leaving straight away keeps the old survey.
+    "new-survey": () => {
+      survey = normaliseSurvey(null);
+      ui.editing = false;
+      ui.step = 0;
+      render();
+      window.scrollTo(0, 0);
+    },
+    "edit-survey": () => {
+      ui.editing = true;
+      ui.step = 0;
+      if (location.hash === "#/" || location.hash === "") render();
+      else location.hash = "#/";
+      window.scrollTo(0, 0);
     },
     "clear-all": async () => {
       if (!confirm("Clear your survey answers and habits? This can't be undone.")) return;
