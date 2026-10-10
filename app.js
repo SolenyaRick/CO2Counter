@@ -37,7 +37,6 @@
   // Savings assumptions (see tipFor).
   const ACTIVE_TRAVEL_MAX_KM = 10; // one-way; beyond this, train/bus is the realistic swap
   const MOTOR_MODES = ["car_petrol", "car_diesel", "ev", "motorcycle"];
-  const RAIL_REPLACEABLE_KM = 800; // routes like London–Paris/Edinburgh/Amsterdam
   const TRAIN_TO_FLIGHT_RATIO = 4 / 123; // Eurostar vs flight, London–Paris
   const HEAT_PUMP_COP = 3;
   const MEDIUM_HAUL_KM = 4000;
@@ -578,23 +577,47 @@
       },
       // Flying is optional, so the potential saving is all of it: what you'd
       // save by holidaying by train or closer to home instead.
-      // Realistic: take the train for short routes (rail emits ~97% less) and
-      // fly economy on the rest. Maximum: not flying at all.
+      // Realistic (keeps some flying, swaps the rest):
+      //  - more than one long-haul flight -> one long-haul flight in economy
+      //  - exactly one long-haul flight   -> one short-haul flight in economy
+      //  - three or more short-haul       -> one short-haul in economy, the rest by train
+      //  - one or two short-haul          -> all by train
+      // Long-haul and short-haul are handled separately. Maximum: not flying.
       flights: () => {
         const flights = s.flights || [];
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
-        const realistic = flights.reduce((sum, f) => {
+        const economyKg = (f) => flightKm(f.from, f.to) * cabinFactor("economy");
+        const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
+        const long = flights.filter((f) => flightKm(f.from, f.to) > MEDIUM_HAUL_KM);
+        const short = flights.filter((f) => {
           const km = flightKm(f.from, f.to);
-          if (km > 0 && km <= RAIL_REPLACEABLE_KM) return sum + flightKg(f) * (1 - TRAIN_TO_FLIGHT_RATIO);
-          return sum + km * Math.max(0, cabinFactor(f.cabin) - cabinFactor("economy"));
-        }, 0);
+          return km > 0 && km <= MEDIUM_HAUL_KM;
+        });
+        const typicalShortKg =
+          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * cabinFactor("economy");
+        let remaining = 0;
+        const parts = [];
+        if (long.length > 1) {
+          remaining += avg(long, economyKg);
+          parts.push("one long-haul flight in economy");
+        } else if (long.length === 1) {
+          remaining += typicalShortKg;
+          parts.push("a short-haul trip in economy instead of long-haul");
+        }
+        if (short.length >= 3) {
+          remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          parts.push("one short-haul flight in economy, the rest by train");
+        } else if (short.length > 0) {
+          remaining += short.length * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          parts.push("short trips by train");
+        }
         return {
-          realisticLabel: "train for short routes, economy for the rest",
+          realisticLabel: parts.join(", ") || "no change needed",
           maxLabel: "not flying",
           maxSaving: total,
+          saving: Math.max(0, total - remaining),
           title: "Cut back on flying",
           body: "Flights are often the single largest chunk of a personal footprint. A single long-haul return can emit more than a year of driving. Every flight you swap for a train, a closer destination or a video call removes its emissions entirely — and if you can't avoid flying, economy and direct routes keep it lower.",
-          saving: realistic,
         };
       },
       // Realistic: green electricity tariff. Maximum: green tariff plus a heat
@@ -1657,7 +1680,7 @@
         "<p>For each area we show two figures: what a <strong>realistic</strong> change would save, and the most you could save <strong>going all the way</strong>.</p>" +
           "<p>Realistic changes:</p>" +
           list([
-            "Flights: taking the train on short routes, and flying economy on the rest",
+            "Flights: if you take several long-haul flights, keeping one in economy; swapping a single long-haul trip for a short-haul one; and taking the train for short-haul trips, keeping one short-haul flight if you take three or more",
             "Commuting: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones",
             "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
             "Home energy: switching to a renewable electricity tariff",
