@@ -307,7 +307,15 @@
 
   // kg CO2e per year from a pension pot at a given t CO2e per £1m invested.
   const pensionKg = (pot, tPerMillion) => ((pot || 0) * tPerMillion) / 1000;
-  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin);
+  // A ticked "Return trip" counts the distance both ways. Flights saved
+  // before the box existed have no flag and stay one-way.
+  const legs = (f) => (f.returnTrip ? 2 : 1);
+  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin) * legs(f);
+  const routeLabel = (f) => {
+    const a = airport(f.from);
+    const b = airport(f.to);
+    return ((a && a.city) || f.from) + (f.returnTrip ? " ⇄ " : " → ") + ((b && b.city) || f.to);
+  };
 
   function flightTier(s) {
     const flights = s.flights || [];
@@ -316,9 +324,9 @@
     let longHaul = 0;
     flights.forEach((f) => {
       const km = flightKm(f.from, f.to);
-      if (km < SHORT_HAUL_KM) shortHaul++;
-      else if (km < MEDIUM_HAUL_KM) mediumHaul++;
-      else longHaul++;
+      if (km < SHORT_HAUL_KM) shortHaul += legs(f);
+      else if (km < MEDIUM_HAUL_KM) mediumHaul += legs(f);
+      else longHaul += legs(f);
     });
     let tier;
     if (flights.length === 0) tier = 1;
@@ -331,10 +339,8 @@
   function flightTotals(s) {
     const items = (s.flights || []).map((f) => {
       const co2 = flightKg(f);
-      const a = airport(f.from);
-      const b = airport(f.to);
       return {
-        label: ((a && a.city) || f.from) + " → " + ((b && b.city) || f.to),
+        label: routeLabel(f),
         co2,
         pctOfTarget: (co2 / D.BUDGET_YEARLY) * 100,
       };
@@ -392,7 +398,7 @@
       label: "Flights",
       icon: "✈️",
       yearly: flights.reduce((sum, f) => sum + flightKg(f), 0),
-      detail: flights.length + " flight(s) / year",
+      detail: flights.length + (flights.length === 1 ? " trip" : " trips") + " / year",
     });
 
     const energy = s.energy || {};
@@ -586,7 +592,7 @@
       flights: () => {
         const flights = s.flights || [];
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
-        const economyKg = (f) => flightKm(f.from, f.to) * cabinFactor("economy");
+        const economyKg = (f) => flightKm(f.from, f.to) * cabinFactor("economy") * legs(f);
         const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
         const long = flights.filter((f) => flightKm(f.from, f.to) > MEDIUM_HAUL_KM);
         const short = flights.filter((f) => {
@@ -594,19 +600,19 @@
           return km > 0 && km <= MEDIUM_HAUL_KM;
         });
         const typicalShortKg =
-          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * cabinFactor("economy");
+          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * cabinFactor("economy") * (long.length === 1 ? legs(long[0]) : 1);
         let remaining = 0;
         const parts = [];
         if (long.length > 1) {
           remaining += avg(long, economyKg);
-          parts.push("one long-haul flight in economy");
+          parts.push("one long-haul trip in economy");
         } else if (long.length === 1) {
           remaining += typicalShortKg;
           parts.push("a short-haul trip in economy instead of long-haul");
         }
         if (short.length >= 3) {
           remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
-          parts.push("one short-haul flight in economy, the rest by train");
+          parts.push("one short-haul trip in economy, the rest by train");
         } else if (short.length > 0) {
           remaining += short.length * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
           parts.push("short trips by train");
@@ -1081,7 +1087,7 @@
   function renderFlightsStep() {
     const flights = survey.flights;
     let html =
-      '<p class="muted sm mb-6">This is your standing <span class="fw-500 fg">flight checklist</span> — add flights as you book them and they stay saved, so you only enter each one once. Pick a start and end airport and when you flew; we\'ll work out the distance.</p>' +
+      '<p class="muted sm mb-6">This is your standing <span class="fw-500 fg">flight checklist</span> — add trips as you book them and they stay saved, so you only enter each one once. Pick a start and end airport and when you flew; we\'ll work out the distance. Tick <span class="fw-500 fg">Return trip</span> for there-and-back journeys.</p>' +
       '<div class="stack-3 max-2xl">';
     if (!flights.length) {
       html +=
@@ -1102,8 +1108,10 @@
           '<div class="grow minw-160"><label class="xs">Cabin class</label><select class="input mt-1" data-flight="' + i + '" data-flight-field="cabin">' +
           D.CABINS.map((c) => '<option value="' + c.key + '"' + (c.key === (f.cabin || "economy") ? " selected" : "") + ">" + c.emoji + " " + esc(c.label) + "</option>").join("") +
           "</select></div>" +
+          '<label class="check-label"><input type="checkbox" data-flight="' + i + '" data-flight-field="returnTrip"' + (f.returnTrip ? " checked" : "") +
+          " /> Return trip</label>" +
           (km > 0
-            ? '<div class="sm"><span class="muted">' + km.toFixed(0) + ' km · </span><span class="fw-500">' + (km * cabin.factor).toFixed(0) + " kg CO₂e</span></div>"
+            ? '<div class="sm"><span class="muted">' + (km * legs(f)).toFixed(0) + ' km · </span><span class="fw-500">' + (km * cabin.factor * legs(f)).toFixed(0) + " kg CO₂e</span></div>"
             : "") +
           '<button type="button" class="icon-btn danger-hover" data-action="remove-flight" data-index="' + i + '" aria-label="Remove flight">' + icon("trash") + "</button>" +
           "</div></div>"
@@ -1527,10 +1535,8 @@
         return km > 0 && km < MEDIUM_HAUL_KM;
       })
       .map((f) => {
-        const a = airport(f.from);
-        const b = airport(f.to);
         const kg = flightKg(f);
-        return { label: ((a && a.city) || f.from) + " → " + ((b && b.city) || f.to), flightKg: kg, trainKg: kg * ratio };
+        return { label: routeLabel(f), flightKg: kg, trainKg: kg * ratio };
       });
     return {
       isTrainPopup: true,
@@ -2199,7 +2205,7 @@
       render();
     },
     "add-flight": () => {
-      survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", date: new Date().toISOString().slice(0, 10) });
+      survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", returnTrip: true, date: new Date().toISOString().slice(0, 10) });
       surveyChanged();
       render();
     },
@@ -2384,7 +2390,8 @@
       if (t.dataset.rerender) render();
     } else if (t.dataset.flight) {
       const i = Number(t.dataset.flight);
-      survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: t.value } : f));
+      const value = t.type === "checkbox" ? t.checked : t.value;
+      survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: value } : f));
       surveyChanged();
       render();
     } else if (t.dataset.goal) {

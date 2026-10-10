@@ -77,7 +77,7 @@
       weekMix: { chicken: 230 / 150, pork: 137 / 150, fish: 120 / 150, beef: 84 / 150, lamb: 23 / 150, veggie: 7 - 594 / 150 },
     },
     commute: { distance: 3.1, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
-    flights: [{ from: "LHR", to: "BCN", cabin: "economy" }, { from: "BCN", to: "LHR", cabin: "economy" }],
+    flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true }],
     energy: { electricityKwh: 2500 / 12, gasKwh: 9500 / 12, greenTariff: false, household: 2.4 },
     water: { liters: 140 * 30.4 * 2.4 },
     pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
