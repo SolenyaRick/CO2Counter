@@ -22,8 +22,8 @@
   const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/9B6eVd0a4g2X4Gbc2K5EY00";
   const WEBSITE_URL = "https://co2counter.co.uk/";
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
-  const OPERATOR_NAME = "";
-  const CONTACT_EMAIL = "";
+  const OPERATOR_NAME = "Jack Brown";
+  const CONTACT_EMAIL = "CO2counter@outlook.com";
   const LEGAL_UPDATED = "10 October 2026";
 
   const D = window.ECO_DATA;
