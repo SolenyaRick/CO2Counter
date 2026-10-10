@@ -1,8 +1,11 @@
 # EcoImpact (Prototype 2)
 
 A carbon-footprint survey and habit tracker. Answer six short sections
-about your week and it estimates your monthly footprint, shows where it
+about your week and it estimates your yearly footprint, shows where it
 comes from, and points you at your biggest opportunity to cut it.
+
+People sign in first, then need a £2/year membership (Stripe) to use the
+app. The owner account (jack.s.brown@outlook.com) is free.
 
 Prototype 2 was designed in Base44 and ported here as a plain static web
 app (no build step), replacing Prototype 1 (the weekly CO2 Tracker). Prototype 1
@@ -30,15 +33,17 @@ untouched.
 - **Habits** (`#/habits`) and **Check-in** (`#/check-in`): committed
   habits, daily check-ins with 🔥 streaks, one new habit unlocking per week,
   and deadlines for one-off goal habits.
-- **Account** (`#/account`): sign in or out, a summary of saved data, and
-  options to clear habits or everything.
+- **Account** (`#/account`): sign out, membership status (with a link to
+  Stripe to manage or cancel), a summary of saved data, and options to clear
+  habits or everything.
+- **Sign-in and membership screens**: shown instead of the app until the
+  person is signed in and has access.
 
 ## Where data lives
 
-Everything works without an account, saved in the browser's localStorage
-(`ecoimpact_*` keys). When signed in, the survey answers are also saved to
-Supabase (`survey_responses`, one JSON row per user), so they follow you
-between devices. Habits, streaks, goals and monthly snapshots stay on the
+Survey answers are saved to Supabase (`survey_responses`, one JSON row per
+user) and cached in the browser's localStorage (`ecoimpact_*` keys), so they
+follow you between devices. Habits, streaks, goals and monthly snapshots stay on the
 device, as they did in the Base44 version. Existing Prototype 1 accounts
 sign in unchanged; only their survey starts fresh.
 
@@ -47,12 +52,16 @@ sign in unchanged; only their survey starts fresh.
 - `index.html`: page shell, header and navigation.
 - `data.js`: survey options, emission factors, airports, banks, and all
   explainer and habit text, copied exactly from the Base44 prototype.
+  Results are shown per year (12× Base44's monthly figures); the energy and
+  water questions still ask for monthly amounts, as bills show them.
 - `app.js`: calculations, hash routing, rendering, and Supabase auth and sync.
 - `style.css`: styles (neutral greys with an emerald accent, matching
   Base44).
 - `vendor/supabase.js`: the Supabase client.
-- `supabase/schema.sql`: database schema. The `survey_responses` section at
-  the end is what Prototype 2 needs.
+- `supabase/schema.sql`: database schema. The "EcoImpact (Prototype 2)"
+  section at the end is what Prototype 2 needs.
+- `supabase/functions/stripe-webhook/index.ts`: Edge Function that Stripe
+  calls on payments, renewals and cancellations; it updates `memberships`.
 
 ## Running it
 
@@ -65,9 +74,56 @@ python3 -m http.server 8000
 Then open http://localhost:8000.
 
 **One-time database step:** in Supabase, open **SQL Editor** and run the
-"EcoImpact (Prototype 2)" section at the end of `supabase/schema.sql`. It
-creates the `survey_responses` table. Until it exists, signed-in users'
-answers are only kept on their device.
+"EcoImpact (Prototype 2)" section at the end of `supabase/schema.sql`
+(the `survey_responses` and `memberships` parts). It's safe to re-run.
+
+## Payments (£2/year via Stripe)
+
+How it fits together:
+
+1. The membership screen sends people to a Stripe **Payment Link**, adding
+   their Supabase user ID as `client_reference_id`.
+2. Stripe calls the `stripe-webhook` Edge Function, which records the
+   subscription in `memberships` (status and paid-until date).
+3. `has_access()` in the database is true for the owner's email or an active,
+   paid-up membership. The app checks it via `membership_status()`, and the
+   `survey_responses` policy uses it, so the paywall holds on the server too.
+4. Renewals, failed cards and cancellations arrive as
+   `customer.subscription.*` events and update the same row.
+
+The iOS app never shows a purchase button or link to Stripe (App Store rules
+require Apple's own in-app purchase for that). People who haven't paid are
+told to join on the website, then sign in on the app.
+
+Setup (Stripe dashboard, then Supabase dashboard):
+
+1. **Product:** Product catalogue → **Add product** → "EcoImpact
+   membership", **Recurring**, **£2.00 GBP**, billing period **Yearly**.
+2. **Payment Link:** on that product, **Create payment link**. Under
+   **After payment**, choose "Don't show confirmation page" and redirect to
+   `https://co2counter.co.uk/?checkout=success`. Copy the link
+   (`https://buy.stripe.com/...`) into `STRIPE_PAYMENT_LINK` in `app.js`.
+3. **Customer portal:** Settings → Billing → **Customer portal** → activate,
+   allow cancelling, and copy the **login link** into `STRIPE_PORTAL_URL` in
+   `app.js`.
+4. **Edge Function:** Supabase → **Edge Functions** → **Deploy a new
+   function** → **Via editor**, name it `stripe-webhook`, paste in
+   `supabase/functions/stripe-webhook/index.ts` and deploy. Then open its
+   settings and turn **Enforce JWT verification** off. (CLI alternative:
+   `supabase functions deploy stripe-webhook --no-verify-jwt`.)
+5. **Webhook:** Stripe → Developers → **Webhooks** → **Add endpoint**:
+   `https://fbgfylfnbtxzbwgilktt.supabase.co/functions/v1/stripe-webhook`,
+   with events `checkout.session.completed`,
+   `customer.subscription.updated` and `customer.subscription.deleted`.
+   Copy its **Signing secret** (`whsec_...`).
+6. **Secrets:** Supabase → Edge Functions → **Secrets**: add
+   `STRIPE_SECRET_KEY` (Stripe → Developers → API keys → Secret key) and
+   `STRIPE_WEBHOOK_SECRET` (from step 5).
+
+Do all of this in Stripe's **test mode** first and pay with card
+`4242 4242 4242 4242`. Then repeat steps 1–3, 5 and 6 in live mode,
+update the two links in `app.js`, and replace both secrets with their live
+values.
 
 ## iOS app (Capacitor)
 

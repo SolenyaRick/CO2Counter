@@ -1061,3 +1061,71 @@ alter table public.survey_responses enable row level security;
 drop policy if exists "survey_responses: owner full access" on public.survey_responses;
 create policy "survey_responses: owner full access" on public.survey_responses
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ---------- EcoImpact memberships (£2/year via Stripe) ----------
+-- One row per paying member, written only by the stripe-webhook Edge
+-- Function (supabase/functions/stripe-webhook) using the service-role key.
+-- Members can read their own row; there are deliberately no insert/update
+-- policies, so nobody can mark themselves as paid from the app.
+
+create table if not exists public.memberships (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  stripe_customer_id text unique,
+  stripe_subscription_id text,
+  status text not null default 'inactive',
+  current_period_end timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.memberships enable row level security;
+
+drop policy if exists "memberships: owner can select" on public.memberships;
+create policy "memberships: owner can select" on public.memberships
+  for select using (auth.uid() = user_id);
+
+-- True for the app owner, or for anyone whose Stripe subscription is active
+-- and paid up. Used by the app (via membership_status) and by the
+-- survey_responses policy below, so the paywall is enforced server-side.
+create or replace function public.has_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(lower(auth.jwt() ->> 'email') = 'jack.s.brown@outlook.com', false)
+    or exists (
+      select 1 from public.memberships
+      where user_id = auth.uid()
+        and status in ('active', 'trialing', 'past_due')
+        and current_period_end > now()
+    );
+$$;
+
+create or replace function public.membership_status()
+returns table (has_access boolean, is_owner boolean, status text, current_period_end timestamptz)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.has_access(),
+    coalesce(lower(auth.jwt() ->> 'email') = 'jack.s.brown@outlook.com', false),
+    m.status,
+    m.current_period_end
+  from (select 1) as one
+  left join public.memberships m on m.user_id = auth.uid();
+$$;
+
+revoke all on function public.has_access() from public;
+revoke all on function public.membership_status() from public;
+grant execute on function public.has_access() to authenticated;
+grant execute on function public.membership_status() to authenticated;
+
+-- Survey answers can only be read or saved by members (and the owner).
+drop policy if exists "survey_responses: owner full access" on public.survey_responses;
+drop policy if exists "survey_responses: members full access" on public.survey_responses;
+create policy "survey_responses: members full access" on public.survey_responses
+  for all using (auth.uid() = user_id and public.has_access())
+  with check (auth.uid() = user_id and public.has_access());

@@ -43,10 +43,9 @@
   "Sat",
   "Sun"
 ];
-  const WEEKS_PER_MONTH = 4.33;
-  const UK_AVERAGE_MONTHLY = 400.83; // kg CO2e / month
-  const BUDGET_MONTHLY = 208.33; // 1.5°C budget, 2.5 t/yr
-  const BUDGET_YEARLY = 2500;
+  const WEEKS_PER_YEAR = 4.33 * 12; // matches the Base44 monthly figures x12
+  const UK_AVERAGE_YEARLY = 400.83 * 12; // kg CO2e / year (~4.8 t)
+  const BUDGET_YEARLY = 2500; // 1.5°C budget, kg CO2e / year
   const ELECTRICITY_FACTOR = 0.22687; // kg / kWh, standard grid
   const GREEN_ELECTRICITY_FACTOR = 0.04;
   const GAS_FACTOR = 0.21317;
@@ -1211,7 +1210,7 @@
     "sections": [
       {
         "heading": "Drop a red-meat day or two",
-        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals can cut over 150 kg CO₂e per month."
+        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals can cut over 1,800 kg CO₂e a year."
       },
       {
         "heading": "Choose chicken over beef",
@@ -1543,7 +1542,7 @@
 ];
 
   window.ECO_DATA = {
-    DEFAULT_SURVEY, DAYS, WEEKS_PER_MONTH, UK_AVERAGE_MONTHLY, BUDGET_MONTHLY,
+    DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_AVERAGE_YEARLY,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
