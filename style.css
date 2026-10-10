@@ -1796,16 +1796,12 @@ label {
 
 /* ---------- sign-in & membership screens ---------- */
 
-body.gated .topbar {
-  display: none;
-}
-
 .gate {
-  min-height: 100vh;
+  min-height: calc(100vh - 57px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
 }
 
 .gate-card {
@@ -1848,6 +1844,10 @@ body.gated .topbar {
 
 .price {
   margin-bottom: 16px;
+}
+
+.price.mb-0 {
+  margin-bottom: 4px !important;
 }
 
 .price-num {

@@ -4,8 +4,12 @@ A carbon-footprint survey and habit tracker. Answer six short sections
 about your week and it estimates your yearly footprint, shows where it
 comes from, and points you at your biggest opportunity to cut it.
 
-People sign in first, then need a £2/year membership (Stripe) to use the
-app. The owner account (jack.s.brown@outlook.com) is free.
+Anyone can take the survey and see their yearly total compared with the
+UK average, with no account. Everything else (the breakdown, tips, guides,
+habits, check-ins and saving across devices) needs an account with a
+£2/year membership (Stripe). The owner account (jack.s.brown@outlook.com)
+is free. Answers given as a guest stay on the device and are uploaded to
+the account when the person joins.
 
 Prototype 2 was designed in Base44 and ported here as a plain static web
 app (no build step), replacing Prototype 1 (the weekly CO2 Tracker). Prototype 1
@@ -36,8 +40,9 @@ untouched.
 - **Account** (`#/account`): sign out, membership status (with a link to
   Stripe to manage or cancel), a summary of saved data, and options to clear
   habits or everything.
-- **Sign-in and membership screens**: shown instead of the app until the
-  person is signed in and has access.
+- **Sign-in and membership screens**: guests see the free results (total
+  and UK-average comparison) with a "Create an account and join" prompt;
+  the members-only pages ask guests to sign in and non-members to join.
 
 ## Where data lives
 
