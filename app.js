@@ -16,8 +16,8 @@
   // Stripe Payment Link for the £2/year membership, and the Stripe customer
   // portal login link (for cancelling or updating a card). Both come from
   // the Stripe dashboard; see README "Payments". Leave empty until set up.
-  const STRIPE_PAYMENT_LINK = "";
-  const STRIPE_PORTAL_URL = "";
+  const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_eVqcN4dPS0QVcB98m483C00";
+  const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/test_eVqcN4dPS0QVcB98m483C00";
   const WEBSITE_URL = "https://co2counter.co.uk/";
 
   const D = window.ECO_DATA;
