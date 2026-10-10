@@ -1948,3 +1948,26 @@ label {
 .btn-delete:hover {
   background: #b91c1c;
 }
+
+.footer-sep {
+  color: var(--muted-fg);
+  margin: 0 6px;
+  font-size: 12px;
+}
+
+/* ---------- friends ---------- */
+
+.friend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+}
+
+.month-row.me {
+  border-color: var(--em-400);
+  background: var(--em-50);
+}

@@ -22,9 +22,9 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 <!-- Bump ?v= whenever these files change, so browsers that cached the
      previous version (GitHub Pages sends max-age=600) fetch the new one. -->
-<link rel="stylesheet" href="style.css?v=15" />
-<script src="vendor/supabase.js?v=15"></script>
-<script src="data.js?v=15"></script>
+<link rel="stylesheet" href="style.css?v=19" />
+<script src="vendor/supabase.js?v=19"></script>
+<script src="data.js?v=19"></script>
 </head>
 <body>
   <header class="topbar">
@@ -36,17 +36,23 @@
       <nav class="nav" id="nav">
         <a href="#/" data-route="/">Survey</a>
         <a href="#/results" data-route="/results">Results</a>
-        <a href="#/check-in" data-route="/check-in">Check-in</a>
         <a href="#/habits" data-route="/habits">Habits</a>
+        <a href="#/friends" data-route="/friends">Friends</a>
         <a href="#/account" data-route="/account">Account</a>
       </nav>
     </div>
   </header>
 
   <main id="app"></main>
-  <footer class="site-footer"><a class="link-btn muted-link" href="#/how-we-calculate">How we calculate</a></footer>
+  <footer class="site-footer">
+    <a class="link-btn muted-link" href="#/how-we-calculate">How we calculate</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="#/privacy">Privacy</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="#/terms">Terms</a>
+  </footer>
   <div id="modal-root"></div>
 
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>

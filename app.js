@@ -21,6 +21,10 @@
   const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00";
   const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/9B6eVd0a4g2X4Gbc2K5EY00";
   const WEBSITE_URL = "https://co2counter.co.uk/";
+  // Shown on the Privacy and Terms pages. Fill these in before publishing.
+  const OPERATOR_NAME = "Jack Brown";
+  const CONTACT_EMAIL = "CO2counter@outlook.com";
+  const LEGAL_UPDATED = "10 October 2026";
 
   const D = window.ECO_DATA;
   const DAYS = D.DAYS;
@@ -154,6 +158,7 @@
       if (row) {
         result.access = !!row.has_access;
         result.owner = !!row.is_owner;
+        result.free = !!row.is_free;
         result.status = row.status || "";
         result.until = row.current_period_end ? new Date(row.current_period_end) : null;
       }
@@ -218,12 +223,12 @@
 
   async function saveSurveyRemote(s) {
     if (!currentUser || !sb) return;
+    const row = { user_id: currentUser.id, survey_data: s, updated_at: new Date().toISOString() };
     try {
-      await sb.from("survey_responses").upsert({
-        user_id: currentUser.id,
-        survey_data: s,
-        updated_at: new Date().toISOString(),
-      });
+      // total_yearly lets friends see your total (friends_footprints()).
+      // If the database doesn't have that column yet, save without it.
+      const { error } = await sb.from("survey_responses").upsert({ ...row, total_yearly: Math.round(footprint(s).totalYearly) });
+      if (error && /total_yearly/.test(error.message || "")) await sb.from("survey_responses").upsert(row);
     } catch (e) {}
   }
 
@@ -1410,11 +1415,27 @@
       "</div>";
 
     html +=
+      habitsComingSoonCard() +
+      '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
+    return html;
+  }
+
+  function habitsComingSoonCard() {
+    return (
       '<div class="card callout strong"><div class="label-row mb-4"><span class="round-badge sm">' + icon("leaf") + '</span><span class="eyebrow">Build these habits</span>' +
       '<span class="tag amber ml-auto">Coming Soon</span></div><div class="coming-soon"><div class="soon-icon">' + icon("leaf") + "</div>" +
       '<h2 class="soon-title">Habit tracking is on the way</h2><p class="sm muted max-sm">We\'re putting the finishing touches on the habit commitment and streak-tracking feature. Check back soon to build greener habits, one step at a time.</p></div></div>' +
-      '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
-    return html;
+      ""
+    );
+  }
+
+  // Habit tracking isn't built yet: the Habits tab shows the same
+  // "coming soon" card as the guides, for everyone.
+  function renderHabitsPending() {
+    return (
+      '<div class="container narrow">' + pageHeader("My Habits", "Coming soon") + habitsComingSoonCard() +
+      '<div class="center mt-8"><a class="btn btn-outline" href="#/results">' + icon("arrowLeft") + " Back to results</a></div></div>"
+    );
   }
 
   function openSectionDialog(cat, index) {
@@ -1718,6 +1739,250 @@
     );
   }
 
+  // ==================== Friends page ====================
+
+  const friends = { loaded: false, loading: false, rows: [], board: [], myName: "", error: "", msg: "" };
+
+  async function loadFriends() {
+    if (!currentUser || !sb || friends.loading) return;
+    friends.loading = true;
+    const me = currentUser.id;
+    try {
+      const [{ data: rows }, { data: board }, { data: mine }] = await Promise.all([
+        sb.from("friendships").select("*").or("requester_id.eq." + me + ",addressee_id.eq." + me),
+        sb.rpc("friends_footprints"),
+        sb.from("profiles").select("display_name").eq("id", me).maybeSingle(),
+      ]);
+      const list = rows || [];
+      const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
+      const names = {};
+      if (otherIds.length) {
+        const { data: profs } = await sb.from("profiles").select("id, display_name").in("id", otherIds);
+        (profs || []).forEach((p) => (names[p.id] = p.display_name || "Friend"));
+      }
+      friends.rows = list.map((r) => {
+        const otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
+        return { id: r.id, status: r.status, otherId, name: names[otherId] || "Someone", iAsked: r.requester_id === me };
+      });
+      friends.board = (board || []).slice().sort((a, b) => a.total_yearly - b.total_yearly);
+      friends.myName = (mine && mine.display_name) || "";
+    } catch (e) {
+      friends.error = "Couldn't load your friends. Check your connection and try again.";
+    }
+    friends.loaded = true;
+    friends.loading = false;
+    if (currentPath() === "/friends") render();
+  }
+
+  function renderFriends() {
+    if (!friends.loaded) {
+      loadFriends();
+      return spinner;
+    }
+    const incoming = friends.rows.filter((f) => f.status === "pending" && !f.iAsked);
+    const outgoing = friends.rows.filter((f) => f.status === "pending" && f.iAsked);
+    const accepted = friends.rows.filter((f) => f.status === "accepted");
+    const row = (f, buttons) =>
+      '<div class="friend-row"><span class="sm fw-500 truncate">' + esc(f.name) + '</span><span class="chip-row">' +
+      buttons.map(([label, action, cls]) => '<button type="button" class="btn btn-sm ' + cls + '" data-action="' + action + '" data-id="' + f.id + '">' + label + "</button>").join("") +
+      "</span></div>";
+    const section = (title, body) => '<div class="card"><h2 class="card-title mb-4">' + title + "</h2>" + body + "</div>";
+    let html = '<div class="container narrow">' + pageHeader("Friends", "Compare footprints with people you know", "user");
+    if (friends.error) html += '<p class="sm red mb-4">' + esc(friends.error) + "</p>";
+
+    // Leaderboard
+    const meOnBoard = friends.board.find((b) => b.is_self);
+    let board;
+    if (!accepted.length) board = '<p class="sm muted">Add friends below to compare your yearly footprints.</p>';
+    else {
+      board =
+        '<div class="stack-2">' +
+        friends.board
+          .map(
+            (b, i) =>
+              '<div class="month-row' + (b.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge">' + (i + 1) + '</span><span class="sm fw-500 truncate">' +
+              esc(b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name) + '</span></div><div class="label-row shrink0"><span class="fw-600">' +
+              (b.total_yearly / 1000).toFixed(1) + '</span><span class="xs muted">t / yr</span></div></div>'
+          )
+          .join("") +
+        "</div>" +
+        (!meOnBoard ? '<p class="xs muted mt-3">Finish the survey to appear on the leaderboard.</p>' : "") +
+        (accepted.length > friends.board.filter((b) => !b.is_self).length
+          ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey as members yet won\'t appear until they do.</p>'
+          : "");
+    }
+    html += section("Leaderboard", board + '<p class="xs muted mt-3">Lowest footprint first. Friends only ever see each other\'s yearly totals, never your answers.</p>');
+
+    // Your name
+    html += section(
+      "Your name",
+      '<p class="xs muted mb-3">This is what your friends see.</p><form id="name-form" class="chip-row"><input class="input grow" id="display-name" maxlength="40" placeholder="e.g. Sam" value="' +
+        esc(friends.myName) + '" /><button type="submit" class="btn btn-outline">Save</button></form>'
+    );
+
+    // Add a friend
+    html += section(
+      "Add a friend",
+      '<form id="friend-form" class="chip-row"><input class="input grow" type="email" id="friend-email" placeholder="Their email address" required /><button type="submit" class="btn btn-green">Send request</button></form>' +
+        '<p class="xs muted mt-2">They need a CO2 Counter account with that email.</p>' +
+        (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
+    );
+
+    if (incoming.length)
+      html += section("Requests for you", '<div class="stack-2">' + incoming.map((f) => row(f, [["Accept", "friend-accept", "btn-green"], ["Decline", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    if (outgoing.length)
+      html += section("Waiting for a reply", '<div class="stack-2">' + outgoing.map((f) => row(f, [["Cancel", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    if (accepted.length)
+      html += section("Your friends", '<div class="stack-2">' + accepted.map((f) => row(f, [["Remove", "friend-remove", "btn-outline"]])).join("") + "</div>");
+    return html + "</div>";
+  }
+
+  async function addFriend(email) {
+    friends.msg = "";
+    friends.msgOk = false;
+    const clean = email.trim().toLowerCase();
+    if (!clean) return;
+    const { data: foundId, error } = await sb.rpc("find_user_by_email", { lookup_email: clean });
+    const existing = friends.rows.find((f) => f.otherId === foundId);
+    if (error) friends.msg = "Something went wrong looking that up.";
+    else if (!foundId) friends.msg = "No CO2 Counter account uses that email.";
+    else if (foundId === currentUser.id) friends.msg = "That's your own account.";
+    else if (existing && existing.status === "accepted") friends.msg = "You're already friends.";
+    else if (existing && existing.iAsked) friends.msg = "You've already sent them a request.";
+    else if (existing) {
+      await sb.from("friendships").update({ status: "accepted" }).eq("id", existing.id);
+      friends.msg = "They'd already asked you, so you're now friends.";
+      friends.msgOk = true;
+    } else {
+      const { error: insertError } = await sb.from("friendships").insert({ requester_id: currentUser.id, addressee_id: foundId, status: "pending" });
+      friends.msg = insertError ? "Couldn't send the request." : "Request sent.";
+      friends.msgOk = !insertError;
+    }
+    friends.loaded = false;
+    await loadFriends();
+  }
+
+  // ==================== Privacy & Terms pages ====================
+
+  function contactLink() {
+    return CONTACT_EMAIL ? '<a class="link-btn" href="mailto:' + esc(CONTACT_EMAIL) + '">' + esc(CONTACT_EMAIL) + "</a>" : "[contact email to be added]";
+  }
+
+  function legalPage(title, intro, sections) {
+    return (
+      '<div class="container narrow">' + pageHeader(title, "Last updated " + LEGAL_UPDATED, "info") +
+      '<p class="muted lh mb-8">' + intro + '</p><div class="stack-6 mb-10">' +
+      sections
+        .map(([h, body]) => '<div class="section-card static"><h2 class="fw-600 mb-2">' + esc(h) + '</h2><div class="sm muted lh method">' + body + "</div></div>")
+        .join("") +
+      "</div></div>"
+    );
+  }
+
+  const ul = (items) => "<ul>" + items.map((i) => "<li>" + i + "</li>").join("") + "</ul>";
+  const operator = () => (OPERATOR_NAME ? esc(OPERATOR_NAME) : "[operator name to be added]");
+
+  function renderPrivacy() {
+    return legalPage(
+      "Privacy policy",
+      "This policy explains what personal data CO2 Counter (co2counter.co.uk) collects, why, who it's shared with, and your rights. CO2 Counter is run by " +
+        operator() + ' ("we", "us"), who is the data controller. Questions or requests: ' + contactLink() + ".",
+      [
+        [
+          "What we collect",
+          ul([
+            "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
+            "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
+            "<strong>Membership details</strong>: whether you have a membership, its status and renewal date, and a reference to your customer record at Stripe. We never see or store your card details.",
+            "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
+          ])
+        ],
+        [
+          "Why we use it",
+          ul([
+            "To work out and show your footprint, save your answers to your account, and provide the membership you've paid for. The legal basis is performing our contract with you.",
+            "To keep the service secure and working. The legal basis is our legitimate interests.",
+            "To keep payment records, as the law requires. The legal basis is legal obligation.",
+          ]) +
+            "<p>We don't sell your data, show adverts, or use tracking or analytics cookies.</p>",
+        ],
+        [
+          "Who we share it with",
+          "<p>Only the providers that run the service for us:</p>" +
+            ul([
+              "<strong>Supabase</strong>: sign-in and database (your account, saved answers and membership status).",
+              "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
+              "<strong>GitHub Pages</strong>: hosting the website.",
+            ]) +
+            "<p>Some of these providers may process data outside the UK. Where they do, they rely on safeguards recognised under UK data protection law, such as adequacy regulations or standard contractual clauses.</p>",
+        ],
+        [
+          "Storage on your device",
+          "<p>The site stores your survey answers, habits, check-ins and sign-in session in your browser's local storage so it can work. These aren't tracking cookies. Clearing your browser's site data removes them, and signing out or deleting your account clears them on that device.</p>",
+        ],
+        [
+          "How long we keep it",
+          "<p>We keep your account data until you delete your account. Deleting it removes your account, saved answers and membership record straight away. Stripe keeps payment records for as long as the law requires.</p>",
+        ],
+        [
+          "Your rights",
+          "<p>Under UK data protection law you can ask to access, correct or delete your data, receive a copy of it, or object to or restrict how we use it. You can delete your account at any time from the Account page. For anything else, email " +
+            contactLink() +
+            `. If you're unhappy with how we've handled your data, you can complain to the Information Commissioner's Office (<a class="link-btn" href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a>).</p>`,
+        ],
+        ["Children", "<p>CO2 Counter is intended for people aged 16 and over.</p>"],
+        ["Changes", "<p>If we change this policy, we'll update this page and the date above. Significant changes will be highlighted on the site.</p>"],
+      ]
+    );
+  }
+
+  function renderTerms() {
+    return legalPage(
+      "Terms of use",
+      "These terms apply when you use CO2 Counter (co2counter.co.uk), run by " + operator() + ' ("we", "us"). By using the site you agree to them. Contact: ' + contactLink() + ".",
+      [
+        [
+          "What CO2 Counter is",
+          "<p>CO2 Counter estimates your carbon footprint from your answers to a survey, and suggests ways to reduce it. Results are estimates based on typical published figures, not measurements. They're for general information and aren't financial, investment or professional advice. Check with a qualified adviser before making financial decisions, such as moving a pension.</p>",
+        ],
+        [
+          "Your account",
+          "<p>You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
+        ],
+        [
+          "Membership and payment",
+          ul([
+            "The survey and your headline result are free. Membership unlocks the full results, tips and guides, and costs <strong>£2 a year</strong>, paid through Stripe.",
+            "Membership <strong>renews automatically each year</strong> until you cancel. You can cancel at any time with <em>Manage subscription</em> on the Account page. You keep access until the end of the year you've paid for.",
+            "If we change the price, we'll tell you at least 30 days before your next renewal, and you can cancel before it applies.",
+            "<strong>Refunds:</strong> if you change your mind, email us within 14 days of joining or renewing and we'll refund that payment in full.",
+            "Deleting your account doesn't cancel your subscription. Please cancel it first.",
+          ]),
+        ],
+        [
+          "Using the site fairly",
+          "<p>Please don't misuse the service: no attempts to break or overload it, get around the membership, access other people's data, or copy and resell its content. We may suspend accounts that do.</p>",
+        ],
+        [
+          "Our content",
+          "<p>The site's text, design, calculations and guides belong to us or our licensors. You're welcome to use your own results however you like.</p>",
+        ],
+        [
+          "Availability and changes",
+          "<p>We'll try to keep the site available and accurate, but we can't promise it will always be uninterrupted or error-free. We may update features, data sources and estimates over time. If we ever close the service, we'll give members notice and refund any unused part of their membership.</p>",
+        ],
+        [
+          "Our liability",
+          "<p>Nothing in these terms limits liability that can't legally be limited, such as for death or personal injury caused by negligence, or for fraud, and your statutory consumer rights are unaffected. Otherwise, we're not responsible for decisions you make based on estimates from the site, and our total liability to you is limited to the amount you've paid us in the previous 12 months.</p>",
+        ],
+        [
+          "Changes and law",
+          "<p>We may update these terms. If a change affects your membership, we'll let you know in advance. These terms are governed by the law of England and Wales, and you can bring a claim in the courts where you live in the UK.</p>",
+        ],
+      ]
+    );
+  }
+
   // ==================== Habits page ====================
 
   function renderHabits() {
@@ -1869,6 +2134,7 @@
     const m = membership || {};
     let plan;
     if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
+    else if (m.free && m.status !== "active") plan = '<p class="fw-600">Free access</p><p class="sm muted">You\'ve been given full access, free of charge.</p>';
     else {
       const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
       plan =
@@ -1946,6 +2212,9 @@
       (ui.authErr ? '<p class="xs red">' + esc(ui.authErr) + "</p>" : "") +
       (ui.authMsg ? '<p class="xs green-dark">' + esc(ui.authMsg) + "</p>" : "") +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
+      (signup
+        ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>'
+        : "") +
       '<div class="chip-row"><button type="button" class="link-btn" data-action="toggle-auth-mode">' + (signup ? "Have an account? Sign in" : "Need an account? Sign up") + "</button>" +
       (signup ? "" : '<button type="button" class="link-btn" data-action="forgot">Forgot password?</button>') + "</div></form>"
     );
@@ -2070,7 +2339,8 @@
     } else {
       action =
         '<a class="btn btn-green btn-block" href="' + esc(paymentUrl()) + '">Join for £2 a year</a>' +
-        '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time.</p>' +
+        '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time. By joining you agree to our ' +
+        '<a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>' +
         '<button type="button" class="link-btn mt-3" data-action="recheck-membership">Already paid? Check again</button>';
     }
     if (ui.paymentTimedOut && !ui.confirmingPayment) {
@@ -2153,10 +2423,12 @@
     else if (ui.recovery) html = renderLogin();
     else if (path === "/") html = renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
+    else if (path === "/privacy") html = renderPrivacy();
+    else if (path === "/terms") html = renderTerms();
     else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
-    else if (path === "/check-in") html = member ? renderCheckIn() : renderLocked();
-    else if (path === "/habits") html = member ? renderHabits() : renderLocked();
+    else if (path === "/check-in" || path === "/habits") html = renderHabitsPending();
+    else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
     setNav(parts[0] === "explainer" ? "" : path);
@@ -2167,6 +2439,10 @@
 
   function onRouteChange() {
     closeModal();
+    if (currentPath() === "/friends") {
+      friends.loaded = false;
+      friends.msg = "";
+    }
     ui.commuteOpen = null;
     ui.airport = null;
     if (currentPath() !== "/results") ui.selectedCategory = null;
@@ -2325,6 +2601,9 @@
       if (sb) await sb.auth.signOut();
       currentUser = null;
       membership = null;
+      friends.loaded = false;
+      friends.rows = [];
+      friends.board = [];
       ui.userName = "";
       ui.authMode = "signin";
       // The next person to use this device shouldn't see these answers.
@@ -2358,6 +2637,16 @@
     "clear-habits": () => {
       CATEGORIES.forEach((c) => lsRemove(KEY_HABITS + c));
       render();
+    },
+    "friend-accept": async (el) => {
+      await sb.from("friendships").update({ status: "accepted" }).eq("id", el.dataset.id);
+      friends.loaded = false;
+      await loadFriends();
+    },
+    "friend-remove": async (el) => {
+      await sb.from("friendships").delete().eq("id", el.dataset.id);
+      friends.loaded = false;
+      await loadFriends();
     },
     "delete-account": () => {
       ui.confirmDelete = true;
@@ -2473,6 +2762,21 @@
   });
 
   document.addEventListener("submit", async (e) => {
+    if (e.target.id === "friend-form") {
+      e.preventDefault();
+      addFriend(document.getElementById("friend-email").value);
+      return;
+    }
+    if (e.target.id === "name-form") {
+      e.preventDefault();
+      const name = document.getElementById("display-name").value.trim().slice(0, 40);
+      const { error } = await sb.from("profiles").upsert({ id: currentUser.id, display_name: name });
+      friends.msg = error ? "Couldn't save your name." : "";
+      friends.myName = error ? friends.myName : name;
+      ui.userName = name || ui.userName;
+      render();
+      return;
+    }
     if (e.target.id === "auth-form") {
       e.preventDefault();
       submitAuth();
