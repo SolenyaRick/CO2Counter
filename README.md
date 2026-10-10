@@ -1,4 +1,4 @@
-# EcoImpact (Prototype 2)
+# CO2 Counter (Prototype 2)
 
 A carbon-footprint survey and habit tracker. Answer six short sections
 about your week and it estimates your yearly footprint, shows where it
@@ -18,7 +18,7 @@ untouched.
   meal, eating out, food waste), Daily Commute (distance + mode per day),
   Flight Checklist (airport-to-airport flights with cabin class), Home &
   Water (electricity, gas, green tariff, water, household size), Pets and
-  Banking (savings and which bank holds them). Answers save as you go.
+  Banking & Pension (savings and bank, pension pot and provider). Answers save as you go.
   Finishing the survey records that month's total for the progress list.
 - **Results** (`#/results`): monthly total, comparison with the UK average
   and the 1.5°C budget (2.5 t/yr), a tappable bar chart by category, the
@@ -76,6 +76,23 @@ Then open http://localhost:8000.
 **One-time database step:** in Supabase, open **SQL Editor** and run the
 "EcoImpact (Prototype 2)" section at the end of `supabase/schema.sql`
 (the `survey_responses` and `memberships` parts). It's safe to re-run.
+
+## Pension figures
+
+The Banking & Pension step multiplies the pension pot by the provider's
+default-fund carbon footprint (Scope 1+2 tonnes CO2e per £1m invested,
+from each scheme's own TCFD climate report). The figures and their sources
+are in `PENSION_PROVIDERS` in `data.js`. "Other / not sure" uses the
+average of 20 major UK workplace schemes (Corporate Adviser, 2024). The
+saving assumes a switch to a climate-focused fund like Nest's Ethical Fund
+(21 t per £1m). Providers publish new reports every year, so refresh the
+figures yearly. Not yet included, because no usable current figure could
+be retrieved: Scottish Widows (its site blocks automated downloads),
+Prudential/M&G (report link removed), Cushon and SEI (only 2023 data),
+Mercer, LifeSight, Hargreaves Lansdown, Zurich, Atlas and PensionBee (no
+default-fund figure published or found). The People's Pension figure is
+worked out from its reported reduction, and NOW: Pensions' comes from its
+announcement, because neither report could be downloaded.
 
 ## Payments (£2/year via Stripe)
 

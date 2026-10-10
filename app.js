@@ -1,4 +1,4 @@
-// EcoImpact (Prototype 2): yearly carbon-footprint survey, results,
+// CO2 Counter (Prototype 2): yearly carbon-footprint survey, results,
 // reduction guides, habits and daily check-ins.
 //
 // Ported from the Base44 prototype. People must sign in, and then need an
@@ -288,6 +288,14 @@
   }
 
   const cabinFactor = (key) => factorOf(D.CABINS, key);
+
+  // A pot with no provider picked counts as "other" (the sector average).
+  function pensionProvider(b) {
+    return byKey(D.PENSION_PROVIDERS, b.pensionProvider) || byKey(D.PENSION_PROVIDERS, "other");
+  }
+
+  // kg CO2e per year from a pension pot at a given t CO2e per £1m invested.
+  const pensionKg = (pot, tPerMillion) => ((pot || 0) * tPerMillion) / 1000;
   const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin);
 
   function flightTier(s) {
@@ -404,12 +412,14 @@
 
     const banking = s.banking || {};
     const bank = byKey(D.BANKS, banking.bank);
+    const pension = pensionProvider(banking);
+    const pot = banking.pensionPot || 0;
     items.push({
       key: "banking",
-      label: "Banking",
+      label: "Banking & Pension",
       icon: "🏦",
-      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank),
-      detail: bank ? bank.label : "",
+      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank) + pensionKg(pot, pension.tPerMillion),
+      detail: [bank ? bank.label : "", pot > 0 ? "pension: " + pension.label : ""].filter(Boolean).join(" · "),
     });
 
     const totalYearly = items.reduce((sum, i) => sum + i.yearly, 0);
@@ -572,13 +582,33 @@
         };
       },
       banking: () => {
-        const bank = byKey(D.BANKS, s.banking && s.banking.bank);
+        const b = s.banking || {};
+        const bank = byKey(D.BANKS, b.bank);
         const greenest = D.BANKS[0].factor;
+        const bankSaving = !bank || bank.factor <= greenest ? 0 : (b.amount || 0) * (bank.factor - greenest);
+        const pension = pensionProvider(b);
+        const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
+        const bankBody =
+          "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.";
+        if (pensionSaving > bankSaving) {
+          return {
+            title: "Switch your pension to a climate-focused fund",
+            body:
+              "Your pension is invested in companies, and its share of their emissions counts towards your footprint. Most providers offer an ethical or climate-focused fund alongside the default — Nest's Ethical Fund, for example, is around " +
+              D.GREEN_PENSION_T_PER_MILLION +
+              " t CO₂e per £1m invested against " +
+              pension.tPerMillion +
+              " t for " +
+              (b.pensionProvider && b.pensionProvider !== "other" ? pension.label + "'s default" : "a typical default fund") +
+              ". Ask your provider or HR how to switch; it usually takes a few minutes online." +
+              (bankSaving > 0 ? " " + bankBody : ""),
+            saving: bankSaving + pensionSaving,
+          };
+        }
         return {
           title: "Move your money to a greener bank",
-          body: "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.",
-          saving:
-            !bank || bank.factor <= greenest ? 0 : ((s.banking && s.banking.amount) || 0) * (bank.factor - greenest),
+          body: bankBody + (pensionSaving > 0 ? " Switching your pension to a climate-focused fund helps too." : ""),
+          saving: bankSaving + pensionSaving,
         };
       },
     };
@@ -753,7 +783,7 @@
     { key: "flights", title: "Flight Checklist", subtitle: "Your saved flights", icon: "✈️", render: renderFlightsStep },
     { key: "energy", title: "Home & Water", subtitle: "Energy, gas & water", icon: "⚡", render: renderEnergyStep },
     { key: "pets", title: "Pets", subtitle: "Furry companions", icon: "🐾", render: renderPetsStep },
-    { key: "banking", title: "Banking", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
+    { key: "banking", title: "Banking & Pension", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
   ];
 
   function renderSurvey() {
@@ -976,7 +1006,7 @@
       '<p class="xs muted mt-1">Cuts electricity emissions by up to 80%.</p></div>' +
       '<button type="button" role="switch" aria-checked="' + !!e.greenTariff + '" class="switch' + (e.greenTariff ? " on" : "") +
       '" data-action="toggle-green"><span></span></button></div>' +
-      '<div class="mt-4 max-xl">' + numberCard("Water (liters / month)", "water.liters", w.liters == null ? 0 : w.liters, "A typical person uses ~3,000–5,000 L per month.") + "</div>" +
+      '<div class="mt-4 max-xl">' + numberCard("Water (litres / month)", "water.liters", w.liters == null ? 0 : w.liters, "A typical person uses ~3,000–5,000 L per month.") + "</div>" +
       '<div class="mt-4 max-xl">' +
       numberCard("People in your home", "energy.household", e.household == null ? 2 : e.household, "Energy, water and pet footprints are split across your household.", 1, "w-120") +
       "</div>"
@@ -996,14 +1026,24 @@
 
   function renderBankingStep() {
     const b = survey.banking;
+    const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
     return (
-      '<p class="muted sm mb-6">Your bank finances projects with your deposits — this matters more than people think.</p>' +
+      '<p class="muted sm mb-6">Your bank and pension invest your money in projects and companies — this matters more than people think.</p>' +
       '<div class="grid-2 gap-4 max-xl">' +
       numberCard("Total savings / deposits (£)", "banking.amount", b.amount == null ? 0 : b.amount) +
       '<div class="panel p-5"><label class="sm fw-500">Your bank</label><select class="input mt-2" data-field="banking.bank" data-type="text">' +
       '<option value=""' + (b.bank ? "" : " selected") + " disabled>Select your bank</option>" +
       D.BANKS.map((x) => '<option value="' + x.key + '"' + (x.key === b.bank ? " selected" : "") + ">" + (x.green ? "🌱 " : "") + esc(x.label) + "</option>").join("") +
-      "</select></div></div>"
+      "</select></div></div>" +
+      '<p class="sm fw-500 mt-8 mb-1">Your pension</p><p class="xs muted mb-4">Add up your workplace and personal pension pots. Leave it at 0 if you don\'t have one.</p>' +
+      '<div class="grid-2 gap-4 max-xl">' +
+      numberCard("Pension pot (£)", "banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot) +
+      '<div class="panel p-5"><label class="sm fw-500">Pension provider</label><select class="input mt-2" data-field="banking.pensionProvider" data-type="text" data-rerender="1">' +
+      '<option value=""' + (b.pensionProvider ? "" : " selected") + " disabled>Select your provider</option>" +
+      D.PENSION_PROVIDERS.map((x) => '<option value="' + x.key + '"' + (x.key === b.pensionProvider ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
+      "</select>" +
+      (pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "") +
+      "</div></div>"
     );
   }
 
@@ -1269,7 +1309,7 @@
     const pct = Math.round(totals.pctOfTarget);
     return {
       executiveSummary: {
-        text: "This will be one of the most impactful changes, for the least amount of effort. The reason being it does not require you to change anything about your day to day life, but rather stop doing things in your day-to-day life. However, it is a lot easier said then done. The introduction largely explains why we need to reduce flights but to make it more understandable I have put some more metrics below.",
+        text: "This will be one of the most impactful changes, for the least amount of effort. The reason being it does not require you to change anything about your day to day life, but rather stop doing things in your day-to-day life. However, it is a lot easier said than done. The introduction largely explains why we need to reduce flights but to make it more understandable I have put some more metrics below.",
         reminder: "Remember, 1 less flight a year, no matter how many you take is an important step in the right direction!",
       },
       userTier: tier.tier,
@@ -1352,7 +1392,7 @@
       text:
         "This may not be most impactful for your entire footprint, due to longer haul flights that cannot be replaced by train. What is important is that 1 short-haul flight replaced by yourself vs one short-haul flight replaced by someone that barely flies still has the same impact for the planet!\n" +
         "According to independently-commissioned figures, EuroStar reports a return journey from London-to-Paris is ~4kg CO₂ per person, whereas a flight is ~123kg CO₂. 97% less! But also, less than most meat-based meals. If we again compare this to our 1.5°C target per year, 4kg = 0.16% whereas 123kg = 4.92%. What a difference!\n" +
-        "Here are some more equivalence figures, for you stats nerds below.",
+        "Here are some more equivalence figures below, for the stats nerds.",
       rows: [{ label: "London → Paris (return)", flightKg: PARIS_FLIGHT_KG, trainKg: PARIS_TRAIN_KG }].concat(rows),
       equivalents: [
         { type: "target", category: "1.5°C target", icon: "Target", sub: "CO₂ emissions / 2,500 kg yearly target" },
@@ -1579,7 +1619,7 @@
     else {
       const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
       plan =
-        '<p class="fw-600">EcoImpact membership · £2 a year</p><p class="sm muted">' +
+        '<p class="fw-600">CO2 Counter membership · £2 a year</p><p class="sm muted">' +
         (m.status === "active" && until ? "Renews on " + esc(until) + "." : until ? "Access until " + esc(until) + "." : "Active.") +
         "</p>" +
         (STRIPE_PORTAL_URL && !isNativeApp()
@@ -1687,7 +1727,7 @@
   function gateShell(title, subtitle, body) {
     return (
       '<div class="gate"><div class="gate-card fade-up"><div class="gate-brand"><span class="page-badge">' + icon("leaf") +
-      '</span><span class="brand-name lg">EcoImpact</span></div><h1 class="gate-title">' + esc(title) + "</h1>" +
+      '</span><span class="brand-name lg">CO2 Counter</span></div><h1 class="gate-title">' + esc(title) + "</h1>" +
       (subtitle ? '<p class="sm muted mb-5">' + esc(subtitle) + "</p>" : "") + body + "</div></div>"
     );
   }
@@ -1741,7 +1781,7 @@
       "Your answers saved across all your devices",
     ];
     return gateShell(
-      "Join EcoImpact",
+      "Join CO2 Counter",
       "Signed in as " + (currentUser.email || ""),
       '<div class="price"><span class="price-num">£2</span><span class="muted"> / year</span></div><ul class="perks">' +
         perks.map((p) => "<li>" + icon("check") + "<span>" + esc(p) + "</span></li>").join("") +

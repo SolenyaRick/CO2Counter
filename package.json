@@ -1,7 +1,7 @@
 {
   "name": "co2-tracker",
   "version": "1.0.0",
-  "description": "EcoImpact (Prototype 2) - static web app wrapped for iOS via Capacitor",
+  "description": "CO2 Counter (Prototype 2) - static web app wrapped for iOS via Capacitor",
   "private": true,
   "scripts": {
     "build:web": "sh scripts/sync-web.sh",
