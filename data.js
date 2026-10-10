@@ -46,7 +46,37 @@
   "Sun"
 ];
   const WEEKS_PER_YEAR = 4.33 * 12; // matches the Base44 monthly figures x12
-  const UK_AVERAGE_YEARLY = 400.83 * 12; // kg CO2e / year (~4.8 t)
+  // A typical UK resident's answers to this survey, so the "UK average"
+  // comparison runs through the same factors and covers only what the
+  // survey measures (no shopping, services, coffee, alcohol...). Banking
+  // and pensions are left out of the comparison: there's no reliable
+  // per-person UK figure for savings by bank or pension provider.
+  //  - Home energy: Ofgem typical consumption (2,500 kWh electricity,
+  //    9,500 kWh gas a year, 2026 revision), 2.4 people per household
+  //    (ONS mid-2024: 69.3m people / 28.6m households).
+  //  - Water: 140 L per person per day (Consumer Council for Water, 2023).
+  //  - Commuting: 1,007 miles per person per year (DfT National Travel
+  //    Survey 2024), about 3/4 by car (NTS: 76% of all miles are by car),
+  //    modelled as a 3.1 km trip each weekday, four days by car, one by
+  //    train.
+  //  - Flights: 94.6m visits abroad by UK residents in 2024 (ONS Travel
+  //    trends) for 69.3m people, most by air: about one return European
+  //    flight each, modelled as London-Barcelona and back in economy.
+  //  - Pets: 15.5m dogs and 13.1m cats (UK Pet Food 2026) for 69.3m people.
+  //  - Food: no official "main meal per day" data exists, so this is an
+  //    assumed typical meat-eating week: two chicken, one beef, one pork,
+  //    one fish and two vegetarian days, eating out once, some food waste.
+  const UK_TYPICAL_SURVEY = {
+    meals: { diet: "meat_eater", eatOut: 1, foodWaste: "some", Mon: "chicken", Tue: "veggie", Wed: "chicken", Thu: "beef", Fri: "fish", Sat: "pork", Sun: "veggie" },
+    commute: { distance: 3.1, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
+    flights: [{ from: "LHR", to: "BCN", cabin: "economy" }, { from: "BCN", to: "LHR", cabin: "economy" }],
+    energy: { electricityKwh: 2500 / 12, gasKwh: 9500 / 12, greenTariff: false, household: 2.4 },
+    water: { liters: 140 * 30.4 * 2.4 },
+    pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
+    banking: { amount: 0, bank: "", pensionPot: 0, pensionProvider: "" },
+  };
+  // Categories used in the UK comparison (everything except banking).
+  const UK_COMPARISON_KEYS = ["meals", "commute", "flights", "energy", "water", "pets"];
   const BUDGET_YEARLY = 2500; // 1.5°C budget, kg CO2e / year
   const ELECTRICITY_FACTOR = 0.22687; // kg / kWh, standard grid
   const GREEN_ELECTRICITY_FACTOR = 0.04;
@@ -1569,7 +1599,7 @@
 ];
 
   window.ECO_DATA = {
-    DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_AVERAGE_YEARLY,
+    DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
