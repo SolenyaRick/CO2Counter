@@ -1971,3 +1971,316 @@ label {
   border-color: var(--em-400);
   background: var(--em-50);
 }
+
+/* =====================================================================
+   Sleek theme (Oct 2026). Paper background, deep pine green with a
+   leaf accent, bold sans headings, small monospace labels, pill buttons and
+   line icons in tinted tiles instead of emojis. Everything
+   above still sets layout; this block only restyles. Colours go through
+   the variables, so the emerald scale below is now a pine scale.
+   ===================================================================== */
+
+/* CO2 Counter palette
+     Pine        #12403a  header, footer, primary buttons, headings
+     Deep pine   #0a2a26  gradients, pressed states
+     Moss        #2c7a5e  progress bars, chart lead colour
+     Leaf        #c4e57d  accent: active nav, logo tile, highlights
+     Mist        #ecf4f0  icon tiles, soft callouts
+     Paper       #f6f5ef  page background
+     Ink         #10241f  body text
+     Sun         #dca23a  warnings, "coming soon"
+     Clay        #d0574a  above-average, delete */
+
+:root {
+  --bg: #f6f5ef;
+  --fg: #10241f;
+  --card: #fffffb;
+  --muted: #eeede5;
+  --muted-fg: #5a6863;
+  --border: #e3e2d8;
+  --input: #d6d5c9;
+  --em-50: #ecf4f0;
+  --em-100: #d6e9e0;
+  --em-200: #b3d4c5;
+  --em-300: #84b8a1;
+  --em-400: #4f9478;
+  --em-500: #2c7a5e;
+  --em-600: #12403a;
+  --em-700: #0d3530;
+  --em-800: #0a2a26;
+  --leaf: #c4e57d;
+  --leaf-strong: #b2db5c;
+  --forest-grad: linear-gradient(150deg, #1d5a4f 0%, #12403a 45%, #0c302b 100%);
+  --shadow: 0 1px 2px rgba(18, 38, 30, 0.04);
+  --shadow-md: 0 10px 30px -14px rgba(18, 38, 30, 0.25);
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  --display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  background: var(--bg);
+}
+
+::selection {
+  background: var(--leaf);
+  color: var(--em-800);
+}
+
+/* serif display type */
+.page-head h1,
+.step-title,
+.explainer-title,
+.tip-title,
+.soon-title,
+.modal-title,
+.card-title,
+.big-number .num,
+.price-num,
+.stat,
+.stat-num,
+.method h2,
+.legal h2 {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.page-head h1 { font-size: 26px; line-height: 1.15; color: var(--em-600); }
+.step-title { font-size: 26px; color: var(--em-600); }
+.explainer-title { font-size: 32px; color: var(--em-600); }
+.tip-title { font-size: 28px; line-height: 1.2; }
+.card-title { font-size: 21px; }
+.big-number .num { font-size: 56px; font-weight: 700; letter-spacing: -0.04em; }
+
+/* monospace labels */
+.eyebrow,
+.eyebrow-sm,
+.eyebrow-xs {
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+}
+
+.eyebrow { font-size: 12px; }
+.eyebrow-sm { font-size: 11px; }
+.eyebrow-xs { font-size: 10px; }
+
+/* header: deep forest band */
+.topbar {
+  background: rgba(18, 64, 58, 0.97);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fffdf9;
+}
+
+.topbar-inner { height: 60px; }
+
+.brand-mark {
+  background: var(--leaf);
+  color: var(--em-700);
+  border-radius: 9px;
+}
+
+.brand-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.nav a {
+  font-size: 13px;
+  padding: 7px 12px;
+  color: rgba(255, 253, 249, 0.72);
+}
+
+.nav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fffdf9;
+}
+
+.nav a.active {
+  background: var(--leaf);
+  color: var(--em-700);
+}
+
+/* page badge next to titles */
+.page-badge,
+.round-badge {
+  background: var(--em-600);
+  color: var(--leaf);
+}
+
+/* cards */
+.card,
+.survey-card {
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+.survey-card { padding: 28px; }
+
+.panel,
+.section-card,
+.cat-row,
+.option-card,
+.month-row,
+.friend-row {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.section-card:hover,
+.section-card:focus-visible,
+.option-card:hover {
+  border-color: var(--em-300);
+  box-shadow: var(--shadow-md);
+}
+
+.card.callout {
+  border-color: var(--em-200);
+  background: linear-gradient(to bottom right, var(--em-50), var(--card));
+}
+
+.panel.green { background: var(--em-50); }
+
+/* results hero: dark forest card with a leaf hairline on top */
+.card.hero {
+  background: var(--forest-grad);
+  border: 0;
+  color: #fffdf9;
+  box-shadow: 0 24px 50px -28px rgba(10, 42, 38, 0.7);
+}
+
+.card.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--leaf), transparent);
+}
+
+.card.hero .glow { background: rgba(196, 229, 125, 0.12); }
+.card.hero .muted,
+.card.hero .big-number .unit { color: rgba(255, 253, 249, 0.68); }
+.card.hero .green,
+.card.hero .green-dark { color: var(--leaf); }
+.card.hero .red { color: #ffb4a6; }
+.card.hero .stat-pill {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fffdf9;
+}
+.card.hero .stat-pill.solid {
+  background: var(--leaf);
+  color: var(--em-700);
+}
+.card.hero .btn-outline {
+  background: transparent;
+  color: #fffdf9;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* buttons: pills */
+.btn { border-radius: 999px; padding: 0 18px; }
+.btn-sm { padding: 0 14px; }
+
+.btn-green {
+  background: var(--em-600);
+  color: #fffdf9;
+  box-shadow: 0 10px 22px -12px rgba(18, 64, 58, 0.8);
+}
+
+.btn-green:hover { background: var(--em-500); }
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--input);
+  box-shadow: none;
+}
+
+.btn-outline:hover { background: var(--muted); }
+
+.icon-btn { border-radius: 999px; }
+
+.input,
+.xs-input,
+.picker-btn {
+  background: #fffefb;
+  border-color: var(--input);
+  border-radius: 12px;
+}
+
+/* survey chips & progress */
+.step-chip { background: transparent; }
+.step-chip.current {
+  border-color: var(--em-600);
+  background: var(--em-600);
+  color: #fffdf9;
+}
+
+.progress { background: var(--muted); }
+
+/* footer: forest band like the header */
+.site-footer {
+  margin-top: 40px;
+  padding: 28px 16px calc(28px + env(safe-area-inset-bottom));
+  background: var(--em-600);
+}
+
+.site-footer a,
+.site-footer .footer-sep { color: rgba(255, 253, 249, 0.75); }
+.site-footer a:hover { color: #fffdf9; }
+
+@media (min-width: 640px) {
+  .page-head h1 { font-size: 36px; }
+  .brand-name { font-size: 21px; }
+  .step-title { font-size: 30px; }
+  .big-number .num { font-size: 64px; }
+}
+
+/* ---------- line icons in tiles (replacing emojis) ---------- */
+
+.icon.glyph { width: 1em; height: 1em; }
+
+.emoji-xl,
+.emoji-lg,
+.emoji-md2,
+.emoji-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--em-50);
+  color: var(--em-600);
+  line-height: 1;
+}
+
+.emoji-xl { width: 56px; height: 56px; font-size: 28px; }
+.emoji-lg { width: 48px; height: 48px; font-size: 24px; border-radius: 12px; }
+.emoji-md2 { width: 40px; height: 40px; font-size: 20px; border-radius: 12px; }
+.emoji-row { width: 36px; height: 36px; font-size: 18px; border-radius: 10px; }
+.emoji-md { font-size: 18px; color: var(--em-600); display: inline-flex; }
+
+.option-card.selected .emoji-lg,
+.option-card.selected .emoji-md2,
+.option-card.active .emoji-lg,
+.option-card.active .emoji-md2 {
+  background: var(--em-600);
+  color: var(--leaf);
+}
+
+.cmp-emoji { font-size: 18px; display: inline-flex; color: var(--muted-fg); }
+.icon-row { color: var(--em-500); }
+.icon-row .icon.glyph { width: 16px; height: 16px; }
+
+.dot-ind {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+}
