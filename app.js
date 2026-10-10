@@ -288,6 +288,14 @@
   }
 
   const cabinFactor = (key) => factorOf(D.CABINS, key);
+
+  // A pot with no provider picked counts as "other" (the sector average).
+  function pensionProvider(b) {
+    return byKey(D.PENSION_PROVIDERS, b.pensionProvider) || byKey(D.PENSION_PROVIDERS, "other");
+  }
+
+  // kg CO2e per year from a pension pot at a given t CO2e per £1m invested.
+  const pensionKg = (pot, tPerMillion) => ((pot || 0) * tPerMillion) / 1000;
   const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin);
 
   function flightTier(s) {
@@ -404,12 +412,14 @@
 
     const banking = s.banking || {};
     const bank = byKey(D.BANKS, banking.bank);
+    const pension = pensionProvider(banking);
+    const pot = banking.pensionPot || 0;
     items.push({
       key: "banking",
-      label: "Banking",
+      label: "Banking & Pension",
       icon: "🏦",
-      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank),
-      detail: bank ? bank.label : "",
+      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank) + pensionKg(pot, pension.tPerMillion),
+      detail: [bank ? bank.label : "", pot > 0 ? "pension: " + pension.label : ""].filter(Boolean).join(" · "),
     });
 
     const totalYearly = items.reduce((sum, i) => sum + i.yearly, 0);
@@ -572,13 +582,33 @@
         };
       },
       banking: () => {
-        const bank = byKey(D.BANKS, s.banking && s.banking.bank);
+        const b = s.banking || {};
+        const bank = byKey(D.BANKS, b.bank);
         const greenest = D.BANKS[0].factor;
+        const bankSaving = !bank || bank.factor <= greenest ? 0 : (b.amount || 0) * (bank.factor - greenest);
+        const pension = pensionProvider(b);
+        const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
+        const bankBody =
+          "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.";
+        if (pensionSaving > bankSaving) {
+          return {
+            title: "Switch your pension to a climate-focused fund",
+            body:
+              "Your pension is invested in companies, and its share of their emissions counts towards your footprint. Most providers offer an ethical or climate-focused fund alongside the default — Nest's Ethical Fund, for example, is around " +
+              D.GREEN_PENSION_T_PER_MILLION +
+              " t CO₂e per £1m invested against " +
+              pension.tPerMillion +
+              " t for " +
+              (b.pensionProvider && b.pensionProvider !== "other" ? pension.label + "'s default" : "a typical default fund") +
+              ". Ask your provider or HR how to switch; it usually takes a few minutes online." +
+              (bankSaving > 0 ? " " + bankBody : ""),
+            saving: bankSaving + pensionSaving,
+          };
+        }
         return {
           title: "Move your money to a greener bank",
-          body: "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.",
-          saving:
-            !bank || bank.factor <= greenest ? 0 : ((s.banking && s.banking.amount) || 0) * (bank.factor - greenest),
+          body: bankBody + (pensionSaving > 0 ? " Switching your pension to a climate-focused fund helps too." : ""),
+          saving: bankSaving + pensionSaving,
         };
       },
     };
@@ -753,7 +783,7 @@
     { key: "flights", title: "Flight Checklist", subtitle: "Your saved flights", icon: "✈️", render: renderFlightsStep },
     { key: "energy", title: "Home & Water", subtitle: "Energy, gas & water", icon: "⚡", render: renderEnergyStep },
     { key: "pets", title: "Pets", subtitle: "Furry companions", icon: "🐾", render: renderPetsStep },
-    { key: "banking", title: "Banking", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
+    { key: "banking", title: "Banking & Pension", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
   ];
 
   function renderSurvey() {
@@ -996,14 +1026,24 @@
 
   function renderBankingStep() {
     const b = survey.banking;
+    const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
     return (
-      '<p class="muted sm mb-6">Your bank finances projects with your deposits — this matters more than people think.</p>' +
+      '<p class="muted sm mb-6">Your bank and pension invest your money in projects and companies — this matters more than people think.</p>' +
       '<div class="grid-2 gap-4 max-xl">' +
       numberCard("Total savings / deposits (£)", "banking.amount", b.amount == null ? 0 : b.amount) +
       '<div class="panel p-5"><label class="sm fw-500">Your bank</label><select class="input mt-2" data-field="banking.bank" data-type="text">' +
       '<option value=""' + (b.bank ? "" : " selected") + " disabled>Select your bank</option>" +
       D.BANKS.map((x) => '<option value="' + x.key + '"' + (x.key === b.bank ? " selected" : "") + ">" + (x.green ? "🌱 " : "") + esc(x.label) + "</option>").join("") +
-      "</select></div></div>"
+      "</select></div></div>" +
+      '<p class="sm fw-500 mt-8 mb-1">Your pension</p><p class="xs muted mb-4">Add up your workplace and personal pension pots. Leave it at 0 if you don\'t have one.</p>' +
+      '<div class="grid-2 gap-4 max-xl">' +
+      numberCard("Pension pot (£)", "banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot) +
+      '<div class="panel p-5"><label class="sm fw-500">Pension provider</label><select class="input mt-2" data-field="banking.pensionProvider" data-type="text" data-rerender="1">' +
+      '<option value=""' + (b.pensionProvider ? "" : " selected") + " disabled>Select your provider</option>" +
+      D.PENSION_PROVIDERS.map((x) => '<option value="' + x.key + '"' + (x.key === b.pensionProvider ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
+      "</select>" +
+      (pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "") +
+      "</div></div>"
     );
   }
 

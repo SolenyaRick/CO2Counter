@@ -30,7 +30,9 @@
   },
   "banking": {
     "amount": 5000,
-    "bank": ""
+    "bank": "",
+    "pensionPot": 0,
+    "pensionProvider": ""
   }
 };
 
@@ -802,6 +804,24 @@
   }
 ];
 
+  // Workplace pension providers' default-fund carbon footprint: Scope 1+2
+  // tonnes CO2e per £1m invested, from each scheme's own climate (TCFD)
+  // report. Most figures cover listed equities and bonds only. "other" is
+  // the average across 20 major UK workplace schemes. Add a provider only
+  // with a figure from its latest report, and update these each year.
+  const PENSION_PROVIDERS = [
+    { key: "fidelity", label: "Fidelity Master Trust", tPerMillion: 29.3, source: "Fidelity Master Trust TCFD report 2025 (FutureWise target date funds, Dec 2024)" },
+    { key: "peoples", label: "The People's Pension", tPerMillion: 31.3, source: "The People's Pension TCFD report 2024 (Global Investments fund; 53% cut = 35.3 t, so ~31.3 t remaining)" },
+    { key: "nest", label: "Nest", tPerMillion: 32.7, source: "Nest TCFD report 2024/25 (default strategy, Mar 2025)" },
+    { key: "standard_life", label: "Standard Life", tPerMillion: 34.2, source: "Standard Life DC Master Trust TCFD report 2026 (listed equity & credit, 2025)" },
+    { key: "uss", label: "USS (universities)", tPerMillion: 44.2, source: "USS TCFD report 2025 (non-sovereign assets, Dec 2024)" },
+    { key: "now", label: "NOW: Pensions", tPerMillion: 52.0, source: "NOW: Pensions TCFD report 2024" },
+    { key: "other", label: "Other / not sure", tPerMillion: 61.1, source: "Corporate Adviser ESG in DC Pensions Report 2024 (average of 20 master trusts and GPPs)" },
+  ];
+  // A climate-focused pension fund, used to size the "switch fund" saving:
+  // Nest Ethical Fund, Scope 1+2 (Nest TCFD report 2024/25).
+  const GREEN_PENSION_T_PER_MILLION = 21;
+
   // Per-category "why / how to reduce" content and suggested habits.
   const EXPLAINERS = {
   "meals": {
@@ -1128,7 +1148,7 @@
     ]
   },
   "banking": {
-    "title": "Banking",
+    "title": "Banking & Pension",
     "icon": "🏦",
     "why": "Your savings don't just sit in a vault — banks lend them out, and many finance fossil-fuel projects. This 'financed emission' can be one of your largest hidden contributions. Moving your money is a one-time action with a big ongoing effect.",
     "sections": [
@@ -1546,7 +1566,8 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, CABINS, AIRPORTS, BANKS, EXPLAINERS, FLIGHT_TIERS,
+    COMMUTE_MODES, CABINS, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };
 })();
