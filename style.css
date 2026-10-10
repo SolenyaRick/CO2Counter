@@ -580,6 +580,10 @@ label {
   background: var(--em-500);
 }
 
+.progress > div.deep {
+  background: var(--em-800);
+}
+
 .progress > div.grey {
   background: rgba(115, 115, 115, 0.7);
 }
