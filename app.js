@@ -256,6 +256,8 @@
       pets: { ...d.pets, ...(s.pets || {}) },
       banking: { ...d.banking, ...(s.banking || {}) },
       flights: Array.isArray(s.flights) ? s.flights : [],
+      extraTravel: Array.isArray(s.extraTravel) ? s.extraTravel : [],
+      longTrips: Array.isArray(s.longTrips) ? s.longTrips : [],
     };
   }
 
@@ -469,12 +471,13 @@
       (sum, day) => sum + factorOf(D.COMMUTE_MODES, commute[day]) * (commute.distance || 0) * 2,
       0
     );
+    const otherYearly = extraTravelYearly(s) + longTripsYearly(s);
     items.push({
       key: "commute",
       label: "Commute & Travel",
       icon: "🚗",
-      yearly: commuteWeekly * D.WEEKS_PER_YEAR,
-      detail: "~" + commuteWeekly.toFixed(1) + " kg CO₂e per week",
+      yearly: commuteWeekly * D.WEEKS_PER_YEAR + otherYearly,
+      detail: "~" + commuteWeekly.toFixed(1) + " kg CO₂e per week commuting" + (otherYearly > 0 ? " · " + Math.round(otherYearly) + " kg other travel" : ""),
     });
 
     const flights = s.flights || [];
@@ -653,8 +656,12 @@
         const long = distance > ACTIVE_TRAVEL_MAX_KM;
         const replacement = long ? publicTransportFactor() : 0;
         const perDay = (mode) => Math.max(0, factorOf(D.COMMUTE_MODES, mode) - replacement) * distance * 2;
+        // Long journeys by car: the realistic swap is the train.
+        const trainF = travelFactor("train");
+        const carTrips = (s.longTrips || []).filter((x) => MOTOR_MODES.includes(x.mode));
+        const tripSaving = carTrips.reduce((t, x) => t + Math.max(0, longTripKg(x) - trainF * (Number(x.km) || 0) * (x.returnTrip ? 2 : 1)), 0);
         const saving =
-          DAYS.filter((d) => MOTOR_MODES.includes(c[d])).reduce((sum, d) => sum + perDay(c[d]), 0) * D.WEEKS_PER_YEAR;
+          DAYS.filter((d) => MOTOR_MODES.includes(c[d])).reduce((sum, d) => sum + perDay(c[d]), 0) * D.WEEKS_PER_YEAR + tripSaving;
         return {
           title: "Rethink your daily commute",
           body: long
@@ -662,8 +669,8 @@
             : "Driving is one of the largest personal emission sources. For a commute of 10 km or less, walking or cycling instead of driving removes those emissions completely — an e-bike makes longer or hillier trips easy.",
           saving,
           maxSaving: categoryYearly("commute", s),
-          realisticLabel: long ? "train or bus on driving days" : "walking or cycling on driving days",
-          maxLabel: "no commuting emissions, by working from home or walking and cycling",
+          realisticLabel: (long ? "train or bus on driving days" : "walking or cycling on driving days") + (tripSaving > 0 ? ", and the train for long journeys you drive" : ""),
+          maxLabel: "no travel emissions, by working from home, walking and cycling, and holidaying closer to home",
         };
       },
       // Flying is optional, so the potential saving is all of it: what you'd
@@ -801,6 +808,13 @@
   function publicTransportFactor() {
     return (factorOf(D.COMMUTE_MODES, "train") + factorOf(D.COMMUTE_MODES, "bus")) / 2;
   }
+
+  // Travel outside the commute: regular weekly trips (km a week) and long
+  // journeys (km one way, doubled for a return).
+  const travelFactor = (mode) => factorOf(D.TRAVEL_MODES, mode);
+  const extraTravelYearly = (s) => (s.extraTravel || []).reduce((t, x) => t + travelFactor(x.mode) * (Number(x.km) || 0), 0) * D.WEEKS_PER_YEAR;
+  const longTripKg = (x) => travelFactor(x.mode) * (Number(x.km) || 0) * (x.returnTrip ? 2 : 1);
+  const longTripsYearly = (s) => (s.longTrips || []).reduce((t, x) => t + longTripKg(x), 0);
 
   function categoryYearly(key, s) {
     const item = footprint(s).breakdown.find((b) => b.key === key);
@@ -999,7 +1013,7 @@
 
   const STEPS = [
     { key: "meals", title: "Weekly Meals", subtitle: "What you eat, day by day", icon: "🍽️", render: renderMealsStep },
-    { key: "commute", title: "Daily Commute", subtitle: "How you get around", icon: "🚗", render: renderCommuteStep },
+    { key: "commute", title: "Commute & Travel", subtitle: "How you get around", icon: "🚗", render: renderCommuteStep },
     { key: "flights", title: "Flight Checklist", subtitle: "Your saved flights", icon: "✈️", render: renderFlightsStep },
     { key: "energy", title: "Home & Water", subtitle: "Energy, gas & water", icon: "⚡", render: renderEnergyStep },
     { key: "pets", title: "Pets", subtitle: "Furry companions", icon: "🐾", render: renderPetsStep },
@@ -1153,7 +1167,63 @@
       }
       return row;
     }).join("");
-    return html + "</div>";
+    return html + "</div>" + renderExtraTravel() + renderLongTrips();
+  }
+
+  function travelModeSelect(kind, i, value) {
+    return (
+      '<select class="input mt-1" data-travel="' + kind + '" data-index="' + i + '" data-key="mode">' +
+      D.TRAVEL_MODES.map((m) => '<option value="' + m.key + '"' + (m.key === value ? " selected" : "") + ">" + esc(m.label) + "</option>").join("") +
+      "</select>"
+    );
+  }
+
+  function renderExtraTravel() {
+    const rows = survey.extraTravel
+      .map((x, i) => {
+        const kg = travelFactor(x.mode) * (Number(x.km) || 0);
+        return (
+          '<div class="travel-row"><div class="grow minw-160"><label class="xs">How</label>' + travelModeSelect("extra", i, x.mode) + "</div>" +
+          '<div class="w-150"><label class="xs">km per week</label><input class="input mt-1" type="number" min="0" value="' + esc(x.km || 0) +
+          '" data-travel="extra" data-index="' + i + '" data-key="km" /></div>' +
+          '<div class="travel-kg xs muted">' + (kg > 0 ? kg.toFixed(1) + " kg CO₂e / week" : "") + "</div>" +
+          '<button type="button" class="icon-btn danger-hover" data-action="remove-travel" data-kind="extra" data-index="' + i + '" aria-label="Remove">' + icon("trash") + "</button></div>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="panel p-5 mt-8"><h3 class="sm fw-600">Other travel each week</h3>' +
+      '<p class="xs muted mt-1 mb-4">Regular trips outside your commute, like the school run, the weekly shop or visiting family. Add a rough total distance for the week.</p>' +
+      '<div class="stack-3">' + rows + "</div>" +
+      '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="add-travel" data-kind="extra">' + icon("plus") + " Add weekly travel</button></div>"
+    );
+  }
+
+  function renderLongTrips() {
+    const rows = survey.longTrips
+      .map((x, i) => {
+        const kg = longTripKg(x);
+        return (
+          '<div class="panel p-4"><div class="travel-row">' +
+          '<div class="grow minw-160"><label class="xs">Journey</label><input class="input mt-1" type="text" maxlength="60" placeholder="e.g. Train to Devon" value="' + esc(x.label || "") +
+          '" data-travel="long" data-index="' + i + '" data-key="label" /></div>' +
+          '<div class="grow minw-160"><label class="xs">How</label>' + travelModeSelect("long", i, x.mode) + "</div>" +
+          '<div class="w-150"><label class="xs">km one way</label><input class="input mt-1" type="number" min="0" value="' + esc(x.km || 0) +
+          '" data-travel="long" data-index="' + i + '" data-key="km" /></div>' +
+          '<button type="button" class="icon-btn danger-hover" data-action="remove-travel" data-kind="long" data-index="' + i + '" aria-label="Remove">' + icon("trash") + "</button></div>" +
+          '<div class="row-between mt-3"><label class="check-label"><input type="checkbox"' + (x.returnTrip ? " checked" : "") +
+          ' data-travel="long" data-index="' + i + '" data-key="returnTrip" /> Return trip</label>' +
+          '<span class="sm fw-500">' + (kg > 0 ? Math.round(kg) + " kg CO₂e" : "") + "</span></div></div>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="panel p-5 mt-4"><h3 class="sm fw-600">Long journeys each year</h3>' +
+      '<p class="xs muted mt-1 mb-4">Trips by land, like a train to Devon or Spain, or a drive to Scotland. Flights go in the next step. ' +
+      "Rough distances from London: Devon ~300 km, Manchester ~300 km, Edinburgh ~650 km, Paris ~460 km, Barcelona ~1,500 km.</p>" +
+      '<div class="stack-3">' + rows + "</div>" +
+      '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="add-travel" data-kind="long">' + icon("plus") + " Add a journey</button></div>"
+    );
   }
 
   function airportPicker(index, field, value, placeholder) {
@@ -1754,7 +1824,7 @@
         "<p>Seven areas of everyday life:</p>" +
           list([
             "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
-            "<strong>Commuting</strong>: how you travel to work each day and how far, counting the journey there and back",
+            "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land",
             "<strong>Flights</strong>: each flight's distance between airports and the cabin class",
             "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
             "<strong>Water</strong>: household water use, shared across your household",
@@ -1808,7 +1878,7 @@
           "<p>Realistic changes:</p>" +
           list([
             "Flights: if you take several long-haul flights, keeping one in economy; swapping a single long-haul trip for a short-haul one; and taking the train for short-haul trips, keeping one short-haul flight if you take three or more",
-            "Commuting: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones",
+            "Commute and travel: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones, and the train for long journeys you'd otherwise drive",
             "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
             "Home energy: switching to a renewable electricity tariff",
             "Water and pets: using less water, and choosing lower-impact pet food",
@@ -1817,7 +1887,7 @@
           "<p>Going all the way:</p>" +
           list([
             "Flights: not flying",
-            "Commuting: no commuting emissions, by working from home or walking and cycling",
+            "Commute and travel: no travel emissions, by working from home, walking and cycling, and holidaying closer to home",
             "Food: a fully plant-based diet with little waste",
             "Home energy: a renewable tariff plus a heat pump instead of gas",
             "Water and pets: bigger cuts in water use, and alternative-protein pet food",
@@ -2619,6 +2689,19 @@
       surveyChanged();
       render();
     },
+    "add-travel": (el) => {
+      if (el.dataset.kind === "extra") survey.extraTravel = survey.extraTravel.concat({ mode: "car_petrol", km: 0 });
+      else survey.longTrips = survey.longTrips.concat({ label: "", mode: "train", km: 0, returnTrip: true });
+      surveyChanged();
+      render();
+    },
+    "remove-travel": (el) => {
+      const i = Number(el.dataset.index);
+      const key = el.dataset.kind === "extra" ? "extraTravel" : "longTrips";
+      survey[key] = survey[key].filter((_, idx) => idx !== i);
+      surveyChanged();
+      render();
+    },
     "add-flight": () => {
       survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", returnTrip: true, date: new Date().toISOString().slice(0, 10) });
       surveyChanged();
@@ -2873,6 +2956,14 @@
       const i = Number(t.dataset.flight);
       const value = t.type === "checkbox" ? t.checked : t.value;
       survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: value } : f));
+      surveyChanged();
+      render();
+    } else if (t.dataset.travel) {
+      const key = t.dataset.travel === "extra" ? "extraTravel" : "longTrips";
+      const i = Number(t.dataset.index);
+      const f = t.dataset.key;
+      const value = t.type === "checkbox" ? t.checked : f === "km" ? Math.max(0, Number(t.value) || 0) : t.value;
+      survey[key] = survey[key].map((x, idx) => (idx === i ? { ...x, [f]: value } : x));
       surveyChanged();
       render();
     } else if (t.dataset.goal) {

@@ -14,6 +14,8 @@
   "commute": {
     "distance": 10
   },
+  "extraTravel": [],
+  "longTrips": [],
   "flights": [],
   "energy": {
     "electricityKwh": 200,
@@ -259,11 +261,11 @@
   },
   {
     "key": "ev",
-    // DESNZ 2025 battery electric average car: 0.04047 (electricity
+    // DESNZ 2026 battery electric average car: 0.02951 (electricity
     // incl. T&D) + 0.01049 (well-to-tank) kg CO2e/km.
     "label": "Electric car",
     "emoji": "⚡",
-    "factor": 0.05096
+    "factor": 0.04
   },
   {
     "key": "car_petrol",
@@ -284,7 +286,16 @@
     "factor": 0.118
   }
 ];
-  // Flight factors: DESNZ 2025 conversion factors, kg CO2e per passenger km,
+  // Modes for travel outside the daily commute (extra weekly travel and
+  // long journeys): the motorised commute modes plus coach and
+  // international rail. DESNZ 2026, kg CO2e per passenger km, including
+  // well-to-tank.
+  const TRAVEL_MODES = COMMUTE_MODES.filter((m) => m.factor > 0).concat([
+    { key: "coach", label: "Coach", emoji: "🚌", factor: 0.03948 + 0.00656 },
+    { key: "intl_rail", label: "International train", emoji: "🚆", factor: 0.01135 + 0.00117 },
+  ]);
+
+  // Flight factors: DESNZ 2026 conversion factors (unchanged from 2025), kg CO2e per passenger km,
   // with radiative forcing, plus well-to-tank (fuel production). Short-haul
   // has no premium or first class in DESNZ, so those use economy and
   // business. Domestic UK flights use DESNZ's average passenger figure.
@@ -1605,7 +1616,7 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, CABINS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    COMMUTE_MODES, TRAVEL_MODES, CABINS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };

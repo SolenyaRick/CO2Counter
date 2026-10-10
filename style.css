@@ -2294,3 +2294,22 @@ body {
 #app {
   flex: 1 0 auto;
 }
+
+/* ---------- extra travel & long journeys ---------- */
+
+.travel-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.travel-row .w-150 {
+  flex: 0 1 140px;
+  min-width: 110px;
+}
+
+.travel-kg {
+  min-width: 110px;
+  padding-bottom: 10px;
+}
