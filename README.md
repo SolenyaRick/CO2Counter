@@ -86,8 +86,13 @@ are in `PENSION_PROVIDERS` in `data.js`. "Other / not sure" uses the
 average of 20 major UK workplace schemes (Corporate Adviser, 2024). The
 saving assumes a switch to a climate-focused fund like Nest's Ethical Fund
 (21 t per £1m). Providers publish new reports every year, so refresh the
-figures yearly. Add Aviva, L&G, Royal London, Scottish Widows and others
-once their latest default-fund figures are checked.
+figures yearly. Not yet included, because no usable current figure could
+be retrieved: Scottish Widows (its site blocks automated downloads),
+Prudential/M&G (report link removed), Cushon and SEI (only 2023 data),
+Mercer, LifeSight, Hargreaves Lansdown, Zurich, Atlas and PensionBee (no
+default-fund figure published or found). The People's Pension figure is
+worked out from its reported reduction, and NOW: Pensions' comes from its
+announcement, because neither report could be downloaded.
 
 ## Payments (£2/year via Stripe)
 

@@ -810,12 +810,19 @@
   // the average across 20 major UK workplace schemes. Add a provider only
   // with a figure from its latest report, and update these each year.
   const PENSION_PROVIDERS = [
-    { key: "fidelity", label: "Fidelity Master Trust", tPerMillion: 29.3, source: "Fidelity Master Trust TCFD report 2025 (FutureWise target date funds, Dec 2024)" },
-    { key: "peoples", label: "The People's Pension", tPerMillion: 31.3, source: "The People's Pension TCFD report 2024 (Global Investments fund; 53% cut = 35.3 t, so ~31.3 t remaining)" },
+    { key: "aegon", label: "Aegon", tPerMillion: 38.7, source: "Aegon Master Trust climate disclosure 2024-25 (BlackRock LifePath Flexi default, Dec 2024)" },
+    { key: "aon", label: "Aon", tPerMillion: 26.1, source: "Aon MasterTrust TCFD report 2025 (Managed Core Retirement Pathway, equities and corporate bonds, Dec 2024)" },
+    { key: "aviva", label: "Aviva", tPerMillion: 65, source: "Aviva Master Trust TCFD report 2025 (My Future Focus Growth, Sep 2024)" },
+    { key: "fidelity", label: "Fidelity", tPerMillion: 29.3, source: "Fidelity Master Trust TCFD report 2025 (FutureWise target date funds, Dec 2024)" },
+    { key: "lg", label: "Legal & General", tPerMillion: 61.7, source: "L&G Mastertrust Sustainability Report 2025 (Target Date Funds growth phase, incl. government bonds, Mar 2025)" },
     { key: "nest", label: "Nest", tPerMillion: 32.7, source: "Nest TCFD report 2024/25 (default strategy, Mar 2025)" },
+    { key: "now", label: "NOW: Pensions", tPerMillion: 52.0, source: "NOW: Pensions TCFD report 2024, as reported by NOW: Pensions" },
+    { key: "peoples", label: "The People's Pension", tPerMillion: 31.3, source: "The People's Pension TCFD report 2024 (Global Investments fund; a 53% cut of 35.3 t leaves ~31.3 t)" },
+    { key: "royal_london", label: "Royal London", tPerMillion: 56.3, source: "Royal London TCFD product report Dec 2025 (Balanced Lifestyle Strategy, 42.0 t per US$1m at ~$1.34 to £1)" },
+    { key: "smart", label: "Smart Pension", tPerMillion: 75.4, source: "Smart Pension Master Trust TCFD report 2025 (main default growth fund, Jun 2025)" },
     { key: "standard_life", label: "Standard Life", tPerMillion: 34.2, source: "Standard Life DC Master Trust TCFD report 2026 (listed equity & credit, 2025)" },
+    { key: "tpt", label: "TPT Retirement Solutions", tPerMillion: 28.5, source: "TPT TCFD report 2025 (DC listed equity & corporate bonds, Sep 2025)" },
     { key: "uss", label: "USS (universities)", tPerMillion: 44.2, source: "USS TCFD report 2025 (non-sovereign assets, Dec 2024)" },
-    { key: "now", label: "NOW: Pensions", tPerMillion: 52.0, source: "NOW: Pensions TCFD report 2024" },
     { key: "other", label: "Other / not sure", tPerMillion: 61.1, source: "Corporate Adviser ESG in DC Pensions Report 2024 (average of 20 master trusts and GPPs)" },
   ];
   // A climate-focused pension fund, used to size the "switch fund" saving:
