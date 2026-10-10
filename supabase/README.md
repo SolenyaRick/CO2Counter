@@ -1,5 +1,12 @@
 # Supabase setup
 
+> **Prototype 2 (EcoImpact):** the current app needs only the
+> `survey_responses` table. It's created by the "EcoImpact (Prototype 2)"
+> section at the end of `schema.sql`, which you can run on its own against
+> the existing database. The rest of this file describes Prototype 1's
+> tables (profiles, weeks, friendships, leaderboard). They are kept so no
+> existing data is lost, but the current app doesn't use them.
+
 The app's accounts, weeks, and friends data live in Supabase (hosted Postgres +
 auth) once login is wired up. To set that up:
 

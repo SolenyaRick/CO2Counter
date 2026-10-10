@@ -1,2859 +1,1795 @@
+/* EcoImpact (Prototype 2). Visual language ported from the Base44
+   prototype: neutral greys plus an emerald accent, big rounded cards. */
+
 :root {
-  --bg: #f4f6f5;
-  --surface: #ffffff;
-  --text: #1c2321;
-  --text-muted: #5b6864;
-  --border: #dde3e0;
-  --accent: #2f6f4f;
-  --accent-light: #e4f1ea;
-  --danger: #b3492f;
-  --danger-light: #f5e2dc;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
-  --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --tile-shadow-highlight: 0 2px 8px rgba(47, 111, 79, 0.16);
-
-  /* Spacing scale - every card/tile/list gap below should reference one of
-     these rather than a one-off pixel value, so the app has one consistent
-     rhythm instead of ad-hoc numbers picked feature-by-feature. */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-
-  /* Domain bar/legend categorical palette (12 slots: --accent for "food" is
-     the 1st). Hand-tuned to a 12-way hue wheel and checked against the
-     dataviz skill's OKLab validator (scripts/validate_palette.js) for the
-     fixed DOMAIN_ORDER used in app.js - every hard gate (lightness band,
-     chroma floor, CVD separation, normal-vision floor) passes for every
-     *adjacent* pair in that order, in both themes. Two exceptions are kept
-     on purpose: --accent (food) undershoots the chroma/lightness gates
-     because it's the app's brand color used everywhere else, not just
-     here, and it's already the most distinguishable slot in practice
-     (always slot 1, always paired with the 🍽️ icon). The "Rank by size"
-     toggle can put any two slots next to each other, and one pair
-     (nonCommuteCar/pets in light mode, nonCommuteCar/gasHeating in dark)
-     falls in the 6-8 "legal only with secondary encoding" CVD band under
-     that reordering - mitigated by the emoji + text label every legend
-     row always shows (see renderDomainBarChart() in app.js), so identity
-     never depends on hue alone. */
-  --commute-color: #b931b9;
-  --alcohol-color: #4242cd;
-  --noncommutecar-color: #75b931;
-  --homeenergy-color: #b97531;
-  --gasheating-color: #31b9b9;
-  --water-color: #b93175;
-  --pets-color: #31b931;
-  --flying-color: #7531b9;
-  --banks-color: #b9b931;
-  --goods-color: #3175b9;
-  --carownership-color: #b93131;
+  --bg: #ffffff;
+  --fg: #0a0a0a;
+  --card: #ffffff;
+  --muted: #f5f5f5;
+  --muted-fg: #737373;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --em-50: #ecfdf5;
+  --em-100: #d1fae5;
+  --em-200: #a7f3d0;
+  --em-300: #6ee7b7;
+  --em-400: #34d399;
+  --em-500: #10b981;
+  --em-600: #059669;
+  --em-700: #047857;
+  --em-800: #065f46;
+  --amber-100: #fef3c7;
+  --amber-600: #d97706;
+  --amber-700: #b45309;
+  --orange-50: #fff7ed;
+  --orange-100: #ffedd5;
+  --orange-600: #ea580c;
+  --red-50: #fef2f2;
+  --red-200: #fecaca;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14181a;
-    --surface: #1e2422;
-    --text: #eef2ef;
-    --text-muted: #9aa8a2;
-    --border: #2c3532;
-    --accent: #6fbf94;
-    --accent-light: #223730;
-    --danger: #e2836a;
-    --danger-light: #3a2620;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
-    --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --tile-shadow-highlight: 0 2px 10px rgba(111, 191, 148, 0.2);
-    /* Same 12-hue set, re-stepped for the dark surface (validated
-       separately against #1e2422, not just lightened from the light set)
-       - see the light-mode comment above for the palette methodology and
-       the two accepted exceptions. */
-    --commute-color: #cc3ecc;
-    --alcohol-color: #5e5ed4;
-    --noncommutecar-color: #6ba92d;
-    --homeenergy-color: #c98036;
-    --gasheating-color: #21abab;
-    --water-color: #cc3e85;
-    --pets-color: #2da92d;
-    --flying-color: #9456d2;
-    --banks-color: #919127;
-    --goods-color: #4e8fd0;
-    --carownership-color: #ce4646;
-  }
+* {
+  box-sizing: border-box;
 }
 
-* { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+}
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-
-.app {
-  max-width: 760px;
-  margin: 0 auto;
-  /* env(safe-area-inset-*) is 0 in a normal browser (these are then just
-     the original 24px/16px/64px), but keeps content clear of the notch/
-     Dynamic Island and home indicator when running full-screen in the
-     Capacitor iOS wrapper - see capacitor.config.json. */
-  padding-top: max(24px, env(safe-area-inset-top));
-  padding-right: max(16px, env(safe-area-inset-right));
-  /* Clears the fixed bottom tab bar (see #main-tabs below) - its own
-     height plus the safe-area inset it already pads itself, plus a
-     little breathing room so the last card on any page never sits flush
-     against it. */
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
-  padding-left: max(16px, env(safe-area-inset-left));
-}
-
-/* Auth screen */
-.auth-screen {
+  font-family: var(--font);
+  color: var(--fg);
+  background: linear-gradient(to bottom, rgba(236, 253, 245, 0.4), var(--bg) 40vh) no-repeat, var(--bg);
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* [hidden] and .auth-screen{display:flex} have equal specificity, so without
-   this the later rule (this one) would always win and the screen would stay
-   visible even when JS sets the hidden attribute after sign-in. */
-.auth-screen[hidden] {
-  display: none;
-}
-
-.auth-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 28px 24px;
-  width: 100%;
-  max-width: 380px;
-}
-
-.auth-card h1 {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.auth-actions {
-  margin-top: 4px;
-}
-
-.auth-actions .btn-primary {
-  width: 100%;
-}
-
-.auth-links {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin-top: 14px;
-}
-
-.link-btn {
-  font: inherit;
-  font-size: 0.85rem;
-  background: none;
-  border: none;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 2px;
-}
-
-.auth-error {
-  color: var(--danger);
-  font-size: 0.85rem;
-  margin: 4px 0;
-}
-
-.auth-status {
-  color: var(--accent);
-  font-size: 0.85rem;
-  margin: 4px 0;
-}
-
-.sync-status {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--text-muted);
-  vertical-align: middle;
-}
-
-.sync-status.sync-error {
-  color: var(--danger);
-}
-
-/* Account: header + friends */
-.account-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  font-size: 0.9rem;
-}
-
-/* Account page sections, stacked as a vertical accordion instead of a
-   horizontal tab bar - native <details>/<summary> (grouped by a shared
-   `name` so opening one closes the others, same "exclusive accordion"
-   idea as a tab bar, but click-to-expand-in-place going down the page
-   instead of swapping panels) - see the "account-accordion" name group
-   in index.html. No JS needed for expand/collapse itself; the browser
-   also remembers each section's open/closed state for free across tab
-   switches, since showTab() only toggles the whole page's `hidden`. */
-.account-accordion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.avatar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.avatar-wrap {
-  flex-shrink: 0;
-}
-
-.profile-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-}
-
-.profile-avatar[hidden] {
-  display: none;
-}
-
-.profile-avatar-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent-light);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 1.4rem;
-}
-
-.avatar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.accordion-item {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+body.modal-open {
   overflow: hidden;
 }
 
-.accordion-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-5);
-  font-weight: 700;
-  font-size: 1.02rem;
-  cursor: pointer;
-  list-style: none;
+h1, h2, h3, p {
+  margin: 0;
 }
 
-.accordion-summary::-webkit-details-marker {
-  display: none;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-.accordion-summary::after {
-  content: "\25BE";
-  color: var(--text-muted);
-  transition: transform 0.15s ease;
-}
-
-/* Direct-child combinator, not a plain descendant selector - guards
-   against any future nested-accordion structure re-triggering every
-   descendant .accordion-summary's chevron/border just because some
-   ancestor .accordion-item is open, regardless of that descendant's own
-   open state. */
-.accordion-item[open] > .accordion-summary::after {
-  transform: rotate(180deg);
-}
-
-.accordion-item[open] > .accordion-summary {
-  border-bottom: 1px solid var(--border);
-}
-
-.accordion-content {
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.accordion-content .card {
-  box-shadow: none;
-  border: none;
-  padding: 0;
-  margin-bottom: 0;
-  background: none;
-}
-
-.accordion-content .card + .card {
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-}
-
-/* List->detail->back pattern, used by both the This Year page and the
-   Account page's Settings section: a list of rows, each drilling into its
-   own full .year-detail "page" (shown/hidden via plain [hidden], not an
-   accordion) with a back button - a deliberately different pattern from
-   the rest of the Account page's accordion, per explicit user direction.
-   Visually though, each row is styled to match .accordion-item/
-   .accordion-summary (same card look: background/border/radius/shadow,
-   same label weight+size) so every page reads as one consistent design
-   language even though only some of them actually expand in place. Class
-   names keep the "year-" prefix from where this pattern was first built,
-   reused as-is for Settings rather than renamed - same "generic look,
-   borrowed name" convention already used elsewhere in this stylesheet
-   (e.g. .week-picker-btn reused for the journey-mode toggle). */
-.year-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-/* [hidden] and .year-list{display:flex} have equal specificity, so without
-   this the later rule (this one) would always win and the list would stay
-   visible behind a detail page even when JS sets the hidden attribute. */
-.year-list[hidden] {
-  display: none;
-}
-
-.year-list-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: var(--space-4) var(--space-5);
+button, input, select {
   font: inherit;
-  font-weight: 700;
-  font-size: 1.02rem;
-  color: var(--text);
-  text-align: left;
+  color: inherit;
+}
+
+button {
   cursor: pointer;
-}
-
-.year-list-row:hover,
-.year-list-row:focus-visible {
-  border-color: var(--accent);
-}
-
-.year-list-icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  color: var(--text-muted);
-}
-
-.year-list-label {
-  flex: 1;
-}
-
-.year-list-chevron {
-  color: var(--text-muted);
-  font-size: 1.3rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.year-detail-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.year-detail-header h2 {
-  margin: 0;
-}
-
-.year-back-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font-size: 1.1rem;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.year-back-btn:hover {
-  background: var(--border);
-}
-
-.subheading {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  margin: 18px 0 8px;
-}
-
-.friend-add-form {
-  display: flex;
-  gap: 8px;
-}
-
-.friend-add-form input {
-  flex: 1;
-}
-
-.friend-list {
-  list-style: none;
-  margin: 0;
+  background: none;
+  border: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
-.friend-list:empty::after {
-  content: "None yet.";
-  color: var(--text-muted);
-  font-size: 0.85rem;
+.icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
-.friend-row {
+/* ---------- header ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding-top: env(safe-area-inset-top);
+}
+
+.topbar-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 16px;
+  height: 56px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.9rem;
+  gap: 12px;
 }
 
-.friend-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.friend-actions button {
-  padding: 5px 10px;
-  font-size: 0.8rem;
-}
-
-.app-header h1 {
-  margin: 0;
-  font-size: 1.6rem;
-}
-
-/* Brand lockup: a small square mark (matching the app icon design) beside
-   the "CO2 Tracker" wordmark, used identically on the login screen and the
-   in-app header. A dark pipe base with a soft organic wisp curling upward
-   (an S-curve, not a straight line, so it reads as drifting smoke rather
-   than a ruled diagram) leads into a bold "C" and a small "2" subscript,
-   with the final large light-toned circle standing in for the "O" -
-   together the mark reads as "C₂ ⬤" i.e. "CO2" at a glance, while the
-   dark-at-the-source/light-at-the-top gradient echoes the original app
-   icon's organic multi-tone style. Colors are fixed (not theme-aware CSS
-   variables) like a real logo/app-icon asset would be, and the badge
-   keeps a light background in both themes so the dark letterforms stay
-   legible against a dark card. */
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 4px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-}
-
-.brand-mark-bg {
-  fill: #f4f6f5;
-}
-
-.brand-mark-pipe {
-  fill: #1d4a34;
-}
-
-.brand-mark-trail {
-  fill: none;
-  stroke: #2f6f4f;
-  stroke-width: 2.3;
-  stroke-linecap: round;
-}
-
-.brand-mark-letter {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 6.5px;
-  fill: #1d4a34;
-  text-anchor: middle;
-}
-
-.brand-mark-subscript {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  font-weight: 800;
-  font-size: 4.1px;
-  fill: #1d4a34;
-  text-anchor: middle;
-}
-
-.brand-mark-o {
-  fill: #6fbf94;
-}
-
-/* Older three-circle "fumes" mark (superseded on the header by the C/O2
-   lettered one above) - reused here as the Home snapshot card's decorative
-   icon, stacked straight up over the pipe rather than its original
-   diagonal rise, and without .brand-mark-bg's background box (see
-   index.html) so it sits directly on the card instead of in its own boxed
-   badge. .brand-mark-pipe already carries the exact same color this mark
-   originally used. */
-.brand-mark-puff-1 {
-  fill: #1d4a34;
-}
-
-.brand-mark-puff-2 {
-  fill: #2f6f4f;
-}
-
-.brand-mark-puff-3 {
-  fill: #6fbf94;
-}
-
-.home-snapshot-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-3);
-}
-
-.home-snapshot-logo .brand-mark {
-  width: 56px;
-  height: 56px;
-}
-
-.home-snapshot-goal {
-  width: 100%;
-}
-
-.home-snapshot-goal-bar-track {
-  background: var(--border);
-  border-radius: 999px;
-  height: 8px;
-  overflow: hidden;
-  margin-bottom: var(--space-1);
-}
-
-.home-snapshot-goal-bar-fill {
-  height: 100%;
-  border-radius: inherit;
-  transition: width 0.3s ease;
-  background: #3a9d5d;
-}
-
-.home-snapshot-goal-bar-fill.status-warn {
-  background: #d0a020;
-}
-
-.home-snapshot-goal-bar-fill.status-high {
-  background: var(--danger);
-}
-
-.home-snapshot-goal-caption {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.home-snapshot-days {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-2);
-}
-
-.home-snapshot-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.home-snapshot-day-square {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-}
-
-.home-snapshot-day.logged .home-snapshot-day-square {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.home-snapshot-day.is-today .home-snapshot-day-square {
-  box-shadow: 0 0 0 2px var(--accent-light);
-}
-
-.home-snapshot-day-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.subtitle {
-  margin: 0 0 24px;
-  color: var(--text-muted);
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: var(--space-5);
-  margin-bottom: var(--space-5);
-}
-
-.card h2 {
-  margin: 0 0 var(--space-3);
-  font-size: 1.05rem;
-}
-
-/* The Budget pace / emissions-by-domain carousel card - narrower side
-   padding than a standard .card so the budget line chart (and the
-   treemap on the carousel's other slide) get more actual plotted width
-   to work with on a phone-width screen, where the card is already close
-   to the full viewport width and there's nowhere else to grow. */
-.summary-card {
-  padding-left: var(--space-2);
-  padding-right: var(--space-2);
-}
-
-.journeys-inline {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.journeys-inline summary {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.journeys-inline[open] summary {
-  margin-bottom: 12px;
-}
-
-.journey-list {
-  list-style: none;
-  margin: 0 0 14px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.journey-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.88rem;
-}
-
-.journey-remove-btn {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.journey-remove-btn:hover,
-.journey-remove-btn:focus-visible {
-  color: var(--danger);
-  background: var(--danger-light);
-}
-
-.journey-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-}
-
-.journey-form .field {
-  margin-bottom: 0;
-  min-width: 110px;
-}
-
-.optional-badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 8px;
-  margin-left: 6px;
-  vertical-align: middle;
-}
-
-/* "Pick one of N" toggle-button family - .week-picker (a rigid single-row
-   segmented control, for a handful of fixed short options) and .chip-toggle
-   (wraps onto multiple lines, for option sets too wide for one row on a
-   phone, e.g. 6 flight continents) share this base look and .active state
-   so every toggle in the app reads as the same control; only the
-   container/button shape differs between the two. */
-.week-picker-btn,
-.chip-toggle-btn {
-  font: inherit;
-  font-size: 0.85rem;
-  background: var(--bg);
-  color: var(--text-muted);
-  padding: var(--space-2) var(--space-3);
-  cursor: pointer;
-}
-
-.week-picker-btn.active,
-.chip-toggle-btn.active {
-  background: var(--accent);
+  background: var(--em-600);
   color: #fff;
-  font-weight: 600;
-}
-
-.week-picker {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: var(--space-3);
-}
-
-.week-picker-btn {
-  border: none;
-}
-
-.week-picker-btn + .week-picker-btn {
-  border-left: 1px solid var(--border);
-}
-
-.row-footprint.counted {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.chip-toggle {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.chip-toggle-btn {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-
-.chip-toggle-btn.active {
-  border-color: var(--accent);
-}
-
-.journey-item-excluded {
-  opacity: 0.6;
-}
-
-.journey-item-excluded-note {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
-
-.electricity-bill-summary {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  margin: -6px 0 10px;
-}
-
-.electricity-bill-stale {
-  font-size: 0.8rem;
-  color: var(--danger);
-  margin: -6px 0 10px;
-}
-
-.table-caption {
-  text-align: left;
-  font-weight: 600;
-  font-size: 1.05rem;
-  margin-bottom: 14px;
-  caption-side: top;
-}
-
-/* Fixed bottom tab bar (native-app convention) rather than a top row -
-   always visible regardless of scroll position, same as .app's own
-   padding-bottom already reserves room for. max-width/margin mirror
-   .app so it stays centered under the content on a wide (desktop
-   browser) viewport instead of stretching edge to edge; on a phone the
-   viewport is already narrower than max-width so this has no effect.
-   grid with a fixed 5-column count (not flex) is what actually
-   guarantees all 5 tabs fit with no horizontal scroll needed, ever,
-   regardless of viewport width - each tab gets an equal fraction of the
-   width no matter how long its label is, rather than sizing to content
-   and potentially overflowing. */
-.tabs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-width: 760px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 20;
-}
-
-.tab-btn {
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  font: inherit;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  padding: 8px 2px 6px;
-  cursor: pointer;
-  font-size: 0.64rem;
-  line-height: 1.15;
-  /* Every label is short by design (see index.html), but this is the
-     backstop that guarantees no label can ever force the tab bar wider
-     than the viewport and reintroduce the horizontal scroll this
-     replaces. */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.tab-icon {
-  width: 22px;
-  height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.tab-btn.active {
-  color: var(--accent);
+.brand-name {
   font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
 }
 
-.inline-field {
+.nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.95rem;
-}
-
-.inline-field input {
-  width: 100px;
-}
-
-input, select {
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-
-.tracker-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tracker-table th {
-  text-align: left;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.tracker-table td {
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.tracker-table tr:last-child td {
-  border-bottom: none;
-}
-
-.tracker-table tr.is-today td {
-  background: var(--accent-light);
-}
-
-.tracker-table tr.is-today .day-badge {
-  background: var(--accent);
-  color: #fff;
-}
-
-.day-col {
-  width: 56px;
-}
-
-.footprint-col {
-  width: 90px;
-  text-align: right;
-}
-
-.confirm-col {
-  width: 44px;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.day-confirm-cell {
-  text-align: center;
-}
-
-.day-confirm-btn {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.day-confirm-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.day-confirm-btn.confirmed {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.day-confirm-btn.pop {
-  animation: day-confirm-pop 0.4s ease;
-}
-
-.day-confirm-btn.pop::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-  animation: day-confirm-ripple 0.5s ease-out;
-}
-
-@keyframes day-confirm-pop {
-  0% { transform: scale(0.7); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
-
-@keyframes day-confirm-ripple {
-  0% { opacity: 0.6; transform: scale(0.6); }
-  100% { opacity: 0; transform: scale(1.6); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .day-confirm-btn.pop,
-  .day-confirm-btn.pop::after {
-    animation: none;
-  }
-}
-
-.day-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--accent-light);
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: default;
-}
-
-.mode-select {
-  width: 100%;
-  max-width: 220px;
-}
-
-.diet-day-row {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.diet-day-row:first-child {
-  padding-top: 0;
-}
-
-.diet-day-row:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.diet-day-row.is-today {
-  background: var(--accent-light);
-  border-radius: 10px;
-  padding: 10px;
-  margin: 0 -10px;
-}
-
-.diet-day-row.is-today .day-badge {
-  background: var(--accent);
-  color: #fff;
-}
-
-.diet-day-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.diet-day-head .row-footprint {
+  gap: 4px;
   margin-left: auto;
-}
-
-.diet-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.diet-type-row, .portion-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.diet-opt {
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-}
-
-.diet-opt.meat-opt {
-  font-size: 1.15rem;
-}
-
-.diet-opt:hover {
-  border-color: var(--accent);
-}
-
-.diet-opt.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.portion-row {
-  margin-left: 4px;
-}
-
-.portion-opt {
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-}
-
-.portion-opt:hover {
-  border-color: var(--accent);
-}
-
-.portion-opt.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.eat-row {
-  display: flex;
-  gap: 4px;
-  margin-left: 4px;
-}
-
-.eat-opt {
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
-  height: 22px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.eat-opt:hover {
-  border-color: var(--accent);
-}
-
-.eat-opt.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.diet-summary {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-left: 4px;
-}
-
-.alcohol-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.alcohol-fill {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
-.alcohol-fill-opt {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  color: var(--text-muted);
-  opacity: 0.45;
-}
-
-.alcohol-fill-opt svg {
-  width: 24px;
-  height: 24px;
-}
-
-.alcohol-fill-opt:hover {
-  opacity: 0.75;
-}
-
-.alcohol-fill-opt.active {
-  color: var(--accent);
-  opacity: 1;
-}
-
-.alcohol-count {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.alcohol-other {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.alcohol-other .field {
-  flex: 1;
-  min-width: 140px;
-}
-
-.row-footprint {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-}
-
-.summary-totals {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.stat {
-  position: relative;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: var(--space-3) var(--space-4);
-  box-shadow: var(--tile-shadow);
-}
-
-.tile-info-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.tile-info-btn:hover,
-.tile-info-btn:focus-visible {
-  color: var(--accent);
-  background: var(--accent-light);
-}
-
-.tile-icon {
-  position: absolute;
-  top: 9px;
-  left: 11px;
-  width: 17px;
-  height: 17px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  color: var(--text-muted);
-}
-
-.stat-highlight {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  box-shadow: var(--tile-shadow-highlight);
-}
-
-.stat-highlight .stat-value {
-  color: var(--accent);
-}
-
-/* This Week page's summary card: one full-width hero total up top, then a
-   3-column row of Commute/Food/Alcohol underneath - deliberately its own
-   markup rather than reusing .summary-totals, since that class's
-   auto-fit grid (shared with the Home page tile carousel) is sized for a
-   variable count of same-weight boxes, not a "one hero, three equal
-   children" layout. */
-.week-summary-total {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-  border-radius: 12px;
-  box-shadow: var(--tile-shadow-highlight);
-  padding: var(--space-4);
-  margin-bottom: var(--space-3);
-}
-
-.week-summary-total .stat-value {
-  font-size: 2.2rem;
-  color: var(--accent);
-}
-
-.week-summary-breakdown {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.week-summary-breakdown .stat {
-  text-align: center;
-}
-
-/* First-run welcome (see renderOnboardingBanner() in app.js) - only shown
-   while every To Do item is still outstanding, and remembered as
-   dismissed per-device via localStorage once closed. */
-.onboarding-banner {
-  position: relative;
-  background: var(--accent-light);
-  border-color: var(--accent);
-}
-
-.onboarding-banner h2 {
-  margin: 0 0 var(--space-2);
-  padding-right: var(--space-5);
-}
-
-.onboarding-banner .assumptions {
-  margin-bottom: var(--space-3);
-}
-
-.onboarding-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.onboarding-dismiss {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--text-muted);
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.onboarding-dismiss:hover,
-.onboarding-dismiss:focus-visible {
-  color: var(--accent);
-  background: rgba(255, 255, 255, 0.4);
-}
-
-.year-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-1);
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-  border-radius: 12px;
-  padding: var(--space-5) var(--space-4);
-  margin-bottom: var(--space-2);
-  box-shadow: var(--tile-shadow-highlight);
-}
-
-.year-hero-value {
-  font-size: 2.6rem;
-  font-weight: 800;
-  line-height: 1.1;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.year-hero-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.year-hero.over-average {
-  background: var(--danger-light);
-  border-color: var(--danger);
-}
-
-.year-hero.over-average .year-hero-value {
-  color: var(--danger);
-}
-
-.year-hero.no-data {
-  background: var(--surface);
-  border-color: var(--border);
-}
-
-.year-hero.no-data .year-hero-value {
-  color: var(--text-muted);
-  font-size: 1.6rem;
-}
-
-/* Home page "Habits" card (see renderHabitsCard() in app.js) - two streak
-   tiles, side by side above ~320px wide, stacked below. */
-.habits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-3);
-}
-
-.habit-tile {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: var(--space-3) var(--space-4);
-}
-
-.habit-tile-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.habit-emoji {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.habit-label {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.habit-streak-value {
-  font-size: 1.8rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  line-height: 1.1;
-}
-
-.habit-streak-unit {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-left: 4px;
-}
-
-.habit-empty-streak {
-  font-size: 1.8rem;
-}
-
-.habit-best {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin: 2px 0 var(--space-2);
-}
-
-.habit-challenge {
-  margin-top: var(--space-2);
-}
-
-.habit-challenge-bar-track {
-  background: var(--border);
-  border-radius: 999px;
-  height: 6px;
-  overflow: hidden;
-  margin-bottom: var(--space-1);
-}
-
-.habit-challenge-bar-fill {
-  background: var(--accent);
-  height: 100%;
-  transition: width 0.3s ease;
-}
-
-.habit-challenge-caption {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin: 0 0 var(--space-1);
-}
-
-.habit-challenge-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-}
-
-.habit-cancel-btn {
-  font-size: 0.75rem;
-}
-
-.habit-challenge-bar-fill.over-target {
-  background: var(--danger);
-}
-
-.habit-nudge-text {
-  font-size: 0.85rem;
-  margin: 0 0 var(--space-3);
-}
-
-.habit-prompt-btn {
-  width: 100%;
-  background: var(--bg);
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  padding: var(--space-4);
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--accent);
-  cursor: pointer;
-  text-align: center;
-}
-
-.habit-survey-question {
-  font-size: 0.9rem;
-  margin: 0 0 var(--space-3);
-}
-
-.habit-survey-back-btn {
-  display: inline-block;
-  margin-bottom: var(--space-2);
-}
-
-.habit-survey-options {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.habit-survey-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-3);
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.habit-survey-emoji {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.habit-survey-label {
-  font-weight: 600;
-  font-size: 0.88rem;
-  flex: 1;
-}
-
-.habit-survey-badge {
-  display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--accent-light);
-  border-radius: 999px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-
-.habit-tier-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.habit-tier-btn {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 14px;
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-/* Instagram-style swipeable carousel: native scroll-snap, no JS drag
-   library needed - works with real touch swipe on mobile and mouse-wheel/
-   trackpad scroll on desktop. */
-.carousel {
-  display: flex;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
   scrollbar-width: none;
 }
 
-.carousel::-webkit-scrollbar {
+.nav::-webkit-scrollbar {
   display: none;
 }
 
-/* overflow:hidden (rather than the default visible) disables a flex item's
-   automatic min-height:auto floor, so JS (see syncCarouselHeight() in
-   app.js) can actually shrink .carousel's own height down to match
-   whichever slide is currently visible - without it, a taller sibling
-   slide would keep forcing the whole row (and every slide in it) back up
-   to its own content height regardless of what height gets set. */
-.carousel-slide {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  min-width: 0;
-  min-height: 0;
+.nav a {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav a:hover {
+  background: var(--muted);
+  color: var(--fg);
+}
+
+.nav a.active {
+  background: var(--em-600);
+  color: #fff;
+}
+
+/* ---------- layout ---------- */
+
+.container {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 32px 16px calc(32px + env(safe-area-inset-bottom));
+}
+
+.container.narrow {
+  max-width: 48rem;
+}
+
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.page-head h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.page-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--em-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-badge .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+}
+
+.card.hero {
   overflow: hidden;
 }
 
-.carousel-slide .year-hero {
-  margin-bottom: 0;
-}
-
-.carousel-dots {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 10px 0 8px;
-}
-
-.carousel-dot {
-  width: 6px;
-  height: 6px;
+.glow {
+  position: absolute;
+  top: -48px;
+  right: -48px;
+  width: 192px;
+  height: 192px;
   border-radius: 50%;
-  background: var(--border);
-  transition: background 0.15s ease;
+  background: rgba(209, 250, 229, 0.5);
+  filter: blur(40px);
 }
 
-.carousel-dot.active {
-  background: var(--accent);
+.glow.small {
+  width: 160px;
+  height: 160px;
+  top: -40px;
+  right: -40px;
 }
 
-.assumptions.small-print {
-  font-size: 0.75rem;
-  margin-bottom: 16px;
+.rel {
+  position: relative;
 }
 
-.compare-chip-heading {
-  margin: 0 0 6px;
-  font-size: 0.75rem;
+.card.callout {
+  border-color: var(--em-300);
+  background: linear-gradient(to bottom right, var(--em-50), var(--bg));
+}
+
+.card.callout.strong {
+  border-width: 2px;
+}
+
+.card-title {
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-muted);
 }
 
-.year-hero[data-nav] {
-  cursor: pointer;
-}
-
-.section-break {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: var(--space-4) 0;
-}
-
-.category-heading {
-  margin: 0 0 var(--space-2);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.avg-week-savings {
-  background: var(--bg);
+.panel {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-4);
+  background: var(--card);
+  border-radius: 16px;
 }
 
-.avg-week-savings.avg-week-good {
-  background: var(--accent-light);
-  border-color: var(--accent);
+.panel.green {
+  border-color: var(--em-200);
+  background: rgba(236, 253, 245, 0.6);
 }
 
-.avg-week-savings.avg-week-good .stat-value {
-  color: var(--accent);
-}
-
-.avg-week-savings.avg-week-bad {
-  border-color: var(--danger);
-}
-
-.avg-week-savings.avg-week-bad .stat-value {
-  color: var(--danger);
-}
-
-.app-average-figure {
-  background: var(--bg);
+.survey-card {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
 }
 
-.app-average-figure + .app-average-figure {
-  margin-top: var(--space-2);
-}
+/* ---------- type & spacing utilities ---------- */
 
-.stat .week-diff {
-  display: flex;
-  flex-direction: column;
-  margin-top: 6px;
-}
+.muted { color: var(--muted-fg); }
+.faint { color: var(--muted-fg); opacity: 0.5; }
+.fg { color: var(--fg); }
+.green { color: var(--em-600); }
+.green-dark { color: var(--em-700); }
+.green-darker { color: var(--em-800); }
+.red { color: var(--red-600); }
+.amber-text { color: var(--amber-700); }
+.xs { font-size: 12px; }
+.sm { font-size: 14px; }
+.md { font-size: 16px; }
+.tiny { font-size: 10px; line-height: 1.2; }
+.tiny2 { font-size: 11px; }
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.normal { font-weight: 400; }
+.upper { text-transform: uppercase; letter-spacing: 0.04em; }
+.italic { font-style: italic; }
+.lh { line-height: 1.65; }
+.pre-line { white-space: pre-line; }
+.nowrap { white-space: nowrap; }
+.center { text-align: center; }
+.center-block { margin-left: auto; margin-right: auto; }
+.block { display: block; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.min0 { min-width: 0; }
+.grow { flex: 1; }
+.shrink0 { flex-shrink: 0; }
+.right { text-align: right; }
+.ml-auto { margin-left: auto; }
+.mt-0 { margin-top: 2px; }
+.mt-1 { margin-top: 4px; }
+.mt-2 { margin-top: 8px; }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mt-5 { margin-top: 20px; }
+.mt-8 { margin-top: 32px; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 4px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-5 { margin-bottom: 20px; }
+.mb-6 { margin-bottom: 24px; }
+.mb-8 { margin-bottom: 32px; }
+.mb-10 { margin-bottom: 40px; }
+.p-4 { padding: 16px; }
+.p-5 { padding: 20px; }
+.max-sm { max-width: 24rem; }
+.max-xl { max-width: 36rem; }
+.max-2xl { max-width: 42rem; }
+.w-120 { max-width: 120px; }
+.w-150 { min-width: 150px; }
+.w-160 { max-width: 160px; }
+.minw-160 { min-width: 160px; }
+.gap-sm { gap: 6px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
 
-.stat-percentile {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--accent);
-}
+.stack-2 > * + * { margin-top: 8px; }
+.stack-3 > * + * { margin-top: 12px; }
+.stack-4 > * + * { margin-top: 16px; }
+.stack-5 > * + * { margin-top: 20px; }
+.stack-6 > * + * { margin-top: 24px; }
 
-/* One row per comparison (car, then trees) rather than a 2-up grid, so
-   each always has its own full-width line for the text-left/visual-right
-   layout below. */
-.comparison-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-
-.comparison-item {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-4);
+.row-between {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
 }
 
-.comparison-text {
-  min-width: 0;
-}
-
-.comparison-value {
-  display: block;
-  font-size: 2rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-
-.comparison-label {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.comparison-item .week-diff {
+.label-row {
   display: flex;
-  flex-direction: column;
-  margin-top: 6px;
-}
-
-/* Conceptual visuals to the right of each comparison-item's text (see
-   renderEarthLapsRing()/renderTreeIcons() in app.js) - a small "times
-   around the Earth" ring for the car-km figure, a row of tiny tree icons
-   for the trees one. Width-capped so the tree-icon grid wraps into a
-   compact block instead of stretching the row - renderTreeIcons() reads
-   this same width back (TREE_BOX_WIDTH) to size each icon so the whole
-   count fits. */
-.comparison-visual {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
-  max-width: 128px;
+  gap: 8px;
 }
 
-.comparison-icon-row {
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.grid-2-fixed {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-2-4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.chip-row {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emoji-xl { font-size: 36px; line-height: 1; }
+.emoji-lg { font-size: 30px; line-height: 1.2; }
+.emoji-md2 { font-size: 24px; line-height: 1.2; }
+.emoji-md { font-size: 18px; line-height: 1; }
+.emoji-row { font-size: 24px; line-height: 1; width: 28px; text-align: center; flex-shrink: 0; }
+
+.hide-sm { display: none; }
+
+/* ---------- buttons & inputs ---------- */
+
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-}
-
-.earth-ring-svg {
-  width: 56px;
-  height: 56px;
-}
-
-.earth-ring-track {
-  fill: none;
-  stroke: var(--border);
-  stroke-width: 6;
-}
-
-.earth-ring-progress {
-  fill: none;
-  stroke: var(--commute-color);
-  stroke-width: 6;
-  stroke-linecap: round;
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  transform: rotate(-90deg);
-  transition: stroke-dashoffset 0.4s ease;
-}
-
-.earth-ring-globe {
-  color: var(--commute-color);
-}
-
-.earth-ring-globe circle,
-.earth-ring-globe line,
-.earth-ring-globe path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-}
-
-.comparison-icon-caption {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  text-align: center;
-  margin: var(--space-1) 0 0;
-}
-
-/* Width/height set inline per render (see renderTreeIcons() in app.js) -
-   the icon shrinks as the tree count grows, so the whole count always
-   fits without an arbitrary cap. */
-.comparison-tree-icon {
-  fill: var(--accent);
-  flex-shrink: 0;
-}
-
-.unaccounted-list {
-  margin: 0 0 12px;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.88rem;
-  color: var(--text);
-}
-
-.compact-card {
-  padding: var(--space-4) var(--space-5);
-}
-
-.compact-card h2 {
-  font-size: 0.92rem;
-  margin-bottom: var(--space-2);
-}
-
-.compact-bullets {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.compact-bullets strong {
-  color: var(--text);
-}
-
-.stat-value {
-  display: block;
-  font-size: 1.55rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-  margin-bottom: 2px;
-}
-
-.stat-label {
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--text-muted);
-}
-
-/* Apple-Watch-style ring for each "Your year, estimated" tile (see
-   renderRingStat() in app.js). .ring-container-empty falls back to the
-   plain .stat-value/.stat-label/.week-diff markup above, so an unanswered
-   tile still looks like every other muted "–" tile in the app rather than
-   an empty ring. */
-.ring-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-/* Before renderRingStat() has run at all (the window between sign-in and
-   the first full render - see onSignedIn() in app.js), this div is
-   literally empty: no height, so the tile would show only its emoji
-   badge/info button floating over blank space. :empty gives it a
-   reserved-height shimmer placeholder instead, and stops applying itself
-   automatically the instant JS sets any innerHTML (populated or the
-   muted "no data" markup alike), so no JS toggling is needed. */
-.ring-container:empty {
-  min-height: 138px;
-  width: 100%;
-  border-radius: 10px;
-  background: linear-gradient(100deg, var(--border) 30%, var(--surface) 45%, var(--border) 60%);
-  background-size: 250% 100%;
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
-}
-
-@keyframes skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -50% 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ring-container:empty {
-    animation: none;
-  }
-}
-
-.ring-wrap {
-  position: relative;
-  width: 92px;
-  height: 92px;
-}
-
-.ring-svg {
-  width: 100%;
-  height: 100%;
-}
-
-.ring-track {
-  fill: none;
-  stroke: var(--border);
-  stroke-width: 8;
-}
-
-.ring-progress {
-  fill: none;
-  stroke-width: 8;
-  stroke-linecap: round;
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  transition: stroke-dashoffset 0.4s ease, stroke 0.2s ease;
-}
-
-/* Green (budget remaining): the visible arc always starts at 12 o'clock
-   and extends the standard clockwise direction (rotate(-90deg) alone) -
-   which means its far/trailing edge, the part that "goes missing" as the
-   arc shrinks, retreats anticlockwise from 12 o'clock: top-left goes
-   first (75% remaining), then bottom-left (50%), then bottom-right (25%,
-   leaving only the top-right quarter). */
-.ring-progress-green {
-  stroke: var(--accent);
-  transform: rotate(-90deg);
-}
-
-/* Red (over budget): fills up from empty the opposite way round - flips
-   the same trick across the vertical axis (keeping the 12-o'clock start
-   point) so the newly-filled sliver always appears counter-clockwise of
-   whatever's already filled, i.e. it fills anticlockwise from empty. */
-.ring-progress-red {
-  stroke: var(--danger);
-  transform: scaleX(-1) rotate(-90deg);
-}
-
-.ring-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 1px;
-}
-
-.ring-center-value {
-  font-size: 1.15rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  color: var(--text);
-}
-
-.ring-center-unit {
-  font-size: 0.6rem;
-  color: var(--text-muted);
-}
-
-.ring-caption {
-  margin: 8px 0 0;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.ring-pct-caption {
-  margin: 2px 0 0;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.ring-pct-under {
-  color: var(--accent);
-}
-
-.ring-pct-over {
-  color: var(--danger);
-}
-
-.todo-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* [hidden] and .todo-list/.todo-item{display:flex} have equal specificity,
-   so without these the later rule would always win and the list/items
-   would stay visible even when JS sets the hidden attribute (the list once
-   everything's done, individual items as each one gets done). */
-.todo-list[hidden] {
-  display: none;
-}
-
-.todo-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
-}
-
-.todo-item[hidden] {
-  display: none;
-}
-
-.todo-item:hover {
-  border-color: var(--accent);
-}
-
-.todo-item:active {
-  transform: scale(0.99);
-}
-
-.todo-circle {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid var(--text-muted);
-  position: relative;
-}
-
-.todo-text {
-  font-size: 0.92rem;
-  color: var(--text);
-}
-
-.todo-all-done {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-
-/* [hidden] and .todo-all-done{display:flex} have equal specificity, so
-   without this the later rule (this one) would always win and the message
-   would stay visible even when JS sets the hidden attribute. */
-.todo-all-done[hidden] {
-  display: none;
-}
-
-.budget-chart {
-  padding-top: 4px;
-}
-
-/* Reserves the chart's rendered height before renderBudgetChart() has run
-   (this div only has a comment child until then, so :empty doesn't apply
-   here the way it does for .ring-container - reserving height directly
-   is the simpler fix for the same "nothing painted yet" flash). */
-.budget-chart:not(:has(svg)) {
-  min-height: 160px;
-}
-
-.budget-chart-svg {
-  width: 100%;
-  display: block;
-}
-
-.budget-predicted-line {
-  fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 1.4;
-  stroke-dasharray: 4 3;
-}
-
-.budget-actual-dot {
-  fill: var(--accent);
-  stroke: var(--surface);
-  stroke-width: 1.2;
-}
-
-.budget-chart-svg.over-track .budget-actual-dot {
-  fill: var(--danger);
-}
-
-/* Stacked domain bands for the Budget pace chart - same colors as "This
-   week's emissions by domain" (.domain-commute/.domain-food/.domain-alcohol
-   etc. above use these same variables as a `background`; here it's an SVG
-   `fill` instead) so the two cards read as one consistent picture. Covers
-   every domain the bar chart can show, not just commute/food/alcohol - see
-   the extras handling in renderPeriodChart(). A solid-color top stroke
-   over a semi-transparent fill keeps each band's own boundary crisp even
-   where two bands' colors are close in value. */
-.budget-band {
-  stroke-width: 1.6;
-  stroke-linejoin: round;
-}
-
-.budget-band-commute {
-  fill: var(--commute-color);
-  fill-opacity: 0.55;
-  stroke: var(--commute-color);
-}
-
-.budget-band-food {
-  fill: var(--accent);
-  fill-opacity: 0.55;
-  stroke: var(--accent);
-}
-
-.budget-band-alcohol {
-  fill: var(--alcohol-color);
-  fill-opacity: 0.55;
-  stroke: var(--alcohol-color);
-}
-
-.budget-band-homeEnergy {
-  fill: var(--homeenergy-color);
-  fill-opacity: 0.55;
-  stroke: var(--homeenergy-color);
-}
-
-.budget-band-gasHeating {
-  fill: var(--gasheating-color);
-  fill-opacity: 0.55;
-  stroke: var(--gasheating-color);
-}
-
-.budget-band-water {
-  fill: var(--water-color);
-  fill-opacity: 0.55;
-  stroke: var(--water-color);
-}
-
-.budget-band-pets {
-  fill: var(--pets-color);
-  fill-opacity: 0.55;
-  stroke: var(--pets-color);
-}
-
-.budget-band-flying {
-  fill: var(--flying-color);
-  fill-opacity: 0.55;
-  stroke: var(--flying-color);
-}
-
-.budget-band-banks {
-  fill: var(--banks-color);
-  fill-opacity: 0.55;
-  stroke: var(--banks-color);
-}
-
-.budget-band-goods {
-  fill: var(--goods-color);
-  fill-opacity: 0.55;
-  stroke: var(--goods-color);
-}
-
-.budget-band-carOwnership {
-  fill: var(--carownership-color);
-  fill-opacity: 0.55;
-  stroke: var(--carownership-color);
-}
-
-.budget-zero-line {
-  stroke: var(--border);
-  stroke-width: 1;
-  stroke-dasharray: 2 2;
-}
-
-.budget-day-label, .budget-axis-label {
-  font-size: 7px;
-  fill: var(--text-muted);
-}
-
-.budget-day-label.is-today {
-  fill: var(--accent);
-  font-weight: 700;
-}
-
-.budget-chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin: 6px 0 16px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
   gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-.legend-swatch {
-  width: 14px;
-  height: 3px;
-  border-radius: 2px;
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.btn-green {
+  background: var(--em-600);
+  color: #fff;
+}
+
+.btn-green:hover {
+  background: var(--em-700);
+}
+
+.btn-outline {
+  border: 1px solid var(--input);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.btn-outline:hover {
+  background: var(--muted);
+}
+
+.btn-ghost:hover {
+  background: var(--muted);
+}
+
+.btn-danger {
+  color: var(--red-600);
+  border-color: var(--red-200);
+}
+
+.btn-danger:hover {
+  background: var(--red-50);
+}
+
+.btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.back-link {
+  margin: 0 0 24px -8px;
+  color: var(--muted-fg);
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-fg);
+}
+
+.icon-btn:hover {
+  background: var(--muted);
+}
+
+.icon-btn.round {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.icon-btn.round:hover {
+  background: var(--em-100);
+  color: var(--em-700);
+}
+
+.danger-hover:hover {
+  color: var(--red-500);
+}
+
+.link-btn {
+  font-size: 12px;
+  color: var(--em-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 4px 12px;
+  font-size: 16px;
+  box-shadow: var(--shadow);
+}
+
+.input:focus {
+  outline: 2px solid var(--em-500);
+  outline-offset: 1px;
+}
+
+select.input {
+  appearance: auto;
+}
+
+.xs-input {
+  width: auto;
+  height: 28px;
+  font-size: 12px;
+  padding: 2px 8px;
   display: inline-block;
 }
 
-.legend-swatch-target {
-  background-image: linear-gradient(to right, var(--text-muted) 50%, transparent 50%);
-  background-size: 6px 3px;
+.xs-input:disabled {
+  opacity: 0.6;
 }
 
-.legend-swatch-actual.on-track {
-  background: var(--accent);
+label {
+  display: block;
 }
 
-.legend-swatch-actual.over-track {
-  background: var(--danger);
-}
-
-.legend-swatch-domain {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-}
-
-/* Domain-by-domain treemap (see squarifyTreemap()/renderDomainTreemap()
-   in app.js) - a fixed-height positioning context for the absolutely
-   positioned .domain-treemap-box children the JS computes coordinates
-   for, height set inline per render (proportional to the container's own
-   width, so the whole thing keeps a consistent landscape aspect ratio
-   whatever the screen size). */
-.domain-treemap {
-  position: relative;
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--border);
-  margin: var(--space-1) 0 var(--space-3);
-}
-
-/* Position/size set inline per render. A visible gap between boxes
-   (baked into those inline coordinates, not a border here) so two
-   adjacent categories with a similar-reading color still read as
-   separate shapes - the categorical palette above (--commute-color etc.)
-   is validated for CVD separation, but a boundary you can see regardless
-   of color is a stronger, order-independent cue. White text with a soft
-   shadow reads reasonably across the whole palette without needing a
-   per-color text-color lookup. */
-.domain-treemap-box {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 6px 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-.domain-treemap-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.domain-treemap-value {
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.92;
-}
-
-/* A box too small for the name+value text (see renderDomainTreemap() in
-   app.js) centers just its category icon instead - padding drops to 0 so
-   a very small box doesn't get squeezed to nothing by the base padding. */
-.domain-treemap-box-icon-only {
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-}
-
-.domain-treemap-icon {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
-}
-
-.domain-treemap-empty {
-  padding: var(--space-4);
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-}
-
-.domain-commute {
-  background: var(--commute-color);
-}
-
-.domain-food {
-  background: var(--accent);
-}
-
-.domain-alcohol {
-  background: var(--alcohol-color);
-}
-
-.domain-nonCommuteCar {
-  background: var(--noncommutecar-color);
-}
-
-.domain-homeEnergy {
-  background: var(--homeenergy-color);
-}
-
-.domain-gasHeating {
-  background: var(--gasheating-color);
-}
-
-.domain-water {
-  background: var(--water-color);
-}
-
-.domain-pets {
-  background: var(--pets-color);
-}
-
-.domain-flying {
-  background: var(--flying-color);
-}
-
-.domain-banks {
-  background: var(--banks-color);
-}
-
-.domain-goods {
-  background: var(--goods-color);
-}
-
-.domain-carOwnership {
-  background: var(--carownership-color);
-}
-
-/* Compact color key under the treemap - swatch + icon + name only, no
-   kg/percentage (those live inside each box itself now, or its title
-   tooltip for a box too small to hold text) - so this stays a quick
-   color-to-category lookup, matching the small legend row style of the
-   treemap references this was modeled on. */
-.domain-key {
-  list-style: none;
-  margin: 0 0 4px;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-}
-
-.domain-key-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.domain-key-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-.domain-key-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.domain-key-total {
-  width: 100%;
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  color: var(--text);
-}
-
-.assumptions {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0 0 16px;
-}
-
-.btn-primary, .btn-secondary {
-  font: inherit;
-  border-radius: 8px;
-  padding: 9px 16px;
-  cursor: pointer;
-  border: 1px solid transparent;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--text);
-  border-color: var(--border);
-}
-
-.goal-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -8px 0 10px;
-}
-
-.btn-small {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-}
-
-/* Weeks grid (page 2) */
-.weeks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
-  gap: 10px;
-  max-width: 700px;
-}
-
-.week-box {
-  position: relative;
-  text-align: left;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  cursor: pointer;
-  min-height: 84px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.week-box:hover {
-  border-color: var(--accent);
-}
-
-.week-box.is-current {
-  box-shadow: 0 0 0 2px var(--accent) inset;
-}
-
-.week-box.status-good { border-left-color: #3a9d5d; }
-.week-box.status-warn { border-left-color: #d0a020; }
-.week-box.status-high { border-left-color: var(--danger); }
-.week-box.status-empty { border-left-color: var(--border); opacity: 0.6; }
-
-.week-box-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  padding-right: 28px;
-}
-
-.week-box-bottom {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.week-box-total {
-  font-size: 1.1rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.week-diff {
-  font-size: 0.72rem;
-  font-weight: 700;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  gap: 1px;
-}
-
-.week-diff-over {
-  color: var(--danger);
-}
-
-.week-diff-under {
-  color: var(--accent);
-}
-
-.diff-caption {
-  font-size: 0.63rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-muted);
-}
-
-.week-box-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 0.65rem;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.week-box-badge-full {
-  background: var(--accent-light);
+.switch {
+  width: 36px;
+  height: 20px;
   border-radius: 999px;
-  padding: 2px 6px;
+  background: var(--input);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s;
 }
 
-/* Leaderboard (page 3) */
-.leaderboard-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
 }
 
-.leaderboard-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-2) var(--space-3);
+.switch.on {
+  background: #171717;
 }
 
-.leaderboard-row.is-current {
-  border-color: var(--accent);
-  background: var(--accent-light);
+.switch.on span {
+  transform: translateX(16px);
 }
 
-.leaderboard-rank {
-  font-weight: 700;
-  width: 28px;
-  text-align: center;
+/* ---------- progress & pills ---------- */
+
+.progress {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
 }
 
-.leaderboard-info {
-  flex: 1;
+.progress.thin {
+  height: 6px;
 }
 
-.leaderboard-week-label {
+.progress > div {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--em-600);
+  transition: width 0.5s ease-out;
+}
+
+.progress.thin > div {
+  background: var(--em-500);
+}
+
+.progress > div.grey {
+  background: rgba(115, 115, 115, 0.7);
+}
+
+.progress > div.grad {
+  background: linear-gradient(to right, var(--em-500), var(--em-600));
+}
+
+.pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.tag {
+  font-size: 10px;
   font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.leaderboard-sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.tag.green {
+  background: var(--em-100);
+  color: var(--em-700);
 }
 
-.leaderboard-total-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  text-align: right;
+.tag.amber {
+  background: var(--amber-100);
+  color: var(--amber-700);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.leaderboard-total {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.tag.solid {
+  background: var(--em-600);
+  color: #fff;
 }
 
-.leaderboard-winner {
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-weight: 600;
-  margin: 0 0 12px;
-}
-
-.leaderboard-sub-note {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
-.empty-note {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* Leaderboard "Leagues" card (see renderLeagues() in app.js). */
-.leagues-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--space-3);
-}
-
-.league-block {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: var(--space-3) var(--space-4);
-}
-
-.league-heading {
-  margin: 0 0 var(--space-2);
-  font-size: 0.88rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.league-members {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.league-members li {
-  font-size: 0.85rem;
-  color: var(--text);
-}
-
-.league-members li.is-self {
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.league-empty {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-/* Account (page 4) */
-.account-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-.file-btn {
+.stat-pill {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--muted);
 }
 
-.btn-secondary.danger {
-  color: var(--danger);
-  border-color: var(--danger);
+.stat-pill.solid {
+  background: var(--em-600);
+  color: #fff;
 }
 
-.modal-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+.stat-pill .icon.sm {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------- survey ---------- */
+
+.step-chips {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.step-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted-fg);
+}
+
+.step-chip.done {
+  border-color: var(--em-200);
+  background: rgba(236, 253, 245, 0.5);
+  color: var(--em-600);
+}
+
+.step-chip.current {
+  border-color: var(--em-500);
+  background: var(--em-50);
+  color: var(--em-700);
+  font-weight: 500;
+}
+
+.step-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 20px;
+  transition: all 0.15s;
+}
+
+.option-card.compact {
+  gap: 6px;
+  padding: 16px;
+}
+
+.option-card:hover {
+  background: rgba(245, 245, 245, 0.5);
+}
+
+.option-card.selected {
+  border-color: var(--em-500);
+  background: var(--em-50);
+  box-shadow: var(--shadow);
+  transform: scale(1.02);
+}
+
+.divider-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.divider-label span {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+
+.divider-label em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.meal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.meal-btn {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  z-index: 10;
-}
-
-.modal-backdrop.open {
-  display: flex;
-}
-
-.modal {
-  background: var(--surface);
+  gap: 2px;
   border-radius: 12px;
-  padding: var(--space-5);
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.meal-btn:hover {
+  background: var(--muted);
+}
+
+.meal-btn.selected {
+  border-color: rgba(10, 10, 10, 0.8);
+  background: var(--fg);
+  color: var(--bg);
+  transform: scale(1.03);
+}
+
+.note-green {
+  border-radius: 16px;
+  border: 1px solid var(--em-200);
+  background: rgba(236, 253, 245, 0.5);
+  padding: 20px;
+  font-size: 14px;
+  color: var(--em-800);
+}
+
+.choice-chip {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.choice-chip:hover {
+  background: rgba(245, 245, 245, 0.5);
+}
+
+.choice-chip.selected {
+  border-color: var(--em-500);
+  background: var(--em-50);
+  color: var(--em-800);
+}
+
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+
+.timeline > * + * {
+  margin-top: 8px;
+}
+
+.timeline-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -24px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--em-500);
+  background: var(--bg);
+  z-index: 1;
+}
+
+.day-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 12px;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.day-row:hover {
+  background: rgba(245, 245, 245, 0.5);
+  border-color: var(--em-300);
+}
+
+.day-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-fg);
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.popover-inline {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow-md);
+  padding: 12px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.mode-btn:hover {
+  background: var(--muted);
+}
+
+.mode-btn.selected {
+  border-color: var(--em-500);
+  background: var(--em-50);
+  font-weight: 500;
+}
+
+.empty-box {
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(245, 245, 245, 0.3);
+  padding: 40px;
+  text-align: center;
+}
+
+.empty-box.small {
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.empty-box .icon.big {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 12px;
+  display: block;
+}
+
+.flight-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: end;
+}
+
+.flight-arrow {
+  display: none;
+  margin-bottom: 12px;
+}
+
+.flight-meta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.picker {
+  position: relative;
+}
+
+.picker-btn {
   width: 100%;
-  max-width: 340px;
-  box-shadow: var(--shadow);
-  max-height: 85vh;
+  justify-content: space-between;
+  font-weight: 400;
+  padding: 0 12px;
+}
+
+.picker-btn.placeholder {
+  color: var(--muted-fg);
+}
+
+.picker-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.picker-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(300px, calc(100vw - 48px));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.picker-search input {
+  flex: 1;
+  height: 40px;
+  border: 0;
+  outline: 0;
+  font-size: 16px;
+  background: transparent;
+}
+
+.picker-list {
+  max-height: 280px;
   overflow-y: auto;
+  padding: 4px;
 }
 
-.modal-wide {
-  max-width: 480px;
-}
-
-.week-detail-table {
+.picker-item {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: left;
+}
+
+.picker-item:hover {
+  background: var(--muted);
+}
+
+.check-slot {
+  width: 16px;
+  margin-right: 4px;
+  display: inline-flex;
+}
+
+.picker-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* ---------- results ---------- */
+
+.big-number {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 12px;
+  margin-top: 8px;
+}
+
+.big-number .num {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.big-number .unit {
+  font-size: 14px;
+  color: var(--muted-fg);
+}
+
+.callout-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.round-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--em-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.round-badge .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.round-badge.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.round-badge.sm .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.eyebrow {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--em-700);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.eyebrow-sm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
 
-.week-detail-table th {
-  text-align: left;
-  color: var(--text-muted);
+.eyebrow-xs {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--em-700);
+  margin-bottom: 8px;
+}
+
+.eyebrow-xs.amber {
+  color: var(--amber-600);
+}
+
+.tip-title {
+  font-size: 24px;
   font-weight: 600;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
 }
 
-.week-detail-table td {
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal h3 {
-  margin: 0 0 14px;
-  font-size: 1rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.9rem;
-  margin-bottom: 14px;
-}
-
-/* [hidden] and .field{display:flex} have equal specificity, so without this
-   a hidden .field (e.g. #leaderboard-group-filter-field) stays visible. */
-.field[hidden] {
-  display: none;
-}
-
-.field-checkbox {
-  flex-direction: row;
+.saving-pill {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: var(--em-600);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.field-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+.chart-wrap {
+  width: 100%;
+}
+
+.bar-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.bar-chart .axis {
+  font-size: 11px;
+  fill: var(--muted-fg);
+}
+
+.bar-chart .axis.small {
+  font-size: 10px;
+}
+
+.bar-chart .grid-line {
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+}
+
+.bar-chart .bar {
+  cursor: pointer;
+}
+
+.bar-chart .bar:hover rect {
+  fill: rgba(0, 0, 0, 0.04);
+}
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 16px;
+  transition: all 0.15s;
+}
+
+.cat-row:hover {
+  background: rgba(245, 245, 245, 0.5);
+}
+
+.cat-row.selected {
+  border-color: var(--em-400);
+  background: rgba(236, 253, 245, 0.6);
+}
+
+.cat-row {
+  min-width: 0;
+}
+
+.cat-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.cat-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+}
+
+.footnote {
+  margin: 32px auto 0;
+  text-align: center;
+  max-width: 36rem;
+}
+
+/* ---------- explainer ---------- */
+
+.explainer-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stat {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.section-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.section-card:hover,
+.section-card:focus-visible {
+  border-color: var(--em-300);
+  box-shadow: var(--shadow-md);
+}
+
+.section-card h2 {
+  font-size: 16px;
+}
+
+.section-card:hover .icon.faint {
+  color: var(--em-600);
+  opacity: 1;
+}
+
+.num-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--em-100);
+  color: var(--em-700);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.modal-actions {
+.coming-soon {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 0;
+}
+
+.soon-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--em-100);
+  color: var(--em-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.soon-icon .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.soon-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+
+/* ---------- modal ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  animation: fade 0.15s ease-out;
+}
+
+.modal {
+  position: relative;
+  width: 100%;
+  max-width: 32rem;
+  max-height: 88vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  color: var(--muted-fg);
+  border-radius: 4px;
+}
+
+.modal-close:hover {
+  color: var(--fg);
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 32px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.popup-body {
+  padding-top: 8px;
+  min-width: 0;
+}
+
+.popup-body > * + * {
+  margin-top: 24px;
+}
+
+.tier {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 12px;
+}
+
+.tier.mine {
+  border-color: var(--em-400);
+  background: var(--em-50);
+}
+
+.equiv {
+  border-top: 1px solid var(--em-100);
+  padding-top: 12px;
+}
+
+.equiv-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--em-800);
+}
+
+.icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  min-height: 14px;
+  margin-bottom: 8px;
+}
+
+.cmp-line .icon-row {
+  margin-bottom: 0;
+}
+
+.mini-row,
+.mini-card {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 8px 12px;
+}
+
+.mini-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cmp-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cmp-line + .cmp-line {
   margin-top: 6px;
+}
+
+.cmp-emoji {
+  font-size: 12px;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cmp-track {
+  flex: 1;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.cmp-track > div {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.cmp-track > .flight { background: var(--red-500); }
+.cmp-track > .train { background: var(--em-500); }
+
+.cmp-val {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 80px;
+  text-align: right;
+}
+
+.cmp-val.flight, .icon-row.flight { color: var(--red-500); }
+.cmp-val.train, .icon-row.train { color: var(--em-500); }
+
+/* ---------- habits & check-in ---------- */
+
+.empty-card {
+  border-radius: 24px;
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.5);
+  padding: 40px;
+  text-align: center;
+}
+
+.habit-chip {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid var(--em-200);
+  background: var(--em-50);
+  padding: 14px;
+  transition: background 0.15s;
+}
+
+.habit-chip:hover {
+  background: rgba(209, 250, 229, 0.6);
+}
+
+.tick {
+  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--em-600);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tick .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.stat-box {
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.stat-box .label-row {
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.stat-box.orange {
+  background: linear-gradient(to bottom right, var(--orange-50), var(--bg));
+  border: 1px solid var(--orange-100);
+}
+
+.stat-box.orange .label-row {
+  color: var(--orange-600);
+}
+
+.stat-box.emerald {
+  background: linear-gradient(to bottom right, var(--em-50), var(--bg));
+  border: 1px solid var(--em-100);
+}
+
+.stat-box.emerald .label-row {
+  color: var(--em-600);
+}
+
+.stat-num {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.habit-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 16px;
+}
+
+.habit-card.checked {
+  border-color: var(--em-300);
+  background: linear-gradient(to bottom right, var(--em-50), var(--bg));
+}
+
+.habit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.flame {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--muted);
+  color: var(--muted-fg);
+}
+
+.flame.hot {
+  background: linear-gradient(to bottom right, #fb923c, #f43f5e);
+  color: #fff;
+}
+
+.week-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--muted);
+}
+
+.dot.on {
+  background: var(--em-500);
+  color: #fff;
+}
+
+.dot.on .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dot.today {
+  background: var(--em-100);
+  box-shadow: 0 0 0 1px var(--em-300);
+}
+
+.dot.today i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--em-400);
+}
+
+.goal-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(229, 229, 229, 0.6);
+}
+
+.goal-row .btn {
+  height: 28px;
+}
+
+.checkin-btn {
+  width: 100%;
+}
+
+.locked-card {
+  margin-top: 20px;
+  border-radius: 24px;
+  border: 1px dashed var(--border);
+  background: rgba(245, 245, 245, 0.2);
+  padding: 24px;
+}
+
+.locked-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+}
+
+/* ---------- account ---------- */
+
+.data-box {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(245, 245, 245, 0.3);
+  padding: 16px;
+}
+
+.auth-form > * + * {
+  margin-top: 12px;
+}
+
+/* ---------- misc ---------- */
+
+.center-pad {
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 4px solid var(--em-200);
+  border-top-color: var(--em-600);
+  animation: spin 0.8s linear infinite;
+}
+
+.fade-in {
+  animation: slide-in 0.25s ease-out;
+}
+
+.fade-up {
+  animation: fade-up 0.35s ease-out;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(20px); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- wider screens ---------- */
+
+@media (min-width: 640px) {
+  .container {
+    padding: 48px 24px;
+  }
+
+  .topbar-inner {
+    padding: 0 24px;
+  }
+
+  .nav a {
+    padding: 6px 12px;
+  }
+
+  .card {
+    padding: 32px;
+  }
+
+  .card.hero {
+    padding: 40px;
+  }
+
+  .survey-card {
+    padding: 32px;
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .day-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hide-sm {
+    display: inline;
+  }
+
+  .big-number .num {
+    font-size: 60px;
+  }
+
+  .big-number .unit {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .btn-row {
+    flex-direction: row;
+  }
+
+  .flight-grid {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .flight-arrow {
+    display: block;
+  }
+
+  .explainer-title {
+    font-size: 30px;
+  }
+
+  .checkin-btn {
+    width: auto;
+  }
+
+  .modal {
+    padding: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-2-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .day-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
