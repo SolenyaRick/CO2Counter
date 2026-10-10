@@ -315,7 +315,9 @@
   // A ticked "Return trip" counts the distance both ways. Flights saved
   // before the box existed have no flag and stay one-way.
   const legs = (f) => (f.returnTrip ? 2 : 1);
-  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin) * legs(f);
+  // `trips` (default 1) lets the UK-average profile model a fractional
+  // number of the same trip per year; survey flights never set it.
+  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin) * legs(f) * (f.trips || 1);
   const routeLabel = (f) => {
     const a = airport(f.from);
     const b = airport(f.to);

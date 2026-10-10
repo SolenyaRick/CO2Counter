@@ -59,9 +59,10 @@
   //    Survey 2024), about 3/4 by car (NTS: 76% of all miles are by car),
   //    modelled as a 3.1 km trip each weekday, four days by car, one by
   //    train.
-  //  - Flights: 94.6m visits abroad by UK residents in 2024 (ONS Travel
-  //    trends) for 69.3m people, most by air: about one return European
-  //    flight each, modelled as London-Barcelona and back in economy.
+  //  - Flights: 80.9m of the 91.5m visits abroad by UK residents in 2024
+  //    were by air (ONS Travel trends 2024, Table 4, as corrected Sept
+  //    2026), for 69.3m people: about 1.17 return flights each, modelled
+  //    as London-Barcelona and back in economy.
   //  - Pets: 15.5m dogs and 13.1m cats (UK Pet Food 2026) for 69.3m people.
   //  - Food: Defra Family Food 2023/24, household purchases per person per
   //    week: chicken & poultry 230 g, pork incl. bacon, ham & sausages
@@ -77,7 +78,7 @@
       weekMix: { chicken: 230 / 150, pork: 137 / 150, fish: 120 / 150, beef: 84 / 150, lamb: 23 / 150, veggie: 7 - 594 / 150 },
     },
     commute: { distance: 3.1, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
-    flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true }],
+    flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true, trips: 80.9 / 69.3 }],
     energy: { electricityKwh: 2500 / 12, gasKwh: 9500 / 12, greenTariff: false, household: 2.4 },
     water: { liters: 140 * 30.4 * 2.4 },
     pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
@@ -258,9 +259,11 @@
   },
   {
     "key": "ev",
+    // DESNZ 2025 battery electric average car: 0.04047 (electricity
+    // incl. T&D) + 0.01049 (well-to-tank) kg CO2e/km.
     "label": "Electric car",
     "emoji": "⚡",
-    "factor": 0.12852
+    "factor": 0.05096
   },
   {
     "key": "car_petrol",
@@ -941,7 +944,7 @@
       },
       {
         "heading": "If you must drive",
-        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits roughly half as much per km on the current grid — and far less on a green tariff."
+        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits roughly a quarter as much per km on the current grid — and far less on a green tariff."
       },
       {
         "heading": "Rethink the trip itself",
