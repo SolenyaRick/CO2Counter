@@ -1974,11 +1974,22 @@ label {
 
 /* =====================================================================
    Sleek theme (Oct 2026). Paper background, deep pine green with a
-   leaf accent, serif headings, small monospace labels, pill buttons and
+   leaf accent, bold sans headings, small monospace labels, pill buttons and
    line icons in tinted tiles instead of emojis. Everything
    above still sets layout; this block only restyles. Colours go through
    the variables, so the emerald scale below is now a pine scale.
    ===================================================================== */
+
+/* CO2 Counter palette
+     Pine        #12403a  header, footer, primary buttons, headings
+     Deep pine   #0a2a26  gradients, pressed states
+     Moss        #2c7a5e  progress bars, chart lead colour
+     Leaf        #c4e57d  accent: active nav, logo tile, highlights
+     Mist        #ecf4f0  icon tiles, soft callouts
+     Paper       #f6f5ef  page background
+     Ink         #10241f  body text
+     Sun         #dca23a  warnings, "coming soon"
+     Clay        #d0574a  above-average, delete */
 
 :root {
   --bg: #f6f5ef;
@@ -2002,8 +2013,8 @@ label {
   --forest-grad: linear-gradient(150deg, #1d5a4f 0%, #12403a 45%, #0c302b 100%);
   --shadow: 0 1px 2px rgba(18, 38, 30, 0.04);
   --shadow-md: 0 10px 30px -14px rgba(18, 38, 30, 0.25);
-  --font: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
-  --serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  --display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -2030,9 +2041,9 @@ body {
 .stat-num,
 .method h2,
 .legal h2 {
-  font-family: var(--serif);
-  font-weight: 500;
-  letter-spacing: 0.005em;
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .page-head h1 { font-size: 26px; line-height: 1.15; color: var(--em-600); }
@@ -2040,7 +2051,7 @@ body {
 .explainer-title { font-size: 32px; color: var(--em-600); }
 .tip-title { font-size: 28px; line-height: 1.2; }
 .card-title { font-size: 21px; }
-.big-number .num { font-size: 56px; font-weight: 400; }
+.big-number .num { font-size: 56px; font-weight: 700; letter-spacing: -0.04em; }
 
 /* monospace labels */
 .eyebrow,
@@ -2071,10 +2082,10 @@ body {
 }
 
 .brand-name {
-  font-family: var(--serif);
-  font-weight: 500;
+  font-family: var(--display);
+  font-weight: 700;
   font-size: 17px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.02em;
 }
 
 .nav a {
