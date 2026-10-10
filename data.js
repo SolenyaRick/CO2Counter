@@ -284,32 +284,21 @@
     "factor": 0.118
   }
 ];
+  // Flight factors: DESNZ 2025 conversion factors, kg CO2e per passenger km,
+  // with radiative forcing, plus well-to-tank (fuel production). Short-haul
+  // has no premium or first class in DESNZ, so those use economy and
+  // business. Domestic UK flights use DESNZ's average passenger figure.
   const CABINS = [
-  {
-    "key": "economy",
-    "label": "Economy",
-    "emoji": "💺",
-    "factor": 0.255
-  },
-  {
-    "key": "premium",
-    "label": "Premium economy",
-    "emoji": "🥂",
-    "factor": 0.34
-  },
-  {
-    "key": "business",
-    "label": "Business",
-    "emoji": "🛋️",
-    "factor": 0.43
-  },
-  {
-    "key": "first",
-    "label": "First class",
-    "emoji": "👑",
-    "factor": 0.6
-  }
-];
+    { key: "economy", label: "Economy", emoji: "💺", short: 0.12576 + 0.02249, long: 0.11704 + 0.02461 },
+    { key: "premium", label: "Premium economy", emoji: "🥂", short: 0.12576 + 0.02249, long: 0.18726 + 0.03937 },
+    { key: "business", label: "Business", emoji: "🛋️", short: 0.18863 + 0.03373, long: 0.3394 + 0.07137 },
+    { key: "first", label: "First class", emoji: "👑", short: 0.18863 + 0.03373, long: 0.46814 + 0.09844 },
+  ];
+  const FLIGHT_DOMESTIC_FACTOR = 0.22928 + 0.0335;
+  // DESNZ: short-haul is up to 3,700 km; distances get an 8% uplift for
+  // indirect routing and holding.
+  const FLIGHT_LONG_HAUL_KM = 3700;
+  const FLIGHT_DISTANCE_UPLIFT = 1.08;
   const AIRPORTS = [
   {
     "code": "LHR",
@@ -991,7 +980,7 @@
     "sections": [
       {
         "heading": "Fly less, and shorter",
-        "body": "Every flight has a major impact. A London–NYC return is 2 tonnes CO₂e — nearly half the UK average annual footprint and 80% of one person's entire 1.5°C budget. London–Paris by plane is 314 kg; by train just 34 kg.",
+        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is around 110 kg; by Eurostar, just a few kg.",
         "dynamicKey": "flightTiers"
       },
       {
@@ -1616,7 +1605,7 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, CABINS, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    COMMUTE_MODES, CABINS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };

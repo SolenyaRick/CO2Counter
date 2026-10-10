@@ -350,20 +350,32 @@
     return D.AIRPORTS.find((a) => a.code === code);
   }
 
-  // Great-circle distance with a 10% uplift for real-world routing.
-  function flightKm(from, to) {
-    const a = airport(from);
-    const b = airport(to);
-    if (!a || !b) return 0;
+  function greatCircleKm(a, b) {
     const rad = (x) => (x * Math.PI) / 180;
     const dLat = rad(b.lat - a.lat);
     const dLon = rad(b.lon - a.lon);
     const h =
       Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
-    return 2 * 6371 * Math.asin(Math.sqrt(h)) * 1.1;
+    return 2 * 6371 * Math.asin(Math.sqrt(h));
   }
 
-  const cabinFactor = (key) => factorOf(D.CABINS, key);
+  // Great-circle distance with DESNZ's 8% uplift for real-world routing.
+  function flightKm(from, to) {
+    const a = airport(from);
+    const b = airport(to);
+    if (!a || !b) return 0;
+    return greatCircleKm(a, b) * D.FLIGHT_DISTANCE_UPLIFT;
+  }
+
+  // kg CO2e per km for this route and cabin: domestic, short- or long-haul.
+  function flightFactor(from, to, cabin) {
+    const a = airport(from);
+    const b = airport(to);
+    if (!a || !b) return 0;
+    if (a.country === "UK" && b.country === "UK") return D.FLIGHT_DOMESTIC_FACTOR;
+    const c = byKey(D.CABINS, cabin) || D.CABINS[0];
+    return greatCircleKm(a, b) > D.FLIGHT_LONG_HAUL_KM ? c.long : c.short;
+  }
 
   // A pot with no provider picked counts as "other" (the sector average).
   function pensionProvider(b) {
@@ -377,7 +389,7 @@
   const legs = (f) => (f.returnTrip ? 2 : 1);
   // `trips` (default 1) lets the UK-average profile model a fractional
   // number of the same trip per year; survey flights never set it.
-  const flightKg = (f) => flightKm(f.from, f.to) * cabinFactor(f.cabin) * legs(f) * (f.trips || 1);
+  const flightKg = (f) => flightKm(f.from, f.to) * flightFactor(f.from, f.to, f.cabin) * legs(f) * (f.trips || 1);
   const routeLabel = (f) => {
     const a = airport(f.from);
     const b = airport(f.to);
@@ -659,7 +671,7 @@
       flights: () => {
         const flights = s.flights || [];
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
-        const economyKg = (f) => flightKm(f.from, f.to) * cabinFactor("economy") * legs(f);
+        const economyKg = (f) => flightKm(f.from, f.to) * flightFactor(f.from, f.to, "economy") * legs(f);
         const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
         const long = flights.filter((f) => flightKm(f.from, f.to) > MEDIUM_HAUL_KM);
         const short = flights.filter((f) => {
@@ -667,7 +679,7 @@
           return km > 0 && km <= MEDIUM_HAUL_KM;
         });
         const typicalShortKg =
-          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * cabinFactor("economy") * (long.length === 1 ? legs(long[0]) : 1);
+          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * flightFactor("LHR", "BCN", "economy") * (long.length === 1 ? legs(long[0]) : 1);
         let remaining = 0;
         const parts = [];
         if (long.length > 1) {
@@ -1163,7 +1175,6 @@
     }
     html += flights
       .map((f, i) => {
-        const cabin = byKey(D.CABINS, f.cabin) || D.CABINS[0];
         const km = flightKm(f.from, f.to);
         return (
           '<div class="panel p-4"><div class="flight-grid"><div><label class="xs">From</label><div class="mt-1">' +
@@ -1178,7 +1189,7 @@
           '<label class="check-label"><input type="checkbox" data-flight="' + i + '" data-flight-field="returnTrip"' + (f.returnTrip ? " checked" : "") +
           " /> Return trip</label>" +
           (km > 0
-            ? '<div class="sm"><span class="muted">' + (km * legs(f)).toFixed(0) + ' km · </span><span class="fw-500">' + (km * cabin.factor * legs(f)).toFixed(0) + " kg CO₂e</span></div>"
+            ? '<div class="sm"><span class="muted">' + (km * legs(f)).toFixed(0) + ' km · </span><span class="fw-500">' + flightKg({ ...f, trips: 1 }).toFixed(0) + " kg CO₂e</span></div>"
             : "") +
           '<button type="button" class="icon-btn danger-hover" data-action="remove-flight" data-index="' + i + '" aria-label="Remove flight">' + icon("trash") + "</button>" +
           "</div></div>"
