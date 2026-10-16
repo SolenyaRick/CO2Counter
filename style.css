@@ -2313,3 +2313,64 @@ body {
   min-width: 110px;
   padding-bottom: 10px;
 }
+
+/* ---------- auth messages ---------- */
+
+.auth-note {
+  font-size: 13px;
+  line-height: 1.45;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.auth-note.error {
+  background: #fbecea;
+  color: #9f3a2f;
+}
+
+.auth-note.ok {
+  background: var(--em-50);
+  color: var(--em-700);
+}
+
+.auth-links {
+  justify-content: space-between;
+}
+
+.auth-sent {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--em-600);
+  color: var(--leaf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-sent .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.flash {
+  max-width: 48rem;
+  margin: 16px auto 0;
+  width: calc(100% - 32px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 14px;
+  background: var(--em-600);
+  color: #fffdf9;
+  font-size: 14px;
+}
+
+.flash > span {
+  flex: 1;
+}
+
+.flash .icon-btn {
+  color: rgba(255, 253, 249, 0.8);
+}

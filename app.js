@@ -32,6 +32,9 @@
 
   const KEY_SURVEY = "ecoimpact_survey";
   const KEY_SNAPSHOTS = "ecoimpact_monthly_snapshots";
+  // Set while someone who came from a reset link still has to choose a new
+  // password, so a reload doesn't skip that step. Per tab only.
+  const KEY_RECOVERY = "co2_password_recovery";
   const KEY_HABITS = "ecoimpact_habits_"; // + category
   const KEY_STAGE = "ecoimpact_stage_"; // + category
   const KEY_GOALS = "ecoimpact_goals";
@@ -69,6 +72,21 @@
   function lsSet(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {}
+  }
+
+  function ssGet(key) {
+    try {
+      return sessionStorage.getItem(key) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function ssSet(key, on) {
+    try {
+      if (on) sessionStorage.setItem(key, "1");
+      else sessionStorage.removeItem(key);
     } catch (e) {}
   }
 
@@ -1001,6 +1019,8 @@
     authErr: "",
     userName: "",
     recovery: false,
+    authSentTo: "", // email a confirmation link was just sent to
+    flash: "", // one-off message shown at the top of the next page
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -2363,30 +2383,97 @@
     );
   }
 
+  const MIN_PASSWORD = 8;
+
+  const authNotes = () =>
+    (ui.authErr ? '<p class="auth-note error" role="alert">' + esc(ui.authErr) + "</p>" : "") +
+    (ui.authMsg ? '<p class="auth-note ok" role="status">' + esc(ui.authMsg) + "</p>" : "");
+
+  function passwordField(id, label, autocomplete) {
+    return (
+      '<label class="xs">' + label + '<input class="input mt-1" type="password" id="' + id + '" minlength="' + MIN_PASSWORD +
+      '" required autocomplete="' + autocomplete + '" /></label>'
+    );
+  }
+
+  const emailField = () =>
+    '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" value="' + esc(ui.authEmail) + '" /></label>';
+
+  const showPasswords = () =>
+    '<label class="check-label xs"><input type="checkbox" data-action="show-passwords" /> Show password</label>';
+
   function authForm() {
     if (ui.recovery) {
       return (
-        '<form id="recovery-form" class="auth-form"><p class="sm fw-500">Set a new password</p>' +
-        '<label class="xs">New password<input class="input mt-1" type="password" id="new-password" minlength="6" required autocomplete="new-password" /></label>' +
-        (ui.authErr ? '<p class="xs red">' + esc(ui.authErr) + "</p>" : "") +
-        '<button type="submit" class="btn btn-green">Save password</button></form>'
+        '<form id="recovery-form" class="auth-form" novalidate>' +
+        passwordField("new-password", "New password (at least " + MIN_PASSWORD + " characters)", "new-password") +
+        passwordField("new-password2", "Type it again", "new-password") +
+        showPasswords() + authNotes() +
+        '<button type="submit" class="btn btn-green btn-block">Save new password</button></form>'
+      );
+    }
+    if (ui.authSentTo) {
+      return (
+        '<div class="auth-form"><div class="auth-sent">' + icon("check") + "</div>" +
+        '<p class="sm">We\'ve sent a confirmation link to <strong>' + esc(ui.authSentTo) + "</strong>. Open it to finish creating your account, and you'll be signed in.</p>" +
+        '<p class="xs muted">Can\'t see it? Check your junk or spam folder. Each link only works once.</p>' +
+        authNotes() +
+        '<button type="button" class="btn btn-outline btn-block" data-action="resend-confirm">Send the link again</button>' +
+        '<div class="chip-row"><button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Back to sign in</button></div></div>'
+      );
+    }
+    if (ui.authMode === "reset") {
+      return (
+        '<form id="reset-form" class="auth-form" novalidate><p class="sm muted">Enter your account email and we\'ll send you a link to choose a new password.</p>' +
+        emailField() + authNotes() +
+        '<button type="submit" class="btn btn-green btn-block">Send reset link</button>' +
+        '<div class="chip-row"><button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Back to sign in</button></div></form>'
       );
     }
     const signup = ui.authMode === "signup";
     return (
-      '<form id="auth-form" class="auth-form"><p class="sm muted">Existing CO2 Tracker accounts work here too.</p>' +
-      '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" value="' + esc(ui.authEmail) + '" /></label>' +
-      '<label class="xs">Password<input class="input mt-1" type="password" id="auth-password" minlength="6" required autocomplete="' +
-      (signup ? "new-password" : "current-password") + '" /></label>' +
-      (ui.authErr ? '<p class="xs red">' + esc(ui.authErr) + "</p>" : "") +
-      (ui.authMsg ? '<p class="xs green-dark">' + esc(ui.authMsg) + "</p>" : "") +
+      '<form id="auth-form" class="auth-form" novalidate>' +
+      emailField() +
+      (signup
+        ? passwordField("auth-password", "Password (at least " + MIN_PASSWORD + " characters)", "new-password") +
+          passwordField("auth-password2", "Type it again", "new-password")
+        : passwordField("auth-password", "Password", "current-password")) +
+      showPasswords() + authNotes() +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
       (signup
         ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>'
         : "") +
-      '<div class="chip-row"><button type="button" class="link-btn" data-action="toggle-auth-mode">' + (signup ? "Have an account? Sign in" : "Need an account? Sign up") + "</button>" +
-      (signup ? "" : '<button type="button" class="link-btn" data-action="forgot">Forgot password?</button>') + "</div></form>"
+      '<div class="chip-row auth-links">' +
+      (signup
+        ? '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Have an account? Sign in</button>'
+        : '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signup">Need an account? Sign up</button>' +
+          '<button type="button" class="link-btn" data-action="auth-mode" data-mode="reset">Forgot password?</button>') +
+      "</div></form>"
     );
+  }
+
+  // Supabase's error messages, in plainer words.
+  function friendlyAuthError(e) {
+    const code = (e && (e.code || e.error_code)) || "";
+    const msg = (e && e.message) || "";
+    if (code === "invalid_credentials" || /invalid login credentials/i.test(msg))
+      return "That email and password don't match. Check them and try again, or use Forgot password.";
+    if (code === "email_not_confirmed" || /email not confirmed/i.test(msg))
+      return "You need to confirm your email before signing in.";
+    if (code === "over_email_send_rate_limit" || /rate limit|security purposes/i.test(msg))
+      return "We've sent a few emails already. Please wait a minute and try again.";
+    if (code === "same_password") return "Your new password must be different from your old one.";
+    if (code === "weak_password") return msg || "Please choose a stronger password.";
+    if (code === "validation_failed" || /invalid format|unable to validate email/i.test(msg)) return "Please enter a valid email address.";
+    if (/fetch|network/i.test(msg)) return "We couldn't reach the server. Check your connection and try again.";
+    return msg || "Something went wrong. Please try again.";
+  }
+
+  // Checks shared by sign-up and set-new-password; returns an error or "".
+  function passwordProblem(p1, p2) {
+    if (p1.length < MIN_PASSWORD) return "Your password needs at least " + MIN_PASSWORD + " characters.";
+    if (p1 !== p2) return "The two passwords don't match. Please type them again.";
+    return "";
   }
 
   // Supabase appends its tokens to this URL's hash, so it must not carry a
@@ -2409,30 +2496,97 @@
     ui.authEmail = email; // keep it filled in if the form re-renders with an error
     ui.authErr = "";
     ui.authMsg = "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      ui.authErr = "Please enter a valid email address.";
+      return render();
+    }
     try {
       if (ui.authMode === "signup") {
+        const problem = passwordProblem(password, document.getElementById("auth-password2").value);
+        if (problem) {
+          ui.authErr = problem;
+          return render();
+        }
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl() } });
         if (error) throw error;
-        if (!data.session) {
-          ui.authMsg = "Check your email to confirm your account, then sign in.";
+        // Supabase answers a sign-up for an existing email with a user that
+        // has no identities, and sends nothing.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
           ui.authMode = "signin";
+          ui.authErr = "There's already an account with this email. Sign in below, or use Forgot password if you can't remember it.";
+          return render();
+        }
+        if (!data.session) {
+          ui.authSentTo = email;
           return render();
         }
       } else {
+        if (!password) {
+          ui.authErr = "Please enter your password.";
+          return render();
+        }
         const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          // Not confirmed yet: send a fresh link and say so.
+          if (error.code === "email_not_confirmed" || /not confirmed/i.test(error.message || "")) {
+            await sb.auth.resend({ type: "signup", email, options: { emailRedirectTo: authRedirectUrl() } });
+            ui.authSentTo = email;
+            ui.authMsg = "You need to confirm your email before signing in, so we've sent you a new link.";
+            return render();
+          }
+          throw error;
+        }
       }
       await afterSignIn();
     } catch (e) {
-      ui.authErr = (e && e.message) || "Something went wrong. Please try again.";
+      ui.authErr = friendlyAuthError(e);
       render();
     }
+  }
+
+  async function submitReset() {
+    const email = document.getElementById("auth-email").value.trim();
+    ui.authEmail = email;
+    ui.authErr = "";
+    ui.authMsg = "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      ui.authErr = "Please enter a valid email address.";
+      return render();
+    }
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() });
+    if (error) ui.authErr = friendlyAuthError(error);
+    // Same message whether or not the account exists, so the form can't be
+    // used to find out who has one.
+    else ui.authMsg = "If there's an account for " + email + ", we've sent it a link to reset the password. Check your inbox (and junk folder).";
+    render();
+  }
+
+  async function submitNewPassword() {
+    const p1 = document.getElementById("new-password").value;
+    const problem = passwordProblem(p1, document.getElementById("new-password2").value);
+    ui.authErr = problem;
+    if (problem) return render();
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    if (error) {
+      ui.authErr = /session|jwt|expired/i.test(error.message || "")
+        ? "Your reset link has expired. Please request a new one."
+        : friendlyAuthError(error);
+      return render();
+    }
+    ui.recovery = false;
+    ssSet(KEY_RECOVERY, false);
+    ui.authErr = "";
+    ui.flash = "Your password has been changed and you're signed in.";
+    await afterSignIn();
+    location.hash = membership && membership.access ? "#/results" : "#/";
+    render();
   }
 
   async function afterSignIn() {
     await refreshUser();
     ui.authMsg = "";
     ui.authErr = "";
+    ui.authSentTo = "";
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
     if (membership && membership.access) {
@@ -2456,11 +2610,13 @@
   }
 
   function renderLogin() {
-    if (ui.recovery) return gateShell("Set a new password", "", authForm());
+    if (ui.recovery) return gateShell("Choose a new password", "Type your new password twice to make sure it's right.", authForm());
+    if (ui.authSentTo) return gateShell("Check your inbox", "", authForm());
+    if (ui.authMode === "reset") return gateShell("Reset your password", "", authForm());
     const signup = ui.authMode === "signup";
     return gateShell(
       signup ? "Create your account" : "Sign in",
-      "Work out your carbon footprint and find your biggest wins.",
+      signup ? "Save your results and see your full breakdown." : "Welcome back. Sign in to see your results.",
       authForm()
     );
   }
@@ -2605,11 +2761,26 @@
     setNav(parts[0] === "explainer" ? "" : path);
     const accountLink = document.querySelector('#nav a[data-route="/account"]');
     if (accountLink) accountLink.textContent = currentUser ? "Account" : "Sign in";
+    if (ui.flash && html !== spinner) {
+      html =
+        '<div class="flash" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
+        '<button type="button" class="icon-btn" data-action="dismiss-flash" aria-label="Dismiss">' + icon("x") + "</button></div>" + html;
+    }
+    // Re-rendering a form after an error shouldn't wipe the passwords
+    // someone just typed.
+    const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(html);
+    kept.forEach(([id, el]) => {
+      const now = document.getElementById(id);
+      if (now) now.value = el.value;
+    });
   }
+
+  const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
 
   function onRouteChange() {
     closeModal();
+    ui.flash = "";
     if (currentPath() === "/friends") {
       friends.loaded = false;
       friends.msg = "";
@@ -2765,23 +2936,31 @@
       updateGoal(id, { done: !goalFor(id).done });
       render();
     },
-    "toggle-auth-mode": () => {
-      ui.authMode = ui.authMode === "signup" ? "signin" : "signup";
+    "auth-mode": (el) => {
+      const email = document.getElementById("auth-email");
+      if (email) ui.authEmail = email.value.trim();
+      ui.authMode = el.dataset.mode;
+      ui.authSentTo = "";
       ui.authErr = "";
       ui.authMsg = "";
       render();
     },
-    forgot: async () => {
-      const email = document.getElementById("auth-email").value.trim();
+    "show-passwords": (el) => {
+      document.querySelectorAll('.auth-form input[type="password"], .auth-form input[data-pw]').forEach((i) => {
+        i.dataset.pw = "1";
+        i.type = el.checked ? "text" : "password";
+      });
+    },
+    "resend-confirm": async () => {
       ui.authErr = "";
       ui.authMsg = "";
-      if (!email) {
-        ui.authErr = "Enter your email above first.";
-        return render();
-      }
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: authRedirectUrl() });
-      if (error) ui.authErr = error.message;
-      else ui.authMsg = "Check your email for a link to reset your password.";
+      const { error } = await sb.auth.resend({ type: "signup", email: ui.authSentTo, options: { emailRedirectTo: authRedirectUrl() } });
+      if (error) ui.authErr = friendlyAuthError(error);
+      else ui.authMsg = "Sent. It can take a minute to arrive.";
+      render();
+    },
+    "dismiss-flash": () => {
+      ui.flash = "";
       render();
     },
     "sign-out": async () => {
@@ -2802,6 +2981,7 @@
     },
     "start-signup": () => {
       ui.authMode = "signup";
+      ui.authSentTo = "";
       ui.authErr = "";
       ui.authMsg = "";
       location.hash = "#/account";
@@ -2809,6 +2989,7 @@
     },
     "start-signin": () => {
       ui.authMode = "signin";
+      ui.authSentTo = "";
       ui.authErr = "";
       ui.authMsg = "";
       location.hash = "#/account";
@@ -2991,18 +3172,12 @@
     if (e.target.id === "auth-form") {
       e.preventDefault();
       submitAuth();
+    } else if (e.target.id === "reset-form") {
+      e.preventDefault();
+      submitReset();
     } else if (e.target.id === "recovery-form") {
       e.preventDefault();
-      const { error } = await sb.auth.updateUser({ password: document.getElementById("new-password").value });
-      if (error) {
-        ui.authErr = error.message;
-      } else {
-        ui.recovery = false;
-        ui.authErr = "";
-        await checkMembership();
-        survey = await loadSurvey();
-      }
-      render();
+      submitNewPassword();
     }
   });
 
@@ -3030,13 +3205,31 @@
   async function start() {
     // Links from sign-up confirmation and password-reset emails land with
     // Supabase's tokens in the hash; supabase-js consumes them on startup.
-    const fromEmail = /access_token|error_description|type=recovery/.test(location.hash + location.search);
-    if (/type=recovery/.test(location.hash + location.search)) ui.recovery = true;
+    const linkParams = new URLSearchParams((location.hash.replace(/^#/, "") + "&" + location.search.replace(/^\?/, "")));
+    const fromEmail = linkParams.has("access_token") || linkParams.has("error_description");
+    const linkType = linkParams.get("type");
+    if (linkType === "recovery" || ssGet(KEY_RECOVERY)) ui.recovery = true;
+    if (linkType === "recovery") ssSet(KEY_RECOVERY, true);
+    if (linkType === "signup" && linkParams.has("access_token")) ui.flash = "Your email is confirmed and you're signed in.";
+    if (linkType === "email_change" && linkParams.has("access_token")) ui.flash = "Your email address has been updated.";
+    if (linkParams.has("error_description")) {
+      ui.authErr = /expired|invalid/i.test(linkParams.get("error_description"))
+        ? "That link has expired or has already been used. Sign in below, or ask for a new link."
+        : linkParams.get("error_description");
+    }
     // Stripe sends people back to ?checkout=success after paying.
     const fromCheckout = /checkout=success/.test(location.search);
     render();
     await refreshUser();
-    if (fromEmail || fromCheckout) history.replaceState(null, "", location.pathname + (fromCheckout ? "#/results" : "#/"));
+    if (fromEmail || fromCheckout) {
+      const to = fromCheckout ? "#/results" : linkParams.has("error_description") && !currentUser ? "#/account" : "#/";
+      history.replaceState(null, "", location.pathname + to);
+    }
+    // A recovery flag left over from a link that didn't sign anyone in.
+    if (ui.recovery && !currentUser) {
+      ui.recovery = false;
+      ssSet(KEY_RECOVERY, false);
+    }
     if (currentUser) {
       ui.userName = await displayName(currentUser);
       await checkMembership();
@@ -3049,6 +3242,7 @@
       sb.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY") {
           ui.recovery = true;
+          ssSet(KEY_RECOVERY, true);
           render();
         }
       });
