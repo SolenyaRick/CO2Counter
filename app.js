@@ -106,6 +106,7 @@
   const byKey = (list, key) => list.find((o) => o.key === key);
   const factorOf = (list, key) => (byKey(list, key) || {}).factor || 0;
   const fixed = (n, d) => Number(n || 0).toFixed(d || 0);
+  const capFirst = (t) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : "");
 
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
@@ -2270,11 +2271,14 @@
     friends.loading = true;
     const me = currentUser.id;
     try {
-      const [{ data: rows }, { data: board }, { data: mine }] = await Promise.all([
+      const [{ data: rows }, { data: board }, { data: mine }, prog] = await Promise.all([
         sb.from("friendships").select("*").or("requester_id.eq." + me + ",addressee_id.eq." + me),
         sb.rpc("friends_footprints"),
         sb.from("profiles").select("display_name").eq("id", me).maybeSingle(),
+        // Most improved; missing until the SQL is run, which is fine.
+        sb.rpc("friends_progress").then((x) => x, () => ({ data: null })),
       ]);
+      friends.progress = (prog && !prog.error && prog.data) || [];
       const list = rows || [];
       const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
       const names = {};
@@ -2296,6 +2300,59 @@
     if (currentPath() === "/friends") render();
   }
 
+  // "You're 2nd of 5" and what it would take to move up.
+  function rankSummary() {
+    const board = friends.board;
+    const i = board.findIndex((b) => b.is_self);
+    if (i < 0 || board.length < 2) return "";
+    const me = board[i];
+    const ord = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+    let nudge;
+    if (i === 0) {
+      const next = board[1];
+      nudge = "You're in the lead, " + fixed(next.total_yearly - me.total_yearly) + " kg a year ahead of " + esc(next.display_name) + ". Keep it up!";
+    } else {
+      const ahead = board[i - 1];
+      const gap = me.total_yearly - ahead.total_yearly;
+      const best = CATEGORIES.map((c) => ({ c, tip: tipFor(c, survey) })).sort((a, b) => b.tip.saving - a.tip.saving)[0];
+      nudge =
+        "You're " + fixed(gap) + " kg a year behind " + esc(ahead.display_name) + ". " +
+        (best && best.tip.saving > 0.5
+          ? (best.tip.saving >= gap
+              ? "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong> would save about " + fixed(best.tip.saving) + " kg and put you ahead."
+              : "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong>, your biggest win, would close " + Math.round((best.tip.saving / gap) * 100) + "% of the gap.") +
+            ' <a class="link-btn" href="#/explainer/' + best.c + '">See how</a>'
+          : "");
+    }
+    return '<div class="rank-banner"><p class="rank-big">You\'re ' + ord(i + 1) + " of " + board.length + '</p><p class="sm">' + nudge + "</p></div>";
+  }
+
+  function mostImprovedHtml() {
+    const rows = (friends.progress || [])
+      .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0)
+      .map((p) => ({ ...p, change: Number(p.latest_total) - Number(p.first_total), pct: (Number(p.latest_total) - Number(p.first_total)) / Number(p.first_total) }))
+      .sort((a, b) => a.pct - b.pct);
+    if (!rows.length) {
+      return '<p class="sm muted">Take a new survey every few months. Whoever cuts their footprint the most, compared with their first survey, tops this board. Anyone can win it, whatever their starting point.</p>';
+    }
+    return (
+      '<div class="stack-2">' +
+      rows
+        .map((p, i) => {
+          const down = p.change < 0;
+          return (
+            '<div class="month-row' + (p.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge' + (i === 0 && down ? " rank-1" : "") + '">' + (i + 1) +
+            '</span><span class="sm fw-500 truncate">' + esc(p.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : p.display_name) + "</span></div>" +
+            '<div class="label-row shrink0"><span class="xs fw-600 ' + (down ? "green" : p.change > 0 ? "red" : "muted") + '">' + (down ? "▼ " : p.change > 0 ? "▲ " : "") +
+            Math.abs(Math.round(p.pct * 100)) + "%</span>" + '<span class="xs muted">' + (down ? "−" : p.change > 0 ? "+" : "") + fixed(Math.abs(p.change)) + " kg</span></div></div>"
+          );
+        })
+        .join("") +
+      "</div>" +
+      '<p class="xs muted mt-3">Change from each person\'s first survey to their latest. Only people who\'ve done at least two surveys appear.</p>'
+    );
+  }
+
   function renderFriends() {
     if (!friends.loaded) {
       loadFriends();
@@ -2314,16 +2371,32 @@
 
     // Leaderboard
     const meOnBoard = friends.board.find((b) => b.is_self);
+    const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     let board;
     if (!accepted.length) board = '<p class="sm muted">Add friends below to compare your yearly footprints.</p>';
     else {
+      const podium = friends.board.slice(0, 3);
       board =
+        rankSummary() +
+        (podium.length >= 2
+          ? '<div class="podium">' +
+            [1, 0, 2]
+              .filter((i) => podium[i])
+              .map(
+                (i) =>
+                  '<div class="podium-spot place-' + (i + 1) + (podium[i].is_self ? " me" : "") + '"><span class="podium-medal">' + ["1st", "2nd", "3rd"][i] + "</span>" +
+                  '<span class="podium-name">' + esc(nameOf(podium[i])) + '</span><span class="podium-total">' + (podium[i].total_yearly / 1000).toFixed(1) + " t</span>" +
+                  '<span class="podium-step"></span></div>'
+              )
+              .join("") +
+            "</div>"
+          : "") +
         '<div class="stack-2">' +
         friends.board
           .map(
             (b, i) =>
-              '<div class="month-row' + (b.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge">' + (i + 1) + '</span><span class="sm fw-500 truncate">' +
-              esc(b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name) + '</span></div><div class="label-row shrink0"><span class="fw-600">' +
+              '<div class="month-row' + (b.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge' + (i < 3 ? " rank-" + (i + 1) : "") + '">' + (i + 1) +
+              '</span><span class="sm fw-500 truncate">' + esc(nameOf(b)) + '</span></div><div class="label-row shrink0"><span class="fw-600">' +
               (b.total_yearly / 1000).toFixed(1) + '</span><span class="xs muted">t / yr</span></div></div>'
           )
           .join("") +
@@ -2334,6 +2407,7 @@
           : "");
     }
     html += section("Leaderboard", board + '<p class="xs muted mt-3">Lowest footprint first. Friends only ever see each other\'s yearly totals, never your answers.</p>');
+    if (accepted.length) html += section("Most improved", mostImprovedHtml());
 
     // Your name
     html += section(

@@ -2654,3 +2654,95 @@ body {
   .league .rate { font-size: 10px; padding: 1px 5px; }
   .league td:nth-child(2) { min-width: 64px; }
 }
+
+/* ---------- competitive Friends page ---------- */
+
+.rank-banner {
+  border-radius: 16px;
+  background: var(--forest-grad);
+  color: #fffdf9;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.rank-banner .rank-big {
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.rank-banner .sm {
+  color: rgba(255, 253, 249, 0.85);
+}
+
+.rank-banner strong {
+  color: var(--leaf);
+}
+
+.rank-banner .link-btn {
+  color: var(--leaf);
+}
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.podium-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.podium-medal {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.place-1 .podium-medal { background: #e9c25b; color: #4a3505; }
+.place-2 .podium-medal { background: #cfd4d6; color: #2f3a3e; }
+.place-3 .podium-medal { background: #d9a27a; color: #4a2a12; }
+
+.podium-name {
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-total {
+  font-size: 12px;
+  color: var(--muted-fg);
+  margin-bottom: 6px;
+}
+
+.podium-step {
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  background: var(--em-100);
+}
+
+.place-1 .podium-step { height: 64px; background: var(--em-200); }
+.place-2 .podium-step { height: 44px; }
+.place-3 .podium-step { height: 30px; }
+.podium-spot.me .podium-step { background: var(--leaf); }
+
+.num-badge.rank-1 { background: #e9c25b; color: #4a3505; }
+.num-badge.rank-2 { background: #cfd4d6; color: #2f3a3e; }
+.num-badge.rank-3 { background: #d9a27a; color: #4a2a12; }
