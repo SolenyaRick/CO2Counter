@@ -1322,6 +1322,8 @@
   // Straight-line distance between two towns plus 25% for the way roads
   // and railways wind (a common rule of thumb for land routes).
   const LAND_ROUTE_UPLIFT = 1.25;
+  // Same number as the ?v= on the scripts in index.html.
+  const ASSET_VERSION = (document.querySelector('script[src*="app.js?v="]') || { src: "" }).src.split("v=")[1] || "1";
   let placeIndex = null;
   function findPlace(name) {
     if (!placeIndex) {
@@ -1344,9 +1346,24 @@
     return Math.round(greatCircleKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) * LAND_ROUTE_UPLIFT);
   }
 
-  // One shared suggestion list for every From / To box.
+  // One shared suggestion list for every From / To box. The place list is
+  // loaded the first time it's needed, then the step re-renders.
+  let placesLoading = false;
   function placesDatalist() {
-    if (document.getElementById("places-list") || !window.ECO_PLACES) return;
+    if (!window.ECO_PLACES) {
+      if (!placesLoading) {
+        placesLoading = true;
+        const sc = document.createElement("script");
+        sc.src = "places.js?v=" + ASSET_VERSION;
+        sc.onload = () => {
+          placeIndex = null;
+          render();
+        };
+        document.head.appendChild(sc);
+      }
+      return;
+    }
+    if (document.getElementById("places-list")) return;
     const dl = document.createElement("datalist");
     dl.id = "places-list";
     dl.innerHTML = window.ECO_PLACES.map((p) => '<option value="' + esc(p[0]) + '"></option>').join("");
@@ -1834,7 +1851,7 @@
     // Diet cards the survey shows are already done are left out (habits are
     // separate: they track changes from here). Flight cards stay, marked
     // Done, so people come back to them.
-    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)));
+    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s));
     html +=
       '<div class="stack-6 mb-10">' +
       shown
@@ -1884,6 +1901,56 @@
     return false;
   }
 
+  // Driving cards only make sense for people who drive to work.
+  const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
+  function sectionHidden(cat, s) {
+    return cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving") && carDaysOf(survey).length === 0;
+  }
+
+  // Your car commute against swapping 1 day, about half your car days, or
+  // all of them, to each alternative. Uses your distance and the same DESNZ
+  // 2026 factors as the rest of the app; swaps the highest-emitting car days
+  // first.
+  function commuteSwapHtml() {
+    const c = survey.commute || {};
+    const km = Number(c.distance) || 0;
+    const carDays = carDaysOf(survey);
+    const n = carDays.length;
+    if (!n || !km) return '<div class="popup-body"><p class="sm">Add your commute distance and the days you drive in the survey to see your options.</p></div>';
+    const perDay = (mode) => factorOf(D.COMMUTE_MODES, mode) * km * 2;
+    const yearly = (kgPerWeek) => kgPerWeek * D.WEEKS_PER_YEAR;
+    const carDayKg = carDays.map((d) => perDay(c[d])).sort((a, b) => b - a);
+    const weekNow = DAYS.reduce((t, d) => t + perDay(c[d]), 0);
+    const steps = [...new Set([1, Math.ceil(n / 2), n])].filter((k) => k >= 1 && k <= n);
+    const stepLabel = (k) => (k === n ? (n === 1 ? "Your 1 day" : "All " + n) : k + (k === 1 ? " day" : " days"));
+    const active = km <= ACTIVE_TRAVEL_MAX_KM;
+    const alts = [
+      { label: "Train", mode: "train" },
+      { label: "Bus", mode: "bus" },
+      active ? { label: km <= 3 ? "Walk or cycle" : "Cycle", mode: "walk_bike" } : null,
+      { label: "Work from home", mode: "wfh" },
+    ].filter(Boolean);
+    const saving = (k, mode) => yearly(carDayKg.slice(0, k).reduce((t, kg) => t + (kg - perDay(mode)), 0));
+    const rows = alts
+      .map(
+        (a) =>
+          "<tr><td>" + esc(a.label) + "</td>" +
+          steps.map((k) => '<td class="num"><span class="green-dark fw-600">−' + kgFmt(Math.max(0, saving(k, a.mode))) + "</span></td>").join("") + "</tr>"
+      )
+      .join("");
+    return (
+      '<div class="popup-body"><p class="sm">You drive <strong>' + n + (n === 1 ? " day" : " days") + " a week</strong>, " + Number(km.toFixed(1)) +
+      " km each way. Your commute comes to about <strong>" + kgFmt(yearly(weekNow)) + " kg CO₂e a year</strong>.</p>" +
+      '<p class="xs fw-600 upper muted">kg saved a year if you swap car days a week for…</p>' +
+      '<div class="league-wrap"><table class="league"><thead><tr><th>Instead</th>' + steps.map((k) => '<th class="num">' + stepLabel(k) + "</th>").join("") + "</tr></thead><tbody>" +
+      rows + "</tbody></table></div>" +
+      (active
+        ? ""
+        : '<p class="xs muted">At ' + fixed(km) + " km each way, walking or cycling isn\'t realistic for most people (most cycle commutes are under 10 km), so it\'s left out. An e-bike or cycling to the station can still help.</p>") +
+      '<p class="xs muted">kg CO₂e a year, using DESNZ 2026 factors for your car, national rail and an average local bus, and your distance there and back. Swaps start with your highest-emitting car days.</p></div>'
+    );
+  }
+
   // Your flights priced in each cabin class (DESNZ 2026 factors). DESNZ has
   // no short-haul premium economy or first class, so those use economy and
   // business, which the note explains.
@@ -1926,6 +1993,10 @@
       if (!bank) return '<p class="xs green-dark fw-600 mt-3">Pick your bank in the survey to see its rating.</p>';
       const rt = bankRating(bank);
       return '<p class="sm mt-3 label-row" style="flex-wrap:wrap">Your bank, ' + esc(bank.label) + ": " + rateChip(rt.key, rt.label) + '<span class="xs green-dark fw-600">Tap to compare</span></p>';
+    }
+    if (s.dynamicKey === "commuteSwap") {
+      const n = carDaysOf(survey).length;
+      return n ? '<p class="xs green-dark fw-600 mt-3">You drive ' + n + (n === 1 ? " day" : " days") + " a week. Tap to compare your options.</p>" : "";
     }
     if (s.dynamicKey === "savingsPensions") {
       const p = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
@@ -2059,6 +2130,7 @@
     let body;
     if (s.dynamicKey === "bankLeague") body = bankLeagueHtml();
     else if (s.dynamicKey === "cabinComparison") body = cabinComparisonHtml();
+    else if (s.dynamicKey === "commuteSwap") body = commuteSwapHtml();
     else if (s.dynamicKey === "switchAccount") body = switchAccountHtml();
     else if (s.dynamicKey === "savingsPensions") body = savingsPensionsHtml();
     else if (content && content.isTrainPopup) body = trainPopupHtml(content);
