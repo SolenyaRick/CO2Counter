@@ -568,3 +568,14 @@ In Supabase: **Authentication → Emails → Templates**.
 The logo comes from `https://co2counter.co.uk/icons/email-logo.png`.
 Old-style `{{ .ConfirmationURL }}` links keep working, so nothing breaks
 before the templates are changed.
+
+## Free mode (optional support)
+
+`FREE_MODE` in `app.js` makes everything free: guests get the full results
+and guides, and a free account saves answers across devices and unlocks
+Friends. The £2/year Stripe link becomes an optional "Support CO2 Counter"
+button (hidden in the iOS app), and the webhook still records supporters in
+`memberships`. Run the "Free mode" block at the end of `schema.sql` so the
+database lets every signed-in user save answers and use Friends. To bring
+the paywall back, set `FREE_MODE = false` and re-run the earlier
+`has_access()` definition.

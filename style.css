@@ -2441,3 +2441,24 @@ body {
 .pw-match.bad {
   color: #b5473b;
 }
+
+/* ---------- shared footprint line & support card ---------- */
+
+.shared-line {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 14px;
+  color: rgba(255, 253, 249, 0.82);
+}
+
+.shared-line strong {
+  color: #fffdf9;
+}
+
+.support-card {
+  border-color: var(--em-200);
+  background: linear-gradient(to bottom right, var(--em-50), var(--card));
+}
+
+.btn-row + .card {
+  margin-top: 24px;
+}

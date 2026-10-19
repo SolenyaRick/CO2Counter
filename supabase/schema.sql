@@ -1243,3 +1243,18 @@ $$;
 
 revoke all on function public.friends_footprints() from public;
 grant execute on function public.friends_footprints() to authenticated;
+
+-- ---------- Free mode (October 2026) ----------
+-- Everything is free for signed-in users; the £2 a year is optional
+-- support (memberships still records supporters). Matches FREE_MODE in
+-- app.js. To bring the paywall back, re-run the has_access() definition in
+-- the "Free access list" section above and set FREE_MODE to false.
+create or replace function public.has_access()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select auth.uid() is not null;
+$$;
