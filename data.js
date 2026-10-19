@@ -15,6 +15,7 @@
     "distance": 10
   },
   "extraTravel": [],
+  "shopping": {},
   "longTrips": [],
   "flights": [],
   "energy": {
@@ -86,6 +87,21 @@
     pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
     banking: { amount: 0, bank: "", pensionPot: 0, pensionProvider: "" },
   };
+  // Shopping & lifestyle: monthly spend per person, times Defra's
+  // spend-based emissions multipliers for 2023 (kg CO2e per £, full supply
+  // chain; COICOP_multipliers_2023). Where a question covers several
+  // COICOP groups, the factor is their simple average. `goods` marks things
+  // that can be bought second-hand or made to last (used for savings).
+  const SHOPPING_CATEGORIES = [
+    { key: "clothes", label: "Clothes and shoes", hint: "Garments, shoes, accessories", factor: 0.353527, goods: true },
+    { key: "gadgets", label: "Phones, computers and gadgets", hint: "Phones, laptops, TVs, headphones", factor: (1.716949 + 1.542718 + 1.825532) / 3, goods: true },
+    { key: "appliances", label: "Household appliances", hint: "Washing machines, kettles, hoovers", factor: 1.658819, goods: true },
+    { key: "furniture", label: "Furniture, homeware and DIY", hint: "Furniture, bedding, tools", factor: 0.380468, goods: true },
+    { key: "hobbies", label: "Hobbies, sport and toys", hint: "Sports kit, games, toys", factor: (1.041809 + 2.786417) / 2, goods: true },
+    { key: "hotels", label: "Hotels and holiday stays", hint: "Hotels, B&Bs, holiday lets", factor: 0.410741, goods: false },
+    { key: "care", label: "Beauty and personal care", hint: "Toiletries, hairdressers", factor: 0.502883, goods: false },
+  ];
+
   // Shared footprint: each UK resident's share of emissions from public
   // services (central and local government: NHS, schools, councils,
   // defence) and from capital investment (infrastructure, buildings,
@@ -1246,6 +1262,42 @@
       }
     ]
   },
+  "shopping": {
+    "title": "Shopping & Lifestyle",
+    "icon": "🛍️",
+    "why": "Most of the emissions from the things we buy happen long before we buy them: in mining, manufacturing and shipping. Gadgets and appliances carry the most carbon per pound, so buying fewer new ones, and making them last, makes a real difference.",
+    "sections": [
+      {
+        "heading": "Buy second-hand and refurbished",
+        "body": "A refurbished phone or laptop, or second-hand clothes and furniture, avoid almost all of the emissions of making something new. Look at refurbished stores, charity shops and resale apps first."
+      },
+      {
+        "heading": "Make things last",
+        "body": "Keeping a phone or laptop for an extra year or two, and repairing clothes and appliances, spreads their manufacturing emissions over more years. Choose things that can be repaired."
+      },
+      {
+        "heading": "Buy less, and better",
+        "body": "Before buying, ask if you'll still use it in a year. Borrowing, renting or sharing things you rarely use, like tools and party clothes, cuts both waste and emissions."
+      }
+    ],
+    "habits": [
+      {
+        "id": "second_hand",
+        "label": "Check second-hand first",
+        "tip": "Refurbished tech and pre-loved clothes."
+      },
+      {
+        "id": "keep_longer",
+        "label": "Keep your phone a year longer",
+        "tip": "Spreads its manufacturing emissions."
+      },
+      {
+        "id": "repair",
+        "label": "Repair before replacing",
+        "tip": "Clothes, shoes and appliances."
+      }
+    ]
+  },
   "banking": {
     "title": "Banking & Pension",
     "icon": "🏦",
@@ -1664,7 +1716,7 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    COMMUTE_MODES, TRAVEL_MODES, SHOPPING_CATEGORIES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };
