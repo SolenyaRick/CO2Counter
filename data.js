@@ -882,6 +882,43 @@
   ];
   // A climate-focused pension fund, used to size the "switch fund" saving:
   // Nest Ethical Fund, Scope 1+2 (Nest TCFD report 2024/25).
+  // Our rating from MotherTree's figures (kg CO2e per £ held per year).
+  const BANK_RATING_BANDS = [
+    { max: 0.045, key: "vgood", label: "Very good" },
+    { max: 0.075, key: "good", label: "Good" },
+    { max: 0.15, key: "bad", label: "Bad" },
+    { max: Infinity, key: "vbad", label: "Very bad" },
+  ];
+  // Which? and Reclaim Finance, "Which? puts major high-street banks in
+  // 'red' warning category" (5 October 2023): fossil-fuel policies of 13
+  // current account providers. green = Which? Eco Provider. Monzo wasn't
+  // assessed.
+  const WHICH_BANK_RATINGS = {
+    triodos: "green", co_op: "green", nationwide: "green",
+    virgin_money: "amber", starling: "amber", metro_bank: "amber",
+    lloyds: "red", halifax: "red", natwest: "red", rbs: "red", santander: "red",
+    chase: "red", hsbc: "red", first_direct: "red", barclays: "red",
+  };
+  // Make My Money Matter, Climate Action Report 2025 (February 2025):
+  // the 12 largest UK workplace pension providers scored out of 10 on
+  // climate commitments, targets, fossil fuels, deforestation and more.
+  // Bands: 7.5+ Good, 5.0-7.4 Adequate, 2.5-4.9 Inadequate, under 2.5 Poor.
+  const PENSION_CLIMATE_RANKING = [
+    { key: "nest", label: "Nest", rank: "1st", score: 5.8 },
+    { key: "aviva", label: "Aviva", rank: "=2nd", score: 5.5 },
+    { key: "now", label: "NOW: Pensions", rank: "=2nd", score: 5.5 },
+    { key: "smart", label: "Smart Pension", rank: "4th", score: 5.4 },
+    { key: "lg", label: "Legal & General", rank: "5th", score: 4.8 },
+    { key: "", label: "Scottish Widows", rank: "6th", score: 4.7 },
+    { key: "aegon", label: "Aegon", rank: "7th", score: 4.6 },
+    { key: "", label: "Cushon", rank: "8th", score: 3.9 },
+    { key: "peoples", label: "The People's Pension", rank: "9th", score: 3.7 },
+    { key: "fidelity", label: "Fidelity", rank: "10th", score: 3.6 },
+    { key: "standard_life", label: "Standard Life", rank: "11th", score: 3.5 },
+    { key: "royal_london", label: "Royal London", rank: "12th", score: 3.3 },
+  ];
+  const CASS_URL = "https://www.currentaccountswitch.co.uk/";
+
   const GREEN_PENSION_T_PER_MILLION = 21;
 
   // Per-category "why / how to reduce" content and suggested habits.
@@ -1216,19 +1253,18 @@
     "sections": [
       {
         "heading": "Check your bank's financing",
-        "body": "Banks publish their financed emissions or are rated by independent league tables. Some high-street banks fund fossil fuels heavily; others (like Triodos, Co-operative) have explicit no-fossil-fuel policies."
+        "body": "Independent league tables rank UK banks by the emissions your money helps finance. Some high-street banks fund fossil fuels heavily; others (like Triodos and the Co-operative Bank) refuse to. Tap to see where your bank sits.",
+        "dynamicKey": "bankLeague"
       },
       {
         "heading": "Switch your main account",
-        "body": "Current-account switching is now fast and protected by guarantee services. Moving your everyday banking to a greener institution redirects your money away from fossil-fuel lending."
+        "body": "The free Current Account Switch Service moves your balance, direct debits and standing orders to a new bank in 7 working days, protected by a guarantee. Tap for the link.",
+        "dynamicKey": "switchAccount"
       },
       {
         "heading": "Move savings and pensions too",
-        "body": "Savings accounts and especially pensions can be the biggest financed-emission lever. Ask your provider for a fossil-fuel-free or ESG fund option — a single pension switch can be the largest climate action you take."
-      },
-      {
-        "heading": "Ask, don't assume",
-        "body": "Green branding can be misleading. Check whether a bank has a credible no-fossil-fuel policy and published, verified financed-emissions figures."
+        "body": "Savings accounts and especially pensions can be the biggest financed-emission lever. Ask your provider for a fossil-fuel-free or climate-focused fund. Tap to see how your pension provider ranks.",
+        "dynamicKey": "savingsPensions"
       }
     ],
     "habits": [
@@ -1628,7 +1664,7 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, TRAVEL_MODES, CABINS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };

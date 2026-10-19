@@ -1660,7 +1660,8 @@
         .map(
           (s, i) =>
             '<div class="section-card fade-up" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
-            '<span class="num-badge">' + (i + 1) + "</span>" + esc(s.heading) + icon("info", "ml-auto faint") + '</h2><p class="sm muted lh">' + esc(s.body) + "</p></div>"
+            '<span class="num-badge">' + (i + 1) + "</span>" + esc(s.heading) + icon("info", "ml-auto faint") + '</h2><p class="sm muted lh">' + esc(s.body) + "</p>" +
+            sectionTeaser(s) + "</div>"
         )
         .join("") +
       "</div>";
@@ -1669,6 +1670,129 @@
       habitsComingSoonCard() +
       '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
     return html;
+  }
+
+  // ---------- banking league tables ----------
+
+  const bankRating = (bank) => D.BANK_RATING_BANDS.find((b) => bank.factor <= b.max);
+  const rateChip = (key, label) => '<span class="rate rate-' + key + '">' + esc(label) + "</span>";
+  const WHICH_LABELS = { green: "Eco Provider", amber: "Amber", red: "Red" };
+  const kgFmt = (n) => Math.round(n).toLocaleString();
+
+  function pensionRating(score) {
+    if (score >= 7.5) return { key: "vgood", label: "Good" };
+    if (score >= 5) return { key: "good", label: "Adequate" };
+    if (score >= 2.5) return { key: "bad", label: "Inadequate" };
+    return { key: "vbad", label: "Poor" };
+  }
+
+  // One line on the card itself, so the comparison is visible before tapping.
+  function sectionTeaser(s) {
+    const b = survey.banking || {};
+    if (s.dynamicKey === "bankLeague") {
+      const bank = byKey(D.BANKS, b.bank);
+      if (!bank) return '<p class="xs green-dark fw-600 mt-3">Pick your bank in the survey to see its rating.</p>';
+      const rt = bankRating(bank);
+      return '<p class="sm mt-3 label-row" style="flex-wrap:wrap">Your bank, ' + esc(bank.label) + ": " + rateChip(rt.key, rt.label) + '<span class="xs green-dark fw-600">Tap to compare</span></p>';
+    }
+    if (s.dynamicKey === "savingsPensions") {
+      const p = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
+      if (!p) return "";
+      const rt = pensionRating(p.score);
+      return '<p class="sm mt-3 label-row" style="flex-wrap:wrap">' + esc(p.label) + ": " + p.rank + " of 12, " + rateChip(rt.key, rt.label) + "</p>";
+    }
+    return "";
+  }
+
+  function bankLeagueHtml() {
+    const b = survey.banking || {};
+    const bank = byKey(D.BANKS, b.bank);
+    const best = D.BANKS.reduce((m, x) => (x.factor < m.factor ? x : m), D.BANKS[0]);
+    let mine;
+    if (!bank) {
+      mine = '<p class="sm">Choose your bank in the survey\'s Banking step to see your personal comparison.</p>';
+    } else {
+      const rt = bankRating(bank);
+      const amount = Number(b.amount) || 0;
+      mine =
+        '<p class="sm label-row" style="flex-wrap:wrap"><strong>Your bank: ' + esc(bank.label) + "</strong>" + rateChip(rt.key, rt.label) +
+        (D.WHICH_BANK_RATINGS[bank.key] ? '<span class="xs muted">Which?: ' + WHICH_LABELS[D.WHICH_BANK_RATINGS[bank.key]] + "</span>" : "") + "</p>" +
+        (amount > 0
+          ? '<p class="sm mt-2">Your £' + amount.toLocaleString() + " there finances about <strong>" + kgFmt(amount * bank.factor) + " kg CO₂e a year</strong>. " +
+            (bank.key === best.key
+              ? "That's already the greenest bank in the table."
+              : "At " + esc(best.label) + ", the greenest bank in the table, it would be about " + kgFmt(amount * best.factor) + " kg: <strong>" +
+                kgFmt(amount * (bank.factor - best.factor)) + " kg less</strong> (" + Math.round((1 - best.factor / bank.factor) * 100) + "% lower).") + "</p>"
+          : '<p class="xs muted mt-2">Add your savings in the survey to see how much CO₂ your money finances.</p>');
+    }
+    const rows = D.BANKS.slice()
+      .sort((x, y) => x.factor - y.factor)
+      .map((x, i) => {
+        const rt = bankRating(x);
+        const w = D.WHICH_BANK_RATINGS[x.key];
+        return (
+          '<tr' + (bank && x.key === bank.key ? ' class="me"' : "") + "><td>" + (i + 1) + "</td><td>" + esc(x.label) + (bank && x.key === bank.key ? " (you)" : "") +
+          "</td><td class=\"num\">" + kgFmt(x.factor * 1000) + "</td><td>" + rateChip(rt.key, rt.label) + "</td><td>" +
+          (w ? rateChip(w === "green" ? "vgood" : w === "amber" ? "bad" : "vbad", WHICH_LABELS[w]) : '<span class="xs muted">Not rated</span>') + "</td></tr>"
+        );
+      })
+      .join("");
+    return (
+      '<div class="popup-body"><div class="panel green p-4">' + mine + "</div>" +
+      '<p class="xs fw-600 upper muted mt-2">Independent league table</p>' +
+      '<div class="league-wrap"><table class="league"><thead><tr><th>#</th><th>Bank</th><th class="num">kg per £1k a year</th><th>Our rating</th><th>Which?</th></tr></thead><tbody>' +
+      rows + "</tbody></table></div>" +
+      '<p class="xs muted">Emissions: MotherTree bank carbon emissions league table (2021), CO₂e financed per pound held. Our rating bands: Very good under 45 kg, Good under 75, Bad under 150, Very bad 150+ per £1,000. ' +
+      "Which?: Which? and Reclaim Finance review of fossil-fuel policies (October 2023); Eco Providers have no fossil-fuel exposure. The two can disagree: Lloyds and Halifax finance relatively little but lack a full fossil-fuel exclusion policy, so Which? rates them red.</p></div>"
+    );
+  }
+
+  function switchAccountHtml() {
+    const support =
+      isNativeApp() || !STRIPE_PAYMENT_LINK
+        ? "Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step."
+        : 'Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step. <a class="link-btn" href="' + esc(supportUrl()) + '">Help us build it by supporting CO2 Counter</a>.';
+    return (
+      '<div class="popup-body"><p class="sm">The <strong>Current Account Switch Service</strong> is free and run by Pay.UK, and most UK banks and building societies use it. ' +
+      "Open an account with your new bank and ask for a full switch: it moves your balance, direct debits and standing orders in 7 working days, " +
+      "redirects payments sent to your old account, and is protected by the Current Account Switch Guarantee.</p>" +
+      '<p class="sm">Greener choices for an everyday account include Nationwide and The Co-operative Bank, both Which? Eco Providers.</p>' +
+      '<div><a class="btn btn-green" href="' + D.CASS_URL + '" target="_blank" rel="noopener">Go to the Current Account Switch Service ' + icon("arrowRight") + "</a></div>" +
+      '<div class="panel p-4 mt-2"><p class="xs muted">' + support + "</p></div></div>"
+    );
+  }
+
+  function savingsPensionsHtml() {
+    const b = survey.banking || {};
+    const mine = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
+    const chosen = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
+    let mineHtml;
+    if (mine) {
+      const rt = pensionRating(mine.score);
+      mineHtml =
+        '<p class="sm label-row" style="flex-wrap:wrap"><strong>Your provider: ' + esc(mine.label) + "</strong>" + rateChip(rt.key, rt.label) + "</p>" +
+        '<p class="sm mt-2">Ranked <strong>' + mine.rank + " of 12</strong> with " + mine.score + "/10 for climate action.</p>";
+    } else if (chosen && chosen.key !== "other") {
+      mineHtml = '<p class="sm"><strong>Your provider: ' + esc(chosen.label) + "</strong> isn't in this ranking, which covers the 12 largest workplace pension providers.</p>";
+    } else {
+      mineHtml = '<p class="sm">Choose your pension provider in the survey\'s Banking step to see how it ranks.</p>';
+    }
+    const rows = D.PENSION_CLIMATE_RANKING.map((x) => {
+      const rt = pensionRating(x.score);
+      const me = mine && x.key === mine.key;
+      return '<tr' + (me ? ' class="me"' : "") + "><td>" + x.rank + "</td><td>" + esc(x.label) + (me ? " (you)" : "") + '</td><td class="num">' + x.score.toFixed(1) + "</td><td>" + rateChip(rt.key, rt.label) + "</td></tr>";
+    }).join("");
+    return (
+      '<div class="popup-body"><p class="sm"><strong>Savings:</strong> a bank lends out savings just like current-account money, so the bank league table applies here too. ' +
+      "Building societies and ethical banks such as Nationwide, The Co-operative Bank and Triodos tend to come out best.</p>" +
+      '<p class="sm"><strong>Pensions:</strong> often the biggest lever. Ask your provider or HR for a climate-focused or fossil-free fund; switching usually takes a few minutes online.</p>' +
+      '<div class="panel green p-4">' + mineHtml + "</div>" +
+      '<p class="xs fw-600 upper muted mt-2">Independent pension ranking</p>' +
+      '<div class="league-wrap"><table class="league"><thead><tr><th>Rank</th><th>Provider</th><th class="num">Score /10</th><th>Rating</th></tr></thead><tbody>' +
+      rows + "</tbody></table></div>" +
+      '<p class="xs muted">Make My Money Matter, Climate Action Report 2025 (February 2025): climate commitments, targets, fossil fuels, deforestation and stewardship. It rates providers\' climate action, not the carbon footprint of your fund; ' +
+      "your footprint figure uses each provider\'s own published (TCFD) data. Not financial advice.</p></div>"
+    );
   }
 
   function habitsComingSoonCard() {
@@ -1701,7 +1825,10 @@
     const subtitle = habits[index] ? "Pairs with habit: " + habits[index].label : null;
 
     let body;
-    if (content && content.isTrainPopup) body = trainPopupHtml(content);
+    if (s.dynamicKey === "bankLeague") body = bankLeagueHtml();
+    else if (s.dynamicKey === "switchAccount") body = switchAccountHtml();
+    else if (s.dynamicKey === "savingsPensions") body = savingsPensionsHtml();
+    else if (content && content.isTrainPopup) body = trainPopupHtml(content);
     else if (content) body = flightPopupHtml(content);
     else body = '<div class="empty-box small"><p class="sm muted">Detailed guide coming soon.</p></div>';
 
@@ -2677,7 +2804,7 @@
         }
         const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { username } } });
         // The database refuses a username someone has just taken.
-        if (error && /database error saving new user/i.test(error.message || "")) {
+        if (error && /database error saving new user|duplicate key|unique constraint|username/i.test(error.message || "")) {
           ui.authErr = "That username was just taken. Please choose another.";
           return render();
         }
