@@ -2746,3 +2746,53 @@ body {
 .num-badge.rank-1 { background: #e9c25b; color: #4a3505; }
 .num-badge.rank-2 { background: #cfd4d6; color: #2f3a3e; }
 .num-badge.rank-3 { background: #d9a27a; color: #4a2a12; }
+
+/* ---------- done guide cards & cabin comparison ---------- */
+
+.section-card.done {
+  border-color: var(--em-200);
+  background: linear-gradient(to bottom right, var(--em-50), var(--card));
+}
+
+.section-card.done .num-badge {
+  background: var(--em-600);
+  color: var(--leaf);
+}
+
+.section-card.done .num-badge .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.done-tag {
+  background: var(--em-600);
+  color: #fffdf9;
+}
+
+.cabin-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.cabin-label {
+  line-height: 1.25;
+}
+
+.cabin-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.cabin-track > div {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--em-500);
+}
+
+@media (max-width: 380px) {
+  .cabin-row { grid-template-columns: 6.2rem 1fr auto; gap: 6px; }
+}

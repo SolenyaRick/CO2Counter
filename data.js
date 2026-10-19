@@ -1065,7 +1065,8 @@
       },
       {
         "heading": "Fly economy, direct, daytime",
-        "body": "Economy seats spread the plane's emissions across more people. Business and first-class can double or triple your share. Direct flights avoid the extra emissions of multiple takeoffs, and daytime flights reduce contrail warming."
+        "body": "Economy seats spread the plane's emissions across more people. Business and first-class can double or triple your share. Direct flights avoid the extra emissions of multiple takeoffs, and daytime flights reduce contrail warming.",
+        "dynamicKey": "cabinComparison"
       },
       {
         "heading": "Be cautious with offsets",
