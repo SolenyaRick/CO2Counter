@@ -291,7 +291,6 @@
       flights: Array.isArray(s.flights) ? s.flights : [],
       extraTravel: Array.isArray(s.extraTravel) ? s.extraTravel : [],
       longTrips: Array.isArray(s.longTrips) ? s.longTrips : [],
-      shopping: { ...(d.shopping || {}), ...(s.shopping || {}) },
     };
   }
 
@@ -607,16 +606,6 @@
       detail: (pets.dogs || 0) + (pets.cats || 0) + " pet(s)",
     });
 
-    const shop = s.shopping || {};
-    const shopMonthly = D.SHOPPING_CATEGORIES.reduce((t, c) => t + (Number(shop[c.key]) || 0), 0);
-    items.push({
-      key: "shopping",
-      label: "Shopping & Lifestyle",
-      icon: "🛍️",
-      yearly: shoppingYearly(s),
-      detail: shopMonthly > 0 ? "£" + Math.round(shopMonthly).toLocaleString() + " a month" : "Nothing added",
-    });
-
     const banking = s.banking || {};
     const bank = byKey(D.BANKS, banking.bank);
     const pension = pensionProvider(banking);
@@ -855,16 +844,6 @@
           maxLabel: "by-product or alternative-protein pet food",
         };
       },
-      // Realistic: half of new goods bought second-hand, refurbished or
-      // kept longer. Maximum: no new goods at all.
-      shopping: () => ({
-        title: "Buy second-hand and make things last",
-        body: "Most of the carbon in what we buy comes from making it. Refurbished tech, second-hand clothes and furniture, and keeping things for longer avoid most of it, and gadgets and appliances carry the most carbon per pound.",
-        saving: shoppingYearly(s, true) * 0.5,
-        maxSaving: shoppingYearly(s, true),
-        realisticLabel: "buying half your goods second-hand or refurbished",
-        maxLabel: "buying only second-hand, refurbished or nothing new",
-      }),
       banking: () => {
         const b = s.banking || {};
         const bank = byKey(D.BANKS, b.bank);
@@ -924,13 +903,6 @@
   const longTripKg = (x) => travelFactor(x.mode) * (Number(x.km) || 0) * (x.returnTrip ? 2 : 1);
   const longTripsYearly = (s) => (s.longTrips || []).reduce((t, x) => t + longTripKg(x), 0);
 
-  // kg CO2e a year from monthly shopping spend; `goodsOnly` limits it to
-  // things that could be bought second-hand.
-  function shoppingYearly(s, goodsOnly) {
-    const shop = (s && s.shopping) || {};
-    return D.SHOPPING_CATEGORIES.filter((c) => !goodsOnly || c.goods).reduce((t, c) => t + (Number(shop[c.key]) || 0) * 12 * c.factor, 0);
-  }
-
   function categoryYearly(key, s) {
     const item = footprint(s).breakdown.find((b) => b.key === key);
     return item ? item.yearly : 0;
@@ -959,11 +931,14 @@
   // infrastructure, shown under the headline total.
   function sharedLine(personalKg) {
     const sh = D.SHARED_FOOTPRINT;
+    const shop = D.ASSUMED_SHOPPING;
     const t = (kg) => (kg / 1000).toFixed(1);
     return (
-      '<div class="shared-line mt-4"><p class="sm"><strong>+ ' + t(sh.totalKg) + " t shared footprint</strong> &middot; your share of the UK's public services (" +
+      '<div class="shared-line mt-4">' +
+      '<p class="sm"><strong>+ ' + t(shop.totalKg) + " t shopping (assumed)</strong> &middot; a typical UK figure for clothes, household goods, electronics and hobbies. Shopping isn't in the survey yet.</p>" +
+      '<p class="sm mt-2"><strong>+ ' + t(sh.totalKg) + " t shared footprint</strong> &middot; your share of the UK's public services (" +
       t(sh.publicServicesKg) + " t) and infrastructure (" + t(sh.infrastructureKg) + " t). It's the same for everyone in the UK.</p>" +
-      '<p class="sm mt-1">Including it, your total is about <strong>' + t(personalKg + sh.totalKg) + " t a year</strong>.</p></div>"
+      '<p class="sm mt-2">Including both, your total is about <strong>' + t(personalKg + shop.totalKg + sh.totalKg) + " t a year</strong>.</p></div>"
     );
   }
 
@@ -971,7 +946,7 @@
     return (
       '<p class="xs muted mt-3">Compared on food, commuting, flights, home energy, water and pets, where you come to ' +
       (cmp.mine / 1000).toFixed(1) + " t and a typical UK resident about " + (cmp.uk / 1000).toFixed(1) +
-      " t a year. Shopping, banking and pensions aren't included in this comparison.</p>"
+      " t a year. Banking and pensions aren't included in this comparison.</p>"
     );
   }
 
@@ -1153,7 +1128,6 @@
     { key: "flights", title: "Flight Checklist", subtitle: "Your saved flights", icon: "✈️", render: renderFlightsStep },
     { key: "energy", title: "Home & Water", subtitle: "Energy, gas & water", icon: "⚡", render: renderEnergyStep },
     { key: "pets", title: "Pets", subtitle: "Furry companions", icon: "🐾", render: renderPetsStep },
-    { key: "shopping", title: "Shopping & Lifestyle", subtitle: "What you buy each month", icon: "🛍️", render: renderShoppingStep },
     { key: "banking", title: "Banking & Pension", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
   ];
 
@@ -1471,20 +1445,6 @@
       numberCard("🐕 Dogs", "pets.dogs", p.dogs == null ? 0 : p.dogs, "~770 kg CO₂e / year each") +
       numberCard("🐈 Cats", "pets.cats", p.cats == null ? 0 : p.cats, "~310 kg CO₂e / year each") +
       "</div>"
-    );
-  }
-
-  function renderShoppingStep() {
-    const shop = survey.shopping || {};
-    const total = shoppingYearly(survey);
-    return (
-      '<p class="muted sm mb-6">Roughly how much do you spend each month? A rough guess is fine, and you can leave things at 0. Eating out is already in Weekly Meals.</p>' +
-      '<div class="grid-2 gap-4">' +
-      D.SHOPPING_CATEGORIES.map((c) =>
-        numberCard(esc(c.label) + ' <span class="xs muted normal">(£ a month)</span>', "shopping." + c.key, shop[c.key] == null ? 0 : shop[c.key], c.hint + " · " + c.factor.toFixed(2) + " kg CO₂e per £")
-      ).join("") +
-      "</div>" +
-      (total > 0 ? '<p class="sm mt-6">So far that\'s about <strong>' + Math.round(total).toLocaleString() + " kg CO₂e a year</strong>.</p>" : "")
     );
   }
 
@@ -2170,7 +2130,7 @@
       '<div class="stack-6 mb-10">' +
       section(
         "What we measure",
-        "<p>Eight areas of everyday life:</p>" +
+        "<p>Seven areas of everyday life:</p>" +
           list([
             "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
             "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land",
@@ -2178,11 +2138,10 @@
             "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
             "<strong>Water</strong>: household water use, shared across your household",
             "<strong>Pets</strong>: the footprint of feeding dogs and cats",
-            "<strong>Shopping and lifestyle</strong>: roughly what you spend each month on clothes, gadgets, appliances, furniture, hobbies, hotels and personal care, using the government's official emissions per pound spent",
             "<strong>Banking and pensions</strong>: the emissions your bank and pension fund finance with your money",
           ]) +
-          "<p>Some things aren't measured yet, including other heating fuels, drinks and snacks, and services such as insurance and phone contracts. " +
-          "Public services and infrastructure are shown separately as your shared footprint.</p>"
+          "<p>Some things aren't measured yet, including shopping, other heating fuels, drinks and snacks, and services such as insurance and phone contracts. " +
+          "For shopping we add a typical UK figure under your total (see below), and public services and infrastructure are shown separately as your shared footprint.</p>"
       ) +
       section(
         "How your estimate is worked out",
@@ -2214,8 +2173,14 @@
             "Water: Consumer Council for Water figures on daily use per person",
             "Pets: UK Pet Food's pet population figures",
           ]) +
-          "<p>The comparison covers food, commuting, flights, home energy, water and pets. Shopping, banking and pensions aren't included, because there's no reliable " +
+          "<p>The comparison covers food, commuting, flights, home energy, water and pets. Banking and pensions aren't included, because there's no reliable " +
           "per-person UK figure for them. Where official data doesn't exist (for example, how often people eat out), we use a reasonable assumption.</p>"
+      ) +
+      section(
+        "Assumed shopping",
+        "<p>Shopping isn't part of the survey yet, so under your total we add a typical UK figure of about " + (D.ASSUMED_SHOPPING.totalKg / 1000).toFixed(1) +
+          " tonnes a year. It comes from the government's official carbon footprint figures for what UK households spend on clothes and shoes, household goods " +
+          "(furniture, appliances, homeware), electronics and phones, and hobbies and leisure, split across the whole population. It's the same for everyone until shopping is added to the survey.</p>"
       ) +
       section(
         "Your shared footprint",
@@ -3709,8 +3674,7 @@
         setPath(survey, t.dataset.field, t.value);
         surveyChanged();
       }
-      // Shopping shows a running total, so refresh it after each answer.
-      if (t.dataset.rerender || /^shopping\./.test(t.dataset.field)) render();
+      if (t.dataset.rerender) render();
     } else if (t.dataset.flight) {
       const i = Number(t.dataset.flight);
       const value = t.type === "checkbox" ? t.checked : t.value;
