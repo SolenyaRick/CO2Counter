@@ -2544,10 +2544,11 @@ body {
 /* ---------- UK average bars on the results chart ---------- */
 
 .bar-chart .uk-bar {
-  fill-opacity: 0.22;
-  stroke-opacity: 0.85;
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
+  fill-opacity: 0.25;
+  stroke: var(--fg);
+  stroke-opacity: 0.7;
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
   pointer-events: none;
 }
 
@@ -2576,8 +2577,8 @@ body {
 }
 
 .lg-uk {
-  background: rgba(44, 122, 94, 0.22);
-  border: 1.5px dashed rgba(44, 122, 94, 0.85);
+  background: rgba(44, 122, 94, 0.25);
+  border: 1.5px dashed rgba(16, 36, 31, 0.7);
 }
 
 .uk-toggle {

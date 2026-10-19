@@ -1499,11 +1499,9 @@
     const niceMax = niceCeil(max);
     const plotH = H - top - bottom;
     const slot = (W - left - 10) / breakdown.length;
-    // With UK averages on, each slot holds your bar and, overlapping it from
-    // behind on the right, a see-through bar of the same colour.
-    const paired = ui.showUk;
-    const barW = paired ? slot * 0.5 : slot * 0.7;
-    const ukShift = slot * 0.24;
+    // The UK average is drawn exactly over your bar as a see-through,
+    // dashed-outline bar of the same colour.
+    const barW = slot * 0.7;
     let svg = '<svg class="bar-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Yearly emissions by category">';
     for (let i = 0; i <= 4; i++) {
       const v = (niceMax / 4) * i;
@@ -1513,7 +1511,7 @@
     }
     breakdown.forEach((b, i) => {
       const h = Math.max(0, (b.yearly / niceMax) * plotH);
-      const x = left + i * slot + (slot - barW - (paired ? ukShift : 0)) / 2;
+      const x = left + i * slot + (slot - barW) / 2;
       const y = top + plotH - h;
       const colour = BAR_COLORS[i % BAR_COLORS.length];
       const ukH = uk[b.key] != null ? Math.max(0, (uk[b.key] / niceMax) * plotH) : 0;
@@ -1522,12 +1520,12 @@
         '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.yearly.toFixed(0) +
         " kg CO₂e / year" + (uk[b.key] != null ? " (UK average " + uk[b.key].toFixed(0) + " kg)" : "") +
         '</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
-        (ukH > 0
-          ? '<path class="uk-bar" d="' + roundedTop(x + ukShift, top + plotH - ukH, barW, ukH, 8) + '" fill="' + colour + '" stroke="' + colour + '" />'
-          : "") +
         '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + colour + '" opacity="' + op + '" />' +
+        (ukH > 0
+          ? '<path class="uk-bar" d="' + roundedTop(x, top + plotH - ukH, barW, ukH, 8) + '" fill="' + colour + '" stroke="' + colour + '" />'
+          : "") +
         "</g>";
-      const lx = x + (barW + (paired ? ukShift : 0)) / 2;
+      const lx = x + barW / 2;
       const ly = top + plotH + 12;
       svg += '<text x="' + lx + '" y="' + ly + '" class="axis small" text-anchor="end" transform="rotate(-40 ' + lx + " " + ly + ')">' + esc(b.label) + "</text>";
     });
