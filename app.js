@@ -36,6 +36,8 @@
 
   const KEY_SURVEY = "ecoimpact_survey";
   const KEY_SNAPSHOTS = "ecoimpact_monthly_snapshots";
+  // Completed surveys on this device (guests, and a fallback when offline).
+  const KEY_HISTORY = "co2_survey_history";
   // Set while someone who came from a reset link still has to choose a new
   // password, so a reload doesn't skip that step. Per tab only.
   const KEY_RECOVERY = "co2_password_recovery";
@@ -135,6 +137,7 @@
   // data.js and the templates. glyphify() swaps them in as each page renders,
   // so the data can keep its emoji keys.
   const GLYPHS = {
+    "🛍️": '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/> <path d="M3 6h18"/> <path d="M16 10a4 4 0 0 1-8 0"/>',
     "🍽️": '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/> <path d="M7 2v20"/> <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
     "🥗": '<path d="M2 2a26.6 26.6 0 0 1 10 20c.9-6.82 1.5-9.5 4-14"/> <path d="M16 8c4 0 6-2 6-6-4 0-6 2-6 6"/> <path d="M17.41 3.6a10 10 0 1 0 3 3"/>',
     "🧀": '<path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7zM8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/> <path d="M22 9s-1.33-2-3.5-2C16.86 7 15 9 15 9s1.33 2 3.5 2S22 9 22 9z"/> <path d="M15 2s-2 1.33-2 3.5S15 9 15 9s2-1.84 2-3.5C17 3.33 15 2 15 2z"/>',
@@ -252,8 +255,9 @@
   }
 
   const isSupporter = () => !!(membership && ["active", "trialing", "past_due"].includes(membership.status));
-  // Full results and guides: everyone in free mode, otherwise members.
-  const hasFullAccess = () => FREE_MODE || !!(currentUser && membership && membership.access);
+  // Full results and guides: any signed-in user in free mode (free, but an
+  // account lets us see who uses the app), otherwise members.
+  const hasFullAccess = () => (FREE_MODE ? !!currentUser : !!(currentUser && membership && membership.access));
   // Answers saved to the account (and Friends): any signed-in user in free
   // mode, otherwise members.
   const canSync = () => !!currentUser && (FREE_MODE || !!(membership && membership.access));
@@ -287,6 +291,7 @@
       flights: Array.isArray(s.flights) ? s.flights : [],
       extraTravel: Array.isArray(s.extraTravel) ? s.extraTravel : [],
       longTrips: Array.isArray(s.longTrips) ? s.longTrips : [],
+      shopping: { ...(d.shopping || {}), ...(s.shopping || {}) },
     };
   }
 
@@ -331,9 +336,63 @@
 
   let saveTimer = null;
   function surveyChanged() {
+    // A new survey replaces the saved one only when it's finished.
+    if (ui.newSurvey) return;
     lsSet(KEY_SURVEY, survey);
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => saveSurveyRemote(survey), 600);
+  }
+
+  // ---------- survey history ----------
+
+  async function loadHistory() {
+    const local = lsGet(KEY_HISTORY, []);
+    if (!canSync() || !sb) {
+      ui.history = local;
+      return;
+    }
+    try {
+      const { data, error } = await sb
+        .from("survey_history")
+        .select("completed_at, total_yearly")
+        .order("completed_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      // Surveys finished on this device before signing in move to the account.
+      if (!data.length && local.length) {
+        await sb.from("survey_history").insert(
+          local.map((h) => ({ user_id: currentUser.id, survey_data: h.survey || {}, total_yearly: Math.round(h.totalYearly), completed_at: h.completedAt }))
+        );
+        ui.history = local;
+        return;
+      }
+      ui.history = data.map((h) => ({ completedAt: h.completed_at, totalYearly: Number(h.total_yearly) || 0 }));
+    } catch (e) {
+      ui.history = local; // table not set up yet, or offline
+    }
+  }
+
+  async function recordHistory(s) {
+    const entry = { completedAt: new Date().toISOString(), totalYearly: Math.round(footprint(s).totalYearly), survey: JSON.parse(JSON.stringify(s)) };
+    const local = [entry].concat(lsGet(KEY_HISTORY, [])).slice(0, 50);
+    lsSet(KEY_HISTORY, local);
+    ui.history = [{ completedAt: entry.completedAt, totalYearly: entry.totalYearly }].concat(ui.history || []);
+    if (canSync() && sb) {
+      try {
+        await sb.from("survey_history").insert({ user_id: currentUser.id, survey_data: entry.survey, total_yearly: entry.totalYearly });
+      } catch (e) {}
+    }
+  }
+
+  // One entry per day (the latest), newest first.
+  function historyByDay() {
+    const seen = {};
+    return (ui.history || []).filter((h) => {
+      const day = (h.completedAt || "").slice(0, 10);
+      if (!day || seen[day]) return false;
+      seen[day] = true;
+      return true;
+    });
   }
 
   async function clearSurvey() {
@@ -546,6 +605,16 @@
       icon: "🐾",
       yearly: ((pets.dogs || 0) * D.DOG_YEARLY + (pets.cats || 0) * D.CAT_YEARLY) / household,
       detail: (pets.dogs || 0) + (pets.cats || 0) + " pet(s)",
+    });
+
+    const shop = s.shopping || {};
+    const shopMonthly = D.SHOPPING_CATEGORIES.reduce((t, c) => t + (Number(shop[c.key]) || 0), 0);
+    items.push({
+      key: "shopping",
+      label: "Shopping & Lifestyle",
+      icon: "🛍️",
+      yearly: shoppingYearly(s),
+      detail: shopMonthly > 0 ? "£" + Math.round(shopMonthly).toLocaleString() + " a month" : "Nothing added",
     });
 
     const banking = s.banking || {};
@@ -786,6 +855,16 @@
           maxLabel: "by-product or alternative-protein pet food",
         };
       },
+      // Realistic: half of new goods bought second-hand, refurbished or
+      // kept longer. Maximum: no new goods at all.
+      shopping: () => ({
+        title: "Buy second-hand and make things last",
+        body: "Most of the carbon in what we buy comes from making it. Refurbished tech, second-hand clothes and furniture, and keeping things for longer avoid most of it, and gadgets and appliances carry the most carbon per pound.",
+        saving: shoppingYearly(s, true) * 0.5,
+        maxSaving: shoppingYearly(s, true),
+        realisticLabel: "buying half your goods second-hand or refurbished",
+        maxLabel: "buying only second-hand, refurbished or nothing new",
+      }),
       banking: () => {
         const b = s.banking || {};
         const bank = byKey(D.BANKS, b.bank);
@@ -845,6 +924,13 @@
   const longTripKg = (x) => travelFactor(x.mode) * (Number(x.km) || 0) * (x.returnTrip ? 2 : 1);
   const longTripsYearly = (s) => (s.longTrips || []).reduce((t, x) => t + longTripKg(x), 0);
 
+  // kg CO2e a year from monthly shopping spend; `goodsOnly` limits it to
+  // things that could be bought second-hand.
+  function shoppingYearly(s, goodsOnly) {
+    const shop = (s && s.shopping) || {};
+    return D.SHOPPING_CATEGORIES.filter((c) => !goodsOnly || c.goods).reduce((t, c) => t + (Number(shop[c.key]) || 0) * 12 * c.factor, 0);
+  }
+
   function categoryYearly(key, s) {
     const item = footprint(s).breakdown.find((b) => b.key === key);
     return item ? item.yearly : 0;
@@ -885,7 +971,7 @@
     return (
       '<p class="xs muted mt-3">Compared on food, commuting, flights, home energy, water and pets, where you come to ' +
       (cmp.mine / 1000).toFixed(1) + " t and a typical UK resident about " + (cmp.uk / 1000).toFixed(1) +
-      " t a year. Banking and pensions aren't included in this comparison.</p>"
+      " t a year. Shopping, banking and pensions aren't included in this comparison.</p>"
     );
   }
 
@@ -1047,6 +1133,10 @@
     pendingVerify: null, // { tokenHash, type } from an email link, until tapped
     authUsername: "",
     needUsername: false, // signed in, but the account has no username yet
+    newSurvey: false, // taking a new survey; the finished one is kept until it's done
+    draft: null,
+    prevSurvey: null,
+    history: [], // completed surveys, newest first: { completedAt, totalYearly }
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -1063,6 +1153,7 @@
     { key: "flights", title: "Flight Checklist", subtitle: "Your saved flights", icon: "✈️", render: renderFlightsStep },
     { key: "energy", title: "Home & Water", subtitle: "Energy, gas & water", icon: "⚡", render: renderEnergyStep },
     { key: "pets", title: "Pets", subtitle: "Furry companions", icon: "🐾", render: renderPetsStep },
+    { key: "shopping", title: "Shopping & Lifestyle", subtitle: "What you buy each month", icon: "🛍️", render: renderShoppingStep },
     { key: "banking", title: "Banking & Pension", subtitle: "Where your money lives", icon: "🏦", render: renderBankingStep },
   ];
 
@@ -1076,7 +1167,7 @@
       '<div class="card center fade-up"><div class="round-badge center-block mb-4">' + icon("check") + "</div>" +
       '<h2 class="card-title mb-2">You\'ve already completed your survey</h2>' +
       '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Would you like to take a new survey? " +
-      "Your new answers will replace your current ones. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
+      "Your current results are kept in your history, and you can cancel before you finish. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
       '<div class="chip-row" style="justify-content:center">' +
       '<button type="button" class="btn btn-green" data-action="new-survey">' + icon("refresh") + " Take a new survey</button>" +
       '<a class="btn btn-outline" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
@@ -1095,9 +1186,13 @@
       );
     }).join("");
     const last = ui.step === STEPS.length - 1;
+    const newBanner = ui.newSurvey
+      ? '<div class="panel p-4 mb-6 row-between gap-3" style="flex-wrap:wrap"><p class="sm">You\'re taking a new survey. Your previous results stay saved until you finish, and are kept in your history.</p>' +
+        '<button type="button" class="btn btn-outline btn-sm" data-action="cancel-new-survey">' + icon("x") + " Cancel new survey</button></div>"
+      : "";
     return (
       '<div class="container">' +
-      pageHeader("Carbon Footprint Survey", "Step " + (ui.step + 1) + " of " + STEPS.length) +
+      pageHeader("Carbon Footprint Survey", "Step " + (ui.step + 1) + " of " + STEPS.length) + newBanner +
       '<div class="mb-8"><div class="progress thin"><div style="width:' + pct + '%"></div></div>' +
       '<div class="step-chips">' + chips + "</div></div>" +
       '<div class="survey-card">' +
@@ -1379,6 +1474,20 @@
     );
   }
 
+  function renderShoppingStep() {
+    const shop = survey.shopping || {};
+    const total = shoppingYearly(survey);
+    return (
+      '<p class="muted sm mb-6">Roughly how much do you spend each month? A rough guess is fine, and you can leave things at 0. Eating out is already in Weekly Meals.</p>' +
+      '<div class="grid-2 gap-4">' +
+      D.SHOPPING_CATEGORIES.map((c) =>
+        numberCard(esc(c.label) + ' <span class="xs muted normal">(£ a month)</span>', "shopping." + c.key, shop[c.key] == null ? 0 : shop[c.key], c.hint + " · " + c.factor.toFixed(2) + " kg CO₂e per £")
+      ).join("") +
+      "</div>" +
+      (total > 0 ? '<p class="sm mt-6">So far that\'s about <strong>' + Math.round(total).toLocaleString() + " kg CO₂e a year</strong>.</p>" : "")
+    );
+  }
+
   function renderBankingStep() {
     const b = survey.banking;
     const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
@@ -1404,7 +1513,7 @@
 
   // ==================== Results page ====================
 
-  const BAR_COLORS = ["#2f6b4f", "#4a95a5", "#dca23a", "#8a73c9", "#d2728c", "#7b8a83"];
+  const BAR_COLORS = ["#2f6b4f", "#4a95a5", "#dca23a", "#8a73c9", "#d2728c", "#b5895a", "#7b8a83"];
 
   function barChart(breakdown, selectedKey) {
     // Sized to the screen so labels stay readable on phones.
@@ -1590,7 +1699,37 @@
       .join("");
     html += "</div>";
 
-    if (snapshots.length) {
+    const hist = historyByDay();
+    if (hist.length) {
+      const recent = hist.slice(0, 6);
+      const dateOf = (h) => new Date(h.completedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+      const first = hist[hist.length - 1];
+      const change = hist.length > 1 ? recent[0].totalYearly - first.totalYearly : 0;
+      html +=
+        '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div>' +
+        (hist.length > 1
+          ? '<p class="sm mb-4">Since your first survey on ' + dateOf(first) + ", your footprint has " +
+            (change < 0 ? '<strong class="green-dark">fallen by ' + fixed(-change) + " kg a year</strong>." : change > 0 ? '<strong class="red">risen by ' + fixed(change) + " kg a year</strong>." : "stayed the same.") + "</p>"
+          : "") +
+        '<div class="stack-2">' +
+        recent
+          .map((h, i) => {
+            const prev = recent[i + 1];
+            const diff = prev ? h.totalYearly - prev.totalYearly : null;
+            const cls = diff > 0 ? "red" : diff < 0 ? "green" : "muted";
+            return (
+              '<div class="month-row"><div class="label-row min0"><span class="sm fw-500 truncate">' + esc(dateOf(h)) + "</span>" +
+              (i === 0 ? '<span class="tag green">Latest</span>' : "") +
+              '</div><div class="label-row shrink0">' +
+              (diff !== null ? '<span class="xs fw-500 ' + cls + '">' + (diff > 0 ? "▲" : diff < 0 ? "▼" : "—") + " " + Math.abs(diff).toFixed(0) + " kg</span>" : "") +
+              '<span class="fw-600">' + fixed(h.totalYearly) + '</span><span class="xs muted">kg/yr</span></div></div>'
+            );
+          })
+          .join("") +
+        "</div>" +
+        (hist.length < 2 ? '<p class="xs muted mt-3">Take a new survey in a few months to see how your footprint changes.</p>' : "") +
+        "</div>";
+    } else if (snapshots.length) {
       const recent = snapshots.slice(-6).reverse();
       html +=
         '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div><div class="stack-2">' +
@@ -2031,7 +2170,7 @@
       '<div class="stack-6 mb-10">' +
       section(
         "What we measure",
-        "<p>Seven areas of everyday life:</p>" +
+        "<p>Eight areas of everyday life:</p>" +
           list([
             "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
             "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land",
@@ -2039,10 +2178,11 @@
             "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
             "<strong>Water</strong>: household water use, shared across your household",
             "<strong>Pets</strong>: the footprint of feeding dogs and cats",
+            "<strong>Shopping and lifestyle</strong>: roughly what you spend each month on clothes, gadgets, appliances, furniture, hobbies, hotels and personal care, using the government's official emissions per pound spent",
             "<strong>Banking and pensions</strong>: the emissions your bank and pension fund finance with your money",
           ]) +
-          "<p>Some things aren't measured yet, including shopping (clothes, electronics, furniture), leisure travel by car or train, other heating fuels, " +
-          "drinks and snacks, and public services. Your total covers only the areas above.</p>"
+          "<p>Some things aren't measured yet, including other heating fuels, drinks and snacks, and services such as insurance and phone contracts. " +
+          "Public services and infrastructure are shown separately as your shared footprint.</p>"
       ) +
       section(
         "How your estimate is worked out",
@@ -2074,7 +2214,7 @@
             "Water: Consumer Council for Water figures on daily use per person",
             "Pets: UK Pet Food's pet population figures",
           ]) +
-          "<p>The comparison covers food, commuting, flights, home energy, water and pets. Banking and pensions aren't included, because there's no reliable " +
+          "<p>The comparison covers food, commuting, flights, home energy, water and pets. Shopping, banking and pensions aren't included, because there's no reliable " +
           "per-person UK figure for them. Where official data doesn't exist (for example, how often people eat out), we use a reasonable assumption.</p>"
       ) +
       section(
@@ -2082,7 +2222,7 @@
         "<p>Some emissions belong to everyone in the UK together: the NHS, schools, councils and defence, and the roads, buildings and equipment the country invests in. " +
           "The government's official carbon footprint figures split these across the whole population, which comes to about 2.4 tonnes per person a year. " +
           "We show it as a fixed line under your total, because it's the same for everyone and your answers don't change it.</p>" +
-          "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about 10 tonnes per person. Some everyday spending, like shopping, hobbies and hotels, isn't in the survey yet.</p>"
+          "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about 10 tonnes per person. Some spending, like insurance, phone contracts and other services, isn't in the survey yet.</p>"
       ) +
       section(
         "The 1.5°C budget",
@@ -2948,6 +3088,7 @@
       // account has nothing saved yet.
       survey = await loadSurvey();
       saveSurveyRemote(survey);
+      await loadHistory();
       if (currentPath() === "/account") location.hash = "#/results";
     }
     render();
@@ -2998,7 +3139,7 @@
     "Where your footprint comes from, category by category",
     "Personal tips with the savings each one could make",
     "Step-by-step guides to cut each part of your footprint",
-    "Your answers saved across all your devices",
+    "Your answers saved across all your devices, with your history over time",
   ];
 
   const perksList = () =>
@@ -3069,10 +3210,14 @@
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
       '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>" +
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("lock") +
-      '</span><span class="eyebrow">Unlock your full results</span></div>' +
+      '</span><span class="eyebrow">' + (FREE_MODE ? "See your full results, free" : "Unlock your full results") + "</span></div>" +
       '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
-      '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
-      '<div class="max-sm">' + joinAction() + "</div></div>" +
+      (FREE_MODE
+        ? '<p class="sm muted mb-2">Create a free account (it takes a minute) to see everything below. Your answers are saved to it.</p>' + perksList() +
+          '<div class="max-sm"><button type="button" class="btn btn-green btn-block" data-action="start-signup">Create a free account</button>' +
+          '<p class="xs muted mt-2 center">Already have an account? <button type="button" class="link-btn" data-action="start-signin">Sign in</button></p></div></div>'
+        : '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
+          '<div class="max-sm">' + joinAction() + "</div></div>") +
       '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
     );
@@ -3109,6 +3254,8 @@
 
   function render() {
     const path = currentPath();
+    // While a new survey is open, every other page shows the finished one.
+    if (ui.newSurvey) survey = path === "/" ? ui.draft : ui.prevSurvey;
     // Leaving the survey ends an edit; the Survey tab asks again next time.
     if (path !== "/") ui.editing = false;
     const parts = path.split("/").filter(Boolean);
@@ -3192,10 +3339,17 @@
         render();
         window.scrollTo(0, 0);
       } else {
+        if (ui.newSurvey) {
+          survey = ui.draft;
+          ui.newSurvey = false;
+          ui.draft = null;
+          ui.prevSurvey = null;
+        }
         survey.completedAt = new Date().toISOString();
         surveyChanged();
         ui.editing = false;
         saveSnapshot(footprint(survey).totalYearly);
+        recordHistory(survey);
         location.hash = "#/results";
       }
     },
@@ -3375,6 +3529,10 @@
       ui.authMode = "signin";
       // The next person to use this device shouldn't see these answers.
       lsRemove(KEY_SURVEY);
+      lsRemove(KEY_HISTORY);
+      ui.history = [];
+      ui.newSurvey = false;
+      ui.draft = ui.prevSurvey = null;
       survey = normaliseSurvey(null);
       ui.step = 0;
       location.hash = "#/";
@@ -3439,7 +3597,10 @@
         return render();
       }
       await sb.auth.signOut().catch(() => {});
-      [KEY_SURVEY, KEY_SNAPSHOTS, KEY_GOALS, KEY_STREAKS].forEach(lsRemove);
+      [KEY_SURVEY, KEY_SNAPSHOTS, KEY_GOALS, KEY_STREAKS, KEY_HISTORY].forEach(lsRemove);
+      ui.history = [];
+      ui.newSurvey = false;
+      ui.draft = ui.prevSurvey = null;
       CATEGORIES.forEach((c) => {
         lsRemove(KEY_HABITS + c);
         lsRemove(KEY_STAGE + c);
@@ -3457,9 +3618,22 @@
     // Starts from blank answers. Nothing is saved until they change
     // something, so leaving straight away keeps the old survey.
     "new-survey": () => {
-      survey = normaliseSurvey(null);
+      ui.prevSurvey = survey;
+      ui.draft = normaliseSurvey(null);
+      survey = ui.draft;
+      ui.newSurvey = true;
       ui.editing = false;
       ui.step = 0;
+      render();
+      window.scrollTo(0, 0);
+    },
+    "cancel-new-survey": () => {
+      survey = ui.prevSurvey || survey;
+      ui.newSurvey = false;
+      ui.draft = null;
+      ui.prevSurvey = null;
+      ui.step = 0;
+      ui.flash = "New survey cancelled. Your previous answers are unchanged.";
       render();
       window.scrollTo(0, 0);
     },
@@ -3535,7 +3709,8 @@
         setPath(survey, t.dataset.field, t.value);
         surveyChanged();
       }
-      if (t.dataset.rerender) render();
+      // Shopping shows a running total, so refresh it after each answer.
+      if (t.dataset.rerender || /^shopping\./.test(t.dataset.field)) render();
     } else if (t.dataset.flight) {
       const i = Number(t.dataset.flight);
       const value = t.type === "checkbox" ? t.checked : t.value;
@@ -3644,6 +3819,7 @@
     }
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
+    await loadHistory();
     render();
     if (fromCheckout && FREE_MODE) {
       ui.flash = "Thank you for supporting CO2 Counter! It really helps keep it running.";

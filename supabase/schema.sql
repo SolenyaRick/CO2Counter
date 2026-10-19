@@ -1323,3 +1323,33 @@ $$;
 
 revoke all on function public.find_user_by_username(text) from public;
 grant execute on function public.find_user_by_username(text) to authenticated;
+
+-- ---------- Survey history (October 2026) ----------
+-- Every completed survey is kept, so people (and you) can see how their
+-- footprint changes over time. survey_responses still holds the current
+-- answers; this table holds a copy each time a survey is finished.
+create table if not exists public.survey_history (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  survey_data jsonb not null,
+  total_yearly numeric,
+  completed_at timestamptz not null default now()
+);
+
+create index if not exists survey_history_user_time on public.survey_history (user_id, completed_at desc);
+
+alter table public.survey_history enable row level security;
+
+drop policy if exists "survey_history: owner can select" on public.survey_history;
+create policy "survey_history: owner can select" on public.survey_history
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "survey_history: owner can insert" on public.survey_history;
+create policy "survey_history: owner can insert" on public.survey_history
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "survey_history: owner can delete" on public.survey_history;
+create policy "survey_history: owner can delete" on public.survey_history
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, delete on public.survey_history to authenticated;
