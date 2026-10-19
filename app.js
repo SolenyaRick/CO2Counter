@@ -1475,14 +1475,25 @@
 
   const BAR_COLORS = ["#2f6b4f", "#4a95a5", "#dca23a", "#8a73c9", "#d2728c", "#b5895a", "#7b8a83"];
 
+  // The typical UK resident's yearly kg per category (the same profile as
+  // the UK comparison), for the dashed markers on the chart.
+  function ukAverageByKey() {
+    const out = {};
+    footprint(D.UK_TYPICAL_SURVEY).breakdown.forEach((b) => {
+      if (D.UK_COMPARISON_KEYS.includes(b.key)) out[b.key] = b.yearly;
+    });
+    return out;
+  }
+
   function barChart(breakdown, selectedKey) {
+    const uk = ukAverageByKey();
     // Sized to the screen so labels stay readable on phones.
     const W = Math.round(Math.max(300, Math.min(900, window.innerWidth - 64)));
     const H = 280;
     const left = 40;
     const bottom = 70;
     const top = 10;
-    const max = Math.max(1, ...breakdown.map((b) => b.yearly));
+    const max = Math.max(1, ...breakdown.map((b) => Math.max(b.yearly, uk[b.key] || 0)));
     const niceMax = niceCeil(max);
     const plotH = H - top - bottom;
     const slot = (W - left - 10) / breakdown.length;
@@ -1501,8 +1512,14 @@
       const op = selectedKey === b.key ? 1 : 0.45;
       svg +=
         '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.yearly.toFixed(0) +
-        ' kg CO₂e / year</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
-        '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + BAR_COLORS[i % BAR_COLORS.length] + '" opacity="' + op + '" /></g>';
+        " kg CO₂e / year" + (uk[b.key] != null ? " (UK average " + uk[b.key].toFixed(0) + " kg)" : "") +
+        '</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
+        '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + BAR_COLORS[i % BAR_COLORS.length] + '" opacity="' + op + '" />' +
+        (uk[b.key] != null
+          ? '<line class="uk-mark" x1="' + (x - 4) + '" x2="' + (x + barW + 4) + '" y1="' + (top + plotH - (uk[b.key] / niceMax) * plotH) +
+            '" y2="' + (top + plotH - (uk[b.key] / niceMax) * plotH) + '" />'
+          : "") +
+        "</g>";
       const lx = x + barW / 2;
       const ly = top + plotH + 12;
       svg += '<text x="' + lx + '" y="' + ly + '" class="axis small" text-anchor="end" transform="rotate(-40 ' + lx + " " + ly + ')">' + esc(b.label) + "</text>";
@@ -1619,8 +1636,11 @@
     }
 
     html +=
-      '<div class="card"><h2 class="card-title mb-1">Where it comes from</h2><p class="sm muted mb-6">Tap a bar to see how to improve it.</p>' +
-      '<div class="chart-wrap">' + barChart(fp.breakdown, selected) + "</div></div>";
+      '<div class="card"><h2 class="card-title mb-1">Where it comes from</h2><p class="sm muted mb-3">Tap a bar to see how to improve it.</p>' +
+      '<div class="chart-legend xs muted mb-4"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span></div>' +
+      '<div class="chart-wrap">' + barChart(fp.breakdown, selected) + "</div>" +
+      '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting. ' +
+      "There's no UK average for banking and pensions.</p></div>";
 
     html +=
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + "</span>" +
@@ -1775,7 +1795,7 @@
 
   const bankRating = (bank) => D.BANK_RATING_BANDS.find((b) => bank.factor <= b.max);
   const rateChip = (key, label) => '<span class="rate rate-' + key + '">' + esc(label) + "</span>";
-  const WHICH_LABELS = { green: "Eco Provider", amber: "Amber", red: "Red" };
+  const WHICH_LABELS = { green: "Eco", amber: "Amber", red: "Red" };
   const kgFmt = (n) => Math.round(n).toLocaleString();
 
   function pensionRating(score) {
@@ -1832,17 +1852,17 @@
         return (
           '<tr' + (bank && x.key === bank.key ? ' class="me"' : "") + "><td>" + (i + 1) + "</td><td>" + esc(x.label) + (bank && x.key === bank.key ? " (you)" : "") +
           "</td><td class=\"num\">" + kgFmt(x.factor * 1000) + "</td><td>" + rateChip(rt.key, rt.label) + "</td><td>" +
-          (w ? rateChip(w === "green" ? "vgood" : w === "amber" ? "bad" : "vbad", WHICH_LABELS[w]) : '<span class="xs muted">Not rated</span>') + "</td></tr>"
+          (w ? rateChip(w === "green" ? "vgood" : w === "amber" ? "bad" : "vbad", WHICH_LABELS[w]) : '<span class="xs muted">–</span>') + "</td></tr>"
         );
       })
       .join("");
     return (
       '<div class="popup-body"><div class="panel green p-4">' + mine + "</div>" +
       '<p class="xs fw-600 upper muted mt-2">Independent league table</p>' +
-      '<div class="league-wrap"><table class="league"><thead><tr><th>#</th><th>Bank</th><th class="num">kg per £1k a year</th><th>Our rating</th><th>Which?</th></tr></thead><tbody>' +
+      '<div class="league-wrap"><table class="league league-banks"><thead><tr><th>#</th><th>Bank</th><th class="num">kg per £1k</th><th>Rating</th><th>Which?</th></tr></thead><tbody>' +
       rows + "</tbody></table></div>" +
       '<p class="xs muted">Emissions: MotherTree bank carbon emissions league table (2021), CO₂e financed per pound held. Our rating bands: Very good under 45 kg, Good under 75, Bad under 150, Very bad 150+ per £1,000. ' +
-      "Which?: Which? and Reclaim Finance review of fossil-fuel policies (October 2023); Eco Providers have no fossil-fuel exposure. The two can disagree: Lloyds and Halifax finance relatively little but lack a full fossil-fuel exclusion policy, so Which? rates them red.</p></div>"
+      "kg per £1k: kg CO₂e a year for every £1,000 held. Which?: Which? and Reclaim Finance review of fossil-fuel policies (October 2023); Eco = Which? Eco Provider, with no fossil-fuel exposure; – = not assessed. The two can disagree: Lloyds and Halifax finance relatively little but lack a full fossil-fuel exclusion policy, so Which? rates them red.</p></div>"
     );
   }
 
@@ -1887,7 +1907,7 @@
       '<p class="sm"><strong>Pensions:</strong> often the biggest lever. Ask your provider or HR for a climate-focused or fossil-free fund; switching usually takes a few minutes online.</p>' +
       '<div class="panel green p-4">' + mineHtml + "</div>" +
       '<p class="xs fw-600 upper muted mt-2">Independent pension ranking</p>' +
-      '<div class="league-wrap"><table class="league"><thead><tr><th>Rank</th><th>Provider</th><th class="num">Score /10</th><th>Rating</th></tr></thead><tbody>' +
+      '<div class="league-wrap"><table class="league"><thead><tr><th>#</th><th>Provider</th><th class="num">/10</th><th>Rating</th></tr></thead><tbody>' +
       rows + "</tbody></table></div>" +
       '<p class="xs muted">Make My Money Matter, Climate Action Report 2025 (February 2025): climate commitments, targets, fossil fuels, deforestation and stewardship. It rates providers\' climate action, not the carbon footprint of your fund; ' +
       "your footprint figure uses each provider\'s own published (TCFD) data. Not financial advice.</p></div>"

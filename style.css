@@ -2491,12 +2491,34 @@ body {
   font-size: 13px;
 }
 
+@media (max-width: 480px) {
+  .league { font-size: 12px; }
+  .league .rate { font-size: 11px; padding: 1px 7px; }
+}
+
 .league th,
 .league td {
-  padding: 8px 10px;
+  padding: 7px 6px;
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+  vertical-align: middle;
+}
+
+.league th:first-child,
+.league td:first-child {
+  padding-left: 10px;
+}
+
+.league th:last-child,
+.league td:last-child {
+  padding-right: 10px;
+}
+
+/* Long names wrap so the table fits a phone screen. */
+.league td:nth-child(2) {
+  white-space: normal;
+  min-width: 80px;
 }
 
 .league th {
@@ -2517,4 +2539,67 @@ body {
 .league tr.me td {
   background: var(--em-50);
   font-weight: 600;
+}
+
+/* ---------- UK average markers on the results chart ---------- */
+
+.bar-chart .uk-mark {
+  stroke: var(--fg);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 3;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lg-you {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--em-500);
+  display: inline-block;
+}
+
+.lg-uk {
+  width: 18px;
+  height: 0;
+  border-top: 2.5px dashed var(--fg);
+  display: inline-block;
+}
+
+@media (max-width: 420px) {
+  /* Rows are already in rank order, so the number column can go. */
+  .league-banks th:first-child,
+  .league-banks td:first-child {
+    display: none;
+  }
+
+  .league-banks th:nth-child(2),
+  .league-banks td:nth-child(2) {
+    padding-left: 10px;
+  }
+
+  .modal {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .league { font-size: 11px; }
+  .league th,
+  .league td { padding-left: 4px; padding-right: 4px; }
+  .league .rate { font-size: 10px; padding: 1px 5px; }
+  .league td:nth-child(2) { min-width: 64px; }
 }
