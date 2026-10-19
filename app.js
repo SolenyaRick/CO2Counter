@@ -2389,26 +2389,61 @@
     (ui.authErr ? '<p class="auth-note error" role="alert">' + esc(ui.authErr) + "</p>" : "") +
     (ui.authMsg ? '<p class="auth-note ok" role="status">' + esc(ui.authMsg) + "</p>" : "");
 
-  function passwordField(id, label, autocomplete) {
+  // A password box with its own Show/Hide button and a tick that appears
+  // once both boxes match. `confirm` marks the retype box, which also gets
+  // a line saying whether the two match.
+  function passwordField(id, label, autocomplete, confirm) {
     return (
-      '<label class="xs">' + label + '<input class="input mt-1" type="password" id="' + id + '" minlength="' + MIN_PASSWORD +
-      '" required autocomplete="' + autocomplete + '" /></label>'
+      '<div><label class="xs" for="' + id + '">' + label + '</label><div class="pw-wrap mt-1">' +
+      '<input class="input" type="password" id="' + id + '" minlength="' + MIN_PASSWORD + '" required autocomplete="' + autocomplete + '"' +
+      (confirm ? ' aria-describedby="' + id + '-match"' : "") + " />" +
+      '<span class="pw-tick" hidden>' + icon("check") + "</span>" +
+      '<button type="button" class="pw-toggle" data-action="toggle-pw" data-target="' + id + '" aria-label="Show password">Show</button></div>' +
+      (confirm ? '<p class="pw-match xs" id="' + id + '-match" aria-live="polite"></p>' : "") + "</div>"
     );
+  }
+
+  // Ticks and "Passwords match" for whichever pair of boxes is on screen.
+  function updatePasswordMatch() {
+    [["auth-password", "auth-password2"], ["new-password", "new-password2"]].forEach(([id1, id2]) => {
+      const a = document.getElementById(id1);
+      const b = document.getElementById(id2);
+      if (!a || !b) return;
+      const match = b.value.length > 0 && a.value === b.value;
+      const good = match && a.value.length >= MIN_PASSWORD;
+      [a, b].forEach((el) => {
+        el.parentNode.querySelector(".pw-tick").hidden = !good;
+        el.classList.toggle("pw-good", good);
+      });
+      const line = document.getElementById(id2 + "-match");
+      if (!line) return;
+      let text = "";
+      let cls = "";
+      if (match && good) {
+        text = "Passwords match";
+        cls = "ok";
+      } else if (match) {
+        text = "Passwords match, but need at least " + MIN_PASSWORD + " characters";
+        cls = "bad";
+      } else if (b.value.length && b.value.length >= a.value.length) {
+        text = "Passwords don't match";
+        cls = "bad";
+      }
+      line.textContent = text;
+      line.className = "pw-match xs " + cls;
+    });
   }
 
   const emailField = () =>
     '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" value="' + esc(ui.authEmail) + '" /></label>';
-
-  const showPasswords = () =>
-    '<label class="check-label xs"><input type="checkbox" data-action="show-passwords" /> Show password</label>';
 
   function authForm() {
     if (ui.recovery) {
       return (
         '<form id="recovery-form" class="auth-form" novalidate>' +
         passwordField("new-password", "New password (at least " + MIN_PASSWORD + " characters)", "new-password") +
-        passwordField("new-password2", "Type it again", "new-password") +
-        showPasswords() + authNotes() +
+        passwordField("new-password2", "Retype new password", "new-password", true) +
+        authNotes() +
         '<button type="submit" class="btn btn-green btn-block">Save new password</button></form>'
       );
     }
@@ -2436,9 +2471,9 @@
       emailField() +
       (signup
         ? passwordField("auth-password", "Password (at least " + MIN_PASSWORD + " characters)", "new-password") +
-          passwordField("auth-password2", "Type it again", "new-password")
+          passwordField("auth-password2", "Retype password", "new-password", true)
         : passwordField("auth-password", "Password", "current-password")) +
-      showPasswords() + authNotes() +
+      authNotes() +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
       (signup
         ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>'
@@ -2774,6 +2809,7 @@
       const now = document.getElementById(id);
       if (now) now.value = el.value;
     });
+    updatePasswordMatch();
   }
 
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
@@ -2945,11 +2981,13 @@
       ui.authMsg = "";
       render();
     },
-    "show-passwords": (el) => {
-      document.querySelectorAll('.auth-form input[type="password"], .auth-form input[data-pw]').forEach((i) => {
-        i.dataset.pw = "1";
-        i.type = el.checked ? "text" : "password";
-      });
+    "toggle-pw": (el) => {
+      const input = document.getElementById(el.dataset.target);
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      el.textContent = show ? "Hide" : "Show";
+      el.setAttribute("aria-label", show ? "Hide password" : "Show password");
     },
     "resend-confirm": async () => {
       ui.authErr = "";
@@ -3110,6 +3148,7 @@
   // steal focus); fields whose value is shown elsewhere re-render on change.
   document.addEventListener("input", (e) => {
     const t = e.target;
+    if (PASSWORD_IDS.includes(t.id)) return updatePasswordMatch();
     if (t.id === "airport-search") {
       ui.airportQuery = t.value;
       const list = document.getElementById("airport-list");

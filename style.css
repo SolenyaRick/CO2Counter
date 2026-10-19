@@ -2374,3 +2374,70 @@ body {
 .flash .icon-btn {
   color: rgba(255, 253, 249, 0.8);
 }
+
+/* ---------- password boxes ---------- */
+
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap .input {
+  padding-right: 96px;
+}
+
+.pw-wrap .input.pw-good {
+  border-color: var(--em-400);
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--em-600);
+}
+
+.pw-toggle:hover {
+  background: var(--muted);
+}
+
+.pw-tick {
+  position: absolute;
+  right: 64px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--em-500);
+}
+
+.pw-tick[hidden] {
+  display: none;
+}
+
+.pw-tick .icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+.pw-match {
+  margin-top: 6px;
+  min-height: 1em;
+}
+
+.pw-match:empty {
+  display: none;
+}
+
+.pw-match.ok {
+  color: var(--em-600);
+  font-weight: 600;
+}
+
+.pw-match.bad {
+  color: #b5473b;
+}
