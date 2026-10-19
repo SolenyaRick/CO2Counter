@@ -1785,15 +1785,22 @@
         : "") +
       "</div>";
 
+    // Diet cards the survey shows are already done are left out (habits are
+    // separate: they track changes from here). Flight cards stay, marked
+    // Done, so people come back to them.
+    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)));
     html +=
       '<div class="stack-6 mb-10">' +
-      sections
-        .map(
-          (s, i) =>
-            '<div class="section-card fade-up" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
-            '<span class="num-badge">' + (i + 1) + "</span>" + esc(s.heading) + icon("info", "ml-auto faint") + '</h2><p class="sm muted lh">' + esc(s.body) + "</p>" +
-            sectionTeaser(s) + "</div>"
-        )
+      shown
+        .map(({ s, i }, n) => {
+          const done = cat === "flights" && sectionDone(cat, s);
+          return (
+            '<div class="section-card fade-up' + (done ? " done" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
+            '<span class="num-badge">' + (done ? icon("check") : n + 1) + "</span>" + esc(s.heading) +
+            (done ? '<span class="tag done-tag ml-auto">Done</span>' + icon("info", "faint") : icon("info", "ml-auto faint")) +
+            '</h2><p class="sm muted lh">' + esc(s.body) + "</p>" + sectionTeaser(s) + "</div>"
+          );
+        })
         .join("") +
       "</div>";
 
@@ -1815,6 +1822,54 @@
     if (score >= 5) return { key: "good", label: "Adequate" };
     if (score >= 2.5) return { key: "bad", label: "Inadequate" };
     return { key: "vbad", label: "Poor" };
+  }
+
+  // Whether the survey shows someone is already doing what a guide card
+  // suggests.
+  function sectionDone(cat, s) {
+    const flights = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+    if (cat === "flights") {
+      if (s.dynamicKey === "flightTiers") return flights.length === 0;
+      if (s.dynamicKey === "trainComparison") return !flights.some((f) => flightKm(f.from, f.to) <= MEDIUM_HAUL_KM);
+      if (s.dynamicKey === "cabinComparison") return flights.every((f) => (f.cabin || "economy") === "economy");
+      return false;
+    }
+    if (cat === "meals") return /food waste/i.test(s.heading) && (survey.meals || {}).foodWaste === "low";
+    return false;
+  }
+
+  // Your flights priced in each cabin class (DESNZ 2026 factors). DESNZ has
+  // no short-haul premium economy or first class, so those use economy and
+  // business, which the note explains.
+  function cabinComparisonHtml() {
+    const flights = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+    if (!flights.length) {
+      return '<div class="popup-body"><p class="sm">You haven\'t added any flights, so there\'s nothing to compare. If you do fly, economy is always the lowest-carbon seat.</p></div>';
+    }
+    const current = flights.reduce((t, f) => t + flightKm(f.from, f.to) * flightFactor(f.from, f.to, f.cabin) * legs(f), 0);
+    const rows = D.CABINS.map((c) => ({ c, kg: flights.reduce((t, f) => t + flightKm(f.from, f.to) * flightFactor(f.from, f.to, c.key) * legs(f), 0) }));
+    const max = Math.max(...rows.map((x) => x.kg), 1);
+    const economy = rows[0].kg;
+    const allEconomy = flights.every((f) => (f.cabin || "economy") === "economy");
+    const business = rows.find((x) => x.c.key === "business").kg;
+    const summary = allEconomy
+      ? "You already fly economy, the lowest-carbon seat. The same flights in business would add about <strong>" + kgFmt(business - economy) + " kg</strong> a year."
+      : "Flying all of these in economy would save about <strong>" + kgFmt(current - economy) + " kg a year</strong> (" + Math.round((1 - economy / current) * 100) + "% of your flight emissions).";
+    return (
+      '<div class="popup-body"><p class="sm">' + summary + "</p>" +
+      '<p class="xs fw-600 upper muted">Your ' + flights.length + (flights.length === 1 ? " flight" : " flights") + " in each cabin</p>" +
+      '<div class="stack-2">' +
+      rows
+        .map(
+          (x) =>
+            '<div class="cabin-row"><span class="sm fw-500 cabin-label">' + esc(x.c.label) + '</span><div class="cabin-track"><div style="width:' + ((x.kg / max) * 100).toFixed(1) +
+            '%"></div></div><span class="sm fw-600 nowrap">' + kgFmt(x.kg) + " kg</span></div>"
+        )
+        .join("") +
+      "</div>" +
+      '<p class="sm">As you booked them: <strong>' + kgFmt(current) + " kg CO₂e a year</strong>.</p>" +
+      '<p class="xs muted">Bigger seats take up more of the plane, so each passenger is responsible for more of its fuel. Figures use DESNZ 2026 flight factors, which have no premium economy or first class for short-haul flights, so those use economy and business. We don\'t have figures for direct versus connecting or daytime versus night flights.</p></div>'
+    );
   }
 
   // One line on the card itself, so the comparison is visible before tapping.
@@ -1957,6 +2012,7 @@
 
     let body;
     if (s.dynamicKey === "bankLeague") body = bankLeagueHtml();
+    else if (s.dynamicKey === "cabinComparison") body = cabinComparisonHtml();
     else if (s.dynamicKey === "switchAccount") body = switchAccountHtml();
     else if (s.dynamicKey === "savingsPensions") body = savingsPensionsHtml();
     else if (content && content.isTrainPopup) body = trainPopupHtml(content);
