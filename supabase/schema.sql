@@ -1258,3 +1258,68 @@ set search_path = public
 as $$
   select auth.uid() is not null;
 $$;
+
+-- ---------- Usernames (October 2026) ----------
+-- Every account has a unique username (3-20 letters, numbers or _), chosen
+-- at sign-up and shown to friends. The app sends it as sign-up metadata;
+-- the trigger below saves it to profiles as soon as the account is created,
+-- so two people can't claim the same name while confirming their email.
+-- Existing accounts are asked to choose one the next time they sign in.
+
+alter table public.profiles add column if not exists username text;
+
+do $$ begin
+  alter table public.profiles add constraint profiles_username_format
+    check (username is null or username ~ '^[A-Za-z0-9_]{3,20}$');
+exception when duplicate_object then null; end $$;
+
+create unique index if not exists profiles_username_unique on public.profiles (lower(username));
+
+create or replace function public.username_available(name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select name ~ '^[A-Za-z0-9_]{3,20}$'
+    and not exists (select 1 from public.profiles where lower(username) = lower(name));
+$$;
+
+revoke all on function public.username_available(text) from public;
+grant execute on function public.username_available(text) to anon, authenticated;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  wanted text := nullif(trim(new.raw_user_meta_data ->> 'username'), '');
+begin
+  insert into public.profiles (id, display_name, username)
+  values (new.id, coalesce(wanted, ''), wanted)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Add friends by username as well as by email.
+create or replace function public.find_user_by_username(lookup_username text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select id from public.profiles where lower(username) = lower(lookup_username) limit 1;
+$$;
+
+revoke all on function public.find_user_by_username(text) from public;
+grant execute on function public.find_user_by_username(text) to authenticated;
