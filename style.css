@@ -2541,13 +2541,13 @@ body {
   font-weight: 600;
 }
 
-/* ---------- UK average markers on the results chart ---------- */
+/* ---------- UK average bars on the results chart ---------- */
 
-.bar-chart .uk-mark {
-  stroke: var(--fg);
-  stroke-width: 2.5;
-  stroke-dasharray: 5 3;
-  stroke-linecap: round;
+.bar-chart .uk-bar {
+  fill-opacity: 0.22;
+  stroke-opacity: 0.85;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
   pointer-events: none;
 }
 
@@ -2563,19 +2563,69 @@ body {
   gap: 6px;
 }
 
-.lg-you {
+.lg-you,
+.lg-uk {
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  background: var(--em-500);
   display: inline-block;
 }
 
+.lg-you {
+  background: var(--em-500);
+}
+
 .lg-uk {
-  width: 18px;
-  height: 0;
-  border-top: 2.5px dashed var(--fg);
-  display: inline-block;
+  background: rgba(44, 122, 94, 0.22);
+  border: 1.5px dashed rgba(44, 122, 94, 0.85);
+}
+
+.uk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+
+.uk-toggle.on {
+  color: var(--em-600);
+  border-color: var(--em-200);
+  background: var(--em-50);
+}
+
+.uk-toggle-track {
+  width: 30px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--input);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.uk-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+
+.uk-toggle.on .uk-toggle-track {
+  background: var(--em-600);
+}
+
+.uk-toggle.on .uk-toggle-knob {
+  transform: translateX(12px);
 }
 
 @media (max-width: 420px) {

@@ -38,6 +38,7 @@
   const KEY_SNAPSHOTS = "ecoimpact_monthly_snapshots";
   // Completed surveys on this device (guests, and a fallback when offline).
   const KEY_HISTORY = "co2_survey_history";
+  const KEY_SHOW_UK = "co2_chart_show_uk";
   // Set while someone who came from a reset link still has to choose a new
   // password, so a reload doesn't skip that step. Per tab only.
   const KEY_RECOVERY = "co2_password_recovery";
@@ -1112,6 +1113,7 @@
     draft: null,
     prevSurvey: null,
     history: [], // completed surveys, newest first: { completedAt, totalYearly }
+    showUk: lsGet(KEY_SHOW_UK, true), // UK average bars on the results chart
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -1486,7 +1488,7 @@
   }
 
   function barChart(breakdown, selectedKey) {
-    const uk = ukAverageByKey();
+    const uk = ui.showUk ? ukAverageByKey() : {};
     // Sized to the screen so labels stay readable on phones.
     const W = Math.round(Math.max(300, Math.min(900, window.innerWidth - 64)));
     const H = 280;
@@ -1497,7 +1499,11 @@
     const niceMax = niceCeil(max);
     const plotH = H - top - bottom;
     const slot = (W - left - 10) / breakdown.length;
-    const barW = slot * 0.7;
+    // With UK averages on, each slot holds your bar and, overlapping it from
+    // behind on the right, a see-through bar of the same colour.
+    const paired = ui.showUk;
+    const barW = paired ? slot * 0.5 : slot * 0.7;
+    const ukShift = slot * 0.24;
     let svg = '<svg class="bar-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Yearly emissions by category">';
     for (let i = 0; i <= 4; i++) {
       const v = (niceMax / 4) * i;
@@ -1507,20 +1513,21 @@
     }
     breakdown.forEach((b, i) => {
       const h = Math.max(0, (b.yearly / niceMax) * plotH);
-      const x = left + i * slot + (slot - barW) / 2;
+      const x = left + i * slot + (slot - barW - (paired ? ukShift : 0)) / 2;
       const y = top + plotH - h;
+      const colour = BAR_COLORS[i % BAR_COLORS.length];
+      const ukH = uk[b.key] != null ? Math.max(0, (uk[b.key] / niceMax) * plotH) : 0;
       const op = selectedKey === b.key ? 1 : 0.45;
       svg +=
         '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.yearly.toFixed(0) +
         " kg CO₂e / year" + (uk[b.key] != null ? " (UK average " + uk[b.key].toFixed(0) + " kg)" : "") +
         '</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
-        '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + BAR_COLORS[i % BAR_COLORS.length] + '" opacity="' + op + '" />' +
-        (uk[b.key] != null
-          ? '<line class="uk-mark" x1="' + (x - 4) + '" x2="' + (x + barW + 4) + '" y1="' + (top + plotH - (uk[b.key] / niceMax) * plotH) +
-            '" y2="' + (top + plotH - (uk[b.key] / niceMax) * plotH) + '" />'
+        (ukH > 0
+          ? '<path class="uk-bar" d="' + roundedTop(x + ukShift, top + plotH - ukH, barW, ukH, 8) + '" fill="' + colour + '" stroke="' + colour + '" />'
           : "") +
+        '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + colour + '" opacity="' + op + '" />' +
         "</g>";
-      const lx = x + barW / 2;
+      const lx = x + (barW + (paired ? ukShift : 0)) / 2;
       const ly = top + plotH + 12;
       svg += '<text x="' + lx + '" y="' + ly + '" class="axis small" text-anchor="end" transform="rotate(-40 ' + lx + " " + ly + ')">' + esc(b.label) + "</text>";
     });
@@ -1636,11 +1643,17 @@
     }
 
     html +=
-      '<div class="card"><h2 class="card-title mb-1">Where it comes from</h2><p class="sm muted mb-3">Tap a bar to see how to improve it.</p>' +
-      '<div class="chart-legend xs muted mb-4"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span></div>' +
+      '<div class="card"><div class="row-between gap-3 mb-1" style="flex-wrap:wrap"><h2 class="card-title">Where it comes from</h2>' +
+      '<button type="button" class="uk-toggle' + (ui.showUk ? " on" : "") + '" data-action="toggle-uk" aria-pressed="' + (ui.showUk ? "true" : "false") + '">' +
+      '<span class="uk-toggle-track"><span class="uk-toggle-knob"></span></span>UK average</button></div>' +
+      '<p class="sm muted mb-3">Tap a bar to see how to improve it.</p>' +
+      (ui.showUk ? '<div class="chart-legend xs muted mb-4"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span></div>' : "") +
       '<div class="chart-wrap">' + barChart(fp.breakdown, selected) + "</div>" +
-      '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting. ' +
-      "There's no UK average for banking and pensions.</p></div>";
+      (ui.showUk
+        ? '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting. ' +
+          "There's no UK average for banking and pensions.</p>"
+        : "") +
+      "</div>";
 
     html +=
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + "</span>" +
@@ -3497,6 +3510,11 @@
       }
       ui.flash = "Your email is confirmed and you're signed in.";
       await afterSignIn();
+      render();
+    },
+    "toggle-uk": () => {
+      ui.showUk = !ui.showUk;
+      lsSet(KEY_SHOW_UK, ui.showUk);
       render();
     },
     "dismiss-flash": () => {
