@@ -548,22 +548,23 @@ actual data or the real friend_leaderboard()/find_user_by_email() functions
 email, the leaderboard — still hasn't been exercised against the live
 project, so please test that yourself and report back anything unexpected.
 
-## Email templates (scanner-proof links)
+## Email templates
 
-Outlook and some other email providers open every link in an email to
-check it. A plain Supabase confirmation link works once, so the scan uses
-it up and the person sees "That link has expired or has already been
-used". The site avoids this by linking to its own page, which only uses
-the one-time code when the person taps a button.
+Ready-made, branded templates live in `supabase/email-templates/`. They
+work in Outlook, Gmail and Apple Mail (tables and inline styles) and use
+scanner-proof links: Outlook and some other providers open every link in
+an email to check it, and a plain Supabase link works only once, so the
+scan used it up ("That link has expired or has already been used"). These
+links open a page on the site that only uses the one-time code when the
+person taps a button.
 
-In Supabase: **Authentication → Emails → Templates**. In each template,
-replace the link `{{ .ConfirmationURL }}` (in both the `href` and any
-visible copy of the link) with:
+In Supabase: **Authentication → Emails → Templates**.
 
-- **Confirm signup**:
-  `https://co2counter.co.uk/?token_hash={{ .TokenHash }}&type=signup`
-- **Reset password**:
-  `https://co2counter.co.uk/?token_hash={{ .TokenHash }}&type=recovery`
+| Template | Subject | Body |
+| --- | --- | --- |
+| Confirm signup | `Confirm your CO2 Counter account` | paste all of `confirm-signup.html` |
+| Reset password | `Reset your CO2 Counter password` | paste all of `reset-password.html` |
 
-Old-style links keep working, so nothing breaks before the templates are
-changed.
+The logo comes from `https://co2counter.co.uk/icons/email-logo.png`.
+Old-style `{{ .ConfirmationURL }}` links keep working, so nothing breaks
+before the templates are changed.
