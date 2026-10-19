@@ -1045,6 +1045,8 @@
     authSentTo: "", // email a confirmation link was just sent to
     flash: "", // one-off message shown at the top of the next page
     pendingVerify: null, // { tokenHash, type } from an email link, until tapped
+    authUsername: "",
+    needUsername: false, // signed in, but the account has no username yet
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -2080,8 +2082,8 @@
     // Add a friend
     html += section(
       "Add a friend",
-      '<form id="friend-form" class="chip-row"><input class="input grow" type="email" id="friend-email" placeholder="Their email address" required /><button type="submit" class="btn btn-green">Send request</button></form>' +
-        '<p class="xs muted mt-2">They need a CO2 Counter account with that email.</p>' +
+      '<form id="friend-form" class="chip-row"><input class="input grow" type="text" id="friend-email" placeholder="Their username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send request</button></form>' +
+        '<p class="xs muted mt-2">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p>' +
         (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
     );
 
@@ -2097,12 +2099,15 @@
   async function addFriend(email) {
     friends.msg = "";
     friends.msgOk = false;
-    const clean = email.trim().toLowerCase();
+    const clean = email.trim().toLowerCase().replace(/^@/, "");
     if (!clean) return;
-    const { data: foundId, error } = await sb.rpc("find_user_by_email", { lookup_email: clean });
+    const byEmail = clean.includes("@");
+    const { data: foundId, error } = byEmail
+      ? await sb.rpc("find_user_by_email", { lookup_email: clean })
+      : await sb.rpc("find_user_by_username", { lookup_username: clean });
     const existing = friends.rows.find((f) => f.otherId === foundId);
     if (error) friends.msg = "Something went wrong looking that up.";
-    else if (!foundId) friends.msg = "No CO2 Counter account uses that email.";
+    else if (!foundId) friends.msg = byEmail ? "No CO2 Counter account uses that email." : "No CO2 Counter account has that username.";
     else if (foundId === currentUser.id) friends.msg = "That's your own account.";
     else if (existing && existing.status === "accepted") friends.msg = "You're already friends.";
     else if (existing && existing.iAsked) friends.msg = "You've already sent them a request.";
@@ -2504,6 +2509,53 @@
     });
   }
 
+  const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
+
+  const usernameField = (id) =>
+    '<div><label class="xs" for="' + id + '">Username</label><div class="pw-wrap mt-1">' +
+    '<input class="input" type="text" id="' + id + '" required maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false" value="' +
+    esc(ui.authUsername) + '" aria-describedby="' + id + '-hint" />' +
+    '<span class="pw-tick" hidden>' + icon("check") + "</span></div>" +
+    '<p class="pw-match xs" id="' + id + '-hint" aria-live="polite">3 to 20 letters, numbers or _. Friends see this.</p></div>';
+
+  // Live "available / taken" under the username box.
+  let usernameTimer = null;
+  function checkUsername(input) {
+    const name = input.value.trim();
+    const hint = document.getElementById(input.id + "-hint");
+    const tick = input.parentNode.querySelector(".pw-tick");
+    const set = (text, cls, ok) => {
+      hint.textContent = text;
+      hint.className = "pw-match xs " + cls;
+      tick.hidden = !ok;
+      input.classList.toggle("pw-good", ok);
+    };
+    clearTimeout(usernameTimer);
+    if (!name) return set("3 to 20 letters, numbers or _. Friends see this.", "", false);
+    if (/[^A-Za-z0-9_]/.test(name)) return set("Only letters, numbers and _ (no spaces).", "bad", false);
+    if (name.length < 3) return set("At least 3 characters.", "", false);
+    if (!USERNAME_RE.test(name)) return set("Use 3 to 20 letters, numbers or _.", "bad", false);
+    set("Checking…", "", false);
+    usernameTimer = setTimeout(async () => {
+      const ok = await usernameAvailable(name);
+      if (input.value.trim() !== name) return;
+      if (ok === false) set("That username is taken.", "bad", false);
+      else set("Available", "ok", true);
+    }, 350);
+  }
+
+  // true / false, or null if the check couldn't run (then the database has
+  // the final say).
+  async function usernameAvailable(name) {
+    if (!sb) return null;
+    try {
+      const { data, error } = await sb.rpc("username_available", { name });
+      return error ? null : !!data;
+    } catch (e) {
+      return null;
+    }
+  }
+
   const emailField = () =>
     '<label class="xs">Email<input class="input mt-1" type="email" id="auth-email" required autocomplete="email" value="' + esc(ui.authEmail) + '" /></label>';
 
@@ -2538,6 +2590,7 @@
     const signup = ui.authMode === "signup";
     return (
       '<form id="auth-form" class="auth-form" novalidate>' +
+      (signup ? usernameField("auth-username") : "") +
       emailField() +
       (signup
         ? passwordField("auth-password", "Password (at least " + MIN_PASSWORD + " characters)", "new-password") +
@@ -2607,12 +2660,27 @@
     }
     try {
       if (ui.authMode === "signup") {
+        const username = document.getElementById("auth-username").value.trim();
+        ui.authUsername = username;
+        if (!USERNAME_RE.test(username)) {
+          ui.authErr = "Please choose a username: 3 to 20 letters, numbers or _ (no spaces).";
+          return render();
+        }
+        if ((await usernameAvailable(username)) === false) {
+          ui.authErr = "That username is taken. Please choose another.";
+          return render();
+        }
         const problem = passwordProblem(password, document.getElementById("auth-password2").value);
         if (problem) {
           ui.authErr = problem;
           return render();
         }
-        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl() } });
+        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { username } } });
+        // The database refuses a username someone has just taken.
+        if (error && /database error saving new user/i.test(error.message || "")) {
+          ui.authErr = "That username was just taken. Please choose another.";
+          return render();
+        }
         if (error) throw error;
         // Supabase answers a sign-up for an existing email with a user that
         // has no identities, and sends nothing.
@@ -2687,11 +2755,65 @@
     render();
   }
 
+  // Accounts made before usernames existed are asked to pick one. If the
+  // username was given at sign-up but never reached the profile, save it.
+  async function ensureUsername() {
+    ui.needUsername = false;
+    if (!currentUser || !sb) return;
+    try {
+      const { data, error } = await sb.from("profiles").select("username, display_name").eq("id", currentUser.id).maybeSingle();
+      if (error) return; // usernames not set up in the database yet
+      if (data && data.username) return;
+      const wanted = ((currentUser.user_metadata || {}).username || "").trim();
+      if (USERNAME_RE.test(wanted)) {
+        const { error: saveErr } = await sb
+          .from("profiles")
+          .upsert({ id: currentUser.id, username: wanted, display_name: (data && data.display_name) || wanted });
+        if (!saveErr) return;
+      }
+      ui.needUsername = true;
+    } catch (e) {}
+  }
+
+  function renderChooseUsername() {
+    return gateShell(
+      "Choose a username",
+      "Pick the name your friends will see. You can't share one with anyone else.",
+      '<form id="username-form" class="auth-form" novalidate>' + usernameField("choose-username") + authNotes() +
+        '<button type="submit" class="btn btn-green btn-block">Save username</button></form>'
+    );
+  }
+
+  async function submitUsername() {
+    const name = document.getElementById("choose-username").value.trim();
+    ui.authUsername = name;
+    ui.authErr = "";
+    if (!USERNAME_RE.test(name)) {
+      ui.authErr = "Use 3 to 20 letters, numbers or _ (no spaces).";
+      return render();
+    }
+    const { data: existing } = await sb.from("profiles").select("display_name").eq("id", currentUser.id).maybeSingle();
+    const { error } = await sb
+      .from("profiles")
+      .upsert({ id: currentUser.id, username: name, display_name: (existing && existing.display_name) || name });
+    if (error) {
+      ui.authErr = /duplicate|unique/i.test(error.message || "") ? "That username is taken. Please choose another." : "Couldn't save your username. Please try again.";
+      return render();
+    }
+    ui.needUsername = false;
+    ui.authUsername = "";
+    ui.userName = (existing && existing.display_name) || name;
+    friends.loaded = false;
+    ui.flash = "Username saved. Friends can now find you as " + name + ".";
+    render();
+  }
+
   async function afterSignIn() {
     await refreshUser();
     ui.authMsg = "";
     ui.authErr = "";
     ui.authSentTo = "";
+    await ensureUsername();
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
     if (canSync()) {
@@ -2869,6 +2991,7 @@
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
     else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
+    else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate"].includes(path)) html = renderChooseUsername();
     else if (path === "/") html = renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
@@ -3262,6 +3385,7 @@
   document.addEventListener("input", (e) => {
     const t = e.target;
     if (PASSWORD_IDS.includes(t.id)) return updatePasswordMatch();
+    if (t.id === "auth-username" || t.id === "choose-username") return checkUsername(t);
     if (t.id === "airport-search") {
       ui.airportQuery = t.value;
       const list = document.getElementById("airport-list");
@@ -3324,6 +3448,9 @@
     if (e.target.id === "auth-form") {
       e.preventDefault();
       submitAuth();
+    } else if (e.target.id === "username-form") {
+      e.preventDefault();
+      submitUsername();
     } else if (e.target.id === "reset-form") {
       e.preventDefault();
       submitReset();
@@ -3384,6 +3511,7 @@
       ssSet(KEY_RECOVERY, false);
     }
     if (currentUser) {
+      await ensureUsername();
       ui.userName = await displayName(currentUser);
       await checkMembership();
     }
