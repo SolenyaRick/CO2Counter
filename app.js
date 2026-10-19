@@ -1317,28 +1317,74 @@
     );
   }
 
+  // ---------- places for land journeys ----------
+
+  // Straight-line distance between two towns plus 25% for the way roads
+  // and railways wind (a common rule of thumb for land routes).
+  const LAND_ROUTE_UPLIFT = 1.25;
+  let placeIndex = null;
+  function findPlace(name) {
+    if (!placeIndex) {
+      placeIndex = new Map();
+      (window.ECO_PLACES || []).forEach((p) => {
+        const full = p[0].toLowerCase();
+        if (!placeIndex.has(full)) placeIndex.set(full, p);
+        // "Paris" or "Newport" alone finds the biggest place of that name.
+        const short = full.replace(/ \(.*\)$/, "").replace(/, .*$/, "");
+        if (!placeIndex.has(short)) placeIndex.set(short, p);
+      });
+    }
+    return placeIndex.get(String(name || "").trim().toLowerCase()) || null;
+  }
+
+  function landKm(from, to) {
+    const a = findPlace(from);
+    const b = findPlace(to);
+    if (!a || !b || a === b) return null;
+    return Math.round(greatCircleKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) * LAND_ROUTE_UPLIFT);
+  }
+
+  // One shared suggestion list for every From / To box.
+  function placesDatalist() {
+    if (document.getElementById("places-list") || !window.ECO_PLACES) return;
+    const dl = document.createElement("datalist");
+    dl.id = "places-list";
+    dl.innerHTML = window.ECO_PLACES.map((p) => '<option value="' + esc(p[0]) + '"></option>').join("");
+    document.body.appendChild(dl);
+  }
+
   function renderLongTrips() {
+    placesDatalist();
     const rows = survey.longTrips
       .map((x, i) => {
         const kg = longTripKg(x);
+        const auto = x.from && x.to && landKm(x.from, x.to);
+        const unknown = (x.from && !findPlace(x.from)) || (x.to && !findPlace(x.to));
+        const place = (key, ph) =>
+          '<input class="input mt-1" type="text" list="places-list" autocomplete="off" maxlength="60" placeholder="' + ph + '" value="' + esc(x[key] || "") +
+          '" data-travel="long" data-index="' + i + '" data-key="' + key + '" />';
         return (
           '<div class="panel p-4"><div class="travel-row">' +
-          '<div class="grow minw-160"><label class="xs">Journey</label><input class="input mt-1" type="text" maxlength="60" placeholder="e.g. Train to Devon" value="' + esc(x.label || "") +
-          '" data-travel="long" data-index="' + i + '" data-key="label" /></div>' +
-          '<div class="grow minw-160"><label class="xs">How</label>' + travelModeSelect("long", i, x.mode) + "</div>" +
+          '<div class="grow minw-160"><label class="xs">From</label>' + place("from", "e.g. London") + "</div>" +
+          '<div class="grow minw-160"><label class="xs">To</label>' + place("to", "e.g. Exeter") + "</div></div>" +
+          '<div class="travel-row mt-3"><div class="grow minw-160"><label class="xs">How</label>' + travelModeSelect("long", i, x.mode) + "</div>" +
           '<div class="w-150"><label class="xs">km one way</label><input class="input mt-1" type="number" min="0" value="' + esc(x.km || 0) +
-          '" data-travel="long" data-index="' + i + '" data-key="km" /></div>' +
-          '<button type="button" class="icon-btn danger-hover" data-action="remove-travel" data-kind="long" data-index="' + i + '" aria-label="Remove">' + icon("trash") + "</button></div>" +
+          '" data-travel="long" data-index="' + i + '" data-key="km" /></div></div>' +
+          (auto
+            ? '<p class="xs green-dark mt-2">' + icon("check", "sm") + " Worked out for you: about " + auto.toLocaleString() + " km by road or rail.</p>"
+            : unknown
+              ? '<p class="xs muted mt-2">We don\'t know that place yet, so pick from the suggestions or type the km yourself.</p>'
+              : "") +
           '<div class="row-between mt-3"><label class="check-label"><input type="checkbox"' + (x.returnTrip ? " checked" : "") +
           ' data-travel="long" data-index="' + i + '" data-key="returnTrip" /> Return trip</label>' +
-          '<span class="sm fw-500">' + (kg > 0 ? Math.round(kg) + " kg CO₂e" : "") + "</span></div></div>"
+          '<span class="label-row"><span class="sm fw-500">' + (kg > 0 ? Math.round(kg).toLocaleString() + " kg CO₂e" : "") + "</span>" +
+          '<button type="button" class="icon-btn danger-hover" data-action="remove-travel" data-kind="long" data-index="' + i + '" aria-label="Remove journey">' + icon("trash") + "</button></span></div></div>"
         );
       })
       .join("");
     return (
       '<div class="panel p-5 mt-4"><h3 class="sm fw-600">Long journeys each year</h3>' +
-      '<p class="xs muted mt-1 mb-4">Trips by land, like a train to Devon or Spain, or a drive to Scotland. Flights go in the next step. ' +
-      "Rough distances from London: Devon ~300 km, Manchester ~300 km, Edinburgh ~650 km, Paris ~460 km, Barcelona ~1,500 km.</p>" +
+      '<p class="xs muted mt-1 mb-4">Trips by land, like a train to Cornwall or Spain, or a drive to Scotland. Type where you go from and to, and we\'ll work out the distance. Flights go in the next step.</p>' +
       '<div class="stack-3">' + rows + "</div>" +
       '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="add-travel" data-kind="long">' + icon("plus") + " Add a journey</button></div>"
     );
@@ -2221,7 +2267,7 @@
         "<p>Seven areas of everyday life:</p>" +
           list([
             "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
-            "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land",
+            "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land. For long journeys we work out the distance from the two towns: the straight line between them plus 25% for the way roads and railways wind (town locations from GeoNames, geonames.org)",
             "<strong>Flights</strong>: each flight's distance between airports and the cabin class",
             "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
             "<strong>Water</strong>: household water use, shared across your household",
@@ -3514,7 +3560,7 @@
     },
     "add-travel": (el) => {
       if (el.dataset.kind === "extra") survey.extraTravel = survey.extraTravel.concat({ mode: "car_petrol", km: 0 });
-      else survey.longTrips = survey.longTrips.concat({ label: "", mode: "train", km: 0, returnTrip: true });
+      else survey.longTrips = survey.longTrips.concat({ from: "", to: "", mode: "train", km: 0, returnTrip: true });
       surveyChanged();
       render();
     },
@@ -3852,7 +3898,16 @@
       const i = Number(t.dataset.index);
       const f = t.dataset.key;
       const value = t.type === "checkbox" ? t.checked : f === "km" ? Math.max(0, Number(t.value) || 0) : t.value;
-      survey[key] = survey[key].map((x, idx) => (idx === i ? { ...x, [f]: value } : x));
+      survey[key] = survey[key].map((x, idx) => {
+        if (idx !== i) return x;
+        const next = { ...x, [f]: value };
+        // Two known places fill in the distance; it can still be overtyped.
+        if ((f === "from" || f === "to") && key === "longTrips") {
+          const km = landKm(next.from, next.to);
+          if (km) next.km = km;
+        }
+        return next;
+      });
       surveyChanged();
       render();
     } else if (t.dataset.goal) {
