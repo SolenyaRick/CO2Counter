@@ -1021,6 +1021,7 @@
     recovery: false,
     authSentTo: "", // email a confirmation link was just sent to
     flash: "", // one-off message shown at the top of the next page
+    pendingVerify: null, // { tokenHash, type } from an email link, until tapped
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -2656,6 +2657,20 @@
     );
   }
 
+  // Email links carry a one-time code that the page only uses when the
+  // person taps the button. Email scanners (Outlook's, for one) open links
+  // to check them, which would use up a link that verified straight away.
+  function renderVerify() {
+    const recovery = ui.pendingVerify.type === "recovery";
+    return gateShell(
+      recovery ? "Reset your password" : "Confirm your email",
+      recovery ? "Tap below to choose a new password." : "One last step: tap below to confirm your email and sign in.",
+      '<div class="auth-form">' + authNotes() +
+        '<button type="button" class="btn btn-green btn-block" data-action="verify-link">' +
+        (recovery ? "Choose a new password" : "Confirm my email") + "</button></div>"
+    );
+  }
+
   function paymentUrl() {
     const params = new URLSearchParams({ client_reference_id: currentUser.id, prefilled_email: currentUser.email || "" });
     return STRIPE_PAYMENT_LINK + (STRIPE_PAYMENT_LINK.includes("?") ? "&" : "?") + params.toString();
@@ -2782,6 +2797,7 @@
     let html;
     const member = !!(currentUser && membership && membership.access);
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
+    else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
     else if (path === "/") html = renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
@@ -2995,6 +3011,33 @@
       const { error } = await sb.auth.resend({ type: "signup", email: ui.authSentTo, options: { emailRedirectTo: authRedirectUrl() } });
       if (error) ui.authErr = friendlyAuthError(error);
       else ui.authMsg = "Sent. It can take a minute to arrive.";
+      render();
+    },
+    "verify-link": async (el) => {
+      const { tokenHash, type } = ui.pendingVerify;
+      el.disabled = true;
+      el.textContent = "One moment…";
+      const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
+      ui.pendingVerify = null;
+      if (error || !data || !data.session) {
+        ui.authMode = "signin";
+        ui.authErr =
+          type === "recovery"
+            ? "That reset link has expired or has already been used. Ask for a new one below."
+            : "That link has expired or has already been used. If you've confirmed your email before, just sign in. If not, sign in anyway and we'll send you a fresh link.";
+        if (type === "recovery") ui.authMode = "reset";
+        location.hash = "#/account";
+        return render();
+      }
+      if (type === "recovery") {
+        ui.recovery = true;
+        ssSet(KEY_RECOVERY, true);
+        await refreshUser();
+        await checkMembership();
+        return render();
+      }
+      ui.flash = "Your email is confirmed and you're signed in.";
+      await afterSignIn();
       render();
     },
     "dismiss-flash": () => {
@@ -3245,15 +3288,16 @@
     // Links from sign-up confirmation and password-reset emails land with
     // Supabase's tokens in the hash; supabase-js consumes them on startup.
     const linkParams = new URLSearchParams((location.hash.replace(/^#/, "") + "&" + location.search.replace(/^\?/, "")));
-    const fromEmail = linkParams.has("access_token") || linkParams.has("error_description");
+    const fromEmail = linkParams.has("access_token") || linkParams.has("error_description") || linkParams.has("token_hash");
     const linkType = linkParams.get("type");
+    if (linkParams.get("token_hash")) ui.pendingVerify = { tokenHash: linkParams.get("token_hash"), type: linkType === "recovery" ? "recovery" : linkType || "signup" };
     if (linkType === "recovery" || ssGet(KEY_RECOVERY)) ui.recovery = true;
     if (linkType === "recovery") ssSet(KEY_RECOVERY, true);
     if (linkType === "signup" && linkParams.has("access_token")) ui.flash = "Your email is confirmed and you're signed in.";
     if (linkType === "email_change" && linkParams.has("access_token")) ui.flash = "Your email address has been updated.";
     if (linkParams.has("error_description")) {
       ui.authErr = /expired|invalid/i.test(linkParams.get("error_description"))
-        ? "That link has expired or has already been used. Sign in below, or ask for a new link."
+        ? "That link has expired or has already been used. Some email providers, like Outlook, open links to check them, which can use them up. If you were creating an account it's probably confirmed already, so try signing in. If it isn't, we'll send you a fresh link."
         : linkParams.get("error_description");
     }
     // Stripe sends people back to ?checkout=success after paying.
