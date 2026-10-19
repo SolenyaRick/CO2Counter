@@ -1353,3 +1353,49 @@ create policy "survey_history: owner can delete" on public.survey_history
   for delete using (auth.uid() = user_id);
 
 grant select, insert, delete on public.survey_history to authenticated;
+
+-- ---------- Friends: most improved (October 2026) ----------
+-- For you and your accepted friends: first and latest yearly totals from
+-- survey_history, and how many surveys each has finished. Totals only,
+-- never anyone's answers. Powers the "Most improved" leaderboard.
+drop function if exists public.friends_progress();
+create function public.friends_progress()
+returns table (user_id uuid, display_name text, first_total numeric, latest_total numeric, first_at timestamptz, latest_at timestamptz, surveys integer, is_self boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with people as (
+    select auth.uid() as uid
+    union
+    select case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end
+    from public.friendships f
+    where f.status = 'accepted' and (f.requester_id = auth.uid() or f.addressee_id = auth.uid())
+  ),
+  h as (
+    select sh.user_id, sh.total_yearly, sh.completed_at,
+      row_number() over (partition by sh.user_id order by sh.completed_at asc) as first_n,
+      row_number() over (partition by sh.user_id order by sh.completed_at desc) as last_n,
+      count(*) over (partition by sh.user_id) as n
+    from public.survey_history sh
+    join people p on p.uid = sh.user_id
+    where sh.total_yearly is not null
+  )
+  select
+    f.user_id,
+    coalesce(nullif(pr.display_name, ''), nullif(pr.username, ''), 'Friend'),
+    f.total_yearly,
+    l.total_yearly,
+    f.completed_at,
+    l.completed_at,
+    f.n::integer,
+    f.user_id = auth.uid()
+  from h f
+  join h l on l.user_id = f.user_id and l.last_n = 1
+  left join public.profiles pr on pr.id = f.user_id
+  where f.first_n = 1 and public.has_access();
+$$;
+
+revoke all on function public.friends_progress() from public;
+grant execute on function public.friends_progress() to authenticated;
