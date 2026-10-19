@@ -19,12 +19,16 @@
   // portal login link (for cancelling or updating a card). Both come from
   // the Stripe dashboard; see README "Payments". Leave empty until set up.
   const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00";
+  // Everything is free while this is on; the £2 a year becomes an optional
+  // way to support the site. Set to false to bring the paywall back (and
+  // restore has_access() in supabase/schema.sql).
+  const FREE_MODE = true;
   const STRIPE_PORTAL_URL = "https://billing.stripe.com/p/login/9B6eVd0a4g2X4Gbc2K5EY00";
   const WEBSITE_URL = "https://co2counter.co.uk/";
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "10 October 2026";
+  const LEGAL_UPDATED = "19 October 2026";
 
   const D = window.ECO_DATA;
   const DAYS = D.DAYS;
@@ -247,6 +251,13 @@
     return result;
   }
 
+  const isSupporter = () => !!(membership && ["active", "trialing", "past_due"].includes(membership.status));
+  // Full results and guides: everyone in free mode, otherwise members.
+  const hasFullAccess = () => FREE_MODE || !!(currentUser && membership && membership.access);
+  // Answers saved to the account (and Friends): any signed-in user in free
+  // mode, otherwise members.
+  const canSync = () => !!currentUser && (FREE_MODE || !!(membership && membership.access));
+
   const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
   async function displayName(user) {
@@ -297,7 +308,7 @@
         // A member with nothing saved yet keeps the answers they gave on
         // this device as a guest, now stored on their account.
         const local = lsGet(KEY_SURVEY, null);
-        if (!error && local && membership && membership.access) saveSurveyRemote(normaliseSurvey(local));
+        if (!error && local && canSync()) saveSurveyRemote(normaliseSurvey(local));
       } catch (e) {}
     }
     const local = normaliseSurvey(lsGet(KEY_SURVEY, null));
@@ -855,6 +866,18 @@
       '<span class="stat-pill">' +
       (cmp.above ? '<span class="red">' + cmp.pct + "% above</span>" : '<span class="green">' + cmp.pct + "% below</span>") +
       " the UK average</span>"
+    );
+  }
+
+  // The fixed share everyone in the UK has from public services and
+  // infrastructure, shown under the headline total.
+  function sharedLine(personalKg) {
+    const sh = D.SHARED_FOOTPRINT;
+    const t = (kg) => (kg / 1000).toFixed(1);
+    return (
+      '<div class="shared-line mt-4"><p class="sm"><strong>+ ' + t(sh.totalKg) + " t shared footprint</strong> &middot; your share of the UK's public services (" +
+      t(sh.publicServicesKg) + " t) and infrastructure (" + t(sh.infrastructureKg) + " t). It's the same for everyone in the UK.</p>" +
+      '<p class="sm mt-1">Including it, your total is about <strong>' + t(personalKg + sh.totalKg) + " t a year</strong>.</p></div>"
     );
   }
 
@@ -1451,6 +1474,42 @@
     );
   }
 
+  function supportUrl() {
+    return currentUser ? paymentUrl() : STRIPE_PAYMENT_LINK;
+  }
+
+  // Optional support. Hidden in the iOS app (App Store rules on outside
+  // payment links).
+  function supportCard() {
+    if (isNativeApp() || !STRIPE_PAYMENT_LINK) return "";
+    if (isSupporter()) {
+      return (
+        '<div class="card support-card fade-up"><div class="label-row mb-2"><span class="round-badge sm">' + icon("leaf") + '</span>' +
+        '<span class="eyebrow">Supporter</span></div><h3 class="card-title mb-1">Thank you for supporting CO2 Counter</h3>' +
+        '<p class="sm muted">Your £2 a year helps keep it free for everyone.</p></div>'
+      );
+    }
+    return (
+      '<div class="card support-card fade-up"><div class="label-row mb-2"><span class="round-badge sm">' + icon("leaf") + '</span>' +
+      '<span class="eyebrow">Support CO2 Counter</span></div>' +
+      '<h3 class="card-title mb-1">Free for everyone, kept going by supporters</h3>' +
+      '<p class="sm muted mb-4 max-2xl">CO2 Counter has no ads and never sells your data. If it\'s helped you, you can chip in £2 a year to cover running costs and new features. Cancel any time.</p>' +
+      '<div class="chip-row"><a class="btn btn-green" href="' + esc(supportUrl()) + '">Support for £2 a year</a></div>' +
+      '<p class="xs muted mt-3">Secure payment by Stripe. Optional: everything stays free either way. <a class="link-btn" href="#/terms">Terms</a></p></div>'
+    );
+  }
+
+  // Guests can see everything; an account keeps answers across devices.
+  function saveCard() {
+    if (currentUser) return "";
+    return (
+      '<div class="card fade-up"><div class="row-between gap-3" style="flex-wrap:wrap"><div class="min0 grow"><h3 class="card-title mb-1">Keep your results</h3>' +
+      '<p class="sm muted">Create a free account to save your answers on all your devices and compare with friends.</p></div>' +
+      '<div class="chip-row"><button type="button" class="btn btn-green" data-action="start-signup">Create free account</button>' +
+      '<button type="button" class="btn btn-outline" data-action="start-signin">Sign in</button></div></div></div>'
+    );
+  }
+
   function renderResults() {
     const fp = footprint(survey);
     const savings = fp.breakdown.map((b) => {
@@ -1477,7 +1536,7 @@
       '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '</span><span class="unit">kg CO₂e / year</span></div>' +
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
       '<div class="chip-row mt-5">' + ukPill(cmp) + '<span class="stat-pill solid">' + icon("target", "sm") + budgetPct +
-      "% of the 1.5°C budget</span></div>" + ukNote(cmp) + "</div></div>";
+      "% of the 1.5°C budget</span></div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>";
 
     if (checkInDue()) {
       html +=
@@ -1555,6 +1614,7 @@
     html +=
       '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
       '<button type="button" class="btn btn-green" data-action="top-opportunity">' + icon("arrowRight") + " Show my top opportunity</button></div>" +
+      saveCard() + supportCard() +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
   }
@@ -1889,6 +1949,13 @@
           "per-person UK figure for them. Where official data doesn't exist (for example, how often people eat out), we use a reasonable assumption.</p>"
       ) +
       section(
+        "Your shared footprint",
+        "<p>Some emissions belong to everyone in the UK together: the NHS, schools, councils and defence, and the roads, buildings and equipment the country invests in. " +
+          "The government's official carbon footprint figures split these across the whole population, which comes to about 2.4 tonnes per person a year. " +
+          "We show it as a fixed line under your total, because it's the same for everyone and your answers don't change it.</p>" +
+          "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about 10 tonnes per person. Some everyday spending, like shopping, hobbies and hotels, isn't in the survey yet.</p>"
+      ) +
+      section(
         "The 1.5°C budget",
         "<p>To keep global warming to 1.5°C, average emissions need to fall to roughly 2.5 tonnes of CO₂-equivalent per person per year. " +
           "We show your footprint as a share of that, as a sense of scale.</p>"
@@ -1998,7 +2065,7 @@
         "</div>" +
         (!meOnBoard ? '<p class="xs muted mt-3">Finish the survey to appear on the leaderboard.</p>' : "") +
         (accepted.length > friends.board.filter((b) => !b.is_self).length
-          ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey as members yet won\'t appear until they do.</p>'
+          ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey yet won\'t appear until they do.</p>'
           : "");
     }
     html += section("Leaderboard", board + '<p class="xs muted mt-3">Lowest footprint first. Friends only ever see each other\'s yearly totals, never your answers.</p>');
@@ -2083,14 +2150,14 @@
           ul([
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
-            "<strong>Membership details</strong>: whether you have a membership, its status and renewal date, and a reference to your customer record at Stripe. We never see or store your card details.",
+            "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
           ])
         ],
         [
           "Why we use it",
           ul([
-            "To work out and show your footprint, save your answers to your account, and provide the membership you've paid for. The legal basis is performing our contract with you.",
+            "To work out and show your footprint, save your answers to your account, and record any support you've chosen to give. The legal basis is performing our contract with you.",
             "To keep the service secure and working. The legal basis is our legitimate interests.",
             "To keep payment records, as the law requires. The legal basis is legal obligation.",
           ]) +
@@ -2100,7 +2167,7 @@
           "Who we share it with",
           "<p>Only the providers that run the service for us:</p>" +
             ul([
-              "<strong>Supabase</strong>: sign-in and database (your account, saved answers and membership status).",
+              "<strong>Supabase</strong>: sign-in and database (your account, saved answers and support status).",
               "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
               "<strong>GitHub Pages</strong>: hosting the website.",
             ]) +
@@ -2112,7 +2179,7 @@
         ],
         [
           "How long we keep it",
-          "<p>We keep your account data until you delete your account. Deleting it removes your account, saved answers and membership record straight away. Stripe keeps payment records for as long as the law requires.</p>",
+          "<p>We keep your account data until you delete your account. Deleting it removes your account, saved answers and support record straight away. Stripe keeps payment records for as long as the law requires.</p>",
         ],
         [
           "Your rights",
@@ -2140,10 +2207,10 @@
           "<p>You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
         ],
         [
-          "Membership and payment",
+          "Free use and optional support",
           ul([
-            "The survey and your headline result are free. Membership unlocks the full results, tips and guides, and costs <strong>£2 a year</strong>, paid through Stripe.",
-            "Membership <strong>renews automatically each year</strong> until you cancel. You can cancel at any time with <em>Manage subscription</em> on the Account page. You keep access until the end of the year you've paid for.",
+            "CO2 Counter is free to use, including the survey, your full results, tips and guides. You can optionally support it for <strong>£2 a year</strong>, paid through Stripe. Supporting doesn't change what you can use.",
+            "Support <strong>renews automatically each year</strong> until you cancel. You can cancel at any time with <em>Manage subscription</em> on the Account page.",
             "If we change the price, we'll tell you at least 30 days before your next renewal, and you can cancel before it applies.",
             "<strong>Refunds:</strong> if you change your mind, email us within 14 days of joining or renewing and we'll refund that payment in full.",
             "Deleting your account doesn't cancel your subscription. Please cancel it first.",
@@ -2151,7 +2218,7 @@
         ],
         [
           "Using the site fairly",
-          "<p>Please don't misuse the service: no attempts to break or overload it, get around the membership, access other people's data, or copy and resell its content. We may suspend accounts that do.</p>",
+          "<p>Please don't misuse the service: no attempts to break or overload it, access other people's data, or copy and resell its content. We may suspend accounts that do.</p>",
         ],
         [
           "Our content",
@@ -2159,7 +2226,7 @@
         ],
         [
           "Availability and changes",
-          "<p>We'll try to keep the site available and accurate, but we can't promise it will always be uninterrupted or error-free. We may update features, data sources and estimates over time. If we ever close the service, we'll give members notice and refund any unused part of their membership.</p>",
+          "<p>We'll try to keep the site available and accurate, but we can't promise it will always be uninterrupted or error-free. We may update features, data sources and estimates over time. If we ever close the service, we'll give notice and refund supporters for any unused part of their year.</p>",
         ],
         [
           "Our liability",
@@ -2167,7 +2234,7 @@
         ],
         [
           "Changes and law",
-          "<p>We may update these terms. If a change affects your membership, we'll let you know in advance. These terms are governed by the law of England and Wales, and you can bring a claim in the courts where you live in the UK.</p>",
+          "<p>We may update these terms. If a change affects your support payments, we'll let you know in advance. These terms are governed by the law of England and Wales, and you can bring a claim in the courts where you live in the UK.</p>",
         ],
       ]
     );
@@ -2324,11 +2391,12 @@
     const m = membership || {};
     let plan;
     if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
+    else if (FREE_MODE && !isSupporter()) plan = '<p class="fw-600">Free account</p><p class="sm muted">Everything on CO2 Counter is free. You can support it below if you\'d like to.</p>';
     else if (m.free && m.status !== "active") plan = '<p class="fw-600">Free access</p><p class="sm muted">You\'ve been given full access, free of charge.</p>';
     else {
       const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
       plan =
-        '<p class="fw-600">CO2 Counter membership · £2 a year</p><p class="sm muted">' +
+        '<p class="fw-600">' + (FREE_MODE ? "Supporter · £2 a year" : "CO2 Counter membership · £2 a year") + '</p><p class="sm muted">' +
         (m.status === "active" && until ? "Renews on " + esc(until) + "." : until ? "Access until " + esc(until) + "." : "Active.") +
         "</p>" +
         (STRIPE_PORTAL_URL && !isNativeApp()
@@ -2339,7 +2407,8 @@
     return (
       '<div class="container narrow">' + pageHeader("Account", "Your profile & saved data", "user") +
       '<div class="card"><div class="label-row mb-4">' + icon("user", "green") + '<span class="sm fw-500 upper green-dark">Profile</span></div>' + profile + "</div>" +
-      '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<span class="sm fw-500 upper green-dark">Membership</span></div>' + plan + "</div>" +
+      '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<span class="sm fw-500 upper green-dark">' + (FREE_MODE ? "Your plan" : "Membership") + "</span></div>" + plan + "</div>" +
+      (FREE_MODE && !m.owner && !isSupporter() ? supportCard() : "") +
       '<div class="card"><div class="label-row mb-4">' + icon("database", "green") + '<span class="sm fw-500 upper green-dark">Your saved data</span></div>' +
       '<div class="grid-2 gap-3"><div class="data-box"><p class="xs muted">Footprint</p><p class="stat-num">' + fp.totalYearly.toFixed(0) +
       '</p><p class="xs muted">kg CO₂e / year</p></div><div class="data-box"><p class="xs muted">Committed habits</p><p class="stat-num">' + habitCount +
@@ -2363,7 +2432,7 @@
     let body;
     if (!ui.confirmDelete) {
       body =
-        '<p class="xs muted mb-4">Permanently delete your account and everything saved with it: your survey answers and membership. This can\'t be undone.</p>' +
+        '<p class="xs muted mb-4">Permanently delete your account and everything saved with it: your survey answers and any support record. This can\'t be undone.</p>' +
         '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="delete-account">' + icon("trash") + " Delete my account</button>";
     } else {
       body =
@@ -2614,7 +2683,7 @@
     ui.authErr = "";
     ui.flash = "Your password has been changed and you're signed in.";
     await afterSignIn();
-    location.hash = membership && membership.access ? "#/results" : "#/";
+    location.hash = canSync() ? "#/results" : "#/";
     render();
   }
 
@@ -2625,7 +2694,7 @@
     ui.authSentTo = "";
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
-    if (membership && membership.access) {
+    if (canSync()) {
       // Answers entered on this device as a guest are uploaded if the
       // account has nothing saved yet.
       survey = await loadSurvey();
@@ -2749,7 +2818,7 @@
       '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
       '</span><span class="unit">kg CO₂e / year</span></div>' +
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
-      '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + "</div></div>" +
+      '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>" +
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("lock") +
       '</span><span class="eyebrow">Unlock your full results</span></div>' +
       '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
@@ -2795,7 +2864,8 @@
     if (path !== "/") ui.editing = false;
     const parts = path.split("/").filter(Boolean);
     let html;
-    const member = !!(currentUser && membership && membership.access);
+    const member = canSync();
+    const full = hasFullAccess();
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
     else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
@@ -2803,8 +2873,8 @@
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
-    else if (path === "/results") html = member ? renderResults() : renderResultsPreview();
-    else if (parts[0] === "explainer" && parts[1]) html = member ? renderExplainer(parts[1]) : renderLocked();
+    else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
+    else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPending();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
@@ -3080,7 +3150,7 @@
       membership = null;
       render();
       await checkMembership();
-      if (membership && membership.access) survey = await loadSurvey();
+      if (canSync()) survey = await loadSurvey();
       render();
     },
     "clear-habits": () => {
@@ -3320,7 +3390,16 @@
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
     render();
-    if (currentUser && !membership.access && fromCheckout) waitForPayment();
+    if (fromCheckout && FREE_MODE) {
+      ui.flash = "Thank you for supporting CO2 Counter! It really helps keep it running.";
+      render();
+      // The webhook can land a moment after the redirect.
+      for (let i = 0; i < 8 && currentUser && !isSupporter(); i++) {
+        await new Promise((res) => setTimeout(res, 2000));
+        await checkMembership();
+      }
+      render();
+    } else if (currentUser && !membership.access && fromCheckout) waitForPayment();
     if (sb) {
       sb.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY") {

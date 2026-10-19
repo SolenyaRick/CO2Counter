@@ -86,6 +86,18 @@
     pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
     banking: { amount: 0, bank: "", pensionPot: 0, pensionProvider: "" },
   };
+  // Shared footprint: each UK resident's share of emissions from public
+  // services (central and local government: NHS, schools, councils,
+  // defence) and from capital investment (infrastructure, buildings,
+  // business equipment). Defra, UK carbon footprint 2023 (published June
+  // 2026), Summary_final_demand, kt CO2e, divided by the ONS mid-2023 UK
+  // population of 68.265m. The same for everyone; not part of the survey.
+  const SHARED_FOOTPRINT = {
+    publicServicesKg: ((53028.3 + 26235.1) / 68265) * 1000,
+    infrastructureKg: (84258.5 / 68265) * 1000,
+  };
+  SHARED_FOOTPRINT.totalKg = SHARED_FOOTPRINT.publicServicesKg + SHARED_FOOTPRINT.infrastructureKg;
+
   // Categories used in the UK comparison (everything except banking).
   const UK_COMPARISON_KEYS = ["meals", "commute", "flights", "energy", "water", "pets"];
   const BUDGET_YEARLY = 2500; // 1.5°C budget, kg CO2e / year
@@ -1612,7 +1624,7 @@
 ];
 
   window.ECO_DATA = {
-    DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS,
+    DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
