@@ -547,3 +547,23 @@ actual data or the real friend_leaderboard()/find_user_by_email() functions
 — confirming days, switching between this/last week, adding a friend by
 email, the leaderboard — still hasn't been exercised against the live
 project, so please test that yourself and report back anything unexpected.
+
+## Email templates (scanner-proof links)
+
+Outlook and some other email providers open every link in an email to
+check it. A plain Supabase confirmation link works once, so the scan uses
+it up and the person sees "That link has expired or has already been
+used". The site avoids this by linking to its own page, which only uses
+the one-time code when the person taps a button.
+
+In Supabase: **Authentication → Emails → Templates**. In each template,
+replace the link `{{ .ConfirmationURL }}` (in both the `href` and any
+visible copy of the link) with:
+
+- **Confirm signup**:
+  `https://co2counter.co.uk/?token_hash={{ .TokenHash }}&type=signup`
+- **Reset password**:
+  `https://co2counter.co.uk/?token_hash={{ .TokenHash }}&type=recovery`
+
+Old-style links keep working, so nothing breaks before the templates are
+changed.
