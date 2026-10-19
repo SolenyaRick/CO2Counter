@@ -1000,13 +1000,15 @@
     "sections": [
       {
         "heading": "Drive less, not never",
-        "body": "The biggest wins come from replacing car trips, not eliminating driving entirely. One or two work-from-home days, or swapping the car for transit or cycling on short trips, can cut your commute footprint by 20–40%."
+        "body": "The biggest wins come from replacing car trips, not eliminating driving entirely. One or two work-from-home days, or swapping the car for transit or cycling on short trips, can cut your commute footprint by 20–40%.",
+        "dynamicKey": "commuteSwap"
       },
       {
         "heading": "Pick the right alternative",
         "body": "Cycling and walking are zero-emission and add health benefits. Trains and buses spread emissions across many passengers — a full bus emits far less per person than a single-occupancy car. For trips under 5km, these are usually viable."
       },
       {
+        "dynamicKey": "ifDriving",
         "heading": "If you must drive",
         "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits roughly a quarter as much per km on the current grid — and far less on a green tariff."
       },
