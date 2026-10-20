@@ -935,49 +935,57 @@
   const CASS_URL = "https://www.currentaccountswitch.co.uk/";
 
   // Hand-picked services shown on each category's guide page. "hideForDiets"
-  // skips the card for people whose diet it wouldn't help.
+  // skips the card for people whose diet it wouldn't help. Give an item a
+  // "ref" URL (an affiliate or referral link) and it's used instead of "url",
+  // and the card's disclosure line changes to say so.
   const USEFUL_LINKS = {
     meals: {
-      title: "Make the swap easier",
+      eyebrow: "Make it easy",
+      title: "Plant-forward food, delivered",
       hideForDiets: ["vegan", "veggie"],
       items: [
-        { label: "Riverford", url: "https://www.riverford.co.uk/", note: "Organic veg and recipe boxes from UK farms." },
-        { label: "Abel & Cole", url: "https://www.abelandcole.co.uk/", note: "Organic fruit, veg and plant-based recipe boxes." },
-        { label: "Oddbox", url: "https://www.oddbox.co.uk/", note: "Surplus and wonky fruit and veg that would otherwise be wasted." },
-        { label: "Fork Ranger", url: "https://www.forkranger.com/", note: "App with easy vegetarian recipes and a shopping list." },
+        { label: "Riverford", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
+        { label: "Abel & Cole", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
+        { label: "Oddbox", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
+        { label: "Fork Ranger", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
       ],
     },
     commute: {
+      eyebrow: "Leave the car",
       title: "Plan it by train",
       items: [
-        { label: "Trainline", url: "https://www.thetrainline.com/", note: "UK train times, tickets and railcards." },
+        { label: "Trainline", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
       ],
     },
     flights: {
+      eyebrow: "Swap the plane",
       title: "Go by train instead",
       items: [
-        { label: "Trainline", url: "https://www.thetrainline.com/", note: "UK and European train tickets." },
-        { label: "Eurostar", url: "https://www.eurostar.com/uk-en", note: "London to Paris, Brussels, Amsterdam and beyond." },
-        { label: "The Man in Seat 61", url: "https://www.seat61.com/", note: "Step-by-step guides to travelling almost anywhere by train." },
+        { label: "Eurostar", url: "https://www.eurostar.com/uk-en", tone: "amber", tags: ["City centre to centre"], note: "London to Paris, Brussels and Amsterdam in a few hours." },
+        { label: "Trainline", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["UK & Europe"], note: "Book trains across the UK and Europe in one place." },
+        { label: "The Man in Seat 61", url: "https://www.seat61.com/", tone: "sky", tags: ["Free guides"], note: "Step-by-step guides to reaching almost anywhere by rail." },
       ],
     },
     energy: {
-      title: "Greener energy suppliers",
+      eyebrow: "Two-minute switch",
+      title: "Power your home with renewables",
       items: [
-        { label: "Good Energy", url: "https://www.goodenergy.co.uk/", note: "100% renewable electricity from UK generators." },
-        { label: "Ecotricity", url: "https://www.ecotricity.co.uk/", note: "Green electricity and green gas, reinvested in new renewables." },
-        { label: "Octopus Energy", url: "https://octopus.energy/", note: "Renewable electricity tariffs and smart tariffs for EVs and heat pumps." },
+        { label: "Good Energy", url: "https://www.goodenergy.co.uk/", tone: "leaf", tags: ["100% renewable", "UK generators"], note: "Electricity bought direct from UK wind, solar and hydro." },
+        { label: "Ecotricity", url: "https://www.ecotricity.co.uk/", tone: "sky", tags: ["Green gas", "Not-for-dividend"], note: "Profits go into building new renewables." },
+        { label: "Octopus Energy", url: "https://octopus.energy/", tone: "plum", tags: ["Smart tariffs", "EV & heat pumps"], note: "Renewable tariffs plus cheap off-peak power." },
       ],
     },
     banking: {
-      title: "Switch to a greener bank",
+      eyebrow: "Seven-day switch",
+      title: "Move to a greener bank",
       items: [
-        { label: "Nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", note: "Member-owned building society that lends mainly for UK homes." },
-        { label: "Triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", note: "Only lends to social and environmental projects." },
-        { label: "The Co-operative Bank", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", note: "Ethical policy rules out fossil-fuel finance." },
+        { label: "Triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", tone: "leaf", tags: ["Top rated", "Ethical lending"], note: "Only lends to social and environmental projects." },
+        { label: "The Co-operative Bank", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", tone: "sky", tags: ["Which? Eco Provider"], note: "Ethical policy rules out fossil-fuel finance." },
+        { label: "Nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", tone: "amber", tags: ["Which? Eco Provider", "Member-owned"], note: "Building society that lends mainly for UK homes." },
       ],
     },
   };
+
 
   const GREEN_PENSION_T_PER_MILLION = 21;
 
