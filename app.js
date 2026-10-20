@@ -1846,7 +1846,6 @@
       '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
       '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
       (tip.saving > 0.5 || tip.maxSaving > 0.5 ? savingSummary(tip) : "") +
-      (selected !== "flights" && linksFor(selected) ? '<p class="xs muted mt-5 mb-2">Ready to act? Try:</p>' + linkChips(selected, 3) : "") +
       (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
       '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
 
@@ -2280,7 +2279,8 @@
     );
   }
 
-  // Compact logo chips for the same links, used in pop-ups and on Results.
+  // Compact logo chips for the same links, used in pop-ups. Results keeps
+  // no links on purpose: they're saved for the guide pages.
   function linkChips(cat, max, place) {
     const links = linksFor(cat);
     if (!links) return "";
@@ -2288,7 +2288,7 @@
       '<div class="chip-links">' +
       links.items
         .slice(0, max || links.items.length)
-        .map((l) => '<a class="chip-link" ' + linkAttrs(cat, l, place || "results") + ">" + monogram(l) + esc(l.label) + (l.ref ? '<span class="affiliate-dot">Affiliate</span>' : "") + "</a>")
+        .map((l) => '<a class="chip-link" ' + linkAttrs(cat, l, place || "popup") + ">" + monogram(l) + esc(l.label) + (l.ref ? '<span class="affiliate-dot">Affiliate</span>' : "") + "</a>")
         .join("") +
       "</div>"
     );
