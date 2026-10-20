@@ -1846,7 +1846,7 @@
       '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
       '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
       (tip.saving > 0.5 || tip.maxSaving > 0.5 ? savingSummary(tip) : "") +
-      (linksFor(selected) ? '<p class="xs muted mt-5 mb-2">Ready to act? Try:</p>' + linkChips(selected, 3) : "") +
+      (selected !== "flights" && linksFor(selected) ? '<p class="xs muted mt-5 mb-2">Ready to act? Try:</p>' + linkChips(selected, 3) : "") +
       (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
       '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
 
