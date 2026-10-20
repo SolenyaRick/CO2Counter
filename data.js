@@ -281,6 +281,14 @@
     "factor": 0.03989
   },
   {
+    // DESNZ 2026 London Underground: 0.01549 + 0.00728 (well-to-tank)
+    // kg CO2e per passenger km. National rail above is 0.03092 + 0.00897.
+    "key": "tube",
+    "label": "Tube",
+    "emoji": "🚇",
+    "factor": 0.02277
+  },
+  {
     "key": "bus",
     "label": "Bus",
     "emoji": "🚌",
