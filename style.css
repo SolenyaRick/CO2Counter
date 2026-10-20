@@ -2884,3 +2884,7 @@ body {
 .celebrate-burst i:nth-child(6) { right: 14%; top: 42%; --dx: 60px; --dy: -20px; animation-delay: .45s; }
 @keyframes leaf-pop { 0% { opacity: 0; transform: translate(0,0) rotate(0) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(200deg) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .celebrate-burst { display: none; } }
+
+/* Guide cards that don't apply to this person */
+.section-card.na { opacity: .72; }
+.na-tag { background: var(--muted); color: var(--muted-fg); }
