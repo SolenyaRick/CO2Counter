@@ -111,6 +111,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
@@ -1868,6 +1869,7 @@
       "</div>";
 
     html +=
+      usefulLinksCard(cat) +
       habitsComingSoonCard() +
       '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
     return html;
@@ -2095,6 +2097,23 @@
       rows + "</tbody></table></div>" +
       '<p class="xs muted">Make My Money Matter, Climate Action Report 2025 (February 2025): climate commitments, targets, fossil fuels, deforestation and stewardship. It rates providers\' climate action, not the carbon footprint of your fund; ' +
       "your footprint figure uses each provider\'s own published (TCFD) data. Not financial advice.</p></div>"
+    );
+  }
+
+  function usefulLinksCard(cat) {
+    const links = D.USEFUL_LINKS[cat];
+    if (!links || (links.hideForDiets || []).includes(dietType(survey))) return "";
+    return (
+      '<div class="card mb-6 fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("link") + '</span><h2 class="card-title">' + esc(links.title) + "</h2></div>" +
+      '<div class="link-list">' +
+      links.items
+        .map(
+          (l) =>
+            '<a class="link-row" href="' + esc(l.url) + '" target="_blank" rel="noopener"><span class="min0"><span class="fw-600 sm block">' + esc(l.label) +
+            '</span><span class="xs muted block">' + esc(l.note) + "</span></span>" + icon("arrowRight", "faint") + "</a>"
+        )
+        .join("") +
+      '</div><p class="xs muted mt-3">Independent suggestions. We don\'t get paid for these links.</p></div>'
     );
   }
 
