@@ -937,16 +937,17 @@
   // Hand-picked services shown on each category's guide page. "hideForDiets"
   // skips the card for people whose diet it wouldn't help. Give an item a
   // "ref" URL (an affiliate or referral link) and it's used instead of "url",
-  // and the card's disclosure line changes to say so.
+  // the tile gets an "Affiliate" tag and the disclosure line changes to say
+  // so. "affiliate" notes a programme we've applied to but has no link yet.
   const USEFUL_LINKS = {
     meals: {
       eyebrow: "Make it easy",
       title: "Plant-forward food, delivered",
       hideForDiets: ["vegan", "veggie"],
       items: [
-        { label: "Riverford", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
-        { label: "Abel & Cole", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
-        { label: "Oddbox", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
+        { label: "Riverford", affiliate: "pending: Awin", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
+        { label: "Abel & Cole", affiliate: "pending: Awin", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
+        { label: "Oddbox", affiliate: "pending: Impact", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
         { label: "Fork Ranger", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
       ],
     },
@@ -954,15 +955,15 @@
       eyebrow: "Leave the car",
       title: "Plan it by train",
       items: [
-        { label: "Trainline", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
+        { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
       ],
     },
     flights: {
       eyebrow: "Swap the plane",
       title: "Go by train instead",
       items: [
-        { label: "Eurostar", url: "https://www.eurostar.com/uk-en", tone: "amber", tags: ["City centre to centre"], note: "London to Paris, Brussels and Amsterdam in a few hours." },
-        { label: "Trainline", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["UK & Europe"], note: "Book trains across the UK and Europe in one place." },
+        { label: "Eurostar", affiliate: "pending: Partnerize", url: "https://www.eurostar.com/uk-en", tone: "amber", tags: ["City centre to centre"], note: "London to Paris, Brussels and Amsterdam in a few hours." },
+        { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["UK & Europe"], note: "Book trains across the UK and Europe in one place." },
         { label: "The Man in Seat 61", url: "https://www.seat61.com/", tone: "sky", tags: ["Free guides"], note: "Step-by-step guides to reaching almost anywhere by rail." },
       ],
     },
@@ -971,7 +972,7 @@
       title: "Power your home with renewables",
       items: [
         { label: "Good Energy", url: "https://www.goodenergy.co.uk/", tone: "leaf", tags: ["100% renewable", "UK generators"], note: "Electricity bought direct from UK wind, solar and hydro." },
-        { label: "Ecotricity", url: "https://www.ecotricity.co.uk/", tone: "sky", tags: ["Green gas", "Not-for-dividend"], note: "Profits go into building new renewables." },
+        { label: "Ecotricity", affiliate: "pending: Webgains", url: "https://www.ecotricity.co.uk/", tone: "sky", tags: ["Green gas", "Not-for-dividend"], note: "Profits go into building new renewables." },
         { label: "Octopus Energy", url: "https://octopus.energy/", tone: "plum", tags: ["Smart tariffs", "EV & heat pumps"], note: "Renewable tariffs plus cheap off-peak power." },
       ],
     },
