@@ -145,8 +145,8 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
               <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
                 <li style="position: relative">
                   <a class="bush" href="Glass2-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="position: absolute; inset: 0; display: block; color: #2E2A22; text-decoration: none; border-radius: 14px">
-                    <span class="num" style="position: absolute; left: {{c.youLeft}}%; width: {{c.youW}}%; bottom: {{c.labelBottom}}%; text-align: center; font-size: 15px; font-weight: 800; opacity: {{c.bushS}}; transition: opacity .4s {{c.bushDelay}}, left .5s, width .5s">{{c.valueLabel}}</span>
-                    <span class="num" style="position: absolute; left: {{c.ukLeft}}%; width: {{c.ukW}}%; bottom: {{c.ukLabelBottom}}%; text-align: center; font-size: 12px; font-weight: 700; color: #6B4A12; opacity: {{c.ukAlpha}}; transition: opacity .5s .3s">{{c.ukLabel}}</span>
+                    <span class="num" style="position: absolute; left: {{c.youLeft}}%; width: {{c.youW}}%; bottom: {{c.labelBottom}}%; text-align: center; font-size: 15px; font-weight: 800; white-space: nowrap; opacity: {{c.bushS}}; transition: opacity .4s {{c.bushDelay}}, left .5s, width .5s">{{c.valueLabel}}</span>
+                    <span class="num" style="position: absolute; left: {{c.ukLeft}}%; width: {{c.ukW}}%; bottom: {{c.ukLabelBottom}}%; text-align: center; font-size: 13px; font-weight: 800; color: #6B4A12; white-space: nowrap; opacity: {{c.ukAlpha}}; transition: opacity .5s .3s">{{c.ukLabel}}</span>
                     <span style="position: absolute; left: {{c.youLeft}}%; bottom: 16.7%; width: {{c.youW}}%; height: {{c.bushH}}%; border-radius: 14px 14px 4px 4px; background: {{c.color}}; transform: scaleY({{c.bushS}}); transform-origin: 50% 100%; transition: transform 1s cubic-bezier(.34,1.35,.5,1) {{c.bushDelay}}, left .5s cubic-bezier(.3,1.2,.5,1), width .5s cubic-bezier(.3,1.2,.5,1)"></span>
                     <span style="position: absolute; left: {{c.ukLeft}}%; bottom: 16.7%; width: {{c.ukW}}%; height: {{c.ukH}}%; box-sizing: border-box; border-radius: 12px 12px 3px 3px; border: 1.5px dashed rgba(107,74,18,.7); background: repeating-linear-gradient(135deg, rgba(217,164,65,.22) 0 6px, transparent 6px 12px); opacity: {{c.ukAlpha}}; transform: scaleY({{c.ukS}}); transform-origin: 50% 100%; transition: opacity .4s, transform .8s cubic-bezier(.34,1.35,.5,1) .15s"></span>
                     <span class="bname" style="position: absolute; left: 0; right: 0; top: 86%; text-align: center; font-size: 13px; font-weight: 700; line-height: 1.2">{{c.short}}</span>
@@ -262,9 +262,9 @@ class Component extends DCLogic {
       ukLeft: 58, ukW: 34,
       ukH: c.uk ? H(c.uk).toFixed(2) : 0,
       ukS: ukOn && c.uk ? 1 : 0, ukAlpha: ukOn && c.uk ? 1 : 0,
-      ukLabel: '',
+      ukLabel: c.uk ? fmt(c.uk) : '',
       ukLabelBottom: c.uk ? (16.7 + H(c.uk) + 1.2).toFixed(2) : 0,
-      sub: ukOn ? (c.uk ? 'UK ' + fmt(c.uk) : 'No UK figure') : Math.max(1, Math.round((c.v / total) * 100)) + '%',
+      sub: ukOn ? (c.uk ? (Math.abs(c.v - c.uk) / c.uk < 0.03 ? 'Same as UK' : (c.v > c.uk ? '+' : '−') + fmt(Math.abs(c.v - c.uk)) + ' vs UK') : 'No UK figure') : Math.max(1, Math.round((c.v / total) * 100)) + '%',
       bushDelay: bars ? (0.85 + i * 0.09).toFixed(2) + 's' : '0s',
       labelBottom: (16.7 + Math.max(1.2, (c.v / 2500) * 77.3) + 1.5).toFixed(2),
       go: remember(c.key)
