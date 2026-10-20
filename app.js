@@ -111,6 +111,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
     link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
@@ -1112,6 +1113,8 @@
     authUsername: "",
     needUsername: false, // signed in, but the account has no username yet
     newSurvey: false, // taking a new survey; the finished one is kept until it's done
+    reviewing: false, // on the "Anything changed?" summary of a new survey
+    fromReview: false, // editing one step, opened from that summary
     draft: null,
     prevSurvey: null,
     history: [], // completed surveys, newest first: { completedAt, totalYearly }
@@ -1144,15 +1147,132 @@
       '<div class="container narrow">' + pageHeader("Carbon Footprint Survey") +
       '<div class="card center fade-up"><div class="round-badge center-block mb-4">' + icon("check") + "</div>" +
       '<h2 class="card-title mb-2">You\'ve already completed your survey</h2>' +
-      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Would you like to take a new survey? " +
-      "Your current results are kept in your history, and you can cancel before you finish. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
+      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Has anything changed since? Check your answers and update just what's different, or start a new survey from scratch. " +
+      "Either way, your current results are kept in your history, and you can cancel before you finish. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
       '<div class="chip-row" style="justify-content:center">' +
-      '<button type="button" class="btn btn-green" data-action="new-survey">' + icon("refresh") + " Take a new survey</button>" +
-      '<a class="btn btn-outline" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
+      '<button type="button" class="btn btn-green" data-action="whats-changed">' + icon("pencil") + " Anything changed?</button>" +
+      '<button type="button" class="btn btn-outline" data-action="new-survey">' + icon("refresh") + " Start from scratch</button>" +
+      '<a class="btn btn-ghost" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
+    );
+  }
+
+  function finishSurvey() {
+    if (ui.newSurvey) {
+      survey = ui.draft;
+      ui.newSurvey = false;
+      ui.draft = null;
+      ui.prevSurvey = null;
+    }
+    ui.reviewing = ui.fromReview = false;
+    survey.completedAt = new Date().toISOString();
+    surveyChanged();
+    ui.editing = false;
+    saveSnapshot(footprint(survey).totalYearly);
+    recordHistory(survey);
+    location.hash = "#/results";
+  }
+
+  // ---------- "Anything changed?" review ----------
+
+  const STEP_FIELDS = { meals: ["meals"], commute: ["commute", "extraTravel", "longTrips"], flights: ["flights"], energy: ["energy", "water"], pets: ["pets"], banking: ["banking"] };
+  const STEP_BREAKDOWN = { energy: ["energy", "water"] };
+  const stepChanged = (key) => STEP_FIELDS[key].some((f) => JSON.stringify(ui.draft[f] || null) !== JSON.stringify(ui.prevSurvey[f] || null));
+  const stepKg = (key, s) => footprint(s).breakdown.filter((b) => (STEP_BREAKDOWN[key] || [key]).includes(b.key)).reduce((sum, b) => sum + b.yearly, 0);
+  const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+
+  function countLabels(options, values) {
+    const counts = {};
+    values.filter(Boolean).forEach((v) => (counts[v] = (counts[v] || 0) + 1));
+    return Object.keys(counts)
+      .sort((a, b) => counts[b] - counts[a])
+      .map((k) => {
+        const o = byKey(options, k);
+        return counts[k] + "× " + ((o && o.label) || k);
+      })
+      .join(", ");
+  }
+
+  // Plain-language lines describing someone's answers for one survey step.
+  function answerSummary(key, s) {
+    if (key === "meals") {
+      const m = s.meals || {};
+      const diet = byKey(D.DIETS, m.diet);
+      const waste = byKey(D.FOOD_WASTE, m.foodWaste || "low");
+      return [
+        (diet ? diet.label + ": " : "") + (countLabels(D.MEAL_OPTIONS, DAYS.map((d) => m[d])) || "No meals chosen"),
+        "Eat out " + (m.eatOut || 0) + "× a week · " + (waste ? waste.label.split(" ")[0] : "Low") + " food waste",
+      ];
+    }
+    if (key === "commute") {
+      const c = s.commute || {};
+      const extra = (s.extraTravel || []).length;
+      const long = (s.longTrips || []).length;
+      return [
+        (countLabels(D.COMMUTE_MODES, DAYS.map((d) => c[d])) || "No commute days") + " · " + (c.distance || 0) + " km each way",
+        extra || long ? [extra ? plural(extra, "weekly trip") : "", long ? plural(long, "long journey") : ""].filter(Boolean).join(" · ") : "No extra trips or long journeys",
+      ];
+    }
+    if (key === "flights") {
+      const f = (s.flights || []).filter((x) => flightKm(x.from, x.to) > 0);
+      if (!f.length) return ["No flights"];
+      return [f.slice(0, 3).map(routeLabel).join(", ") + (f.length > 3 ? " and " + (f.length - 3) + " more" : "")];
+    }
+    if (key === "energy") {
+      const e = s.energy || {};
+      return [
+        Math.round(e.electricityKwh || 0).toLocaleString() + " kWh electricity, " + Math.round(e.gasKwh || 0).toLocaleString() + " kWh gas a month" + (e.greenTariff ? " · green tariff" : ""),
+        ((e.household || 1) === 1 ? "1 person" : (e.household || 1) + " people") + " at home · " + Math.round((s.water && s.water.liters) || 0).toLocaleString() + " L water a month",
+      ];
+    }
+    if (key === "pets") {
+      const p = s.pets || {};
+      return [(p.dogs || 0) + (p.cats || 0) ? [p.dogs ? plural(p.dogs, "dog") : "", p.cats ? plural(p.cats, "cat") : ""].filter(Boolean).join(", ") : "No pets"];
+    }
+    if (key === "banking") {
+      const b = s.banking || {};
+      const bank = byKey(D.BANKS, b.bank);
+      const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
+      return [
+        (bank ? bank.label : "Bank not chosen") + " · £" + (b.amount || 0).toLocaleString(),
+        b.pensionPot ? "Pension: " + (pension ? pension.label : "provider not chosen") + " · £" + b.pensionPot.toLocaleString() : "No pension added",
+      ];
+    }
+    return [];
+  }
+
+  function renderReview() {
+    const before = footprint(ui.prevSurvey).totalYearly;
+    const now = footprint(ui.draft).totalYearly;
+    const diff = now - before;
+    const anyChanged = STEPS.some((st) => stepChanged(st.key));
+    return (
+      '<div class="container narrow">' + pageHeader("Anything changed?", "Here's what you told us last time. Tap anything that's different.") +
+      '<div class="review-list fade-up">' +
+      STEPS.map((st, i) => {
+        const changed = stepChanged(st.key);
+        return (
+          '<button type="button" class="review-row' + (changed ? " changed" : "") + '" data-action="review-edit" data-step="' + i + '">' +
+          '<span class="review-icon">' + st.icon + '</span><span class="review-main"><span class="label-row"><span class="fw-600">' + esc(st.title) + "</span>" +
+          (changed ? '<span class="tag done-tag">Updated</span>' : "") + "</span>" +
+          answerSummary(st.key, ui.draft).map((line) => '<span class="xs muted block">' + esc(line) + "</span>").join("") +
+          '</span><span class="review-side"><span class="sm fw-600">' + kgFmt(stepKg(st.key, ui.draft)) + '</span><span class="tiny muted">kg/yr</span>' +
+          '<span class="review-change">' + (changed ? "Edit" : "Change") + "</span></span></button>"
+        );
+      }).join("") +
+      "</div>" +
+      '<div class="card review-total mt-6"><div class="row-between gap-3" style="flex-wrap:wrap"><div><p class="xs muted">Your footprint</p><p class="fw-600">' +
+      kgFmt(before) + " → " + kgFmt(now) + ' <span class="sm muted">kg CO₂e / year</span></p>' +
+      (anyChanged && Math.abs(diff) >= 1
+        ? '<p class="xs fw-600 ' + (diff < 0 ? "green" : "red") + '">' + (diff < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(diff)) + " kg a year</p>"
+        : "") +
+      '</div><div class="chip-row"><button type="button" class="btn btn-ghost" data-action="cancel-new-survey">Cancel</button>' +
+      '<button type="button" class="btn btn-green" data-action="review-save">' + icon("check") + (anyChanged ? " Save my update" : " Nothing's changed: save") + "</button></div></div></div>" +
+      '<p class="xs muted center mt-4">Saving adds a new entry to your history, so you can see your progress over time.</p></div>'
     );
   }
 
   function renderSurvey() {
+    if (ui.newSurvey && ui.reviewing) return renderReview();
     if (survey.completedAt && !ui.editing) return renderSurveyDone();
     const step = STEPS[ui.step];
     const pct = ((ui.step + 1) / STEPS.length) * 100;
@@ -1164,7 +1284,10 @@
       );
     }).join("");
     const last = ui.step === STEPS.length - 1;
-    const newBanner = ui.newSurvey
+    const newBanner = ui.fromReview
+      ? '<div class="panel p-4 mb-6 row-between gap-3" style="flex-wrap:wrap"><p class="sm">Update what\'s changed, then go back to your summary.</p>' +
+        '<button type="button" class="btn btn-green btn-sm" data-action="review-back">' + icon("check") + " Back to summary</button></div>"
+      : ui.newSurvey
       ? '<div class="panel p-4 mb-6 row-between gap-3" style="flex-wrap:wrap"><p class="sm">You\'re taking a new survey. Your previous results stay saved until you finish, and are kept in your history.</p>' +
         '<button type="button" class="btn btn-outline btn-sm" data-action="cancel-new-survey">' + icon("x") + " Cancel new survey</button></div>"
       : "";
@@ -2142,7 +2265,8 @@
         .map(
           (l) =>
             '<a class="offer" ' + linkAttrs(cat, l, "guide") + ">" +
-            '<div class="label-row">' + monogram(l) + '<span class="fw-600">' + esc(l.label) + "</span></div>" +
+            '<div class="label-row">' + monogram(l) + '<span class="fw-600">' + esc(l.label) + "</span>" +
+            (l.ref ? '<span class="tag affiliate-tag ml-auto">Affiliate</span>' : "") + "</div>" +
             '<div class="offer-tags">' + (l.tags || []).map((t) => '<span class="offer-tag">' + esc(t) + "</span>").join("") + "</div>" +
             '<p class="sm muted lh">' + esc(l.note) + "</p>" +
             '<span class="offer-cta">Visit ' + esc(l.label.replace(/^The /, "")) + " " + icon("link") + "</span></a>"
@@ -2164,7 +2288,7 @@
       '<div class="chip-links">' +
       links.items
         .slice(0, max || links.items.length)
-        .map((l) => '<a class="chip-link" ' + linkAttrs(cat, l, place || "results") + ">" + monogram(l) + esc(l.label) + "</a>")
+        .map((l) => '<a class="chip-link" ' + linkAttrs(cat, l, place || "results") + ">" + monogram(l) + esc(l.label) + (l.ref ? '<span class="affiliate-dot">Affiliate</span>' : "") + "</a>")
         .join("") +
       "</div>"
     );
@@ -3654,20 +3778,7 @@
         ui.step++;
         render();
         window.scrollTo(0, 0);
-      } else {
-        if (ui.newSurvey) {
-          survey = ui.draft;
-          ui.newSurvey = false;
-          ui.draft = null;
-          ui.prevSurvey = null;
-        }
-        survey.completedAt = new Date().toISOString();
-        surveyChanged();
-        ui.editing = false;
-        saveSnapshot(footprint(survey).totalYearly);
-        recordHistory(survey);
-        location.hash = "#/results";
-      }
+      } else finishSurvey();
     },
     "set-diet": (el) => {
       const d = byKey(D.DIETS, el.dataset.key);
@@ -3852,7 +3963,7 @@
       lsRemove(KEY_SURVEY);
       lsRemove(KEY_HISTORY);
       ui.history = [];
-      ui.newSurvey = false;
+      ui.newSurvey = ui.reviewing = ui.fromReview = false;
       ui.draft = ui.prevSurvey = null;
       survey = normaliseSurvey(null);
       ui.step = 0;
@@ -3920,7 +4031,7 @@
       await sb.auth.signOut().catch(() => {});
       [KEY_SURVEY, KEY_SNAPSHOTS, KEY_GOALS, KEY_STREAKS, KEY_HISTORY].forEach(lsRemove);
       ui.history = [];
-      ui.newSurvey = false;
+      ui.newSurvey = ui.reviewing = ui.fromReview = false;
       ui.draft = ui.prevSurvey = null;
       CATEGORIES.forEach((c) => {
         lsRemove(KEY_HABITS + c);
@@ -3939,6 +4050,7 @@
     // Starts from blank answers. Nothing is saved until they change
     // something, so leaving straight away keeps the old survey.
     "new-survey": () => {
+      ui.reviewing = ui.fromReview = false;
       ui.prevSurvey = survey;
       ui.draft = normaliseSurvey(null);
       survey = ui.draft;
@@ -3948,9 +4060,37 @@
       render();
       window.scrollTo(0, 0);
     },
+    "whats-changed": () => {
+      ui.prevSurvey = survey;
+      const copy = JSON.parse(JSON.stringify(survey));
+      delete copy.completedAt;
+      ui.draft = normaliseSurvey(copy);
+      survey = ui.draft;
+      ui.newSurvey = true;
+      ui.reviewing = true;
+      ui.fromReview = false;
+      ui.editing = false;
+      render();
+      window.scrollTo(0, 0);
+    },
+    "review-edit": (el) => {
+      ui.reviewing = false;
+      ui.fromReview = true;
+      ui.step = Number(el.dataset.step) || 0;
+      render();
+      window.scrollTo(0, 0);
+    },
+    "review-back": () => {
+      ui.reviewing = true;
+      ui.fromReview = false;
+      ui.airport = null;
+      render();
+      window.scrollTo(0, 0);
+    },
+    "review-save": () => finishSurvey(),
     "cancel-new-survey": () => {
       survey = ui.prevSurvey || survey;
-      ui.newSurvey = false;
+      ui.newSurvey = ui.reviewing = ui.fromReview = false;
       ui.draft = null;
       ui.prevSurvey = null;
       ui.step = 0;

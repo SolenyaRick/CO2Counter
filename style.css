@@ -2825,3 +2825,21 @@ body {
 .chip-link:hover { border-color: var(--em-300); background: var(--em-50); }
 .chip-link .mono { width: 1.7rem; height: 1.7rem; border-radius: 999px; font-size: .7rem; }
 .offer-card > p.xs { margin: 0; padding: 0 1.25rem 1.25rem; }
+
+/* Affiliate labels */
+.affiliate-tag { background: var(--amber-100); color: var(--amber-700); }
+.affiliate-dot { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--amber-100); color: var(--amber-700); }
+
+/* "Anything changed?" review */
+.review-list { display: flex; flex-direction: column; gap: .6rem; }
+.review-row { display: flex; align-items: center; gap: .9rem; width: 100%; text-align: left; padding: .95rem 1rem; border-radius: 1rem; border: 1px solid var(--border); background: var(--card); color: inherit; font: inherit; cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.review-row:hover, .review-row:focus-visible { border-color: var(--em-300); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.review-row.changed { border-color: var(--em-400); background: var(--em-50); }
+.review-icon { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; flex-shrink: 0; border-radius: .8rem; background: var(--muted); }
+.review-row.changed .review-icon { background: var(--leaf); }
+.review-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.review-main .label-row { gap: .5rem; }
+.review-side { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; flex-shrink: 0; }
+.review-change { margin-top: .3rem; font-size: .75rem; font-weight: 700; padding: .25rem .7rem; border-radius: 999px; background: var(--em-600); color: #fff; }
+.review-row.changed .review-change { background: var(--leaf); color: var(--em-800); }
+@media (max-width: 380px) { .review-row { gap: .6rem; padding: .85rem; } .review-icon { width: 2.1rem; height: 2.1rem; } }
