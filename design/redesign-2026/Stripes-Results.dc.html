@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Results, warming stripes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#CB181D}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.xp{font-family:Archivo,sans-serif;font-stretch:125%}
+@keyframes stripe{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.stripe{transform-origin:50% 100%;animation:stripe .7s cubic-bezier(.2,.8,.2,1) both}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:.1s}.d2{animation-delay:.2s}
+.blink{animation:blink 1s steps(1) infinite}
+.ticker{animation:tick 22s linear infinite}
+.row{transition:background .25s}
+.press{transition:transform .15s}
+.press:active{transform:translateY(2px)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F7F5; color: #111111; font-family: Archivo, system-ui, sans-serif">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #F7F7F5; border-bottom: 2px solid #111111">
+    <span class="xp" style="font-weight: 900; font-size: 15px; letter-spacing: -0.01em">CO2/COUNTER</span>
+    <span class="mono" style="font-size: 11px; font-weight: 700">RESULTS<span class="blink">_</span></span>
+  </div>
+
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 52px 0 0; overflow-y: auto; overflow-x: hidden">
+
+    <section style="padding: 20px 16px 0">
+      <div class="mono rise" style="font-size: 11px; font-weight: 700; display: flex; justify-content: space-between"><span>FOOTPRINT / YEAR</span><span>KG CO₂E</span></div>
+      <div class="xp rise d1" style="margin-top: 6px; font-weight: 900; font-size: 92px; line-height: .9; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; transform: translate3d({{pNum}}px,0,0)">{{countLabel}}</div>
+      <div class="rise d2" style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 2px solid #111111">
+        <div style="padding: 10px 12px; border-right: 2px solid #111111"><div class="mono" style="font-size: 10px; font-weight: 700">VS UK AVERAGE</div><div class="xp" style="font-weight: 800; font-size: 24px; color: #CB181D">+25%</div></div>
+        <div style="padding: 10px 12px"><div class="mono" style="font-size: 10px; font-weight: 700">VS 1.5°C BUDGET</div><div class="xp" style="font-weight: 800; font-size: 24px; color: #CB181D">270%</div></div>
+      </div>
+    </section>
+
+    <section style="margin-top: 22px; position: relative; overflow: hidden">
+      <div style="width: 560px; transform: translate3d({{pBand}}px,0,0)">
+        <div style="height: 200px; display: flex; align-items: flex-end">
+          <sc-for list="{{stripes}}" as="st" hint-placeholder-count="40">
+            <span class="stripe" style="flex: 1 1 0; height: 100%; background: {{st.color}}; opacity: {{st.alpha}}; animation-delay: {{st.delay}}"></span>
+          </sc-for>
+        </div>
+        <div class="mono" style="position: relative; height: 46px; font-size: 10px; font-weight: 700; border-top: 2px solid #111111">
+          <span style="position: absolute; left: 31.25%; top: -210px; bottom: 30px; width: 2px; background: #111111"></span>
+          <span style="position: absolute; left: 31.25%; top: 6px; padding-left: 6px">1.5°C · 2.5 T</span>
+          <span style="position: absolute; left: 48.2%; top: -210px; bottom: 30px; width: 2px; background: #111111"></span>
+          <span style="position: absolute; left: 48.2%; top: 6px; padding-left: 6px">UK · 3.9 T</span>
+          <span style="position: absolute; left: 84.3%; top: -210px; bottom: 30px; width: 4px; background: #111111"></span>
+          <span style="position: absolute; left: 84.3%; top: 22px; padding: 2px 6px; background: #111111; color: #F7F7F5">YOU · 6.7 T</span>
+        </div>
+      </div>
+      <p class="mono" style="margin: 4px 16px 0; font-size: 11px; line-height: 1.5; color: #444444">Each stripe is 0.2 t a year, from cool blue to deep red. Everything to the right of the budget line warms the planet past 1.5°C.</p>
+    </section>
+
+    <section style="margin-top: 30px; padding: 0 16px">
+      <h2 class="xp" style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em">BREAKDOWN</h2>
+      <div class="mono" style="margin-top: 12px; padding-bottom: 6px; display: grid; grid-template-columns: 32px 1fr 64px 40px; gap: 8px; font-size: 10px; font-weight: 700; border-bottom: 2px solid #111111"><span></span><span>CATEGORY</span><span style="text-align: right">KG</span><span style="text-align: right">%</span></div>
+      <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+        <button class="row" onClick="{{c.pick}}" aria-expanded="{{c.expanded}}" style="all: unset; box-sizing: border-box; display: block; width: 100%; padding: 12px 0 10px; border-bottom: 1px solid #111111; background: {{c.bg}}; color: {{c.ink}}; cursor: pointer">
+          <div style="display: grid; grid-template-columns: 32px 1fr 64px 40px; gap: 8px; align-items: center; padding: 0 6px 0 4px">
+            <span style="display: grid; place-items: center">
+              <sc-if value="{{c.isMeals}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 11h20v1.5A10 10 0 0 1 2 12.5Z"></path><path d="M8 3h2.5v6H8ZM13.5 3H16v6h-2.5Z"></path></svg></sc-if>
+              <sc-if value="{{c.isBank}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5 22.5 8h-21Z"></path><path d="M3.5 10h3.5v8H3.5ZM10.25 10h3.5v8h-3.5ZM17 10h3.5v8H17ZM1.5 20h21v2.5h-21Z"></path></svg></sc-if>
+              <sc-if value="{{c.isHome}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M12 1.5 22.5 10v12.5h-21V10ZM13.5 8 8 15.5h4l-1 5 5.5-7.5h-4Z"></path></svg></sc-if>
+              <sc-if value="{{c.isPets}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 11.5c3.3 0 6 3 6 6 0 2.4-2 3.5-4 3l-2-.5-2 .5c-2 .5-4-.6-4-3 0-3 2.7-6 6-6Z"></path><rect x="2" y="8" width="4" height="5"></rect><rect x="6.5" y="2.5" width="4" height="6"></rect><rect x="13.5" y="2.5" width="4" height="6"></rect><rect x="18" y="8" width="4" height="5"></rect></svg></sc-if>
+              <sc-if value="{{c.isFlights}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 1.5h3V9l9 5v3l-9-2.5V19l3 2v2L12 22l-4.5 1v-2l3-2v-4.5l-9 2.5v-3l9-5Z"></path></svg></sc-if>
+              <sc-if value="{{c.isCommute}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M5 5h14l3.5 7v7H19v2.5h-3.5V19h-7v2.5H5V19H1.5v-7ZM6.5 7.5l-2 4h15l-2-4ZM4 14v2.5h3.5V14ZM16.5 14v2.5H20V14Z"></path></svg></sc-if>
+              <sc-if value="{{c.isWater}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.5 19 12a7 7 0 1 1-14 0Z"></path></svg></sc-if>
+            </span>
+            <span style="font-weight: 700; font-size: 15px">{{c.label}}</span>
+            <span class="mono" style="text-align: right; font-size: 14px; font-weight: 700">{{c.valueLabel}}</span>
+            <span class="mono" style="text-align: right; font-size: 12px">{{c.share}}</span>
+          </div>
+          <div style="margin: 8px 4px 0 44px; height: 6px; background: {{c.track}}">
+            <div style="height: 6px; width: {{c.w}}%; background: {{c.bar}}; transition: width 1s cubic-bezier(.2,.8,.2,1) {{c.delay}}"></div>
+          </div>
+          <sc-if value="{{c.open}}" hint-placeholder-val="{{false}}">
+            <div class="mono rise" style="margin: 10px 4px 2px 44px; font-size: 11px; line-height: 1.6">
+              <div>{{c.note}}</div>
+              <div style="margin-top: 4px; display: flex; gap: 14px; font-weight: 700"><span>REALISTIC −{{c.real}}</span><span>MAX −{{c.max}}</span></div>
+            </div>
+          </sc-if>
+        </button>
+      </sc-for>
+    </section>
+
+    <section style="margin-top: 30px; background: #111111; color: #F7F7F5; overflow: hidden">
+      <div class="mono" style="overflow: hidden; white-space: nowrap; border-bottom: 2px solid #CB181D; padding: 8px 0; font-size: 11px; font-weight: 700; color: #FB6A4A">
+        <div class="ticker" style="display: inline-block">BIGGEST OPPORTUNITY ▲ MEALS ▲ −1,066 KG REALISTIC ▲ −1,745 KG PLANT-BASED ▲ BIGGEST OPPORTUNITY ▲ MEALS ▲ −1,066 KG REALISTIC ▲ −1,745 KG PLANT-BASED ▲ </div>
+      </div>
+      <div style="padding: 20px 16px 22px">
+        <h3 class="xp" style="margin: 0; font-size: 32px; line-height: .95; font-weight: 900; letter-spacing: -0.03em">CUT RED MEAT TO 1–2 DAYS A WEEK.</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.5; color: #CFCFCF">Beef and lamb are still your highest-impact meals. Swap one more red-meat day for chicken or a plant-based meal.</p>
+        <a class="press" href="Stripes-Meals.dc.html" style="margin-top: 18px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: #CB181D; color: #FFFFFF; text-decoration: none; font-weight: 800; font-size: 15px"><span>EDIT MY MEALS</span><span class="mono">→</span></a>
+      </div>
+    </section>
+
+    <section style="padding: 30px 16px 120px">
+      <h2 class="xp" style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em">TRAJECTORY</h2>
+      <p class="mono" style="margin: 6px 0 12px; font-size: 11px; color: #444444">KG CO₂E / YEAR IF YOU BUILD THESE HABITS</p>
+      <svg width="358" height="200" viewBox="0 0 358 200" role="img" aria-label="Line falling from 6,746 kg now to 3,536 kg with realistic changes and 1,654 kg going all the way, below the 2,500 kg budget line">
+        <path d="M0 126.1H358" stroke="#2171B5" stroke-width="2" stroke-dasharray="6 6"></path>
+        <text x="358" y="119" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#2171B5">1.5°C BUDGET</text>
+        <path d="M20 29.6 L179 102.6 L338 145.4" fill="none" stroke="#111111" stroke-width="4" stroke-dasharray="420" stroke-dashoffset="{{lineOffset}}" style="transition: stroke-dashoffset 1.8s cubic-bezier(.2,.8,.2,1) .4s"></path>
+        <rect x="12" y="21.6" width="16" height="16" fill="#CB181D"></rect>
+        <rect x="171" y="94.6" width="16" height="16" fill="#FB6A4A"></rect>
+        <rect x="330" y="137.4" width="16" height="16" fill="#2171B5"></rect>
+        <text x="12" y="12" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#111111">NOW 6,746</text>
+        <text x="179" y="86" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#111111">REALISTIC 3,536</text>
+        <text x="346" y="178" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#111111">ALL THE WAY 1,654</text>
+      </svg>
+    </section>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #111111; border-top: 2px solid #111111">
+    <a class="mono" href="Stripes-Meals.dc.html" style="min-height: 64px; display: grid; place-items: center; color: #F7F7F5; font-size: 12px; font-weight: 700; text-decoration: none">SURVEY</a>
+    <a class="mono" href="Stripes-Results.dc.html" aria-current="page" style="min-height: 64px; display: grid; place-items: center; background: #F7F7F5; color: #111111; font-size: 12px; font-weight: 700; text-decoration: none">RESULTS</a>
+    <a class="mono" href="Stripes-Results.dc.html" style="min-height: 64px; display: grid; place-items: center; color: #F7F7F5; font-size: 12px; font-weight: 700; text-decoration: none">HABITS</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, ready: false, open: 'meals' };
+  }
+  componentDidMount() {
+    const target = 6746, dur = 1300, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(target * (1 - Math.pow(1 - k, 3))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+    this.timer = setTimeout(() => this.setState({ ready: true }), 120);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    clearTimeout(this.timer);
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const ready = this.state.ready;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const pal = ['#08306B', '#2171B5', '#6BAED6', '#C6DBEF', '#FCBBA1', '#FB6A4A', '#CB181D', '#67000D'];
+    const stripes = [];
+    for (let i = 0; i < 40; i++) {
+      const t = (i + 1) * 0.2;
+      stripes.push({ color: pal[Math.floor(i / 5)], alpha: t > 6.85 ? 0.22 : 1, delay: (i * 0.025).toFixed(3) + 's' });
+    }
+    const raw = [
+      { key: 'meals', label: 'Meals & diet', v: 2314, real: 1066, max: 1745, note: '~44.5 KG/WK + EATING OUT' },
+      { key: 'bank', label: 'Banking & pension', v: 1931, real: 1175, max: 1931, note: 'BARCLAYS · NEST PENSION' },
+      { key: 'home', label: 'Home energy', v: 1451, real: 247, max: 1326, note: 'STANDARD TARIFF + GAS' },
+      { key: 'pets', label: 'Pets', v: 385, real: 96, max: 193, note: '1 PET' },
+      { key: 'flights', label: 'Flights', v: 367, real: 356, max: 367, note: '1 TRIP / YEAR' },
+      { key: 'commute', label: 'Commute', v: 280, real: 267, max: 280, note: '~5.4 KG/WK' },
+      { key: 'water', label: 'Water', v: 17, real: 3, max: 7, note: '4,000 L / PERSON / MONTH' }
+    ];
+    const heat = ['#67000D', '#CB181D', '#FB6A4A', '#FCBBA1', '#C6DBEF', '#6BAED6', '#2171B5'];
+    const cats = raw.map((c, i) => {
+      const open = this.state.open === c.key;
+      return {
+        ...c, open, expanded: open ? 'true' : 'false',
+        valueLabel: fmt(c.v), real: fmt(c.real), max: fmt(c.max),
+        share: Math.round((c.v / 6746) * 100) + '%',
+        w: ready ? Math.max(1, (c.v / 2314) * 100) : 0,
+        delay: (0.3 + i * 0.08) + 's',
+        bg: open ? '#111111' : 'transparent', ink: open ? '#F7F7F5' : '#111111',
+        track: open ? '#333333' : '#E2E2DE',
+        bar: open ? '#FB6A4A' : heat[i],
+        isMeals: c.key === 'meals', isBank: c.key === 'bank', isHome: c.key === 'home', isPets: c.key === 'pets',
+        isFlights: c.key === 'flights', isCommute: c.key === 'commute', isWater: c.key === 'water',
+        pick: () => this.setState({ open: open ? '' : c.key })
+      };
+    });
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pNum: (-Math.min(s, 400) * 0.25 * k).toFixed(1),
+      pBand: (-Math.min(170, s * 0.45 * k)).toFixed(1),
+      countLabel: fmt(this.state.count),
+      stripes, cats,
+      lineOffset: ready ? 0 : 420
+    };
+  }
+}
+</script>
+</body>
+</html>

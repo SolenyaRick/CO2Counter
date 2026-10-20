@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glass bento results</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C9F06B}a:hover{color:#E4F7B5}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.ac{fill:#C9F06B;stroke:none}
+.tile{transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .3s,box-shadow .3s,background .3s}
+.tile:hover{transform:perspective(700px) rotateX(4deg) rotateY(-4deg) translateY(-3px)}
+.tile:active{transform:perspective(700px) rotateX(-3deg) scale(.97)}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes sheen{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(260%) skewX(-20deg)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.rise{animation:rise .8s cubic-bezier(.2,.75,.2,1) both}
+.sheen{animation:sheen 4s ease-in-out infinite}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B231C; color: #F3F0E6; font-family: Geist, system-ui, sans-serif">
+  <div style="position: absolute; left: -120px; top: -120px; width: 360px; height: 360px; border-radius: 99px; background: #1D5443; opacity: .55; filter: blur(80px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; right: -140px; top: 380px; width: 320px; height: 320px; border-radius: 99px; background: #5E8C7A; opacity: .35; filter: blur(90px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+    <div style="padding: 16px 14px 140px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 8px">
+        <span style="font-weight: 700; font-size: 17px; letter-spacing: -0.02em">CO2 Counter</span>
+        <span class="mono" style="font-size: 11px; color: #9FC4B4"><span class="pulse" style="display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: #C9F06B; margin-right: 6px"></span>Live estimate</span>
+      </div>
+
+      <section class="tile rise" style="position: relative; padding: 20px; border-radius: 28px; background: rgba(243,240,230,.06); border: 1px solid rgba(243,240,230,.10); backdrop-filter: blur(20px); overflow: hidden; display: flex; align-items: center; gap: 12px">
+        <span class="sheen" style="position: absolute; top: 0; bottom: 0; left: 0; width: 60px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent)"></span>
+        <div style="flex: 1; min-width: 0">
+          <div style="font-size: 13px; color: #9FC4B4">Your footprint / year</div>
+          <div style="font-weight: 800; font-size: 50px; line-height: 1.05; letter-spacing: -0.05em; font-variant-numeric: tabular-nums">{{countLabel}}</div>
+          <div class="mono" style="font-size: 11px; color: #9FC4B4">kg CO₂e</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 4px; font-size: 12px">
+            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: #C9F06B; margin-right: 6px"></span>You 6.7 t</span>
+            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: #9FC4B4; margin-right: 6px"></span>UK avg 3.9 t</span>
+            <span><span style="display: inline-block; width: 8px; height: 8px; border-radius: 99px; background: #F08A5D; margin-right: 6px"></span>1.5°C budget 2.5 t</span>
+          </div>
+        </div>
+        <svg width="140" height="140" viewBox="0 0 140 140" style="flex: none; transform: rotate(-90deg)" role="img" aria-label="Rings out of 8 tonnes: you 6.7, UK average 5.4, budget 2.5">
+          <circle cx="70" cy="70" r="62" fill="none" stroke="rgba(201,240,107,.12)" stroke-width="12"></circle>
+          <circle cx="70" cy="70" r="62" fill="none" stroke="#C9F06B" stroke-width="12" stroke-linecap="round" stroke-dasharray="389.6" stroke-dashoffset="{{ringYou}}" style="transition: stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1)"></circle>
+          <circle cx="70" cy="70" r="46" fill="none" stroke="rgba(159,196,180,.12)" stroke-width="12"></circle>
+          <circle cx="70" cy="70" r="46" fill="none" stroke="#9FC4B4" stroke-width="12" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="{{ringUk}}" style="transition: stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1) .15s"></circle>
+          <circle cx="70" cy="70" r="30" fill="none" stroke="rgba(240,138,93,.14)" stroke-width="12"></circle>
+          <circle cx="70" cy="70" r="30" fill="none" stroke="#F08A5D" stroke-width="12" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="{{ringBudget}}" style="transition: stroke-dashoffset 1.6s cubic-bezier(.2,.8,.2,1) .3s"></circle>
+        </svg>
+      </section>
+
+      <div style="display: flex; gap: 10px; align-items: flex-start">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; transform: translate3d(0,{{pColA}}px,0)">
+          <div class="tile rise" style="padding: 16px; border-radius: 24px; background: #F08A5D; color: #2A0F04; animation-delay: .1s">
+            <div style="font-size: 12px; font-weight: 600">vs UK average</div>
+            <div style="font-weight: 800; font-size: 36px; letter-spacing: -0.04em">+25%</div>
+          </div>
+          <button class="tile rise" onClick="{{t.meals.pick}}" aria-pressed="{{t.meals.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; min-height: 190px; border-radius: 24px; background: {{t.meals.bg}}; border: 1px solid {{t.meals.border}}; box-shadow: {{t.meals.glow}}; cursor: pointer; animation-delay: .15s">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="17.5" cy="5" r="1.8"></circle><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg>
+            <div style="margin-top: 26px; font-size: 13px; color: #9FC4B4">Meals & diet</div>
+            <div style="font-weight: 800; font-size: 30px; letter-spacing: -0.04em">2,314</div>
+            <div style="margin-top: 8px; height: 6px; border-radius: 99px; background: rgba(243,240,230,.1)"><div style="height: 6px; width: {{t.meals.w}}%; border-radius: 99px; background: #C9F06B; transition: width 1.2s cubic-bezier(.2,.8,.2,1) .3s"></div></div>
+            <div class="mono" style="margin-top: 8px; font-size: 11px; color: #C9F06B">{{t.meals.save}}</div>
+          </button>
+          <button class="tile rise" onClick="{{t.home.pick}}" aria-pressed="{{t.home.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; border-radius: 24px; background: {{t.home.bg}}; border: 1px solid {{t.home.border}}; box-shadow: {{t.home.glow}}; cursor: pointer; animation-delay: .25s">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M13 10.5 10 15h3l-1 3.5 3.5-5h-3l.5-3Z"></path><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path></svg>
+            <div style="margin-top: 14px; font-size: 13px; color: #9FC4B4">Home energy</div>
+            <div style="font-weight: 800; font-size: 24px; letter-spacing: -0.03em">1,451</div>
+            <div class="mono" style="margin-top: 4px; font-size: 11px; color: #C9F06B">{{t.home.save}}</div>
+          </button>
+          <button class="tile rise" onClick="{{t.flights.pick}}" aria-pressed="{{t.flights.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; border-radius: 24px; background: {{t.flights.bg}}; border: 1px solid {{t.flights.border}}; box-shadow: {{t.flights.glow}}; cursor: pointer; animation-delay: .35s">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.5"></circle><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg>
+            <div style="margin-top: 14px; font-size: 13px; color: #9FC4B4">Flights</div>
+            <div style="font-weight: 800; font-size: 24px; letter-spacing: -0.03em">367</div>
+            <div class="mono" style="margin-top: 4px; font-size: 11px; color: #C9F06B">{{t.flights.save}}</div>
+          </button>
+        </div>
+
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 28px; transform: translate3d(0,{{pColB}}px,0)">
+          <div class="tile rise" style="padding: 16px; border-radius: 24px; background: rgba(243,240,230,.06); border: 1px solid rgba(243,240,230,.10); animation-delay: .12s">
+            <div style="font-size: 12px; color: #9FC4B4">of 1.5°C budget</div>
+            <div style="font-weight: 800; font-size: 36px; letter-spacing: -0.04em; color: #F08A5D">270%</div>
+          </div>
+          <button class="tile rise" onClick="{{t.bank.pick}}" aria-pressed="{{t.bank.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; min-height: 170px; border-radius: 24px; background: {{t.bank.bg}}; border: 1px solid {{t.bank.border}}; box-shadow: {{t.bank.glow}}; cursor: pointer; animation-delay: .2s">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.6"></circle><path d="M3 9.5 12 4l9 5.5H3Z"></path><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg>
+            <div style="margin-top: 20px; font-size: 13px; color: #9FC4B4">Banking & pension</div>
+            <div style="font-weight: 800; font-size: 28px; letter-spacing: -0.04em">1,931</div>
+            <div class="mono" style="margin-top: 6px; font-size: 11px; color: #C9F06B">{{t.bank.save}}</div>
+          </button>
+          <button class="tile rise" onClick="{{t.pets.pick}}" aria-pressed="{{t.pets.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; border-radius: 24px; background: {{t.pets.bg}}; border: 1px solid {{t.pets.border}}; box-shadow: {{t.pets.glow}}; cursor: pointer; animation-delay: .3s">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M12 13c-2.5 0-4.5 2.3-4.5 4.3 0 1.6 1.4 2.2 2.6 1.9l1.9-.5 1.9.5c1.2.3 2.6-.3 2.6-1.9 0-2-2-4.3-4.5-4.3Z"></path><circle cx="5.5" cy="11" r="1.8"></circle><circle cx="9.5" cy="6.5" r="1.8"></circle><circle cx="14.5" cy="6.5" r="1.8"></circle><circle cx="18.5" cy="11" r="1.8"></circle></svg>
+            <div style="margin-top: 14px; font-size: 13px; color: #9FC4B4">Pets</div>
+            <div style="font-weight: 800; font-size: 24px; letter-spacing: -0.03em">385</div>
+            <div class="mono" style="margin-top: 4px; font-size: 11px; color: #C9F06B">{{t.pets.save}}</div>
+          </button>
+          <button class="tile rise" onClick="{{t.commute.pick}}" aria-pressed="{{t.commute.on}}" style="all: unset; box-sizing: border-box; display: block; padding: 16px; border-radius: 24px; background: {{t.commute.bg}}; border: 1px solid {{t.commute.border}}; box-shadow: {{t.commute.glow}}; cursor: pointer; animation-delay: .4s">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M6.5 7.5h11l1.5 4h-14Z"></path><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg>
+            <div style="margin-top: 14px; font-size: 13px; color: #9FC4B4">Commute · Water</div>
+            <div style="font-weight: 800; font-size: 24px; letter-spacing: -0.03em">280 · 17</div>
+            <div class="mono" style="margin-top: 4px; font-size: 11px; color: #C9F06B">{{t.commute.save}}</div>
+          </button>
+        </div>
+      </div>
+
+      <section class="tile" style="margin-top: 30px; padding: 20px; border-radius: 28px; background: #C9F06B; color: #0B231C">
+        <div class="mono" style="font-size: 11px">TOP OPPORTUNITY</div>
+        <h3 style="margin: 8px 0 6px; font-size: 24px; line-height: 1.1; font-weight: 800; letter-spacing: -0.03em">Keep red meat to one or two days a week</h3>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 12px">
+          <p style="margin: 0; font-size: 14px; line-height: 1.45">Swap one more beef or lamb dinner for chicken or plants.</p>
+          <span style="flex: none; font-weight: 800; font-size: 28px; letter-spacing: -0.04em">−1,066</span>
+        </div>
+        <a href="Meals.dc.html" style="margin-top: 16px; display: flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 99px; background: #0B231C; color: #C9F06B; font-weight: 700; font-size: 15px; text-decoration: none">Start this habit</a>
+      </section>
+
+      <section class="tile" style="padding: 20px; border-radius: 28px; background: rgba(243,240,230,.06); border: 1px solid rgba(243,240,230,.10)">
+        <div style="font-size: 13px; color: #9FC4B4">If you build these habits</div>
+        <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 99px; background: rgba(243,240,230,.06)">
+          <sc-for list="{{stages}}" as="st" hint-placeholder-count="3">
+            <button onClick="{{st.pick}}" aria-pressed="{{st.on}}" style="all: unset; box-sizing: border-box; min-height: 44px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 700; cursor: pointer; background: {{st.bg}}; color: {{st.ink}}; transition: background .3s, color .3s">{{st.label}}</button>
+          </sc-for>
+        </div>
+        <div style="margin-top: 16px; display: flex; align-items: baseline; gap: 8px"><span style="font-weight: 800; font-size: 40px; letter-spacing: -0.04em; font-variant-numeric: tabular-nums">{{stageValue}}</span><span class="mono" style="font-size: 11px; color: #9FC4B4">kg / yr</span></div>
+        <div style="position: relative; margin-top: 10px; height: 14px; border-radius: 99px; background: rgba(243,240,230,.08)">
+          <div style="height: 14px; width: {{stageW}}%; border-radius: 99px; background: {{stageBar}}; transition: width .9s cubic-bezier(.3,1.3,.5,1), background .4s"></div>
+          <span style="position: absolute; left: 37%; top: -4px; bottom: -4px; width: 2px; background: #F08A5D"></span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 99px; background: rgba(11,35,28,.7); border: 1px solid rgba(243,240,230,.12); backdrop-filter: blur(18px)">
+    <a href="Meals.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 600; font-size: 14px; color: #B9D3C8; text-decoration: none">Survey</a>
+    <a href="Bento-Results.dc.html" aria-current="page" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #0B231C; background: #F3F0E6; text-decoration: none">Results</a>
+    <a href="Bento-Results.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 600; font-size: 14px; color: #B9D3C8; text-decoration: none">Habits</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, ready: false, sel: 'meals', stage: 'now' };
+  }
+  componentDidMount() {
+    const target = 6746, dur = 1500, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(target * (1 - Math.pow(1 - k, 4))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+    this.timer = setTimeout(() => this.setState({ ready: true }), 150);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    clearTimeout(this.timer);
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const ready = this.state.ready;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const data = {
+      meals: { real: 1066, max: 1745, v: 2314 },
+      bank: { real: 1175, max: 1931, v: 1931 },
+      home: { real: 247, max: 1326, v: 1451 },
+      pets: { real: 96, max: 193, v: 385 },
+      flights: { real: 356, max: 367, v: 367 },
+      commute: { real: 270, max: 287, v: 297 }
+    };
+    const t = {};
+    Object.keys(data).forEach((key) => {
+      const on = this.state.sel === key;
+      const d = data[key];
+      t[key] = {
+        on: on ? 'true' : 'false',
+        bg: on ? 'rgba(201,240,107,.10)' : 'rgba(243,240,230,.06)',
+        border: on ? 'rgba(201,240,107,.6)' : 'rgba(243,240,230,.10)',
+        glow: on ? '0 0 30px rgba(201,240,107,.18)' : 'none',
+        save: on ? 'save −' + fmt(d.real) + ' · max −' + fmt(d.max) : 'tap for savings',
+        w: ready ? (d.v / 2314) * 100 : 0,
+        pick: () => this.setState({ sel: key })
+      };
+    });
+    const ring = (len, frac) => (ready ? len * (1 - frac) : len).toFixed(1);
+    const STAGES = {
+      now: { label: 'Now', v: 6746, bar: '#F08A5D' },
+      real: { label: 'Realistic', v: 3536, bar: '#9FC4B4' },
+      all: { label: 'All the way', v: 1654, bar: '#C9F06B' }
+    };
+    const st = this.state.stage;
+    const stages = Object.keys(STAGES).map((id) => ({
+      label: STAGES[id].label, on: st === id ? 'true' : 'false',
+      bg: st === id ? '#F3F0E6' : 'transparent', ink: st === id ? '#0B231C' : '#B9D3C8',
+      pick: () => this.setState({ stage: id })
+    }));
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pBlobA: (s * 0.5 * k).toFixed(1),
+      pBlobB: (-s * 0.3 * k).toFixed(1),
+      pColA: (s * 0.06 * k).toFixed(1),
+      pColB: (-s * 0.04 * k).toFixed(1),
+      countLabel: fmt(this.state.count),
+      ringYou: ring(389.6, 6.746 / 8),
+      ringUk: ring(289, 3.86 / 8),
+      ringBudget: ring(188.5, 2.5 / 8),
+      t, stages,
+      stageValue: fmt(STAGES[st].v),
+      stageW: ready ? (STAGES[st].v / 6746) * 100 : 0,
+      stageBar: STAGES[st].bar
+    };
+  }
+}
+</script>
+</body>
+</html>

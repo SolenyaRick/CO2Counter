@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Weekly meals, Puff</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Nunito:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1E2350}a:hover{color:#4B4FA0}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.fr{font-family:Fredoka,sans-serif}
+@keyframes drop{0%{transform:translateY(-60px) rotate(-20deg) scale(.6);opacity:0}60%{transform:translateY(6px) rotate(6deg) scale(1.05);opacity:1}100%{transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes drift{from{transform:translateX(-24px)}to{transform:translateX(24px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.drop{animation:drop .55s cubic-bezier(.3,1.4,.5,1) both}
+.bob{animation:bob 3s ease-in-out infinite}
+.drift{animation:drift 8s ease-in-out infinite alternate}
+.spin{animation:spin 30s linear infinite}
+.squish{transition:transform .18s cubic-bezier(.3,1.8,.5,1),background .3s}
+.squish:active{transform:translateY(4px) scale(.96)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #FFF8EA; color: #1E2350; font-family: Nunito, system-ui, sans-serif">
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+
+    <header style="position: relative; height: 190px; background: #CFE6FF; overflow: hidden">
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pFar}}px,0)">
+        <svg class="drift" width="110" height="46" viewBox="0 0 120 50" style="position: absolute; left: 220px; top: 30px" aria-hidden="true"><path d="M20 48a18 18 0 0 1 4-35 26 26 0 0 1 48 0 20 20 0 0 1 28 35Z" fill="#FFFFFF" opacity=".8"></path></svg>
+        <svg class="drift" width="70" height="30" viewBox="0 0 120 50" style="position: absolute; left: 30px; top: 110px; animation-duration: 11s" aria-hidden="true"><path d="M20 48a18 18 0 0 1 4-35 26 26 0 0 1 48 0 20 20 0 0 1 28 35Z" fill="#FFFFFF" opacity=".8"></path></svg>
+      </div>
+      <div style="position: absolute; left: 20px; right: 20px; top: 16px; display: flex; justify-content: space-between; align-items: center">
+        <a class="squish" href="Puff-Results.dc.html" aria-label="Back to my cloud" style="width: 44px; height: 44px; border-radius: 99px; background: #FFFFFF; border: 2.5px solid #1E2350; display: grid; place-items: center; color: #1E2350"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+        <div style="display: flex; gap: 5px" aria-label="Step 1 of 6">
+          <span style="width: 22px; height: 10px; border-radius: 99px; background: #1E2350"></span><span style="width: 10px; height: 10px; border-radius: 99px; background: #FFFFFF; border: 2px solid #1E2350; box-sizing: border-box"></span><span style="width: 10px; height: 10px; border-radius: 99px; background: #FFFFFF; border: 2px solid #1E2350; box-sizing: border-box"></span><span style="width: 10px; height: 10px; border-radius: 99px; background: #FFFFFF; border: 2px solid #1E2350; box-sizing: border-box"></span><span style="width: 10px; height: 10px; border-radius: 99px; background: #FFFFFF; border: 2px solid #1E2350; box-sizing: border-box"></span><span style="width: 10px; height: 10px; border-radius: 99px; background: #FFFFFF; border: 2px solid #1E2350; box-sizing: border-box"></span>
+        </div>
+      </div>
+      <div style="position: absolute; left: 20px; right: 150px; top: 82px; transform: translate3d(0,{{pText}}px,0)">
+        <h1 class="fr" style="margin: 0; font-size: 34px; line-height: 1; font-weight: 700">What’s on your plate?</h1>
+      </div>
+      <div style="position: absolute; right: 18px; top: 70px; transform: translate3d(0,{{pPuff}}px,0)">
+        <div class="bob" style="text-align: center">
+          <div style="transform: scale({{puffScale}}); transition: transform .7s cubic-bezier(.3,1.6,.45,1)">
+            <svg width="120" height="92" viewBox="0 0 250 190" role="img" aria-label="Puff grows when the week has more emissions">
+              <path d="M58 170a44 44 0 0 1-8-87 58 58 0 0 1 108-26 46 46 0 0 1 64 46 38 38 0 0 1-14 67Z" fill="#D9D4F2" stroke="#1E2350" stroke-width="7" stroke-linejoin="round"></path>
+              <ellipse cx="100" cy="112" rx="10" ry="13" fill="#1E2350"></ellipse><ellipse cx="152" cy="112" rx="10" ry="13" fill="#1E2350"></ellipse>
+              <path d="{{puffMouth}}" fill="none" stroke="#1E2350" stroke-width="7" stroke-linecap="round"></path>
+            </svg>
+          </div>
+          <div class="fr" style="margin-top: -4px; font-weight: 700; font-size: 15px">{{weekTotal}} kg/wk</div>
+        </div>
+      </div>
+      <svg width="390" height="40" viewBox="0 0 390 40" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: -1px" aria-hidden="true"><path d="M0 20q30-18 60 0t65 0 65 0 65 0 65 0 70 0V40H0Z" fill="#FFF8EA"></path></svg>
+    </header>
+
+    <div style="padding: 6px 20px 140px; display: flex; flex-direction: column; gap: 22px">
+      <section>
+        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px">
+          <sc-for list="{{diets}}" as="d" hint-placeholder-count="4">
+            <button class="squish" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="all: unset; box-sizing: border-box; flex: none; min-height: 44px; padding: 0 16px; border-radius: 99px; display: grid; place-items: center; font-weight: 800; font-size: 14px; border: 2.5px solid #1E2350; background: {{d.bg}}; color: {{d.ink}}; cursor: pointer">{{d.label}}</button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{days}}" as="day" hint-placeholder-count="7">
+            <button class="squish" onClick="{{day.pick}}" aria-pressed="{{day.on}}" aria-label="{{day.full}}" style="all: unset; box-sizing: border-box; aspect-ratio: 1 / 1.25; border-radius: 99px; border: 2.5px solid #1E2350; background: {{day.bg}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transform: translateY({{day.lift}}px); box-shadow: {{day.shadow}}">
+              <span style="font-weight: 800; font-size: 12px">{{day.short}}</span>
+              <span style="width: 12px; height: 12px; border-radius: 99px; border: 2px solid #1E2350; background: {{day.dot}}"></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="position: relative; margin-top: 18px; height: 220px; display: grid; place-items: center">
+          <svg class="spin" width="220" height="220" viewBox="0 0 220 220" style="position: absolute" aria-hidden="true"><circle cx="110" cy="110" r="104" fill="none" stroke="#1E2350" stroke-width="2.5" stroke-dasharray="4 10" stroke-linecap="round"></circle></svg>
+          <div style="position: absolute; width: 176px; height: 176px; border-radius: 99px; background: #FFFFFF; border: 2.5px solid #1E2350; box-shadow: 0 6px 0 #1E2350"></div>
+          <div style="position: absolute; width: 132px; height: 132px; border-radius: 99px; border: 2.5px dashed #E3DCC8"></div>
+          <sc-for list="{{plate}}" as="p" hint-placeholder-count="1">
+            <div class="drop" style="position: relative">
+              <sc-if value="{{p.isVegan}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20C4 10.5 10 4.5 20 4c0 10-6 16-16 16Z" fill="#7BE0B0"></path><path d="M4 20l8-8"></path></svg></sc-if>
+              <sc-if value="{{p.isVeggie}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 7a3.6 3.6 0 0 1 3 3.6L5 21l-2-2Z" fill="#FFB36B"></path><path d="M15.5 7.5c.5-2.5 2-4 4.5-4.5-.3 2.5-1.8 4-4.5 4.5ZM16.5 8.5c2-.8 4-.5 5 .5-1.5 1.2-3.5 1.2-5-.5Z" fill="#7BE0B0"></path><path d="M9 13l1.5 1.5M11.5 10.5 13 12"></path></svg></sc-if>
+              <sc-if value="{{p.isFish}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c3-4.5 9-6 14.5-1L21 8v8l-4.5-3C11 18 5 16.5 2 12Z" fill="#9BD3FF"></path><circle cx="7.5" cy="11" r="1.2" fill="#1E2350"></circle><path d="M11 9.5q1.5 2.5 0 5"></path></svg></sc-if>
+              <sc-if value="{{p.isChicken}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3a6.5 6.5 0 0 1 6.5 6.5c0 3.8-3.8 6.5-7.5 6l-3.5 3.5" fill="#FFD34E"></path><path d="M14.5 3c-3.8 0-4.4 4.6-4 9.5l3 3c3.7.5 7.5-2.2 7.5-6A6.5 6.5 0 0 0 14.5 3Z" fill="#FFD34E"></path><path d="M10.5 12.5 7 16a2 2 0 1 0-2.5 2.5A2 2 0 1 0 7 21l3-3" fill="#FFFFFF"></path></svg></sc-if>
+              <sc-if value="{{p.isPork}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7.5 5 3l4.5 2.5M18 7.5 19 3l-4.5 2.5" fill="#FFC2CF"></path><circle cx="12" cy="13" r="8" fill="#FFC2CF"></circle><ellipse cx="12" cy="15.5" rx="3.5" ry="2.5" fill="#FF9DB3"></ellipse><circle cx="8.5" cy="11" r=".9" fill="#1E2350"></circle><circle cx="15.5" cy="11" r=".9" fill="#1E2350"></circle></svg></sc-if>
+              <sc-if value="{{p.isBeef}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5C6.5 4 14 3 18.5 6.5c3.5 2.7 1.8 9-3.5 10.7-3 1-4 3.3-7.3 3.3-3.2 0-5.4-3-4.4-6.2.6-2.2 0-3.6.7-5.8Z" fill="#FF8A7A"></path><circle cx="13.5" cy="11" r="2.6" fill="#FFFFFF"></circle><path d="M7 15c1 .5 2 .5 3 0" stroke="#FFFFFF"></path></svg></sc-if>
+              <sc-if value="{{p.isLamb}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 16v4.5M15.5 16v4.5"></path><path d="M6.5 16.5a3.2 3.2 0 0 1-1.3-6.1A3.8 3.8 0 0 1 12 7.5a3.8 3.8 0 0 1 6.5 2.8 3.2 3.2 0 0 1-1.3 6.2Z" fill="#FFFFFF"></path><ellipse cx="18" cy="11" rx="2.6" ry="2.2" fill="#1E2350"></ellipse></svg></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <div style="text-align: center; margin-top: 2px">
+          <span class="fr" style="font-weight: 700; font-size: 20px">{{dayName}}: {{mealLabel}}</span>
+          <span style="display: block; font-weight: 700; font-size: 14px; color: #4B4F7A">{{mealKg}} kg CO₂e</span>
+        </div>
+
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{meals}}" as="m" hint-placeholder-count="7">
+            <button class="squish" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 76px; border-radius: 20px; border: 2.5px solid #1E2350; background: {{m.bg}}; box-shadow: {{m.shadow}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer">
+              <sc-if value="{{m.isVegan}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20C4 10.5 10 4.5 20 4c0 10-6 16-16 16Z" fill="#7BE0B0"></path><path d="M4 20l8-8"></path></svg></sc-if>
+              <sc-if value="{{m.isVeggie}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 7a3.6 3.6 0 0 1 3 3.6L5 21l-2-2Z" fill="#FFB36B"></path><path d="M15.5 7.5c.5-2.5 2-4 4.5-4.5-.3 2.5-1.8 4-4.5 4.5Z" fill="#7BE0B0"></path></svg></sc-if>
+              <sc-if value="{{m.isFish}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c3-4.5 9-6 14.5-1L21 8v8l-4.5-3C11 18 5 16.5 2 12Z" fill="#9BD3FF"></path><circle cx="7.5" cy="11" r="1.2" fill="#1E2350"></circle></svg></sc-if>
+              <sc-if value="{{m.isChicken}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3c-3.8 0-4.4 4.6-4 9.5l3 3c3.7.5 7.5-2.2 7.5-6A6.5 6.5 0 0 0 14.5 3Z" fill="#FFD34E"></path><path d="M10.5 12.5 7 16a2 2 0 1 0-2.5 2.5A2 2 0 1 0 7 21l3-3" fill="#FFFFFF"></path></svg></sc-if>
+              <sc-if value="{{m.isPork}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8" fill="#FFC2CF"></circle><ellipse cx="12" cy="15.5" rx="3.5" ry="2.5" fill="#FF9DB3"></ellipse></svg></sc-if>
+              <sc-if value="{{m.isBeef}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5C6.5 4 14 3 18.5 6.5c3.5 2.7 1.8 9-3.5 10.7-3 1-4 3.3-7.3 3.3-3.2 0-5.4-3-4.4-6.2.6-2.2 0-3.6.7-5.8Z" fill="#FF8A7A"></path><circle cx="13.5" cy="11" r="2.6" fill="#FFFFFF"></circle></svg></sc-if>
+              <sc-if value="{{m.isLamb}}" hint-placeholder-val="{{false}}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1E2350" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 16v4.5M15.5 16v4.5"></path><path d="M6.5 16.5a3.2 3.2 0 0 1-1.3-6.1A3.8 3.8 0 0 1 12 7.5a3.8 3.8 0 0 1 6.5 2.8 3.2 3.2 0 0 1-1.3 6.2Z" fill="#FFFFFF"></path></svg></sc-if>
+              <span style="font-weight: 800; font-size: 12px">{{m.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 20px; right: 20px; bottom: 20px; display: flex; gap: 10px">
+    <a class="squish" href="Puff-Results.dc.html" style="min-height: 56px; padding: 0 22px; border-radius: 99px; display: grid; place-items: center; background: #FFFFFF; border: 2.5px solid #1E2350; box-shadow: 0 5px 0 #1E2350; font-weight: 800; font-size: 15px; color: #1E2350; text-decoration: none">Back</a>
+    <a class="squish" href="Puff-Results.dc.html" style="flex: 1; min-height: 56px; border-radius: 99px; display: grid; place-items: center; background: #FFD34E; border: 2.5px solid #1E2350; box-shadow: 0 5px 0 #1E2350; font-weight: 800; font-size: 16px; color: #1E2350; text-decoration: none">Next: getting around</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, diet: 'meat', day: 1, week: ['chicken', 'beef', 'veggie', 'chicken', 'fish', 'pork', 'veggie'] };
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const MEALS = [
+      { key: 'vegan', label: 'Vegan', f: 1.38, dot: '#7BE0B0' },
+      { key: 'veggie', label: 'Veggie', f: 2.45, dot: '#FFB36B' },
+      { key: 'fish', label: 'Fish', f: 0.41, dot: '#9BD3FF' },
+      { key: 'chicken', label: 'Chicken', f: 2.73, dot: '#FFD34E' },
+      { key: 'pork', label: 'Pork', f: 3.6, dot: '#FFC2CF' },
+      { key: 'beef', label: 'Beef', f: 23.25, dot: '#FF8A7A' },
+      { key: 'lamb', label: 'Lamb', f: 8.76, dot: '#FFFFFF' }
+    ];
+    const byKey = {};
+    MEALS.forEach((m) => { byKey[m.key] = m; });
+    const flags = (key) => ({ isVegan: key === 'vegan', isVeggie: key === 'veggie', isFish: key === 'fish', isChicken: key === 'chicken', isPork: key === 'pork', isBeef: key === 'beef', isLamb: key === 'lamb' });
+    const full = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const week = this.state.week;
+    const cur = week[this.state.day];
+    const total = week.reduce((a, m) => a + byKey[m].f, 0);
+    const days = week.map((m, i) => {
+      const on = this.state.day === i;
+      return {
+        short: full[i].slice(0, 2), full: full[i], on: on ? 'true' : 'false',
+        bg: on ? '#FFD34E' : '#FFFFFF', dot: byKey[m].dot,
+        lift: on ? -4 : 0, shadow: on ? '0 5px 0 #1E2350' : 'none',
+        pick: () => this.setState({ day: i })
+      };
+    });
+    const meals = MEALS.map((m) => {
+      const on = cur === m.key;
+      return {
+        ...m, ...flags(m.key), on: on ? 'true' : 'false',
+        bg: on ? '#FFD34E' : '#FFFFFF', shadow: on ? '0 4px 0 #1E2350' : 'none',
+        pick: () => {
+          const next = week.slice();
+          next[this.state.day] = m.key;
+          this.setState({ week: next, diet: 'meat', drop: (this.state.drop || 0) + 1 });
+        }
+      };
+    });
+    const DIETS = [
+      { key: 'meat', label: 'A bit of everything', meal: null },
+      { key: 'vegan', label: 'Vegan', meal: 'vegan' },
+      { key: 'veggie', label: 'Vegetarian', meal: 'veggie' },
+      { key: 'pesc', label: 'Pescatarian', meal: 'fish' }
+    ];
+    const diets = DIETS.map((d) => ({
+      label: d.label, on: this.state.diet === d.key ? 'true' : 'false',
+      bg: this.state.diet === d.key ? '#1E2350' : '#FFFFFF',
+      ink: this.state.diet === d.key ? '#FFFFFF' : '#1E2350',
+      pick: () => this.setState(d.meal ? { diet: d.key, week: week.map(() => d.meal) } : { diet: d.key })
+    }));
+    const mood = total > 30 ? 'M110 142q16-10 32 0' : total > 15 ? 'M112 136q14 10 28 0' : 'M106 132q20 24 40 0';
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pFar: (s * 0.5 * k).toFixed(1),
+      pText: (s * 0.25 * k).toFixed(1),
+      pPuff: (s * 0.15 * k).toFixed(1),
+      puffScale: Math.min(1.15, 0.6 + total / 70).toFixed(2),
+      puffMouth: mood,
+      weekTotal: total.toFixed(1),
+      diets, days, meals,
+      plate: [{ ...flags(cur), id: this.state.day + '-' + cur }],
+      dayName: full[this.state.day],
+      mealLabel: byKey[cur].label,
+      mealKg: byKey[cur].f.toFixed(2)
+    };
+  }
+}
+</script>
+</body>
+</html>

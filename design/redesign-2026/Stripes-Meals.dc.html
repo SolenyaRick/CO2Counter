@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Weekly meals, warming stripes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#111111}a:hover{color:#CB181D}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+.xp{font-family:Archivo,sans-serif;font-stretch:125%}
+@keyframes stamp{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.stamp{animation:stamp .32s cubic-bezier(.3,1.5,.5,1) both}
+.rise{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.cell{transition:background .25s}
+.cell:hover{background:#E2E2DE}
+.press{transition:transform .15s}
+.press:active{transform:translateY(2px)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F7F7F5; color: #111111; font-family: Archivo, system-ui, sans-serif">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: 52px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #F7F7F5; border-bottom: 2px solid #111111">
+    <a class="xp" href="Stripes-Results.dc.html" style="font-weight: 900; font-size: 15px; text-decoration: none; color: #111111">CO2/COUNTER</a>
+    <span class="mono" style="font-size: 11px; font-weight: 700">01 / 06 MEALS</span>
+  </div>
+  <div style="position: absolute; top: 52px; left: 0; right: 0; z-index: 5; height: 4px; background: #E2E2DE"><div style="width: 16.6%; height: 4px; background: #CB181D"></div></div>
+
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 56px 0 0; overflow-y: auto; overflow-x: hidden">
+    <section style="padding: 20px 16px 0">
+      <h1 class="xp rise" style="margin: 0; font-size: 40px; line-height: .92; font-weight: 900; letter-spacing: -0.03em; transform: translate3d({{pTitle}}px,0,0)">WHAT YOU<br>ATE THIS WEEK</h1>
+      <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-end">
+        <span class="mono" style="font-size: 11px; font-weight: 700">MAIN MEALS · KG CO₂E</span>
+        <span class="xp" style="font-weight: 900; font-size: 30px; font-variant-numeric: tabular-nums">{{weekTotal}}</span>
+      </div>
+      <div style="margin-top: 6px; height: 28px; display: flex; border: 2px solid #111111">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+          <span style="flex: {{r.flex}} 1 0; background: {{r.color}}; transition: flex .6s cubic-bezier(.3,1.2,.5,1), background .3s"></span>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="padding: 22px 16px 0">
+      <div class="mono" style="font-size: 11px; font-weight: 700; margin-bottom: 8px">DIET</div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 2px solid #111111">
+        <sc-for list="{{diets}}" as="d" hint-placeholder-count="4">
+          <button class="press" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; display: grid; place-items: center; font-size: 13px; font-weight: 800; cursor: pointer; background: {{d.bg}}; color: {{d.ink}}; border-left: {{d.border}}">{{d.label}}</button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="padding: 22px 16px 0">
+      <div class="mono" style="font-size: 11px; font-weight: 700; margin-bottom: 8px">TAP A CELL · MEALS SORTED LOW → HIGH</div>
+      <div style="display: grid; grid-template-columns: 34px repeat(7, minmax(0, 1fr)); border-top: 2px solid #111111; border-left: 2px solid #111111">
+        <span style="border-right: 1px solid #111111; border-bottom: 2px solid #111111"></span>
+        <sc-for list="{{cols}}" as="c" hint-placeholder-count="7">
+          <span style="height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-right: 1px solid #111111; border-bottom: 2px solid #111111; background: {{c.color}}; color: {{c.ink}}">
+            <sc-if value="{{c.isFish}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M1.5 12C5 6.5 11.5 5.5 16.5 10l6-4v12l-6-4C11.5 18.5 5 17.5 1.5 12ZM7 10.5h2.5V13H7Z"></path></svg></sc-if>
+            <sc-if value="{{c.isVegan}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3 21C3 10 9.5 3.5 21 3c0 11.5-6.5 18-18 18ZM4.5 18.5 13 10l1.4 1.4L6 19.9Z"></path></svg></sc-if>
+            <sc-if value="{{c.isVeggie}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 6.5 18 10.5 5 21.5 2.5 19Z"></path><path d="M15 6l2.5-4.5 2 1L17 7ZM17.5 9 22 6.5l1 2L18.5 11Z"></path></svg></sc-if>
+            <sc-if value="{{c.isChicken}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 2a7 7 0 0 1 7 7c0 4-4 7-8 6.5L10 19.5a2.5 2.5 0 1 1-3.5 3.5 2.5 2.5 0 1 1-3.5-3.5A2.5 2.5 0 0 1 6.5 16l4-4C10 6 11 2 15 2Z"></path></svg></sc-if>
+            <sc-if value="{{c.isPork}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3 3l5 2.5A9 9 0 0 1 16 5.5L21 3l-1.5 6A9 9 0 1 1 4.5 9ZM9 14h6v4H9Z"></path></svg></sc-if>
+            <sc-if value="{{c.isLamb}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 17a4 4 0 0 1-1.5-7.7A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 7.5 3.3A4 4 0 0 1 18 17ZM7.5 17h3v5h-3ZM13.5 17h3v5h-3Z"></path></svg></sc-if>
+            <sc-if value="{{c.isBeef}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3.5 8C6 3 14 2 19 6c4 3 2 10-4 12-3 1-4.5 3.5-8 3.5S1.5 18 2.5 14.5c.7-2.5 0-4.3 1-6.5ZM11.5 9h4v4h-4Z"></path></svg></sc-if>
+            <span class="mono" style="font-size: 9px; font-weight: 700">{{c.f}}</span>
+          </span>
+        </sc-for>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+          <span class="mono" style="min-height: 46px; display: flex; flex-direction: column; justify-content: center; padding-left: 4px; font-size: 11px; font-weight: 700; border-right: 1px solid #111111; border-bottom: 1px solid #111111; background: {{r.labelBg}}">{{r.short}}<span style="font-size: 9px; font-weight: 500">{{r.kg}}</span></span>
+          <sc-for list="{{r.cells}}" as="cell" hint-placeholder-count="7">
+            <button class="cell" onClick="{{cell.pick}}" aria-label="{{cell.aria}}" aria-pressed="{{cell.on}}" style="all: unset; box-sizing: border-box; min-height: 46px; display: grid; place-items: center; border-right: 1px solid #111111; border-bottom: 1px solid #111111; cursor: pointer">
+              <sc-if value="{{cell.on}}" hint-placeholder-val="{{false}}">
+                <span class="stamp" style="width: 100%; height: 100%; min-height: 45px; display: grid; place-items: center; background: {{cell.color}}; color: {{cell.ink}}">
+                  <sc-if value="{{cell.isFish}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M1.5 12C5 6.5 11.5 5.5 16.5 10l6-4v12l-6-4C11.5 18.5 5 17.5 1.5 12ZM7 10.5h2.5V13H7Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isVegan}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3 21C3 10 9.5 3.5 21 3c0 11.5-6.5 18-18 18ZM4.5 18.5 13 10l1.4 1.4L6 19.9Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isVeggie}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 6.5 18 10.5 5 21.5 2.5 19Z"></path><path d="M15 6l2.5-4.5 2 1L17 7ZM17.5 9 22 6.5l1 2L18.5 11Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isChicken}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 2a7 7 0 0 1 7 7c0 4-4 7-8 6.5L10 19.5a2.5 2.5 0 1 1-3.5 3.5 2.5 2.5 0 1 1-3.5-3.5A2.5 2.5 0 0 1 6.5 16l4-4C10 6 11 2 15 2Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isPork}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3 3l5 2.5A9 9 0 0 1 16 5.5L21 3l-1.5 6A9 9 0 1 1 4.5 9ZM9 14h6v4H9Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isLamb}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 17a4 4 0 0 1-1.5-7.7A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 7.5 3.3A4 4 0 0 1 18 17ZM7.5 17h3v5h-3ZM13.5 17h3v5h-3Z"></path></svg></sc-if>
+                  <sc-if value="{{cell.isBeef}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true"><path d="M3.5 8C6 3 14 2 19 6c4 3 2 10-4 12-3 1-4.5 3.5-8 3.5S1.5 18 2.5 14.5c.7-2.5 0-4.3 1-6.5ZM11.5 9h4v4h-4Z"></path></svg></sc-if>
+                </span>
+              </sc-if>
+              <sc-if value="{{cell.off}}" hint-placeholder-val="{{true}}"><span style="width: 4px; height: 4px; background: #BDBDB8"></span></sc-if>
+            </button>
+          </sc-for>
+        </sc-for>
+      </div>
+      <sc-if value="{{hasTip}}" hint-placeholder-val="{{true}}">
+        <div class="mono rise" style="margin-top: 12px; padding: 12px; background: #111111; color: #F7F7F5; font-size: 11px; line-height: 1.6"><span style="color: #FB6A4A; font-weight: 700">▲ {{tipHead}}</span><br>{{tip}}</div>
+      </sc-if>
+    </section>
+
+    <section style="padding: 26px 16px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <div style="border: 2px solid #111111; padding: 12px">
+        <div class="mono" style="font-size: 10px; font-weight: 700">EATING OUT / WEEK</div>
+        <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between">
+          <button class="press" onClick="{{eatLess}}" aria-label="Fewer meals out" style="all: unset; box-sizing: border-box; width: 44px; height: 44px; display: grid; place-items: center; border: 2px solid #111111; font-weight: 900; font-size: 20px; cursor: pointer">−</button>
+          <span class="xp" style="font-weight: 900; font-size: 30px">{{eatOut}}</span>
+          <button class="press" onClick="{{eatMore}}" aria-label="More meals out" style="all: unset; box-sizing: border-box; width: 44px; height: 44px; display: grid; place-items: center; background: #111111; color: #F7F7F5; font-weight: 900; font-size: 20px; cursor: pointer">+</button>
+        </div>
+        <div class="mono" style="margin-top: 6px; font-size: 10px">×1.78 PER MEAL OUT</div>
+      </div>
+      <div style="border: 2px solid #111111; padding: 12px">
+        <div class="mono" style="font-size: 10px; font-weight: 700">FOOD WASTED</div>
+        <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; height: 44px; align-items: end">
+          <sc-for list="{{waste}}" as="w" hint-placeholder-count="4">
+            <button class="press" onClick="{{w.pick}}" aria-label="{{w.aria}}" aria-pressed="{{w.on}}" style="all: unset; box-sizing: border-box; height: {{w.h}}px; background: {{w.color}}; cursor: pointer; transition: background .3s"></button>
+          </sc-for>
+        </div>
+        <div class="mono" style="margin-top: 6px; font-size: 10px; font-weight: 700">{{wasteLabel}}</div>
+      </div>
+    </section>
+    <div style="height: 110px"></div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 2fr; border-top: 2px solid #111111">
+    <a class="mono press" href="Stripes-Results.dc.html" style="min-height: 64px; display: grid; place-items: center; background: #F7F7F5; color: #111111; font-size: 12px; font-weight: 700; text-decoration: none; border-right: 2px solid #111111">← RESULTS</a>
+    <a class="mono press" href="Stripes-Results.dc.html" style="min-height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: #111111; color: #F7F7F5; font-size: 12px; font-weight: 700; text-decoration: none"><span>NEXT: TRAVEL</span><span>→</span></a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      scroll: 0, diet: 'meat', eatOut: 1, waste: 1,
+      week: ['chicken', 'beef', 'veggie', 'chicken', 'fish', 'pork', 'veggie']
+    };
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const MEALS = [
+      { key: 'fish', label: 'Fish', f: 0.41, color: '#08306B', ink: '#FFFFFF' },
+      { key: 'vegan', label: 'Vegan', f: 1.38, color: '#2171B5', ink: '#FFFFFF' },
+      { key: 'veggie', label: 'Vegetarian', f: 2.45, color: '#6BAED6', ink: '#111111' },
+      { key: 'chicken', label: 'Chicken', f: 2.73, color: '#FCBBA1', ink: '#111111' },
+      { key: 'pork', label: 'Pork', f: 3.6, color: '#FB6A4A', ink: '#111111' },
+      { key: 'lamb', label: 'Lamb', f: 8.76, color: '#CB181D', ink: '#FFFFFF' },
+      { key: 'beef', label: 'Beef', f: 23.25, color: '#67000D', ink: '#FFFFFF' }
+    ];
+    const byKey = {};
+    MEALS.forEach((m) => { byKey[m.key] = m; });
+    const flags = (key) => ({ isFish: key === 'fish', isVegan: key === 'vegan', isVeggie: key === 'veggie', isChicken: key === 'chicken', isPork: key === 'pork', isLamb: key === 'lamb', isBeef: key === 'beef' });
+    const names = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const full = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const week = this.state.week;
+    const cols = MEALS.map((m) => ({ ...flags(m.key), f: m.f.toFixed(2), color: m.color, ink: m.ink }));
+    const rows = week.map((cur, i) => ({
+      short: names[i],
+      kg: byKey[cur].f.toFixed(2),
+      flex: Math.max(0.5, byKey[cur].f).toFixed(2),
+      color: byKey[cur].color,
+      labelBg: byKey[cur].f > 8 ? '#FCBBA1' : 'transparent',
+      cells: MEALS.map((m) => {
+        const on = cur === m.key;
+        return {
+          ...flags(m.key), on, off: !on, color: m.color, ink: m.ink,
+          aria: full[i] + ': ' + m.label,
+          pick: () => {
+            const next = week.slice();
+            next[i] = m.key;
+            this.setState({ week: next, diet: 'meat' });
+          }
+        };
+      })
+    }));
+    const total = week.reduce((a, m) => a + byKey[m].f, 0);
+    const DIETS = [
+      { key: 'vegan', label: 'VEGAN', meal: 'vegan' },
+      { key: 'veggie', label: 'VEGGIE', meal: 'veggie' },
+      { key: 'pesc', label: 'FISH', meal: 'fish' },
+      { key: 'meat', label: 'MIXED', meal: null }
+    ];
+    const diets = DIETS.map((d, i) => {
+      const on = this.state.diet === d.key;
+      return {
+        label: d.label, on: on ? 'true' : 'false',
+        bg: on ? '#111111' : 'transparent', ink: on ? '#F7F7F5' : '#111111',
+        border: i === 0 ? '0' : '2px solid #111111',
+        pick: () => this.setState(d.meal ? { diet: d.key, week: week.map(() => d.meal) } : { diet: d.key })
+      };
+    });
+    const red = week.filter((m) => m === 'beef' || m === 'lamb');
+    const hasTip = red.length > 0;
+    const swapSave = red.reduce((a, m) => a + (byKey[m].f - byKey.chicken.f) * 52, 0);
+    const WASTE = [
+      { label: 'LOW 0–3%', h: 14 }, { label: 'SOME 3–10%', h: 24 }, { label: 'HIGH 10–25%', h: 34 }, { label: 'SEVERE 25%+', h: 44 }
+    ];
+    const wcol = ['#2171B5', '#FCBBA1', '#FB6A4A', '#CB181D'];
+    const waste = WASTE.map((w, i) => ({
+      h: w.h, aria: 'Food waste ' + w.label.toLowerCase(), on: this.state.waste === i ? 'true' : 'false',
+      color: i <= this.state.waste ? wcol[this.state.waste] : '#E2E2DE',
+      pick: () => this.setState({ waste: i })
+    }));
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pTitle: (-Math.min(s, 300) * 0.3 * k).toFixed(1),
+      weekTotal: total.toFixed(1),
+      rows, cols, diets,
+      hasTip,
+      tipHead: red.length + ' RED-MEAT DAY' + (red.length > 1 ? 'S' : ''),
+      tip: 'SWAP TO CHICKEN → −' + Math.round(swapSave).toLocaleString('en-GB') + ' KG CO₂E / YEAR',
+      eatOut: this.state.eatOut === 4 ? '4+' : String(this.state.eatOut),
+      eatLess: () => this.setState({ eatOut: Math.max(0, this.state.eatOut - 1) }),
+      eatMore: () => this.setState({ eatOut: Math.min(4, this.state.eatOut + 1) }),
+      waste, wasteLabel: WASTE[this.state.waste].label
+    };
+  }
+}
+</script>
+</body>
+</html>

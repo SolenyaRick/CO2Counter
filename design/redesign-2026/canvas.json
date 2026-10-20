@@ -1,0 +1,328 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Bento-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "G · Glass bento results",
+      "w": 390,
+      "x": 470,
+      "y": 7218
+    },
+    "Canopy-Mascot.dc.html": {
+      "h": 844,
+      "title": "D · Meet Mol",
+      "w": 860,
+      "x": 470,
+      "y": 4844
+    },
+    "Canopy-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "D · Results with Mol",
+      "w": 390,
+      "x": 0,
+      "y": 4844
+    },
+    "Commute.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "Survey 2 · Commute",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Earth-Results.dc.html": {
+      "expand": "fill",
+      "h": 1560,
+      "is_interactive": true,
+      "title": "Earthy Glass · Results",
+      "w": 1478,
+      "x": 0,
+      "y": 10068
+    },
+    "Earth-Survey.dc.html": {
+      "expand": "fill",
+      "h": 1040,
+      "is_interactive": true,
+      "title": "Earthy Glass · Survey, weekly meals",
+      "w": 1440,
+      "x": 1520,
+      "y": 10068
+    },
+    "Grove-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "E · Results with Wisp",
+      "w": 390,
+      "x": 0,
+      "y": 6031
+    },
+    "Icons.dc.html": {
+      "h": 860,
+      "is_interactive": true,
+      "title": "Custom icon set",
+      "w": 1330,
+      "x": 0,
+      "y": 1187
+    },
+    "Laptop-Atmosphere.dc.html": {
+      "expand": "fill",
+      "h": 1320,
+      "is_interactive": true,
+      "title": "Laptop · Living Atmosphere (minimal)",
+      "w": 1440,
+      "x": 0,
+      "y": 8405
+    },
+    "Laptop-Glass.dc.html": {
+      "expand": "fill",
+      "h": 1080,
+      "is_interactive": true,
+      "title": "Laptop · Glass Bento (minimal)",
+      "w": 1440,
+      "x": 1520,
+      "y": 8405
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "Results · parallax hero",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Meals.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "Survey 1 · Weekly meals",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Puff-Meals.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "C · Weekly meals",
+      "w": 390,
+      "x": 470,
+      "y": 3657
+    },
+    "Puff-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "C · Results",
+      "w": 390,
+      "x": 0,
+      "y": 3657
+    },
+    "Puff-Style.dc.html": {
+      "h": 844,
+      "title": "C · Style tile",
+      "w": 390,
+      "x": 940,
+      "y": 3657
+    },
+    "Stripes-Meals.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "B · Weekly meals matrix",
+      "w": 390,
+      "x": 470,
+      "y": 2470
+    },
+    "Stripes-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "B · Results",
+      "w": 390,
+      "x": 0,
+      "y": 2470
+    },
+    "Stripes-Style.dc.html": {
+      "h": 844,
+      "title": "B · Style tile",
+      "w": 390,
+      "x": 940,
+      "y": 2470
+    },
+    "Topo-Results.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "F · Topographic results",
+      "w": 390,
+      "x": 0,
+      "y": 7218
+    },
+    "Glass2-Results.dc.html": {
+      "x": 0,
+      "y": 11971,
+      "w": 1440,
+      "h": 1320,
+      "title": "Glass v2 · Results overview",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Glass2-Category.dc.html": {
+      "x": 1520,
+      "y": 11971,
+      "w": 1440,
+      "h": 1180,
+      "title": "Glass v2 · Category page (Flights)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "App-Icon.dc.html": {
+      "x": 0,
+      "y": 13494,
+      "w": 1440,
+      "h": 900,
+      "title": "App icon · Leaf Ledger",
+      "is_interactive": true
+    },
+    "Glass2-Survey.dc.html": {
+      "x": 3040,
+      "y": 11971,
+      "w": 1440,
+      "h": 1420,
+      "title": "Glass v2 · Survey, all 6 steps",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-20T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "canopy": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "D · Canopy, with Mol",
+      "w": 240,
+      "x": 0,
+      "y": 4544
+    },
+    "earth": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Earthy Glass · natural palette, softer feel",
+      "w": 240,
+      "x": 0,
+      "y": 9768
+    },
+    "grove": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "E · Night Grove, with Wisp",
+      "w": 240,
+      "x": 0,
+      "y": 5731
+    },
+    "laptop": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Laptop · clean, crisp, minimal",
+      "w": 240,
+      "x": 0,
+      "y": 8105
+    },
+    "nomascot": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "F & G · Green, no mascot",
+      "w": 240,
+      "x": 0,
+      "y": 6918
+    },
+    "puff": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "C · Puff",
+      "w": 240,
+      "x": 0,
+      "y": 3357
+    },
+    "screens": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Living Atmosphere: app screens",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "stripes": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "B · Warming Stripes",
+      "w": 240,
+      "x": 0,
+      "y": 2170
+    },
+    "system": {
+      "kind": "title1",
+      "maxW": 1330,
+      "text": "Icons & motion",
+      "w": 240,
+      "x": 0,
+      "y": 964
+    },
+    "glass2": {
+      "x": 0,
+      "y": 11671,
+      "text": "Glass v2 · from scratch: overview + category pages",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "appicon": {
+      "x": 0,
+      "y": 13194,
+      "text": "App icon",
+      "kind": "title1",
+      "maxW": 1440
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Meals.dc.html",
+    "Commute.dc.html",
+    "Icons.dc.html",
+    "Stripes-Results.dc.html",
+    "Stripes-Meals.dc.html",
+    "Stripes-Style.dc.html",
+    "Puff-Results.dc.html",
+    "Puff-Meals.dc.html",
+    "Puff-Style.dc.html",
+    "Canopy-Results.dc.html",
+    "Canopy-Mascot.dc.html",
+    "Grove-Results.dc.html",
+    "Topo-Results.dc.html",
+    "Bento-Results.dc.html",
+    "Laptop-Atmosphere.dc.html",
+    "Laptop-Glass.dc.html",
+    "Earth-Results.dc.html",
+    "Earth-Survey.dc.html",
+    "Glass2-Results.dc.html",
+    "Glass2-Category.dc.html",
+    "Glass2-Survey.dc.html",
+    "App-Icon.dc.html"
+  ],
+  "pages": [],
+  "title": "CO2 Counter Redesign"
+}

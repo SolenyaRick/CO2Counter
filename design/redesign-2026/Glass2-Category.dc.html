@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Category: how to improve</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.serif{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.ac{fill:#D9A441;stroke:none}
+.tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{transition:background .2s,color .2s}
+.tab:hover{background:rgba(255,252,245,.8)}
+.add{transition:background .25s,color .25s,border-color .25s,transform .2s cubic-bezier(.3,1.6,.5,1)}
+.add:active{transform:scale(.95)}
+.step{transition:background .2s,transform .25s cubic-bezier(.2,.8,.2,1)}
+.step:hover{background:rgba(255,252,245,.85)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div style="position: absolute; right: -10%; top: -220px; width: 660px; height: 660px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; left: -8%; top: 520px; width: 520px; height: 520px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+      <span style="display: flex; align-items: center; gap: 10px">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <span class="serif" style="font-weight: 600; font-size: 19px">CO2 Counter</span>
+      </span>
+      <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <a href="Glass2-Survey.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
+        <a href="Glass2-Results.dc.html" aria-current="page" style="padding: 9px 18px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 15px; font-weight: 600; text-decoration: none">Results</a>
+        <span aria-disabled="true" title="Habits are coming soon" style="padding: 9px 14px 9px 18px; border-radius: 99px; color: #8A8273; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: default">Habits<span style="padding: 2px 7px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 11px; font-weight: 700">Soon</span></span>
+      </span>
+      <span style="font-size: 15px; font-weight: 600; color: #3F5B3A">Your plan · {{planCount}}</span>
+    </nav>
+
+    <div class="tabs" role="navigation" aria-label="Result sections" style="margin-top: 28px; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; border-bottom: 1px solid rgba(46,42,34,.12)">
+      <a class="tab" href="Glass2-Results.dc.html" style="flex: none; padding: 12px 16px; border-radius: 10px 10px 0 0; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Overview</a>
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="7">
+        <button class="tab" onClick="{{t.pick}}" aria-current="{{t.current}}" style="all: unset; box-sizing: border-box; flex: none; padding: 12px 16px; margin-bottom: -1px; border-bottom: 2px solid {{t.line}}; color: {{t.ink}}; font-size: 15px; font-weight: {{t.weight}}; cursor: pointer">{{t.short}}</button>
+      </sc-for>
+    </div>
+
+    <a href="Glass2-Results.dc.html" style="margin-top: 22px; display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; text-decoration: none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>Back to overview</a>
+
+    <header class="rise" style="position: relative; overflow: hidden; margin-top: 14px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-end; justify-content: space-between">
+        <div aria-hidden="true" style="position: absolute; left: 44%; top: -40px; width: 340px; height: 340px; opacity: .07; transform: rotate(-8deg); pointer-events: none">
+          <sc-if value="{{c.isMeals}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg></sc-if>
+          <sc-if value="{{c.isBank}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5H3Z"></path><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg></sc-if>
+          <sc-if value="{{c.isHome}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 10.5 10 15h3l-1 3.5 3.5-5h-3l.5-3Z"></path><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path></svg></sc-if>
+          <sc-if value="{{c.isPets}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13c-2.5 0-4.5 2.3-4.5 4.3 0 1.6 1.4 2.2 2.6 1.9l1.9-.5 1.9.5c1.2.3 2.6-.3 2.6-1.9 0-2-2-4.3-4.5-4.3Z"></path><circle cx="5.5" cy="11" r="1.8"></circle><circle cx="9.5" cy="6.5" r="1.8"></circle><circle cx="14.5" cy="6.5" r="1.8"></circle><circle cx="18.5" cy="11" r="1.8"></circle></svg></sc-if>
+          <sc-if value="{{c.isFlights}}" hint-placeholder-val="{{true}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg></sc-if>
+          <sc-if value="{{c.isCommute}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path d="M3.5 12h17"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg></sc-if>
+          <sc-if value="{{c.isWater}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.5 4.5 6 8 6 11a6 6 0 0 1-12 0c0-3 2.5-6.5 6-11Z"></path><path d="M9 14.5a3 3 0 0 0 3 3"></path></svg></sc-if>
+        </div>
+      <div style="position: relative; flex: 1 1 420px; min-width: 0">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: #3F5B3A; color: #F6F1E6">
+            <sc-if value="{{c.isMeals}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="17.5" cy="5" r="1.8"></circle><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg></sc-if>
+            <sc-if value="{{c.isBank}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.6"></circle><path d="M3 9.5 12 4l9 5.5H3Z"></path><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg></sc-if>
+            <sc-if value="{{c.isHome}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M13 10.5 10 15h3l-1 3.5 3.5-5h-3l.5-3Z"></path><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path></svg></sc-if>
+            <sc-if value="{{c.isPets}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M12 13c-2.5 0-4.5 2.3-4.5 4.3 0 1.6 1.4 2.2 2.6 1.9l1.9-.5 1.9.5c1.2.3 2.6-.3 2.6-1.9 0-2-2-4.3-4.5-4.3Z"></path><circle cx="5.5" cy="11" r="1.8"></circle><circle cx="9.5" cy="6.5" r="1.8"></circle><circle cx="14.5" cy="6.5" r="1.8"></circle><circle cx="18.5" cy="11" r="1.8"></circle></svg></sc-if>
+            <sc-if value="{{c.isFlights}}" hint-placeholder-val="{{true}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.5"></circle><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg></sc-if>
+            <sc-if value="{{c.isCommute}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M6.5 7.5h11l1.5 4h-14Z"></path><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg></sc-if>
+            <sc-if value="{{c.isWater}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3.5 4.5 6 8 6 11a6 6 0 0 1-12 0c0-3 2.5-6.5 6-11Z"></path><path class="ac" d="M9 14.5a3 3 0 0 0 3 3v-1.6a1.4 1.4 0 0 1-1.4-1.4Z"></path></svg></sc-if>
+          </span>
+          <span style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">{{c.rank}}</span>
+        </div>
+        <h1 class="serif" style="margin: 14px 0 0; font-size: 50px; line-height: 1.05; font-weight: 800">{{c.label}}</h1>
+        <p style="margin: 12px 0 0; max-width: 580px; font-size: 19px; line-height: 1.6; color: #3A362D">{{c.why}}</p>
+      </div>
+      <div style="position: relative; display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+        <div style="text-align: right">
+          <div class="num" style="font-weight: 800; font-size: 60px; line-height: 1">{{c.kg}}</div>
+          <div style="margin-top: 4px; font-size: 16px; color: #4A453A">kg CO₂e a year</div>
+          <div style="margin-top: 4px; font-size: 16px; color: #3A362D; font-weight: 600">{{c.yours}}</div>
+          <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 99px; background: rgba(217,164,65,.18); color: #5A3E0E; font-size: 14px; font-weight: 700">{{c.ukLine}}</div>
+        </div>
+        <figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px">
+          <svg width="120" height="120" viewBox="0 0 42 42" role="img" aria-label="{{c.share}} of your total footprint">
+            <circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>
+            <circle cx="21" cy="21" r="10" fill="none" stroke="#3F5B3A" stroke-width="20" pathLength="100" stroke-dasharray="{{pieDash}}" transform="rotate(-90 21 21)" style="transition: stroke-dasharray 1s cubic-bezier(.2,.8,.2,1)"></circle>
+            <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(255,252,245,.9)" stroke-width="1"></circle>
+          </svg>
+          <figcaption style="text-align: center; line-height: 1.2"><span class="num" style="display: block; font-size: 24px; font-weight: 800; color: #3F5B3A">{{c.share}}</span><span style="font-size: 13px; color: #4A453A">of your footprint</span></figcaption>
+        </figure>
+      </div>
+    </header>
+
+    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section style="flex: 999 1 560px; min-width: 0">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 0 4px">
+          <h2 class="serif" style="margin: 0; font-size: 30px; font-weight: 800">Your 3 to-dos</h2>
+          <span style="font-size: 16px; color: #4A453A">Ranked by impact for you</span>
+        </div>
+        <ol style="list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{c.actions}}" as="a" hint-placeholder-count="3">
+            <li class="rise {{a.delay}}" style="padding: 22px 24px; border-radius: 22px; background: {{a.cardBg}}; border: 1.5px solid {{a.cardBorder}}; backdrop-filter: blur(20px); display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 18px; align-items: center; transition: background .3s, border-color .3s">
+              <span class="num" style="width: 52px; height: 52px; border-radius: 16px; background: {{a.badgeBg}}; color: {{a.badgeInk}}; display: grid; place-items: center; font-weight: 800; font-size: 24px">{{a.n}}</span>
+              <div style="min-width: 0">
+                <span style="display: inline-block; padding: 3px 10px; border-radius: 99px; background: {{a.tagBg}}; color: {{a.tagInk}}; font-size: 13px; font-weight: 700">{{a.tag}}</span>
+                <div class="serif" style="margin-top: 6px; font-weight: 700; font-size: 21px; line-height: 1.25; color: #2E2A22">{{a.title}}</div>
+                <p style="margin: 6px 0 0; font-size: 17px; line-height: 1.6; color: #3A362D">{{a.body}}</p>
+              </div>
+              <button class="add" onClick="{{a.toggle}}" aria-pressed="{{a.added}}" aria-label="{{a.aria}}" style="all: unset; box-sizing: border-box; min-width: 132px; min-height: 52px; padding: 0 18px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{a.btnBg}}; color: {{a.btnInk}}; border: 1.5px solid {{a.btnBorder}}">
+                <sc-if value="{{a.isAdded}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                <sc-if value="{{a.notAdded}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></sc-if>
+                {{a.btnLabel}}
+              </button>
+            </li>
+          </sc-for>
+        </ol>
+      </section>
+
+      <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <section style="padding: 24px; border-radius: 24px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+          <h3 class="serif" style="margin: 0; font-size: 20px; font-weight: 600">What this could drop to</h3>
+          <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px; font-size: 15px">
+            <div><div style="display: flex; justify-content: space-between"><span>Now</span><span class="num" style="font-weight: 700">{{c.kg}} kg</span></div><div style="margin-top: 6px; height: 8px; border-radius: 99px; background: rgba(46,42,34,.07)"><div style="height: 8px; width: {{c.nowW}}%; border-radius: 99px; background: #B8653D; transition: width .8s cubic-bezier(.3,1.3,.5,1)"></div></div></div>
+            <div><div style="display: flex; justify-content: space-between"><span>Realistic</span><span class="num" style="font-weight: 700">{{c.afterReal}} kg</span></div><div style="margin-top: 6px; height: 8px; border-radius: 99px; background: rgba(46,42,34,.07)"><div style="height: 8px; width: {{c.realW}}%; border-radius: 99px; background: #8FA58A; transition: width .8s cubic-bezier(.3,1.3,.5,1)"></div></div></div>
+            <div><div style="display: flex; justify-content: space-between"><span>All the way</span><span class="num" style="font-weight: 700">{{c.afterMax}} kg</span></div><div style="margin-top: 6px; height: 8px; border-radius: 99px; background: rgba(46,42,34,.07)"><div style="height: 8px; width: {{c.maxW}}%; border-radius: 99px; background: #3F5B3A; transition: width .8s cubic-bezier(.3,1.3,.5,1)"></div></div>
+            <sc-if value="{{c.hasUk}}" hint-placeholder-val="{{true}}"><div style="padding-top: 12px; border-top: 1px dashed rgba(46,42,34,.15)"><div style="display: flex; justify-content: space-between"><span>Typical UK resident</span><span class="num" style="font-weight: 700">{{c.ukKg}} kg</span></div><div style="margin-top: 6px; height: 8px; border-radius: 99px; background: rgba(46,42,34,.07)"><div style="height: 8px; box-sizing: border-box; width: {{c.ukW}}%; border-radius: 99px; border: 1.5px dashed rgba(107,74,18,.7); background: repeating-linear-gradient(135deg, rgba(217,164,65,.3) 0 4px, transparent 4px 8px); transition: width .8s cubic-bezier(.3,1.3,.5,1)"></div></div></div></sc-if></div>
+          </div>
+        </section>
+        <section style="padding: 24px; border-radius: 24px; background: rgba(217,164,65,.16); border: 1px solid rgba(217,164,65,.35)">
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6B4A12">Good to know</div>
+          <p class="serif" style="margin: 8px 0 0; font-size: 19px; line-height: 1.4; font-weight: 400">{{c.fact}}</p>
+        </section>
+        <section style="padding: 24px; border-radius: 24px; background: #3F5B3A; color: #F6F1E6">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><h3 class="serif" style="margin: 0; font-size: 20px; font-weight: 600">Your plan</h3><span style="font-size: 14px; color: #DCE3D3">{{planCount}}</span></div>
+          <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #DCE3D3">{{planHint}}</p>
+          <span aria-disabled="true" style="margin-top: 14px; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 99px; border: 1.5px dashed rgba(232,200,138,.7); color: #E8C88A; font-weight: 700; font-size: 15px">Habit tracking coming soon</span>
+        </section>
+      </aside>
+    </div>
+
+    <div style="margin-top: 28px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+      <button class="step" onClick="{{prev}}" style="all: unset; box-sizing: border-box; padding: 18px 20px; border-radius: 20px; border: 1px solid rgba(46,42,34,.12); cursor: pointer; display: flex; align-items: center; gap: 12px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        <span><span style="display: block; font-size: 13px; color: #5C5649">Previous</span><span style="display: block; font-weight: 700; font-size: 16px">{{prevLabel}}</span></span>
+      </button>
+      <button class="step" onClick="{{next}}" style="all: unset; box-sizing: border-box; padding: 18px 20px; border-radius: 20px; border: 1px solid rgba(46,42,34,.12); cursor: pointer; display: flex; align-items: center; justify-content: flex-end; gap: 12px; text-align: right">
+        <span><span style="display: block; font-size: 13px; color: #5C5649">Next</span><span style="display: block; font-weight: 700; font-size: 16px">{{nextLabel}}</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, sel: 'flights', plan: [], ready: false };
+  }
+  componentDidMount() {
+    try {
+      const saved = localStorage.getItem('co2-category');
+      const plan = JSON.parse(localStorage.getItem('co2-plan') || '[]');
+      this.setState({ sel: saved || 'flights', plan: Array.isArray(plan) ? plan : [] });
+    } catch (e) {}
+    this.readyTimer = setTimeout(() => this.setState({ ready: true }), 200);
+    this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
+    window.addEventListener('scroll', this.onWin, { passive: true });
+  }
+  componentWillUnmount() {
+    clearTimeout(this.readyTimer);
+    window.removeEventListener('scroll', this.onWin);
+  }
+  choose(key) {
+    try { localStorage.setItem('co2-category', key); } catch (e) {}
+    this.setState({ sel: key });
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) {}
+  }
+  savePlan(plan) {
+    try { localStorage.setItem('co2-plan', JSON.stringify(plan)); } catch (e) {}
+    this.setState({ plan });
+  }
+  renderVals() {
+    const s = Math.min(this.state.scroll, 800);
+    const k = this.props.parallax ?? 1;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const HIGH = 'Biggest impact', MED = 'Medium impact', EASY = 'Quick win', LONG = 'Longer term';
+    const CATS = [
+      { key: 'meals', uk: 1821, label: 'Meals & diet', short: 'Meals', v: 2314, real: 1066, max: 1745, yours: 'Meat eater · eat out once a week',
+        why: 'What you eat is usually the biggest lever in a personal footprint, and small repeated swaps beat rare drastic changes.',
+        fact: 'A single beef portion can emit more than a week of plant-based meals.',
+        actions: [
+          { title: 'Cut red meat first', tag: HIGH, body: 'Your beef day is the outlier in your week. Swap 2–3 red-meat dinners a week for chicken, fish or plants.', habit: 'Cap beef to 1×/week' },
+          { title: 'Eat more plants, not necessarily 100%', tag: MED, body: 'Two or three plant-based days a week captures most of the benefit. Build a short list of recipes you enjoy.', habit: 'Meatless Monday' },
+          { title: 'Tackle food waste', tag: EASY, body: 'You said you waste “some” food. Meal-plan, shop with a list and use leftovers.', habit: 'Weekly leftover night' }
+        ] },
+      { key: 'bank', uk: null, label: 'Banking & pension', short: 'Money', v: 1931, real: 1175, max: 1931, yours: 'Barclays · pension with Nest',
+        why: 'Banks lend out your savings, and some finance fossil-fuel projects. Moving your money is one action with a lasting effect.',
+        fact: 'The free Current Account Switch Service moves your account in 7 working days, with a guarantee.',
+        actions: [
+          { title: 'Move your pension to a climate-focused fund', tag: HIGH, body: 'Pensions are often the biggest financed-emission lever. Ask Nest about its climate-aware fund options.', habit: 'Switch pension to ESG fund' },
+          { title: 'Switch your current account', tag: HIGH, body: 'Pick a bank that avoids fossil-fuel lending, like Triodos or the Co-operative Bank. The switch service does the rest.', habit: 'Switch current account' },
+          { title: 'Check how your bank ranks', tag: EASY, body: 'Independent league tables rank UK banks by the emissions your money helps finance.', habit: 'Look up your bank’s rating' }
+        ] },
+      { key: 'home', uk: 1080, label: 'Home energy', short: 'Home', v: 1451, real: 247, max: 1326, yours: 'Standard electricity tariff + gas',
+        why: 'Heating and powering your home runs every day, so efficiency gains compound, and many fixes are one-time decisions.',
+        fact: 'A renewable tariff can cut electricity emissions by over 80%, with no new equipment.',
+        actions: [
+          { title: 'Switch to a green electricity tariff', tag: HIGH, body: 'You’re on a standard tariff. Switching takes a few clicks and no new kit.', habit: 'Switch to a green tariff' },
+          { title: 'Turn the thermostat down 1°C', tag: MED, body: 'Saves around 8% of heating energy. Washing at 30°C and air-drying add up too.', habit: 'Lower thermostat 1°C' },
+          { title: 'Switch to LED bulbs', tag: EASY, body: 'A quick, one-off change. For bigger wins later, look at loft insulation and draught-proofing.', habit: 'Switch to LEDs' }
+        ] },
+      { key: 'pets', uk: 231, label: 'Pets', short: 'Pets', v: 385, real: 96, max: 193, yours: '1 pet',
+        why: 'Pet food, especially meat-based, adds up. You don’t need to change your pet, just what goes in the bowl.',
+        fact: 'A medium dog’s food can emit as much as a small car over a year.',
+        actions: [
+          { title: 'Choose food made from by-products', tag: HIGH, body: 'Brands using by-products that would otherwise be wasted have a far lower footprint than premium cuts.', habit: 'Switch to a by-product food' },
+          { title: 'Avoid beef-based recipes', tag: MED, body: 'Beef-based formulas carry the highest footprint. Chicken or fish recipes are lower.', habit: 'Avoid beef-based formulas' },
+          { title: 'Measure portions', tag: EASY, body: 'Follow your vet’s portion guidance. It’s better for your pet and the planet.', habit: 'Measure portions' }
+        ] },
+      { key: 'flights', uk: 429, label: 'Flights', short: 'Flights', v: 367, real: 356, max: 367, yours: '1 trip a year',
+        why: 'Flights are occasional but huge, so they can quietly dominate a yearly total.',
+        fact: 'A London–New York return in economy is about 1.7 t CO₂e, roughly two-thirds of a yearly 1.5°C budget.',
+        actions: [
+          { title: 'Take the train for trips under 700 km', tag: HIGH, body: 'Once airport time is counted, rail can be as fast door-to-door, and it emits a fraction as much.', habit: 'Train under 700km' },
+          { title: 'Fly economy and direct', tag: MED, body: 'Economy spreads the plane’s emissions over more people. Direct routes avoid extra take-offs and landings.', habit: 'Always fly economy' },
+          { title: 'Set a yearly flight cap', tag: MED, body: 'Decide in advance how many flights a year feel right, and plan trips around it.', habit: 'Set an annual flight cap' }
+        ] },
+      { key: 'commute', uk: 280, label: 'Commute & travel', short: 'Commute', v: 280, real: 267, max: 280, yours: '3.1 km · car 4 days, train 1 day',
+        why: 'Your commute repeats 200+ times a year, so small shifts compound into real savings.',
+        fact: 'An electric car emits roughly a quarter as much per kilometre as a petrol one.',
+        actions: [
+          { title: 'Swap one car day a week', tag: HIGH, body: 'You drive four days a week. One work-from-home or train day removes a quarter of your car commute.', habit: '1 WFH day/week' },
+          { title: 'Cycle or walk short trips', tag: MED, body: 'Your 3.1 km commute is an easy cycling distance, with zero emissions.', habit: 'Cycle trips under 3km' },
+          { title: 'Plan an EV for your next car', tag: LONG, body: 'When it’s time to replace the car, go electric.', habit: 'Plan EV for next car' }
+        ] },
+      { key: 'water', uk: 18, label: 'Water', short: 'Water', v: 17, real: 3, max: 7, yours: '4,000 L per person a month',
+        why: 'A small slice of your footprint, but the fixes are cheap, immediate and often save money.',
+        fact: 'A dripping tap can waste thousands of litres a year.',
+        actions: [
+          { title: 'Shorter showers', tag: EASY, body: 'Aim for 4–5 minutes. Heating water is where most of the energy goes.', habit: '4-minute showers' },
+          { title: 'Fit a low-flow showerhead', tag: EASY, body: 'A one-off change that cuts hot water use every day.', habit: 'Fit a low-flow showerhead' },
+          { title: 'Full loads only', tag: EASY, body: 'Run the dishwasher and washing machine only when full.', habit: 'Full loads only' }
+        ] }
+    ];
+    const ranks = ['Your #1 source', 'Your #2 source', 'Your #3 source', '#4 of 7 sources', '#5 of 7 sources', '#6 of 7 sources', '#7 of 7 sources'];
+    let i = CATS.findIndex((x) => x.key === this.state.sel);
+    if (i < 0) i = 4;
+    const cat = CATS[i];
+    const sMax = Math.max(cat.v, cat.uk || 0);
+    const plan = this.state.plan;
+    const inPlan = (h) => plan.indexOf(h) >= 0;
+    const tagStyle = (tag) => tag === HIGH ? ['#3F5B3A', '#F6F1E6'] : tag === MED ? ['rgba(143,165,138,.3)', '#2B4128'] : tag === EASY ? ['rgba(217,164,65,.25)', '#6B4A12'] : ['rgba(46,42,34,.08)', '#4A453A'];
+    const actions = cat.actions.map((a, j) => {
+      const added = inPlan(a.habit);
+      const [tagBg, tagInk] = tagStyle(a.tag);
+      return {
+        ...a, n: j + 1, tagBg, tagInk, delay: 'd' + (j + 1),
+        badgeBg: j === 0 ? '#3F5B3A' : 'rgba(63,91,58,.12)', badgeInk: j === 0 ? '#F6F1E6' : '#3F5B3A',
+        isAdded: added, notAdded: !added, added: added ? 'true' : 'false',
+        btnLabel: added ? 'In plan' : 'Add to plan',
+        aria: (added ? 'Remove from plan: ' : 'Add to plan: ') + a.habit,
+        cardBg: added ? 'rgba(63,91,58,.08)' : 'rgba(255,252,245,.8)', cardBorder: added ? 'rgba(63,91,58,.45)' : 'rgba(46,42,34,.08)',
+        btnBg: added ? '#3F5B3A' : 'transparent', btnInk: added ? '#F6F1E6' : '#3F5B3A', btnBorder: added ? '#3F5B3A' : 'rgba(63,91,58,.45)',
+        toggle: () => this.savePlan(added ? plan.filter((h) => h !== a.habit) : plan.concat([a.habit]))
+      };
+    });
+    const tabs = CATS.map((x) => {
+      const on = x.key === cat.key;
+      return { short: x.short, current: on ? 'page' : 'false', line: on ? '#3F5B3A' : 'transparent', ink: on ? '#2E2A22' : '#5C5649', weight: on ? 700 : 500, pick: () => this.choose(x.key) };
+    });
+    const n = CATS.length;
+    return {
+      pBlobA: (s * 0.45 * k).toFixed(1),
+      pBlobB: (-s * 0.2 * k).toFixed(1),
+      tabs,
+      pieDash: !this.state.ready ? '0 100' : (Math.max(1, Math.round((cat.v / 6746) * 100))) + ' 100',
+      c: {
+        ...cat, actions, rank: ranks[i],
+        kg: fmt(cat.v), share: Math.max(1, Math.round((cat.v / 6746) * 100)) + '%',
+        afterReal: fmt(cat.v - cat.real), afterMax: fmt(cat.v - cat.max),
+        hasUk: !!cat.uk, ukKg: cat.uk ? fmt(cat.uk) : '', ukW: cat.uk ? (cat.uk / sMax) * 100 : 0, nowW: (cat.v / sMax) * 100,
+        ukLine: cat.uk ? 'UK average ' + fmt(cat.uk) + ' kg · you’re ' + (Math.abs(cat.v - cat.uk) / cat.uk < 0.03 ? 'about the same' : cat.v > cat.uk ? Math.round((cat.v / cat.uk - 1) * 100) + '% above' : Math.round((1 - cat.v / cat.uk) * 100) + '% below') : 'No UK average for banking & pensions',
+        realW: ((cat.v - cat.real) / sMax) * 100, maxW: Math.max(0, ((cat.v - cat.max) / sMax) * 100),
+        isMeals: cat.key === 'meals', isBank: cat.key === 'bank', isHome: cat.key === 'home', isPets: cat.key === 'pets',
+        isFlights: cat.key === 'flights', isCommute: cat.key === 'commute', isWater: cat.key === 'water'
+      },
+      prevLabel: CATS[(i + n - 1) % n].label,
+      nextLabel: CATS[(i + 1) % n].label,
+      prev: () => this.choose(CATS[(i + n - 1) % n].key),
+      next: () => this.choose(CATS[(i + 1) % n].key),
+      planCount: plan.length === 1 ? '1 habit' : plan.length + ' habits',
+      planHint: plan.length ? 'Added: ' + plan.join(', ') + '.' : 'Add changes from any category. Habit tracking is coming soon, and your plan will be ready for it.'
+    };
+  }
+}
+</script>
+</body>
+</html>

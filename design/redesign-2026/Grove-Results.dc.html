@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Results with Wisp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800;900&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#C9F06B}a:hover{color:#E4F7B5}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.sg{font-family:'Schibsted Grotesk',sans-serif}
+@keyframes sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes trail{to{stroke-dashoffset:-60}}
+@keyframes fly{0%,100%{transform:translate(0,0);opacity:.3}50%{transform:translate(8px,-14px);opacity:1}}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.sway{transform-box:view-box;transform-origin:80px 196px;animation:sway 5s ease-in-out infinite}
+.float{animation:float 4s ease-in-out infinite}
+.trail{animation:trail 2.2s linear infinite}
+.fly{border-radius:99px;background:#C9F06B;box-shadow:0 0 10px 3px rgba(201,240,107,.55);animation:fly 5s ease-in-out infinite}
+.eye{transform-box:fill-box;transform-origin:center;animation:blink 6s infinite}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.grow{transform-origin:50% 100%;animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+.press{transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .3s,color .3s}
+.press:active{transform:scale(.95)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #071A14; color: #F3F0E6; font-family: Manrope, system-ui, sans-serif">
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+
+    <section style="position: relative; height: 520px; overflow: hidden">
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pMoon}}px,0)">
+        <div style="position: absolute; left: 40px; top: 80px; width: 70px; height: 70px; border-radius: 99px; background: #E4F7B5; box-shadow: 0 0 60px 20px rgba(201,240,107,.18)"></div>
+        <div style="position: absolute; left: 58px; top: 72px; width: 60px; height: 60px; border-radius: 99px; background: #071A14"></div>
+      </div>
+      <svg width="390" height="260" viewBox="0 0 390 260" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: 0; transform: translate3d(0,{{pFar}}px,0)" aria-hidden="true"><path d="M0 120 20 70 40 120 55 50 75 120 95 80 115 120 135 40 160 120 180 75 200 120 225 55 250 120 270 85 290 120 315 45 340 120 360 70 390 120V260H0Z" fill="#0D2A21"></path></svg>
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pFlies}}px,0)">
+        <span class="fly" style="position: absolute; left: 60px; top: 300px; width: 5px; height: 5px"></span>
+        <span class="fly" style="position: absolute; left: 300px; top: 250px; width: 4px; height: 4px; animation-delay: -1.5s"></span>
+        <span class="fly" style="position: absolute; left: 200px; top: 340px; width: 5px; height: 5px; animation-delay: -3s"></span>
+        <span class="fly" style="position: absolute; left: 120px; top: 200px; width: 3px; height: 3px; animation-delay: -2s"></span>
+        <span class="fly" style="position: absolute; left: 340px; top: 360px; width: 4px; height: 4px; animation-delay: -4s"></span>
+      </div>
+      <svg width="390" height="180" viewBox="0 0 390 180" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: 0; transform: translate3d(0,{{pMid}}px,0)" aria-hidden="true"><path d="M0 90 30 30 60 90 80 50 100 90 130 20 165 90 190 60 210 90 245 25 280 90 300 55 320 90 350 30 390 90V180H0Z" fill="#123429"></path></svg>
+
+      <div style="position: absolute; left: 20px; right: 20px; top: 18px; display: flex; justify-content: space-between; align-items: center">
+        <span class="sg" style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em">CO2 Counter</span>
+        <span style="padding: 6px 12px; border-radius: 99px; border: 1px solid rgba(201,240,107,.3); color: #C9F06B; font-size: 12px; font-weight: 700">Results</span>
+      </div>
+
+      <div style="position: absolute; left: 0; right: 0; top: 96px; display: flex; justify-content: center; transform: translate3d(0,{{pWisp}}px,0)">
+        <div class="float" style="position: relative">
+          <div style="transform: scale({{wispScale}}); transform-origin: 50% 100%; opacity: {{wispAlpha}}; transition: transform 1.1s cubic-bezier(.3,1.4,.45,1), opacity 1s">
+            <svg width="160" height="210" viewBox="0 0 160 210" role="img" aria-label="Wisp, a curl of smoke the size of your yearly footprint">
+              <g class="sway">
+                <path class="trail" d="M64 40c-10-14 6-22-2-38M96 30c8-12-6-18 2-30" fill="none" stroke="#C9F06B" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="6 9" opacity=".6"></path>
+                <path d="M84 196c-34 0-50-24-40-48 9-20 34-24 32-48-2-20-24-28-18-56 26 10 46 36 46 64 0 18-9 28-5 40 5 12 20 9 22-5 16 22 6 53-37 53Z" fill="rgba(201,240,107,.10)" stroke="#C9F06B" stroke-width="{{wispStroke}}" stroke-linejoin="round" style="transition: stroke-width .8s"></path>
+                <path d="M70 176c-10-6-10-20 2-26M98 70c6 10 6 20 0 30" fill="none" stroke="#C9F06B" stroke-width="2" stroke-linecap="round" opacity=".45"></path>
+                <ellipse class="eye" cx="72" cy="154" rx="3.8" ry="4.5" fill="#F3F0E6"></ellipse>
+                <ellipse class="eye" cx="96" cy="154" rx="3.8" ry="4.5" fill="#F3F0E6"></ellipse>
+                <sc-if value="{{moodNow}}" hint-placeholder-val="{{true}}"><path d="M65 147h12M89 147h12" stroke="#C9F06B" stroke-width="3" stroke-linecap="round"></path><path d="M78 168q6-3 12 0" fill="none" stroke="#F3F0E6" stroke-width="3" stroke-linecap="round"></path></sc-if>
+                <sc-if value="{{moodReal}}" hint-placeholder-val="{{false}}"><path d="M76 166q8 5 15-1" fill="none" stroke="#F3F0E6" stroke-width="3" stroke-linecap="round"></path></sc-if>
+                <sc-if value="{{moodAll}}" hint-placeholder-val="{{false}}"><path d="M75 164q9 10 18 0" fill="none" stroke="#F3F0E6" stroke-width="3" stroke-linecap="round"></path></sc-if>
+              </g>
+            </svg>
+          </div>
+          <sc-if value="{{moodAll}}" hint-placeholder-val="{{false}}">
+            <svg class="rise" width="40" height="44" viewBox="0 0 40 44" style="position: absolute; left: 60px; bottom: -36px" aria-hidden="true"><path d="M20 44V20" stroke="#C9F06B" stroke-width="3" stroke-linecap="round"></path><path d="M20 24C20 12 12 6 2 6c0 12 8 18 18 18ZM20 20c0-10 7-16 18-16 0 10-7 16-18 16Z" fill="#C9F06B"></path></svg>
+          </sc-if>
+          <div class="rise" style="position: absolute; left: 112px; top: 30px; width: 148px; padding: 10px 12px; border-radius: 14px 14px 14px 4px; background: rgba(243,240,230,.08); border: 1px solid rgba(201,240,107,.25); backdrop-filter: blur(10px); font-size: 13px; line-height: 1.4; color: #E4EDE8">{{wispSays}}</div>
+        </div>
+      </div>
+
+      <svg width="390" height="110" viewBox="0 0 390 110" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: -1px" aria-hidden="true"><path d="M0 60 25 10 50 60 70 30 90 60 120 0 150 60 175 35 195 60 225 15 255 60 280 30 300 60 335 5 365 60 390 40V110H0Z" fill="#071A14"></path></svg>
+    </section>
+
+    <div style="padding: 0 20px 130px; display: flex; flex-direction: column; gap: 26px">
+      <section>
+        <div style="font-size: 13px; font-weight: 600; color: #9FC4B4">Your footprint this year</div>
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <span class="sg" style="font-weight: 900; font-size: 78px; line-height: 1; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; color: #F3F0E6">{{countLabel}}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #9FC4B4">kg CO₂e</span>
+        </div>
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 99px; background: rgba(243,240,230,.06); border: 1px solid rgba(201,240,107,.16)">
+          <sc-for list="{{stages}}" as="st" hint-placeholder-count="3">
+            <button class="press" onClick="{{st.pick}}" aria-pressed="{{st.on}}" style="all: unset; box-sizing: border-box; min-height: 44px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 700; cursor: pointer; background: {{st.bg}}; color: {{st.ink}}">{{st.label}}</button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="padding: 20px; border-radius: 28px; background: rgba(243,240,230,.05); border: 1px solid rgba(201,240,107,.14)">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 class="sg" style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Where the smoke comes from</h2>
+        </div>
+        <div style="margin-top: 18px; height: 180px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; border-bottom: 1px solid rgba(201,240,107,.25)">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+            <button class="press" onClick="{{c.pick}}" aria-pressed="{{c.on}}" aria-label="{{c.aria}}" style="all: unset; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; cursor: pointer">
+              <span style="font-size: 10px; font-weight: 700; text-align: center; color: {{c.numInk}}; margin-bottom: 4px">{{c.short}}</span>
+              <span class="grow" style="display: block; height: {{c.h}}px; border-radius: 10px 10px 2px 2px; background: {{c.bar}}; box-shadow: {{c.glow}}; animation-delay: {{c.delay}}; transition: background .3s, box-shadow .3s"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+            <span style="font-size: 10px; font-weight: 600; text-align: center; color: {{c.labelInk}}">{{c.tag}}</span>
+          </sc-for>
+        </div>
+        <div class="rise" style="margin-top: 16px; padding: 14px; border-radius: 18px; background: rgba(201,240,107,.08)">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 700; font-size: 15px">{{selLabel}}</span><span class="sg" style="font-weight: 800; font-size: 18px">{{selKg}} kg</span></div>
+          <div style="margin-top: 4px; font-size: 13px; color: #9FC4B4">{{selNote}}</div>
+          <div style="margin-top: 8px; font-size: 13px; font-weight: 700; color: #C9F06B">Realistic −{{selReal}} kg · all the way −{{selMax}} kg</div>
+        </div>
+      </section>
+
+      <section style="position: relative; padding: 22px; border-radius: 28px; background: #0F2E25; border: 1px solid rgba(201,240,107,.35); box-shadow: 0 0 40px rgba(201,240,107,.10); overflow: hidden">
+        <div style="font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #C9F06B">Wisp’s tip</div>
+        <h3 class="sg" style="margin: 10px 0 8px; font-size: 26px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em">Fewer red‑meat nights, thinner Wisp</h3>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #B9D3C8">“Swap one more beef or lamb dinner and I lose about 1,066 kg a year. I won’t miss it.”</p>
+        <a class="press" href="Grove-Mascot.dc.html" style="margin-top: 18px; display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 99px; background: #C9F06B; color: #0B231C; font-weight: 700; font-size: 15px; text-decoration: none">Start this habit</a>
+      </section>
+    </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 99px; background: rgba(13,42,33,.85); border: 1px solid rgba(201,240,107,.18); backdrop-filter: blur(16px)">
+    <a class="press" href="Meals.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #B9D3C8; text-decoration: none">Survey</a>
+    <a class="press" href="Grove-Results.dc.html" aria-current="page" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #0B231C; background: #C9F06B; text-decoration: none">Results</a>
+    <a class="press" href="Grove-Results.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #B9D3C8; text-decoration: none">Habits</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, stage: 'now', sel: 'meals' };
+  }
+  componentDidMount() {
+    this.tween(6746);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+  }
+  tween(target) {
+    cancelAnimationFrame(this.raf);
+    const from = this.state.count, dur = 1100, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const STAGES = {
+      now: { label: 'Now', v: 6746, scale: 1, alpha: 1, stroke: 4, says: 'Evening. I’m Wisp: 6.7 tonnes of you, drifting up this year.' },
+      real: { label: 'Realistic', v: 3536, scale: 0.78, alpha: 0.85, stroke: 3, says: 'Realistic habits? I’m half the smoke I was.' },
+      all: { label: 'All the way', v: 1654, scale: 0.55, alpha: 0.7, stroke: 2, says: 'Barely a whisper. Something’s growing where I was.' }
+    };
+    const st = this.state.stage;
+    const cur = STAGES[st];
+    const stages = Object.keys(STAGES).map((id) => ({
+      label: STAGES[id].label, on: st === id ? 'true' : 'false',
+      bg: st === id ? '#C9F06B' : 'transparent', ink: st === id ? '#0B231C' : '#B9D3C8',
+      pick: () => { this.setState({ stage: id }); this.tween(STAGES[id].v); }
+    }));
+    const raw = [
+      { key: 'meals', tag: 'Meals', label: 'Meals & diet', v: 2314, real: 1066, max: 1745, note: '~44.5 kg a week, plus eating out' },
+      { key: 'bank', tag: 'Money', label: 'Banking & pension', v: 1931, real: 1175, max: 1931, note: 'Barclays, pension with Nest' },
+      { key: 'home', tag: 'Home', label: 'Home energy', v: 1451, real: 247, max: 1326, note: 'Standard electricity + gas' },
+      { key: 'pets', tag: 'Pets', label: 'Pets', v: 385, real: 96, max: 193, note: '1 pet' },
+      { key: 'flights', tag: 'Flights', label: 'Flights', v: 367, real: 356, max: 367, note: '1 trip a year' },
+      { key: 'commute', tag: 'Travel', label: 'Commute & travel', v: 280, real: 267, max: 280, note: '~5.4 kg a week' },
+      { key: 'water', tag: 'Water', label: 'Water', v: 17, real: 3, max: 7, note: '4,000 L per person a month' }
+    ];
+    const cats = raw.map((c, i) => {
+      const on = this.state.sel === c.key;
+      return {
+        ...c, on: on ? 'true' : 'false', aria: c.label + ', ' + fmt(c.v) + ' kg',
+        short: c.v >= 1000 ? (c.v / 1000).toFixed(1) + 't' : String(c.v),
+        h: Math.max(4, Math.round((c.v / 2314) * 140)),
+        bar: on ? '#C9F06B' : '#2A6150',
+        glow: on ? '0 0 18px rgba(201,240,107,.45)' : 'none',
+        numInk: on ? '#C9F06B' : '#9FC4B4',
+        labelInk: on ? '#F3F0E6' : '#7FA897',
+        delay: (0.1 + i * 0.08) + 's',
+        pick: () => this.setState({ sel: c.key })
+      };
+    });
+    const sel = raw.find((c) => c.key === this.state.sel);
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pMoon: (s * 0.7 * k).toFixed(1),
+      pFar: (s * 0.5 * k).toFixed(1),
+      pFlies: (s * 0.4 * k).toFixed(1),
+      pMid: (s * 0.3 * k).toFixed(1),
+      pWisp: (s * 0.2 * k).toFixed(1),
+      wispScale: cur.scale, wispAlpha: cur.alpha, wispStroke: cur.stroke, wispSays: cur.says,
+      moodNow: st === 'now', moodReal: st === 'real', moodAll: st === 'all',
+      countLabel: fmt(this.state.count),
+      stages, cats,
+      selLabel: sel.label, selKg: fmt(sel.v), selNote: sel.note, selReal: fmt(sel.real), selMax: fmt(sel.max)
+    };
+  }
+}
+</script>
+</body>
+</html>

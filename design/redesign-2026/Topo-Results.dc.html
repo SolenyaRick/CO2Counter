@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Topographic results</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Manrope:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0F2E25}a:hover{color:#1D5443}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.bg{font-family:'Bricolage Grotesque',sans-serif}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes flag{0%,100%{transform:skewY(0)}50%{transform:skewY(-8deg)}}
+@keyframes march{to{stroke-dashoffset:-20}}
+.draw{stroke-dasharray:1;animation:draw 1.4s cubic-bezier(.3,.6,.2,1) both}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.flag{transform-box:fill-box;transform-origin:0 50%;animation:flag 2s ease-in-out infinite}
+.march{animation:march 1.2s linear infinite}
+.press{transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .3s,color .3s}
+.press:active{transform:scale(.97)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F3F0E6; color: #0F2E25; font-family: Manrope, system-ui, sans-serif">
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+
+    <section style="position: relative; padding: 18px 20px 0">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span class="bg" style="font-weight: 800; font-size: 18px; letter-spacing: -0.02em">CO2 Counter</span>
+        <span class="mono" style="font-size: 11px; font-weight: 600; color: #4C5F57">51.5°N · RESULTS</span>
+      </div>
+      <div class="rise" style="margin-top: 22px; transform: translate3d(0,{{pText}}px,0)">
+        <div class="mono" style="font-size: 11px; font-weight: 600; color: #4C5F57">SUMMIT · KG CO₂E / YEAR</div>
+        <div class="bg" style="font-weight: 800; font-size: 76px; line-height: 1; letter-spacing: -0.05em; font-variant-numeric: tabular-nums">{{countLabel}}</div>
+      </div>
+    </section>
+
+    <section style="position: relative; height: 340px; margin-top: -10px">
+      <svg width="390" height="340" viewBox="0 0 390 340" role="img" aria-label="Contour map: each line is 450 kg of CO2; your summit is {{countLabel}} kg">
+        <sc-for list="{{rings}}" as="r" hint-placeholder-count="15">
+          <g style="transform: translate3d(0,{{r.py}}px,0)">
+            <path class="draw" pathLength="1" vector-effect="non-scaling-stroke" transform="{{r.tf}}" d="M-1 .1C-.95-.5-.4-.95.15-.9.7-.85 1.05-.35.95.2.85.75.3 1-.25.92-.75.85-1.05.6-1 .1Z" fill="{{r.fill}}" stroke="{{r.stroke}}" stroke-width="{{r.sw}}" opacity="{{r.alpha}}" style="animation-delay: {{r.delay}}"></path>
+          </g>
+        </sc-for>
+        <g style="transform: translate3d(0,{{pSummit}}px,0); transition: transform .9s cubic-bezier(.3,1.3,.5,1)">
+          <g style="transform: translate({{summitX}}px,{{summitY}}px); transition: transform .9s cubic-bezier(.3,1.3,.5,1)">
+            <path d="M0 0V-34" stroke="#0F2E25" stroke-width="2.5" stroke-linecap="round"></path>
+            <path class="flag" d="M0-34h22l-6 7 6 7H0Z" fill="#C9F06B" stroke="#0F2E25" stroke-width="2" stroke-linejoin="round"></path>
+            <circle r="4" fill="#0F2E25"></circle>
+          </g>
+        </g>
+      </svg>
+      <div class="mono" style="position: absolute; left: 16px; top: {{budgetTop}}px; padding: 3px 8px; border-radius: 6px; background: #C9F06B; font-size: 10px; font-weight: 600; transition: top .9s">1.5°C · 2.5 t</div>
+      <div class="mono" style="position: absolute; right: 16px; top: {{ukTop}}px; padding: 3px 8px; border-radius: 6px; background: #0F2E25; color: #F3F0E6; font-size: 10px; font-weight: 600; opacity: {{ukAlpha}}; transition: opacity .5s">UK avg · 3.9 t</div>
+      <div class="mono" style="position: absolute; left: 16px; bottom: 8px; font-size: 10px; color: #4C5F57">1 contour = 450 kg</div>
+    </section>
+
+    <section style="padding: 0 20px">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 99px; background: #E3E0D4">
+        <sc-for list="{{stages}}" as="st" hint-placeholder-count="3">
+          <button class="press" onClick="{{st.pick}}" aria-pressed="{{st.on}}" style="all: unset; box-sizing: border-box; min-height: 44px; border-radius: 99px; display: grid; place-items: center; font-size: 14px; font-weight: 700; cursor: pointer; background: {{st.bg}}; color: {{st.ink}}">{{st.label}}</button>
+        </sc-for>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 14px; color: #33463F; text-align: center">{{stageNote}}</p>
+    </section>
+
+    <section style="padding: 30px 20px 0">
+      <h2 class="bg" style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">Strata</h2>
+      <p style="margin: 4px 0 14px; font-size: 14px; color: #4C5F57">Your mountain, layer by layer. Tap a layer.</p>
+      <div style="border-radius: 22px; overflow: hidden; border: 2px solid #0F2E25">
+        <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+          <button class="press" onClick="{{c.pick}}" aria-expanded="{{c.expanded}}" style="all: unset; box-sizing: border-box; display: block; width: 100%; min-height: {{c.h}}px; padding: 10px 14px; background: {{c.bg}}; color: {{c.ink}}; cursor: pointer; border-top: {{c.border}}; transition: min-height .5s cubic-bezier(.3,1.3,.5,1)">
+            <span style="display: flex; justify-content: space-between; align-items: baseline">
+              <span style="font-weight: 700; font-size: 14px">{{c.label}}</span>
+              <span class="mono" style="font-size: 12px; font-weight: 600">{{c.kg}}</span>
+            </span>
+            <sc-if value="{{c.open}}" hint-placeholder-val="{{false}}">
+              <span class="rise" style="display: block; margin-top: 6px; font-size: 13px; line-height: 1.45">{{c.note}} · realistic −{{c.real}} kg</span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="margin: 30px 20px 130px; padding: 22px; border-radius: 28px; background: #0F2E25; color: #F3F0E6; position: relative; overflow: hidden">
+      <svg width="360" height="140" viewBox="0 0 360 140" style="position: absolute; right: -40px; top: -10px; opacity: .5" aria-hidden="true"><path class="march" d="M10 20c60 0 70 40 130 40s80 50 150 60" fill="none" stroke="#C9F06B" stroke-width="2.5" stroke-dasharray="6 8" stroke-linecap="round"></path><circle cx="290" cy="120" r="6" fill="#C9F06B"></circle></svg>
+      <div class="mono" style="position: relative; font-size: 11px; font-weight: 600; color: #C9F06B">BEST ROUTE DOWN · −1,066 KG</div>
+      <h3 class="bg" style="position: relative; margin: 10px 0 8px; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em">Keep red meat to one or two days a week</h3>
+      <p style="position: relative; margin: 0; font-size: 14px; line-height: 1.5; color: #B9D3C8">Your Meals layer is the thickest. Swap one more beef or lamb dinner for chicken or plants to take it down by about a third.</p>
+      <a class="press" href="Meals.dc.html" style="position: relative; margin-top: 18px; display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 99px; background: #C9F06B; color: #0F2E25; font-weight: 700; font-size: 15px; text-decoration: none">Plan the descent</a>
+    </section>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 99px; background: rgba(15,46,37,.94); box-shadow: 0 12px 30px rgba(11,35,28,.3)">
+    <a class="press" href="Meals.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #B9D3C8; text-decoration: none">Survey</a>
+    <a class="press" href="Topo-Results.dc.html" aria-current="page" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #0F2E25; background: #C9F06B; text-decoration: none">Results</a>
+    <a class="press" href="Topo-Results.dc.html" style="min-height: 48px; border-radius: 99px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: #B9D3C8; text-decoration: none">Habits</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, stage: 'now', open: 'meals' };
+  }
+  componentDidMount() {
+    this.tween(6746);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+  }
+  tween(target) {
+    cancelAnimationFrame(this.raf);
+    const from = this.state.count, dur = 1100, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const STAGES = {
+      now: { label: 'Now', v: 6746, note: 'Above the UK average line, and nearly 3× the 1.5°C contour.' },
+      real: { label: 'Realistic', v: 3536, note: 'Realistic habits take 7 contours off: below the UK line.' },
+      all: { label: 'All the way', v: 1654, note: 'All the way, you’re inside the 1.5°C contour.' }
+    };
+    const st = this.state.stage;
+    const cur = STAGES[st];
+    const n = Math.max(1, Math.round(cur.v / 450));
+    const ringGeom = (j) => {
+      const sx = 180 - j * 11;
+      return { sx, sy: sx * 0.42, cy: 250 - j * 13 };
+    };
+    const rings = [];
+    for (let j = 0; j < n; j++) {
+      const g = ringGeom(j);
+      const elev = (j + 1) * 450;
+      const isBudget = j === 5;
+      const isUk = j === 8;
+      rings.push({
+        tf: 'translate(195 ' + g.cy + ') scale(' + g.sx + ' ' + g.sy.toFixed(1) + ')',
+        fill: elev <= 2500 ? 'rgba(201,240,107,' + (0.1 + j * 0.03).toFixed(2) + ')' : 'none',
+        stroke: isBudget ? '#5E8C7A' : '#0F2E25',
+        sw: isBudget || isUk ? 2.5 : 1.3,
+        alpha: (0.35 + (j / 15) * 0.65).toFixed(2),
+        delay: (j * 0.06).toFixed(2) + 's',
+        py: (-s * (0.04 + j * 0.018) * k).toFixed(1)
+      });
+    }
+    const top = ringGeom(n - 1);
+    const stages = Object.keys(STAGES).map((id) => ({
+      label: STAGES[id].label, on: st === id ? 'true' : 'false',
+      bg: st === id ? '#0F2E25' : 'transparent', ink: st === id ? '#C9F06B' : '#0F2E25',
+      pick: () => { this.setState({ stage: id }); this.tween(STAGES[id].v); }
+    }));
+    const raw = [
+      { key: 'meals', label: 'Meals & diet', v: 2314, real: 1066, note: '~44.5 kg a week, plus eating out' },
+      { key: 'bank', label: 'Banking & pension', v: 1931, real: 1175, note: 'Barclays, pension with Nest' },
+      { key: 'home', label: 'Home energy', v: 1451, real: 247, note: 'Standard electricity + gas' },
+      { key: 'pets', label: 'Pets', v: 385, real: 96, note: '1 pet' },
+      { key: 'flights', label: 'Flights', v: 367, real: 356, note: '1 trip a year' },
+      { key: 'commute', label: 'Commute', v: 280, real: 267, note: '~5.4 kg a week' },
+      { key: 'water', label: 'Water', v: 17, real: 3, note: '4,000 L per person a month' }
+    ];
+    const tints = ['#0F2E25', '#1D5443', '#2A6150', '#5E8C7A', '#9FC4B4', '#C9F06B', '#E4F7B5'];
+    const cats = raw.map((c, i) => {
+      const open = this.state.open === c.key;
+      return {
+        ...c, open, expanded: open ? 'true' : 'false',
+        kg: fmt(c.v) + ' kg', real: fmt(c.real),
+        h: Math.round(44 + (c.v / 2314) * 70) + (open ? 30 : 0),
+        bg: tints[i], ink: i < 4 ? '#F3F0E6' : '#0F2E25',
+        border: i === 0 ? '0' : '1px solid rgba(15,46,37,.4)',
+        pick: () => this.setState({ open: open ? '' : c.key })
+      };
+    });
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pText: (s * 0.25 * k).toFixed(1),
+      rings,
+      summitX: 195, summitY: (top.cy - top.sy * 0.2).toFixed(1),
+      pSummit: (-s * (0.04 + (n - 1) * 0.018) * k).toFixed(1),
+      budgetTop: ringGeom(5).cy - 10,
+      ukTop: ringGeom(8).cy - 10,
+      ukAlpha: n > 8 ? 1 : 0,
+      countLabel: fmt(this.state.count),
+      stages, stageNote: cur.note,
+      cats
+    };
+  }
+}
+</script>
+</body>
+</html>

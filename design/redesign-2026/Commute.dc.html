@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Survey: commute</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0F2E25}a:hover{color:#1D5443}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.ac{fill:#C9F06B;stroke:none}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes dash{to{stroke-dashoffset:-48}}
+@keyframes travel{from{offset-distance:0%}to{offset-distance:100%}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.rise{animation:rise .8s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.16s}
+.dash{animation:dash 1.4s linear infinite}
+.traveller{offset-path:path("M-20 180 C 70 90, 150 250, 240 150 S 360 70, 420 120");offset-rotate:auto;animation:travel 7s cubic-bezier(.45,0,.55,1) infinite}
+.bob{animation:bob 5s ease-in-out infinite}
+.press{transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .3s,color .3s}
+.press:active{transform:scale(.95)}
+.sheet{transition:transform .5s cubic-bezier(.2,.9,.25,1)}
+.scrim{transition:opacity .4s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F3F0E6; font-family: Manrope, system-ui, sans-serif; color: #0F2E25">
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+
+    <header style="position: relative; height: 300px; background: #0B231C; color: #F3F0E6; overflow: hidden">
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pFar}}px,0)">
+        <svg class="bob" width="60" height="26" viewBox="0 0 60 26" style="position: absolute; left: 40px; top: 120px" aria-hidden="true"><path d="M12 24a10 10 0 0 1 2-19.8A13 13 0 0 1 38 6a9 9 0 0 1 10 18Z" fill="#163A2F"></path></svg>
+        <svg class="bob" width="44" height="20" viewBox="0 0 60 26" style="position: absolute; left: 300px; top: 70px; animation-delay: -2s" aria-hidden="true"><path d="M12 24a10 10 0 0 1 2-19.8A13 13 0 0 1 38 6a9 9 0 0 1 10 18Z" fill="#163A2F"></path></svg>
+      </div>
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pRoad}}px,0)">
+        <svg width="390" height="300" viewBox="0 0 390 300" style="position: absolute; inset: 0" aria-hidden="true">
+          <path d="M-20 180 C 70 90, 150 250, 240 150 S 360 70, 420 120" fill="none" stroke="#1D5443" stroke-width="26" stroke-linecap="round"></path>
+          <path class="dash" d="M-20 180 C 70 90, 150 250, 240 150 S 360 70, 420 120" fill="none" stroke="#C9F06B" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round" opacity=".7"></path>
+          <circle cx="40" cy="146" r="9" fill="#0B231C" stroke="#C9F06B" stroke-width="3"></circle>
+          <circle cx="340" cy="94" r="9" fill="#C9F06B"></circle>
+        </svg>
+        <div class="traveller" style="position: absolute; left: 0; top: 0; width: 30px; height: 18px; border-radius: 8px; background: #F3F0E6; display: grid; place-items: center; box-shadow: 0 4px 10px rgba(0,0,0,.35)"><span style="width: 8px; height: 8px; border-radius: 99px; background: #0F2E25"></span></div>
+      </div>
+      <div style="position: absolute; left: 0; right: 0; top: 0; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between">
+        <a class="press" href="Meals.dc.html" aria-label="Back to meals" style="width: 44px; height: 44px; border-radius: 99px; background: #163A2F; color: #F3F0E6; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+        <span style="font-size: 13px; font-weight: 700; color: #9FC4B4">Step 2 of 6</span>
+      </div>
+      <div style="position: absolute; left: 20px; right: 20px; bottom: 44px; transform: translate3d(0,{{pText}}px,0); opacity: {{textAlpha}}">
+        <h1 class="rise" style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 42px; font-weight: 800; line-height: 1; letter-spacing: -0.04em">Commute &amp; travel</h1>
+        <p class="rise d1" style="margin: 8px 0 0; font-size: 15px; color: #B9D3C8">Your week of getting around, at a glance.</p>
+      </div>
+    </header>
+
+    <div style="position: relative; margin-top: -24px; border-radius: 28px 28px 0 0; background: #F3F0E6; padding: 24px 20px 130px; display: flex; flex-direction: column; gap: 26px">
+
+      <section style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border-radius: 24px; background: #FFFFFF; box-shadow: 0 10px 30px rgba(15,46,37,.08)">
+        <div>
+          <div style="font-size: 13px; font-weight: 700; color: #4C5F57">One-way distance</div>
+          <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums">{{distLabel}}<span style="font-family: Manrope, sans-serif; font-size: 14px; font-weight: 600; color: #4C5F57"> km</span></div>
+        </div>
+        <div style="display: flex; gap: 8px">
+          <button class="press" onClick="{{less}}" aria-label="Shorter distance" style="all: unset; box-sizing: border-box; width: 48px; height: 48px; border-radius: 99px; background: #E3E0D4; display: grid; place-items: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F2E25" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+          <button class="press" onClick="{{more}}" aria-label="Longer distance" style="all: unset; box-sizing: border-box; width: 48px; height: 48px; border-radius: 99px; background: #0F2E25; display: grid; place-items: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9F06B" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+        </div>
+      </section>
+
+      <section>
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Your week</h2>
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums">{{weekKg}}<span style="font-family: Manrope, sans-serif; font-size: 12px; font-weight: 600; color: #4C5F57"> kg/wk</span></span>
+        </div>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+            <button class="press" onClick="{{d.open}}" style="all: unset; box-sizing: border-box; min-height: 60px; padding: 8px 14px 8px 8px; border-radius: 18px; background: {{d.bg}}; display: flex; align-items: center; gap: 12px; cursor: pointer">
+              <span style="width: 44px; height: 44px; flex: none; border-radius: 14px; background: {{d.tile}}; color: {{d.ink}}; display: grid; place-items: center">
+                <sc-if value="{{d.none}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></sc-if>
+                <sc-if value="{{d.isWfh}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="ac" x="9" y="12" width="6" height="4" rx="1"></rect><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path><rect x="9" y="12" width="6" height="4" rx="1"></rect></svg></sc-if>
+                <sc-if value="{{d.isBike}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16" r="3.5"></circle><circle cx="18.5" cy="16" r="3.5"></circle><path d="M5.5 16 9.5 9h6l3 7M9.5 9 8 6H6M14 6h2.5"></path><circle class="ac" cx="12" cy="16" r="1.6"></circle></svg></sc-if>
+                <sc-if value="{{d.isTrain}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="14" rx="3"></rect><path d="M6 10h12M8.5 21l2-4M15.5 21l-2-4"></path><circle class="ac" cx="9.5" cy="13.5" r="1.2"></circle><circle class="ac" cx="14.5" cy="13.5" r="1.2"></circle></svg></sc-if>
+                <sc-if value="{{d.isTube}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><rect class="ac" x="2.5" y="10.5" width="19" height="3" rx="1"></rect><rect x="2.5" y="10.5" width="19" height="3" rx="1"></rect></svg></sc-if>
+                <sc-if value="{{d.isBus}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="ac" x="7" y="5.5" width="10" height="3.5" rx="1"></rect><rect x="4.5" y="3" width="15" height="15" rx="3"></rect><path d="M4.5 11h15M7.5 21v-3M16.5 21v-3"></path></svg></sc-if>
+                <sc-if value="{{d.isEv}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path class="ac" d="M12.8 7.5 10.5 11h2l-.6 2.8 2.6-3.8h-2Z"></path><circle cx="7.5" cy="16.5" r="2" fill="#F3F0E6"></circle><circle cx="16.5" cy="16.5" r="2" fill="#F3F0E6"></circle></svg></sc-if>
+                <sc-if value="{{d.isCar}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M6.5 7.5h11l1.5 4h-14Z"></path><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path d="M3.5 12h17"></path><circle cx="7.5" cy="16.5" r="2" fill="#F3F0E6"></circle><circle cx="16.5" cy="16.5" r="2" fill="#F3F0E6"></circle></svg></sc-if>
+                <sc-if value="{{d.isMoto}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M10 10h5l-1.5 3H9Z"></path><circle cx="5" cy="16" r="3"></circle><circle cx="19" cy="16" r="3"></circle><path d="M5 16h6l3-6h3l2 6M14 10l-2-3H9.5"></path></svg></sc-if>
+              </span>
+              <span style="width: 34px; font-size: 13px; font-weight: 700; color: #4C5F57">{{d.short}}</span>
+              <span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 700">{{d.label}}</span>
+              <span style="font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: {{d.kgInk}}">{{d.kg}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{hasTip}}" hint-placeholder-val="{{true}}">
+          <div class="rise" style="margin-top: 12px; padding: 14px; border-radius: 18px; background: #0F2E25; color: #F3F0E6; display: flex; gap: 12px; align-items: center; font-size: 13px; line-height: 1.45">
+            <span style="flex: none; width: 36px; height: 36px; border-radius: 12px; background: #C9F06B; color: #0F2E25; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="14" rx="3"></rect><path d="M6 10h12M8.5 21l2-4M15.5 21l-2-4"></path></svg></span>
+            <span>{{tip}}</span>
+          </div>
+        </sc-if>
+      </section>
+
+      <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <button class="press" style="all: unset; box-sizing: border-box; padding: 16px; min-height: 120px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F2E25" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="18" cy="6" r="2"></circle><path d="M4 18c3-6 5-9 8-9s4 4 8 4"></path><path d="M4 21h16"></path></svg>
+          <span><span style="display: block; font-weight: 700; font-size: 15px">Other weekly travel</span><span style="display: block; font-size: 12px; color: #4C5F57; margin-top: 2px">School run, big shop, visits</span></span>
+        </button>
+        <button class="press" style="all: unset; box-sizing: border-box; padding: 16px; min-height: 120px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0F2E25" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"></circle><circle class="ac" cx="18" cy="18" r="2.5"></circle><circle cx="18" cy="18" r="2.5"></circle><path d="M8.5 6H15a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h6.5" stroke-dasharray="2 3"></path></svg>
+          <span><span style="display: block; font-weight: 700; font-size: 15px">Long journeys</span><span style="display: block; font-size: 12px; color: #4C5F57; margin-top: 2px">Trains or drives each year</span></span>
+        </button>
+      </section>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 22px; display: flex; gap: 10px; background: rgba(243,240,230,.9); backdrop-filter: blur(14px); border-top: 1px solid #E3E0D4">
+    <a class="press" href="Meals.dc.html" style="min-height: 52px; padding: 0 20px; border-radius: 99px; display: flex; align-items: center; font-weight: 700; font-size: 15px; color: #0F2E25; text-decoration: none; background: #E3E0D4">Back</a>
+    <a class="press" href="Main.dc.html" style="flex: 1; min-height: 52px; border-radius: 99px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 15px; color: #C9F06B; text-decoration: none; background: #0F2E25">Next: Flights<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+  </div>
+
+  <div class="scrim" onClick="{{close}}" style="position: absolute; inset: 0; z-index: 8; background: rgba(11,35,28,.55); opacity: {{scrimAlpha}}; pointer-events: {{scrimEvents}}"></div>
+  <div class="sheet" role="dialog" aria-label="Choose how you travelled" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; padding: 10px 20px 26px; border-radius: 28px 28px 0 0; background: #F3F0E6; transform: translateY({{sheetY}}%)">
+    <div style="width: 40px; height: 5px; border-radius: 99px; background: #CFCBBE; margin: 0 auto 14px"></div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px">
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">{{sheetTitle}}</h2>
+      <button class="press" onClick="{{close}}" aria-label="Close" style="all: unset; box-sizing: border-box; width: 44px; height: 44px; border-radius: 99px; background: #E3E0D4; display: grid; place-items: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F2E25" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <sc-for list="{{modes}}" as="m" hint-placeholder-count="9">
+        <button class="press" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 92px; padding: 10px 6px; border-radius: 18px; background: {{m.bg}}; color: {{m.ink}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; text-align: center">
+          <sc-if value="{{m.isWfh}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="ac" x="9" y="12" width="6" height="4" rx="1"></rect><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path><rect x="9" y="12" width="6" height="4" rx="1"></rect></svg></sc-if>
+          <sc-if value="{{m.isBike}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16" r="3.5"></circle><circle cx="18.5" cy="16" r="3.5"></circle><path d="M5.5 16 9.5 9h6l3 7M9.5 9 8 6H6M14 6h2.5"></path><circle class="ac" cx="12" cy="16" r="1.6"></circle></svg></sc-if>
+          <sc-if value="{{m.isTrain}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="12" height="14" rx="3"></rect><path d="M6 10h12M8.5 21l2-4M15.5 21l-2-4"></path><circle class="ac" cx="9.5" cy="13.5" r="1.2"></circle><circle class="ac" cx="14.5" cy="13.5" r="1.2"></circle></svg></sc-if>
+          <sc-if value="{{m.isTube}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><rect class="ac" x="2.5" y="10.5" width="19" height="3" rx="1"></rect><rect x="2.5" y="10.5" width="19" height="3" rx="1"></rect></svg></sc-if>
+          <sc-if value="{{m.isBus}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect class="ac" x="7" y="5.5" width="10" height="3.5" rx="1"></rect><rect x="4.5" y="3" width="15" height="15" rx="3"></rect><path d="M4.5 11h15M7.5 21v-3M16.5 21v-3"></path></svg></sc-if>
+          <sc-if value="{{m.isEv}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path class="ac" d="M12.8 7.5 10.5 11h2l-.6 2.8 2.6-3.8h-2Z"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg></sc-if>
+          <sc-if value="{{m.isCar}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M6.5 7.5h11l1.5 4h-14Z"></path><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path d="M3.5 12h17"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg></sc-if>
+          <sc-if value="{{m.isMoto}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M10 10h5l-1.5 3H9Z"></path><circle cx="5" cy="16" r="3"></circle><circle cx="19" cy="16" r="3"></circle><path d="M5 16h6l3-6h3l2 6M14 10l-2-3H9.5"></path></svg></sc-if>
+          <span style="font-size: 12px; font-weight: 700; line-height: 1.2">{{m.label}}</span>
+          <span style="font-size: 11px; opacity: .75; font-variant-numeric: tabular-nums">{{m.kg}}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      scroll: 0, dist: 3.1, sheet: -1,
+      week: ['car_petrol', 'car_petrol', 'car_petrol', 'car_petrol', 'train', null, null]
+    };
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const MODES = [
+      { key: 'wfh', label: 'Work from home', f: 0 },
+      { key: 'walk_bike', label: 'Walk / bike', f: 0 },
+      { key: 'train', label: 'Train', f: 0.03989 },
+      { key: 'tube', label: 'Tube', f: 0.02277 },
+      { key: 'bus', label: 'Bus', f: 0.128 },
+      { key: 'ev', label: 'Electric car', f: 0.04 },
+      { key: 'car_petrol', label: 'Car (petrol)', f: 0.20751 },
+      { key: 'car_diesel', label: 'Car (diesel)', f: 0.21411 },
+      { key: 'motorcycle', label: 'Motorcycle', f: 0.118 }
+    ];
+    const byKey = {};
+    MODES.forEach((m) => { byKey[m.key] = m; });
+    const flags = (key) => ({
+      isWfh: key === 'wfh', isBike: key === 'walk_bike', isTrain: key === 'train', isTube: key === 'tube',
+      isBus: key === 'bus', isEv: key === 'ev', isCar: key === 'car_petrol' || key === 'car_diesel', isMoto: key === 'motorcycle'
+    });
+    const dist = this.state.dist;
+    const perDay = (key) => key ? byKey[key].f * dist * 2 : 0;
+    const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const week = this.state.week;
+    const days = week.map((key, i) => {
+      const kg = perDay(key);
+      return {
+        short: names[i].slice(0, 3),
+        label: key ? byKey[key].label : 'Not travelling',
+        kg: key ? kg.toFixed(2) + ' kg' : '—',
+        kgInk: kg > 1 ? '#B4532A' : '#1D5443',
+        none: !key,
+        ...flags(key),
+        bg: key ? '#FFFFFF' : 'transparent',
+        tile: key ? (kg > 1 ? '#FBE3D7' : '#E4F6C2') : '#E3E0D4',
+        ink: '#0F2E25',
+        open: () => this.setState({ sheet: i })
+      };
+    });
+    const total = week.reduce((a, key) => a + perDay(key), 0);
+    const carDays = week.filter((key) => key === 'car_petrol' || key === 'car_diesel').length;
+    const save = carDays * (perDay('car_petrol') - perDay('train')) * 52;
+    const hasTip = carDays > 0;
+    const tip = hasTip ? 'Taking the train on your ' + carDays + ' driving day' + (carDays > 1 ? 's' : '') + ' would save about ' + Math.round(save) + ' kg CO₂e a year.' : '';
+
+    const open = this.state.sheet >= 0;
+    const cur = open ? week[this.state.sheet] : null;
+    const modes = MODES.map((m) => {
+      const on = cur === m.key;
+      return {
+        ...m, ...flags(m.key), on: on ? 'true' : 'false',
+        kg: m.f === 0 ? 'zero' : perDay(m.key).toFixed(2) + ' kg',
+        bg: on ? '#0F2E25' : '#FFFFFF', ink: on ? '#F3F0E6' : '#0F2E25',
+        pick: () => {
+          const next = week.slice();
+          next[this.state.sheet] = m.key;
+          this.setState({ week: next, sheet: -1 });
+        }
+      };
+    });
+    const step = (d) => () => this.setState({ dist: Math.max(0.5, Math.round((this.state.dist + d) * 10) / 10) });
+
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      pFar: (s * 0.6 * k).toFixed(1),
+      pRoad: (s * 0.35 * k).toFixed(1),
+      pText: (s * 0.2 * k).toFixed(1),
+      textAlpha: Math.max(0, 1 - s / 220).toFixed(2),
+      distLabel: dist.toFixed(1),
+      less: step(-0.5), more: step(0.5),
+      days, weekKg: total.toFixed(1),
+      hasTip, tip,
+      modes,
+      sheetTitle: open ? names[this.state.sheet] + ': how did you travel?' : '',
+      sheetY: open ? 0 : 110,
+      scrimAlpha: open ? 1 : 0,
+      scrimEvents: open ? 'auto' : 'none',
+      close: () => this.setState({ sheet: -1 })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CO2 Counter app icon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..700,100&amp;family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0}
+.serif{font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif}
+.tile{transition:transform .5s cubic-bezier(.3,1.5,.5,1)}
+.tile:hover{transform:rotate(-4deg) scale(1.03)}
+.b1,.b2,.b3{transform-box:fill-box;transform-origin:50% 100%}
+@keyframes s1{0%,12%{transform:scaleY(.2)}30%,100%{transform:scaleY(1)}}
+@keyframes s2{0%,20%{transform:scaleY(.2)}38%,55%{transform:scaleY(1.45)}75%,100%{transform:scaleY(1)}}
+@keyframes s3{0%,28%{transform:scaleY(.2)}46%,60%{transform:scaleY(2.6)}85%,100%{transform:scaleY(1)}}
+@keyframes leaf{0%{transform:scale(.7) rotate(-12deg);opacity:0}25%,100%{transform:none;opacity:1}}
+.splash .b1{animation:s1 3.2s cubic-bezier(.3,1.3,.5,1) infinite}
+.splash .b2{animation:s2 3.2s cubic-bezier(.3,1.3,.5,1) infinite}
+.splash .b3{animation:s3 3.2s cubic-bezier(.3,1.3,.5,1) infinite}
+.splash .lf{transform-box:fill-box;transform-origin:20% 90%;animation:leaf 3.2s cubic-bezier(.3,1.4,.5,1) infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; padding: 56px; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif; display: flex; gap: 56px">
+
+  <section style="width: 440px; flex: none; display: flex; flex-direction: column; gap: 28px">
+    <div>
+      <div style="font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #3F5B3A">App icon</div>
+      <h1 class="serif" style="margin: 6px 0 0; font-size: 52px; line-height: 1; font-weight: 600">Leaf Ledger</h1>
+    </div>
+    <svg class="tile" width="300" height="300" viewBox="0 0 100 100" role="img" aria-label="CO2 Counter icon: a cream leaf with three descending bars cut into it, the smallest in honey" style="filter: drop-shadow(0 24px 30px rgba(46,42,34,.22))">
+      <rect width="100" height="100" rx="24" fill="#3F5B3A"></rect>
+      <path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path>
+      <rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect>
+      <rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect>
+      <rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect>
+    </svg>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 16px; line-height: 1.5; color: #4A453A">
+      <li><b style="color: #2E2A22">The leaf</b> is sustainability: the thing you’re protecting.</li>
+      <li><b style="color: #2E2A22">The bars</b> are the counting: your footprint, measured.</li>
+      <li><b style="color: #2E2A22">Stepping down</b> is the point: each bar is smaller, and the honey one is your goal.</li>
+    </ul>
+  </section>
+
+  <section style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+    <div style="padding: 26px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08)">
+      <div style="font-size: 14px; font-weight: 700; color: #5C5649">Holds up at every size</div>
+      <div style="margin-top: 18px; display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap">
+        <figure style="margin: 0; text-align: center"><svg width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg><figcaption class="num" style="font-size: 12px; color: #5C5649; margin-top: 6px">120</figcaption></figure>
+        <figure style="margin: 0; text-align: center"><svg width="76" height="76" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg><figcaption class="num" style="font-size: 12px; color: #5C5649; margin-top: 6px">76</figcaption></figure>
+        <figure style="margin: 0; text-align: center"><svg width="48" height="48" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg><figcaption class="num" style="font-size: 12px; color: #5C5649; margin-top: 6px">48</figcaption></figure>
+        <figure style="margin: 0; text-align: center"><svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg><figcaption class="num" style="font-size: 12px; color: #5C5649; margin-top: 6px">32</figcaption></figure>
+        <figure style="margin: 0; text-align: center"><svg width="16" height="16" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#3F5B3A"></rect><path d="M18 82C18 44 44 18 84 16c0 40-26 66-66 66Z" fill="#EFE9DC"></path><rect x="44" y="44" width="12" height="20" rx="4" fill="#3F5B3A"></rect></svg><figcaption class="num" style="font-size: 12px; color: #5C5649; margin-top: 6px">16 · simplified</figcaption></figure>
+
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 14px">
+          <svg width="56" height="56" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+          <div><div class="num" style="font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1">CO2 Counter</div><div style="margin-top: 4px; font-size: 14px; color: #5C5649">Count it. Cut it.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px">
+      <div style="padding: 22px; border-radius: 24px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); display: flex; flex-direction: column; align-items: center; gap: 12px">
+        <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#EFE9DC" stroke="rgba(46,42,34,.12)"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#3F5B3A"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#EFE9DC"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#EFE9DC"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <div style="font-weight: 700; font-size: 15px">Light</div>
+        <div style="font-size: 13px; color: #5C5649; text-align: center">For light home screens and print</div>
+      </div>
+      <div style="padding: 22px; border-radius: 24px; background: #2E2A22; color: #EFE9DC; display: flex; flex-direction: column; align-items: center; gap: 12px">
+        <svg width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#1F2A1D"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#A3B58F"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#1F2A1D"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#1F2A1D"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#E8C88A"></rect></svg>
+        <div style="font-weight: 700; font-size: 15px">Dark mode</div>
+        <div style="font-size: 13px; color: #CFC6B3; text-align: center">Sage leaf on deep moss</div>
+      </div>
+      <div style="padding: 22px; border-radius: 24px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); display: flex; flex-direction: column; align-items: center; gap: 12px">
+        <svg class="splash" width="120" height="120" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path class="lf" d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect class="b1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect class="b2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect class="b3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <div style="font-weight: 700; font-size: 15px">Animated splash</div>
+        <div style="font-size: 13px; color: #5C5649; text-align: center">The leaf unfurls, the bars count up level, then step down</div>
+      </div>
+    </div>
+
+    <div style="padding: 22px 26px; border-radius: 24px; border: 1px dashed rgba(46,42,34,.2)">
+      <div style="font-size: 14px; font-weight: 700; color: #5C5649">Also explored</div>
+      <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px">
+        <div style="display: flex; align-items: center; gap: 18px">
+          <svg width="88" height="88" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#EFE9DC" stroke="rgba(46,42,34,.12)"></rect><path d="M29 71A30 30 0 1 1 71 71" fill="none" stroke="rgba(63,91,58,.18)" stroke-width="9" stroke-linecap="round"></path><path d="M29 71A30 30 0 0 1 30 28" fill="none" stroke="#3F5B3A" stroke-width="9" stroke-linecap="round"></path><path d="M50 52c-2-12 4-20 16-22 1 12-5 20-16 22Z" fill="#3F5B3A"></path><path d="M50 52 38 64" stroke="#3F5B3A" stroke-width="4" stroke-linecap="round"></path><circle cx="50" cy="52" r="4" fill="#D9A441"></circle></svg>
+          <div><div style="font-weight: 700; font-size: 15px">Gauge</div><div style="font-size: 13px; line-height: 1.45; color: #5C5649">A meter whose needle is a leaf, pointing low. Strong “counter” feel, but busier at small sizes.</div></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 18px">
+          <svg width="88" height="88" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><circle cx="50" cy="56" r="32" fill="#4F6E49"></circle><circle cx="44" cy="62" r="22" fill="#6E8B5E"></circle><circle cx="38" cy="68" r="12" fill="#EFE9DC"></circle><path d="M38 56V48" stroke="#EFE9DC" stroke-width="3" stroke-linecap="round"></path><path d="M38 50c0-6 4-10 10-10 0 6-4 10-10 10Z" fill="#D9A441"></path></svg>
+          <div><div style="font-weight: 700; font-size: 15px">Shrinking footprint</div><div style="font-size: 13px; line-height: 1.45; color: #5C5649">Rings getting smaller, with a sprout on the last. Calm, but reads less like counting.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

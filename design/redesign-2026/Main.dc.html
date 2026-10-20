@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your carbon footprint</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#0F2E25}a:hover{color:#1D5443}
+.scroller{scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.ac{fill:#C9F06B;stroke:none}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes drift{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(10px,-16px) rotate(20deg)}}
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes pulse{0%{transform:scale(.7);opacity:.8}100%{transform:scale(1.9);opacity:0}}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(220%)}}
+.rise{animation:rise .9s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.18s}.d3{animation-delay:.3s}.d4{animation-delay:.45s}
+.mol{animation:drift 9s ease-in-out infinite}
+.orbit{animation:orbit 60s linear infinite}
+.sway{transform-origin:50% 90%;animation:sway 4s ease-in-out infinite}
+.ring{animation:pulse 2.4s cubic-bezier(.2,.6,.3,1) infinite}
+.shine{animation:shimmer 3.2s ease-in-out infinite}
+.row{transition:background .3s,transform .3s}
+.row:active{transform:scale(.98)}
+.press{transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.press:active{transform:scale(.94)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B231C; font-family: Manrope, system-ui, sans-serif; color: #0F2E25">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: rgba(11,35,28,{{barAlpha}}); backdrop-filter: blur(14px)">
+    <div style="display: flex; align-items: center; gap: 10px; color: #F3F0E6">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="16" r="13" stroke="#C9F06B" stroke-width="1.8" stroke-dasharray="3 3"></circle><path class="sway" d="M10 22c0-7 4.5-11 12-12 0 7.5-4 12-12 12Z" fill="#C9F06B"></path><path d="M10 22l6.5-6.5" stroke="#0B231C" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.02em">CO2 Counter</span>
+    </div>
+    <span style="font-size: 13px; font-weight: 600; color: #F3F0E6; opacity: {{barAlpha}}">{{countShort}} t / yr</span>
+  </div>
+
+  <div class="scroller" onScroll="{{onScroll}}" style="position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden">
+
+    <section style="position: relative; height: 500px; overflow: hidden">
+      <div style="position: absolute; inset: 0; transform: translate3d(0,{{pSky}}px,0)">
+        <svg class="orbit" width="420" height="420" viewBox="0 0 420 420" fill="none" style="position: absolute; left: -15px; top: 30px; opacity: .5" aria-hidden="true"><circle cx="210" cy="210" r="190" stroke="#2A6150" stroke-dasharray="2 10" stroke-linecap="round" stroke-width="2"></circle><circle cx="210" cy="20" r="5" fill="#C9F06B"></circle></svg>
+        <svg class="mol" width="34" height="20" viewBox="0 0 34 20" style="position: absolute; left: 30px; top: 96px" aria-hidden="true"><circle cx="17" cy="10" r="6" fill="#2A6150"></circle><circle cx="5" cy="10" r="4" fill="#1D5443"></circle><circle cx="29" cy="10" r="4" fill="#1D5443"></circle></svg>
+        <svg class="mol" width="34" height="20" viewBox="0 0 34 20" style="position: absolute; left: 318px; top: 150px; animation-duration: 12s; animation-delay: -3s" aria-hidden="true"><circle cx="17" cy="10" r="6" fill="#2A6150"></circle><circle cx="5" cy="10" r="4" fill="#1D5443"></circle><circle cx="29" cy="10" r="4" fill="#1D5443"></circle></svg>
+        <svg class="mol" width="24" height="14" viewBox="0 0 34 20" style="position: absolute; left: 270px; top: 72px; animation-duration: 10s; animation-delay: -6s" aria-hidden="true"><circle cx="17" cy="10" r="6" fill="#2A6150"></circle><circle cx="5" cy="10" r="4" fill="#1D5443"></circle><circle cx="29" cy="10" r="4" fill="#1D5443"></circle></svg>
+      </div>
+
+      <div style="position: absolute; left: 0; right: 0; top: 92px; padding: 0 24px; transform: translate3d(0,{{pText}}px,0); opacity: {{textAlpha}}">
+        <div class="rise" style="font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #9FC4B4">Your estimated footprint</div>
+        <div class="rise d1" style="display: flex; align-items: baseline; gap: 10px; margin-top: 6px">
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 84px; line-height: 1; letter-spacing: -0.05em; color: #F3F0E6; font-variant-numeric: tabular-nums">{{countLabel}}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #9FC4B4; line-height: 1.3">kg CO₂e<br>per year</span>
+        </div>
+        <div class="rise d2" style="display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap">
+          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 99px; background: #F08A5D; color: #2A0F04; font-size: 13px; font-weight: 700"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"></path></svg>25% above UK average</span>
+          <span style="display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 99px; background: #163A2F; color: #C9F06B; font-size: 13px; font-weight: 700">270% of 1.5°C budget</span>
+        </div>
+
+        <div class="rise d3" style="margin-top: 26px">
+          <div style="position: relative; height: 12px; border-radius: 99px; background: #163A2F; overflow: hidden">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{meterW}}%; border-radius: 99px; background: #C9F06B; transition: width 1.6s cubic-bezier(.2,.8,.2,1)">
+              <div class="shine" style="position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent)"></div>
+            </div>
+            <div style="position: absolute; left: 31%; top: -2px; bottom: -2px; width: 2px; background: #F3F0E6"></div>
+            <div style="position: absolute; left: 48.2%; top: -2px; bottom: -2px; width: 2px; background: #F08A5D"></div>
+          </div>
+          <div style="position: relative; height: 34px; margin-top: 8px; font-size: 11px; font-weight: 600; color: #9FC4B4">
+            <span style="position: absolute; left: 31%; transform: translateX(-50%); text-align: center; line-height: 1.3">1.5°C<br>2.5 t</span>
+            <span style="position: absolute; left: 48.2%; transform: translateX(-50%); text-align: center; line-height: 1.3; color: #F6B395">UK avg<br>3.9 t</span>
+            <span style="position: absolute; right: 0; text-align: right; line-height: 1.3; color: #F3F0E6">You<br>6.7 t</span>
+          </div>
+        </div>
+      </div>
+
+      <svg width="390" height="170" viewBox="0 0 390 170" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: 0; transform: translate3d(0,{{pFar}}px,0)" aria-hidden="true"><path d="M0 80c40-30 80-46 130-30s70 40 120 22 90-56 140-40v138H0Z" fill="#164236"></path></svg>
+      <svg width="390" height="130" viewBox="0 0 390 130" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: 0; transform: translate3d(0,{{pMid}}px,0)" aria-hidden="true"><path d="M0 70c60-36 110-40 170-14s110 26 220-26v100H0Z" fill="#1D5443"></path><g transform="translate(300 34)"><path d="M0 26V8" stroke="#0F2E25" stroke-width="2"></path><path class="sway" d="M0 14c-8 0-12-6-12-14 8 0 12 6 12 14Zm0-4c6 0 9-5 9-11-6 0-9 5-9 11Z" fill="#2A6150"></path></g></svg>
+      <svg width="390" height="70" viewBox="0 0 390 70" preserveAspectRatio="none" style="position: absolute; left: 0; bottom: -1px" aria-hidden="true"><path d="M0 40c80-30 160-36 240-14s110 10 150-6v50H0Z" fill="#F3F0E6"></path></svg>
+    </section>
+
+    <div style="background: #F3F0E6; padding: 8px 20px 140px; display: flex; flex-direction: column; gap: 28px">
+
+      <section>
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.03em">Where it comes from</h2>
+          <span style="font-size: 12px; font-weight: 600; color: #5B6F67">kg / yr</span>
+        </div>
+        <p style="margin: 6px 0 14px; font-size: 14px; color: #4C5F57">Tap a category to see what you could save.</p>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{cats}}" as="item" hint-placeholder-count="7">
+            <button class="row" onClick="{{item.pick}}" style="all: unset; box-sizing: border-box; display: block; width: 100%; padding: 12px; border-radius: 18px; background: {{item.bg}}; cursor: pointer; box-shadow: {{item.shadow}}">
+              <div style="display: flex; align-items: center; gap: 12px">
+                <span style="flex: none; width: 44px; height: 44px; border-radius: 14px; background: {{item.tile}}; color: {{item.ink}}; display: grid; place-items: center">
+                  <sc-if value="{{item.isMeals}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="17.5" cy="5" r="1.8"></circle><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg></sc-if>
+                  <sc-if value="{{item.isBank}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.6"></circle><path d="M3 9.5 12 4l9 5.5H3Z"></path><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg></sc-if>
+                  <sc-if value="{{item.isHome}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M13 10.5 10 15h3l-1 3.5 3.5-5h-3l.5-3Z"></path><path d="M3.5 11 12 4l8.5 7"></path><path d="M5.5 9.5V20h13V9.5"></path></svg></sc-if>
+                  <sc-if value="{{item.isPets}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M12 13c-2.5 0-4.5 2.3-4.5 4.3 0 1.6 1.4 2.2 2.6 1.9l1.9-.5 1.9.5c1.2.3 2.6-.3 2.6-1.9 0-2-2-4.3-4.5-4.3Z"></path><path d="M12 13c-2.5 0-4.5 2.3-4.5 4.3 0 1.6 1.4 2.2 2.6 1.9l1.9-.5 1.9.5c1.2.3 2.6-.3 2.6-1.9 0-2-2-4.3-4.5-4.3Z"></path><circle cx="5.5" cy="11" r="1.8"></circle><circle cx="9.5" cy="6.5" r="1.8"></circle><circle cx="14.5" cy="6.5" r="1.8"></circle><circle cx="18.5" cy="11" r="1.8"></circle></svg></sc-if>
+                  <sc-if value="{{item.isFlights}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="ac" cx="12" cy="7" r="1.5"></circle><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg></sc-if>
+                  <sc-if value="{{item.isCommute}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ac" d="M6.5 7.5h11l1.5 4h-14Z"></path><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path d="M3.5 12h17"></path><circle cx="7.5" cy="16.5" r="2" fill="#F3F0E6"></circle><circle cx="16.5" cy="16.5" r="2" fill="#F3F0E6"></circle></svg></sc-if>
+                  <sc-if value="{{item.isWater}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3.5 4.5 6 8 6 11a6 6 0 0 1-12 0c0-3 2.5-6.5 6-11Z"></path><path class="ac" d="M9 14.5a3 3 0 0 0 3 3v-1.6a1.4 1.4 0 0 1-1.4-1.4Z"></path></svg></sc-if>
+                </span>
+                <div style="flex: 1; min-width: 0">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+                    <span style="font-weight: 700; font-size: 15px">{{item.label}}</span>
+                    <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums">{{item.valueLabel}}</span>
+                  </div>
+                  <div style="position: relative; height: 8px; margin-top: 8px; border-radius: 99px; background: #E3E0D4; overflow: hidden">
+                    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{item.w}}%; border-radius: 99px; background: {{item.bar}}; transition: width 1.2s cubic-bezier(.2,.8,.2,1) {{item.delay}}"></div>
+                    <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{item.saveW}}%; border-radius: 99px; background: #C9F06B; transition: width .7s cubic-bezier(.2,.8,.2,1)"></div>
+                  </div>
+                </div>
+              </div>
+              <sc-if value="{{item.open}}" hint-placeholder-val="{{false}}">
+                <div class="rise" style="margin: 12px 0 2px 56px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #33463F">
+                  <span>{{item.note}}</span>
+                  <span style="display: flex; gap: 8px; flex-wrap: wrap">
+                    <span style="padding: 5px 10px; border-radius: 99px; background: #0F2E25; color: #C9F06B; font-weight: 700">Realistic −{{item.real}} kg</span>
+                    <span style="padding: 5px 10px; border-radius: 99px; background: #E3E0D4; font-weight: 600">All the way −{{item.max}} kg</span>
+                  </span>
+                </div>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="position: relative; padding: 24px; border-radius: 28px; background: #0F2E25; color: #F3F0E6; overflow: hidden">
+        <svg width="200" height="200" viewBox="0 0 200 200" style="position: absolute; right: -60px; top: -60px; transform: translate3d(0,{{pCard}}px,0)" aria-hidden="true"><circle cx="100" cy="100" r="90" fill="none" stroke="#1D5443" stroke-width="22"></circle><circle cx="100" cy="100" r="50" fill="none" stroke="#163A2F" stroke-width="14"></circle></svg>
+        <div style="position: relative; display: flex; align-items: center; gap: 10px">
+          <span style="position: relative; width: 36px; height: 36px; display: grid; place-items: center">
+            <span class="ring" style="position: absolute; inset: 0; border-radius: 99px; background: #C9F06B"></span>
+            <span style="position: relative; width: 36px; height: 36px; border-radius: 99px; background: #C9F06B; color: #0F2E25; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"></path><path d="M12 8.5l1.2 2.3 2.3 1.2-2.3 1.2-1.2 2.3-1.2-2.3-2.3-1.2 2.3-1.2Z"></path></svg></span>
+          </span>
+          <span style="font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #C9F06B">Your biggest opportunity</span>
+        </div>
+        <h3 style="position: relative; margin: 16px 0 8px; font-family: 'Bricolage Grotesque', sans-serif; font-size: 30px; line-height: 1.05; font-weight: 700; letter-spacing: -0.03em">Trim your red‑meat days to 1–2 a week</h3>
+        <p style="position: relative; margin: 0; font-size: 14px; line-height: 1.55; color: #B9D3C8">You already keep red meat to a couple of days. Swapping one more for chicken or a plant‑based meal keeps cutting your footprint.</p>
+        <div style="position: relative; margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="padding: 14px; border-radius: 18px; background: #163A2F">
+            <div style="font-size: 12px; color: #9FC4B4; font-weight: 600">Realistic</div>
+            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800; color: #C9F06B; letter-spacing: -0.03em">−1,066</div>
+            <div style="font-size: 12px; color: #9FC4B4">kg CO₂e / yr</div>
+          </div>
+          <div style="padding: 14px; border-radius: 18px; background: #163A2F">
+            <div style="font-size: 12px; color: #9FC4B4; font-weight: 600">Fully plant‑based</div>
+            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800; color: #F3F0E6; letter-spacing: -0.03em">−1,745</div>
+            <div style="font-size: 12px; color: #9FC4B4">kg CO₂e / yr</div>
+          </div>
+        </div>
+        <a class="press" href="Meals.dc.html" style="position: relative; margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 99px; background: #C9F06B; color: #0F2E25; font-weight: 700; font-size: 15px; text-decoration: none">Build this habit<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+      </section>
+
+      <section>
+        <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.03em">If you build these habits</h2>
+        <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 99px; background: #E3E0D4">
+          <sc-for list="{{stages}}" as="st" hint-placeholder-count="3">
+            <button class="press" onClick="{{st.pick}}" style="all: unset; box-sizing: border-box; min-height: 44px; display: grid; place-items: center; border-radius: 99px; font-size: 14px; font-weight: 700; cursor: pointer; background: {{st.bg}}; color: {{st.ink}}; transition: background .35s, color .35s">{{st.label}}</button>
+          </sc-for>
+        </div>
+        <div style="margin-top: 20px; display: flex; align-items: baseline; gap: 8px">
+          <span style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 52px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums">{{stageValue}}</span>
+          <span style="font-size: 14px; font-weight: 600; color: #4C5F57">kg CO₂e / yr</span>
+        </div>
+        <div style="position: relative; margin-top: 14px; height: 18px; border-radius: 99px; background: #E3E0D4; overflow: hidden">
+          <div style="position: absolute; inset: 0 auto 0 0; width: {{stageW}}%; border-radius: 99px; background: {{stageBar}}; transition: width .9s cubic-bezier(.3,1.3,.5,1), background .4s"></div>
+          <div style="position: absolute; left: 37%; top: 0; bottom: 0; width: 2px; background: #0F2E25; opacity: .5"></div>
+        </div>
+        <p style="margin: 10px 0 0; font-size: 14px; color: #33463F">{{stageNote}}</p>
+      </section>
+    </div>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 20px; right: 20px; bottom: 20px; z-index: 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 99px; background: rgba(15,46,37,.92); backdrop-filter: blur(16px); box-shadow: 0 12px 30px rgba(11,35,28,.35)">
+    <a class="press" href="Meals.dc.html" style="min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 99px; color: #B9D3C8; font-size: 13px; font-weight: 700; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4V3h6v1M9 11l2 2 4-4M9 17h6"></path></svg>Survey</a>
+    <a class="press" href="Main.dc.html" aria-current="page" style="min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 99px; background: #C9F06B; color: #0F2E25; font-size: 13px; font-weight: 700; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Results</a>
+    <a class="press" href="Main.dc.html" style="min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 99px; color: #B9D3C8; font-size: 13px; font-weight: 700; text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21c-4 0-7-2.6-7-6.5 0-3 2-5.5 3.5-7 .3 2 1.3 3 2.5 3.5C11 7 12.5 4.5 15 3c-.5 3 3.5 5.5 3.5 10 0 4.5-3 8-6.5 8Z"></path></svg>Habits</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, ready: false, open: 'meals', stage: 'now' };
+  }
+  componentDidMount() {
+    const target = 6746, dur = 1600, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      const e = 1 - Math.pow(1 - k, 4);
+      this.setState({ count: Math.round(target * e) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+    this.timer = setTimeout(() => this.setState({ ready: true }), 120);
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    clearTimeout(this.timer);
+  }
+  renderVals() {
+    const s = this.state.scroll;
+    const k = this.props.parallax ?? 1;
+    const ready = this.state.ready;
+    const fmt = (n) => n.toLocaleString('en-GB');
+    const raw = [
+      { key: 'meals', label: 'Meals & diet', v: 2314, real: 1066, max: 1745, note: '~44.5 kg CO₂e a week, plus eating out' },
+      { key: 'bank', label: 'Banking & pension', v: 1931, real: 1175, max: 1931, note: 'Barclays · pension with Nest' },
+      { key: 'home', label: 'Home energy', v: 1451, real: 247, max: 1326, note: 'Standard electricity tariff + gas' },
+      { key: 'pets', label: 'Pets', v: 385, real: 96, max: 193, note: '1 pet' },
+      { key: 'flights', label: 'Flights', v: 367, real: 356, max: 367, note: '1 trip a year' },
+      { key: 'commute', label: 'Commute & travel', v: 280, real: 267, max: 280, note: '~5.4 kg CO₂e a week commuting' },
+      { key: 'water', label: 'Water', v: 17, real: 3, max: 7, note: '4,000 L per person a month' }
+    ];
+    const top = raw[0].v;
+    const cats = raw.map((c, i) => {
+      const open = this.state.open === c.key;
+      const w = ready ? Math.max(2, (c.v / top) * 100) : 0;
+      return {
+        ...c,
+        valueLabel: fmt(c.v),
+        real: fmt(c.real),
+        max: fmt(c.max),
+        open,
+        w,
+        saveW: open && ready ? Math.max(1, ((c.v - c.real) / top) * 100) : 0,
+        delay: (0.25 + i * 0.09) + 's',
+        bg: open ? '#FFFFFF' : 'transparent',
+        shadow: open ? '0 10px 30px rgba(15,46,37,.10)' : 'none',
+        tile: open ? '#0F2E25' : '#E3E0D4',
+        ink: open ? '#F3F0E6' : '#0F2E25',
+        bar: open ? '#0F2E25' : '#5E8C7A',
+        isMeals: c.key === 'meals', isBank: c.key === 'bank', isHome: c.key === 'home', isPets: c.key === 'pets',
+        isFlights: c.key === 'flights', isCommute: c.key === 'commute', isWater: c.key === 'water',
+        pick: () => this.setState({ open: open ? '' : c.key })
+      };
+    });
+    const stageData = {
+      now: { label: 'Now', v: 6746, bar: '#F08A5D', note: 'Where you are today: 25% above the UK average.' },
+      real: { label: 'Realistic', v: 3536, bar: '#5E8C7A', note: 'Realistic changes cut 48% (3,210 kg) — below the UK average.' },
+      all: { label: 'All the way', v: 1654, bar: '#C9F06B', note: 'Going all the way cuts 75% (5,092 kg) — inside the 1.5°C budget.' }
+    };
+    const stages = Object.keys(stageData).map((id) => ({
+      label: stageData[id].label,
+      bg: this.state.stage === id ? '#0F2E25' : 'transparent',
+      ink: this.state.stage === id ? '#C9F06B' : '#0F2E25',
+      pick: () => this.setState({ stage: id })
+    }));
+    const cur = stageData[this.state.stage];
+    return {
+      onScroll: (e) => this.setState({ scroll: e.currentTarget.scrollTop }),
+      barAlpha: Math.min(1, s / 260).toFixed(2),
+      pSky: (s * 0.7 * k).toFixed(1),
+      pText: (s * 0.45 * k).toFixed(1),
+      pFar: (s * 0.3 * k).toFixed(1),
+      pMid: (s * 0.15 * k).toFixed(1),
+      pCard: (-(s - 600) * 0.12 * k).toFixed(1),
+      textAlpha: Math.max(0, 1 - s / 340).toFixed(2),
+      countLabel: fmt(this.state.count),
+      countShort: (this.state.count / 1000).toFixed(1),
+      meterW: ready ? 84 : 0,
+      cats,
+      stages,
+      stageValue: fmt(cur.v),
+      stageW: ready ? (cur.v / 6746) * 100 : 0,
+      stageBar: cur.bar,
+      stageNote: cur.note
+    };
+  }
+}
+</script>
+</body>
+</html>
