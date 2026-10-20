@@ -2042,11 +2042,13 @@
       '<div class="stack-6 mb-10">' +
       shown
         .map(({ s, i }, n) => {
-          const done = cat === "flights" && sectionDone(cat, s);
+          const na = sectionNA(cat, s);
+          const done = !na && (cat === "flights" || cat === "banking") && sectionDone(cat, s);
+          const tag = done ? '<span class="tag done-tag ml-auto">Done</span>' : na ? '<span class="tag na-tag ml-auto">Not applicable</span>' : "";
           return (
-            '<div class="section-card fade-up' + (done ? " done" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
+            '<div class="section-card fade-up' + (done ? " done" : na ? " na" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
             '<span class="num-badge">' + (done ? icon("check") : n + 1) + "</span>" + esc(s.heading) +
-            (done ? '<span class="tag done-tag ml-auto">Done</span>' + icon("info", "faint") : icon("info", "ml-auto faint")) +
+            (tag ? tag + icon("info", "faint") : icon("info", "ml-auto faint")) +
             '</h2><p class="sm muted lh">' + esc(s.body) + "</p>" + sectionTeaser(s) + "</div>"
           );
         })
@@ -2085,8 +2087,20 @@
       return false;
     }
     if (cat === "meals") return /food waste/i.test(s.heading) && (survey.meals || {}).foodWaste === "low";
+    if (cat === "banking") {
+      const b = survey.banking || {};
+      if (s.dynamicKey === "switchAccount" || s.dynamicKey === "bankLeague") return GREEN_BANKS.includes(b.bank);
+      if (s.dynamicKey === "savingsPensions") {
+        const p = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
+        return !!(b.pensionPot && p && pensionRating(p.score).key === "vgood");
+      }
+    }
     return false;
   }
+
+  // The banks in the switching card, and when a guide card doesn't apply.
+  const GREEN_BANKS = ["triodos", "co_op", "nationwide"];
+  const sectionNA = (cat, s) => cat === "banking" && s.dynamicKey === "savingsPensions" && !(survey.banking || {}).pensionPot;
 
   // Driving cards only make sense for people who drive to work.
   const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
