@@ -1116,6 +1116,8 @@
     newSurvey: false, // taking a new survey; the finished one is kept until it's done
     reviewing: false, // on the "Anything changed?" summary of a new survey
     fromReview: false, // editing one step, opened from that summary
+    editBase: null, // answers before "Edit my answers", to compare on save
+    celebrate: null, // what changed since the last survey, shown once on Results
     draft: null,
     prevSurvey: null,
     history: [], // completed surveys, newest first: { completedAt, totalYearly }
@@ -1148,16 +1150,18 @@
       '<div class="container narrow">' + pageHeader("Carbon Footprint Survey") +
       '<div class="card center fade-up"><div class="round-badge center-block mb-4">' + icon("check") + "</div>" +
       '<h2 class="card-title mb-2">You\'ve already completed your survey</h2>' +
-      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Has anything changed since? Check your answers and update just what's different, or start a new survey from scratch. " +
+      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Has anything changed since? A quick update is a new survey that starts from your last answers, so you only change what's different. Or start from scratch. " +
       "Either way, your current results are kept in your history, and you can cancel before you finish. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
       '<div class="chip-row" style="justify-content:center">' +
-      '<button type="button" class="btn btn-green" data-action="whats-changed">' + icon("pencil") + " Anything changed?</button>" +
+      '<button type="button" class="btn btn-green" data-action="whats-changed">' + icon("pencil") + " Quick update: anything changed?</button>" +
       '<button type="button" class="btn btn-outline" data-action="new-survey">' + icon("refresh") + " Start from scratch</button>" +
       '<a class="btn btn-ghost" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
     );
   }
 
   function finishSurvey() {
+    const base = ui.newSurvey ? ui.prevSurvey : ui.editBase;
+    ui.editBase = null;
     if (ui.newSurvey) {
       survey = ui.draft;
       ui.newSurvey = false;
@@ -1170,7 +1174,54 @@
     ui.editing = false;
     saveSnapshot(footprint(survey).totalYearly);
     recordHistory(survey);
+    ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
     location.hash = "#/results";
+  }
+
+  // What changed between two surveys, for the message on Results.
+  function celebration(before, after) {
+    const a = footprint(before);
+    const b = footprint(after);
+    const cats = b.breakdown
+      .map((x) => {
+        const old = a.breakdown.find((y) => y.key === x.key);
+        return { label: x.label, diff: x.yearly - (old ? old.yearly : 0) };
+      })
+      .filter((c) => Math.abs(c.diff) >= 0.05);
+    return { before: a.totalYearly, after: b.totalYearly, saved: a.totalYearly - b.totalYearly, cats };
+  }
+
+  function celebrationCard() {
+    const c = ui.celebrate;
+    if (!c) return "";
+    const kg = (n) => (n >= 10 ? kgFmt(n) : n.toFixed(1)) + " kg";
+    const down = c.cats.filter((x) => x.diff < 0).sort((x, y) => x.diff - y.diff);
+    const close = '<button type="button" class="modal-close" data-action="dismiss-celebrate" aria-label="Dismiss">' + icon("x") + "</button>";
+    if (c.saved >= 0.05) {
+      const pct = c.before ? (c.saved / c.before) * 100 : 0;
+      const km = c.saved / byKey(D.COMMUTE_MODES, "car_petrol").factor;
+      const title = c.saved < 25 ? "Every bit counts. Nice one!" : c.saved < 250 ? "Great progress!" : "Brilliant work!";
+      return (
+        '<div class="card celebrate fade-up" role="status">' + close + '<div class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
+        '<span class="eyebrow">' + icon("trendDown") + " Since your last survey</span>" +
+        '<h2 class="celebrate-title">' + title + "</h2>" +
+        '<p class="celebrate-num"><span>−' + kg(c.saved) + '</span> CO₂e a year</p>' +
+        '<p class="sm celebrate-sub">That\'s ' + (pct >= 1 ? Math.round(pct) + "%" : "a little") + " lower, the same as not driving " + kgFmt(Math.max(1, km)) + " km in a petrol car. " +
+        (c.saved < 25 ? "Small changes add up when they stick." : "Keep it going.") + "</p>" +
+        (down.length ? '<div class="celebrate-chips">' + down.map((x) => '<span class="celebrate-chip">' + esc(x.label) + " −" + kg(-x.diff) + "</span>").join("") + "</div>" : "") +
+        "</div>"
+      );
+    }
+    return (
+      '<div class="card celebrate quiet fade-up" role="status">' + close +
+      '<span class="eyebrow">' + icon("check") + " New survey saved</span>" +
+      (c.cats.length
+        ? '<h2 class="celebrate-title">Thanks for keeping it honest</h2><p class="sm celebrate-sub">Your footprint is up ' + kg(-c.saved) +
+          " a year since last time. Your biggest opportunity is below." +
+          (down.length ? " You still cut " + down.map((x) => esc(x.label) + " by " + kg(-x.diff)).join(" and ") + ", so well done there." : "") + "</p>"
+        : '<h2 class="celebrate-title">All up to date</h2><p class="sm celebrate-sub">Nothing changed since last time. Your next step is below.</p>') +
+      "</div>"
+    );
   }
 
   // ---------- "Anything changed?" review ----------
@@ -1246,29 +1297,38 @@
     const now = footprint(ui.draft).totalYearly;
     const diff = now - before;
     const anyChanged = STEPS.some((st) => stepChanged(st.key));
+    const when = Date.parse(ui.prevSurvey.completedAt);
+    const date = isNaN(when) ? "last time" : new Date(when).toLocaleDateString(undefined, { day: "numeric", month: "long" });
+    const delta = !anyChanged
+      ? '<span class="review-pill">No changes yet</span>'
+      : Math.abs(diff) < 0.05
+      ? '<span class="review-pill">Same total</span>'
+      : '<span class="review-pill ' + (diff < 0 ? "down" : "up") + '">' + (diff < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(diff)) + " kg</span>";
     return (
-      '<div class="container narrow">' + pageHeader("Anything changed?", "Here's what you told us last time. Tap anything that's different.") +
-      '<div class="review-list fade-up">' +
+      '<div class="container narrow review-page">' +
+      '<div class="review-hero fade-up"><span class="eyebrow">New survey · the quick way</span>' +
+      '<h1 class="review-title">Anything changed?</h1>' +
+      '<p class="sm review-lead">Here are your answers from ' + esc(date) + ". Tap anything that's different. Everything else carries over.</p>" +
+      '<div class="review-stat"><span class="review-num">' + kgFmt(now) + '</span><span class="xs">kg CO₂e a year</span>' + delta + "</div></div>" +
+      '<div class="review-group fade-up">' +
       STEPS.map((st, i) => {
         const changed = stepChanged(st.key);
+        const kgNow = stepKg(st.key, ui.draft);
+        const kgWas = stepKg(st.key, ui.prevSurvey);
         return (
-          '<button type="button" class="review-row' + (changed ? " changed" : "") + '" data-action="review-edit" data-step="' + i + '">' +
-          '<span class="review-icon">' + st.icon + '</span><span class="review-main"><span class="label-row"><span class="fw-600">' + esc(st.title) + "</span>" +
-          (changed ? '<span class="tag done-tag">Updated</span>' : "") + "</span>" +
-          answerSummary(st.key, ui.draft).map((line) => '<span class="xs muted block">' + esc(line) + "</span>").join("") +
-          '</span><span class="review-side"><span class="sm fw-600">' + kgFmt(stepKg(st.key, ui.draft)) + '</span><span class="tiny muted">kg/yr</span>' +
-          '<span class="review-change">' + (changed ? "Edit" : "Change") + "</span></span></button>"
+          '<button type="button" class="review-item' + (changed ? " changed" : "") + '" data-action="review-edit" data-step="' + i + '">' +
+          '<span class="review-icon">' + st.icon + "</span>" +
+          '<span class="review-main"><span class="review-name">' + esc(st.title) + (changed ? '<span class="review-dot" aria-label="Updated"></span>' : "") + "</span>" +
+          '<span class="review-detail">' + esc(answerSummary(st.key, ui.draft).join(" · ")) + "</span></span>" +
+          '<span class="review-side"><span class="review-kg">' + kgFmt(kgNow) + "<small> kg</small></span>" +
+          (changed && Math.round(kgWas) !== Math.round(kgNow) ? '<span class="review-was">was ' + kgFmt(kgWas) + "</span>" : "") +
+          "</span>" + icon("chevronRight", "review-chev") + "</button>"
         );
       }).join("") +
       "</div>" +
-      '<div class="card review-total mt-6"><div class="row-between gap-3" style="flex-wrap:wrap"><div><p class="xs muted">Your footprint</p><p class="fw-600">' +
-      kgFmt(before) + " → " + kgFmt(now) + ' <span class="sm muted">kg CO₂e / year</span></p>' +
-      (anyChanged && Math.abs(diff) >= 1
-        ? '<p class="xs fw-600 ' + (diff < 0 ? "green" : "red") + '">' + (diff < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(diff)) + " kg a year</p>"
-        : "") +
-      '</div><div class="chip-row"><button type="button" class="btn btn-ghost" data-action="cancel-new-survey">Cancel</button>' +
-      '<button type="button" class="btn btn-green" data-action="review-save">' + icon("check") + (anyChanged ? " Save my update" : " Nothing's changed: save") + "</button></div></div></div>" +
-      '<p class="xs muted center mt-4">Saving adds a new entry to your history, so you can see your progress over time.</p></div>'
+      '<p class="xs muted center mt-4">This counts as a new survey, so it\'s added to your history and progress.</p>' +
+      '<div class="review-bar"><button type="button" class="btn btn-ghost" data-action="cancel-new-survey">Cancel</button>' +
+      '<button type="button" class="btn btn-green" data-action="review-save">' + icon("check") + (anyChanged ? " Save new survey" : " Nothing's changed: save") + "</button></div></div>"
     );
   }
 
@@ -1811,6 +1871,7 @@
     const snapshots = getSnapshots();
 
     let html = '<div class="container">' + pageHeader("Your Carbon Footprint");
+    html += celebrationCard();
 
     html +=
       '<div class="card hero fade-up"><div class="glow"></div><div class="rel">' +
@@ -3699,6 +3760,7 @@
     if (ui.newSurvey) survey = path === "/" ? ui.draft : ui.prevSurvey;
     // Leaving the survey ends an edit; the Survey tab asks again next time.
     if (path !== "/") ui.editing = false;
+    if (path !== "/results") ui.celebrate = null;
     const parts = path.split("/").filter(Boolean);
     let html;
     const member = canSync();
@@ -4099,7 +4161,12 @@
       render();
       window.scrollTo(0, 0);
     },
+    "dismiss-celebrate": () => {
+      ui.celebrate = null;
+      render();
+    },
     "edit-survey": () => {
+      ui.editBase = JSON.parse(JSON.stringify(survey));
       ui.editing = true;
       ui.step = 0;
       if (location.hash === "#/" || location.hash === "") render();
