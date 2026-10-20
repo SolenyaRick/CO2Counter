@@ -934,6 +934,51 @@
   ];
   const CASS_URL = "https://www.currentaccountswitch.co.uk/";
 
+  // Hand-picked services shown on each category's guide page. "hideForDiets"
+  // skips the card for people whose diet it wouldn't help.
+  const USEFUL_LINKS = {
+    meals: {
+      title: "Make the swap easier",
+      hideForDiets: ["vegan", "veggie"],
+      items: [
+        { label: "Riverford", url: "https://www.riverford.co.uk/", note: "Organic veg and recipe boxes from UK farms." },
+        { label: "Abel & Cole", url: "https://www.abelandcole.co.uk/", note: "Organic fruit, veg and plant-based recipe boxes." },
+        { label: "Oddbox", url: "https://www.oddbox.co.uk/", note: "Surplus and wonky fruit and veg that would otherwise be wasted." },
+        { label: "Fork Ranger", url: "https://www.forkranger.com/", note: "App with easy vegetarian recipes and a shopping list." },
+      ],
+    },
+    commute: {
+      title: "Plan it by train",
+      items: [
+        { label: "Trainline", url: "https://www.thetrainline.com/", note: "UK train times, tickets and railcards." },
+      ],
+    },
+    flights: {
+      title: "Go by train instead",
+      items: [
+        { label: "Trainline", url: "https://www.thetrainline.com/", note: "UK and European train tickets." },
+        { label: "Eurostar", url: "https://www.eurostar.com/uk-en", note: "London to Paris, Brussels, Amsterdam and beyond." },
+        { label: "The Man in Seat 61", url: "https://www.seat61.com/", note: "Step-by-step guides to travelling almost anywhere by train." },
+      ],
+    },
+    energy: {
+      title: "Greener energy suppliers",
+      items: [
+        { label: "Good Energy", url: "https://www.goodenergy.co.uk/", note: "100% renewable electricity from UK generators." },
+        { label: "Ecotricity", url: "https://www.ecotricity.co.uk/", note: "Green electricity and green gas, reinvested in new renewables." },
+        { label: "Octopus Energy", url: "https://octopus.energy/", note: "Renewable electricity tariffs and smart tariffs for EVs and heat pumps." },
+      ],
+    },
+    banking: {
+      title: "Switch to a greener bank",
+      items: [
+        { label: "Nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", note: "Member-owned building society that lends mainly for UK homes." },
+        { label: "Triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", note: "Only lends to social and environmental projects." },
+        { label: "The Co-operative Bank", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", note: "Ethical policy rules out fossil-fuel finance." },
+      ],
+    },
+  };
+
   const GREEN_PENSION_T_PER_MILLION = 21;
 
   // Per-category "why / how to reduce" content and suggested habits.
@@ -1682,7 +1727,7 @@
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
-    COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
+    COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
     DIET_EXPLAINERS, GOAL_HABIT_IDS,
   };
