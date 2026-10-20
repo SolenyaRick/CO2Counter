@@ -1723,6 +1723,7 @@
       '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
       '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
       (tip.saving > 0.5 || tip.maxSaving > 0.5 ? savingSummary(tip) : "") +
+      (linksFor(selected) ? '<p class="xs muted mt-5 mb-2">Ready to act? Try:</p>' + linkChips(selected, 3) : "") +
       (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
       '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
 
@@ -2061,7 +2062,7 @@
       '<div class="popup-body"><p class="sm">The <strong>Current Account Switch Service</strong> is free and run by Pay.UK, and most UK banks and building societies use it. ' +
       "Open an account with your new bank and ask for a full switch: it moves your balance, direct debits and standing orders in 7 working days, " +
       "redirects payments sent to your old account, and is protected by the Current Account Switch Guarantee.</p>" +
-      '<p class="sm">Greener choices for an everyday account include Nationwide and The Co-operative Bank, both Which? Eco Providers.</p>' +
+      '<p class="sm">Greener banks to switch to:</p>' + linkChips("banking") +
       '<div><a class="btn btn-green" href="' + D.CASS_URL + '" target="_blank" rel="noopener">Go to the Current Account Switch Service ' + icon("arrowRight") + "</a></div>" +
       '<div class="panel p-4 mt-2"><p class="xs muted">' + support + "</p></div></div>"
     );
@@ -2100,20 +2101,54 @@
     );
   }
 
-  function usefulLinksCard(cat) {
+  const linksFor = (cat) => {
     const links = D.USEFUL_LINKS[cat];
-    if (!links || (links.hideForDiets || []).includes(dietType(survey))) return "";
+    return links && !(links.hideForDiets || []).includes(dietType(survey)) ? links : null;
+  };
+  const linkHref = (l) => esc(l.ref || l.url);
+  const monogram = (l) =>
+    '<span class="mono mono-' + (l.tone || "leaf") + '">' + esc(l.label.replace(/^The /, "").replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("")) + "</span>";
+
+  function usefulLinksCard(cat) {
+    const links = linksFor(cat);
+    if (!links) return "";
+    const tip = tipFor(cat, survey);
+    const kg = tip.saving > 0.5 ? tip.saving : tip.maxSaving;
+    const paid = links.items.some((l) => l.ref);
     return (
-      '<div class="card mb-6 fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("link") + '</span><h2 class="card-title">' + esc(links.title) + "</h2></div>" +
-      '<div class="link-list">' +
+      '<div class="card offer-card mb-6 fade-up"><div class="offer-head"><span class="eyebrow">' + esc(links.eyebrow || "Useful links") + "</span>" +
+      '<h2 class="offer-title">' + esc(links.title) + "</h2>" +
+      (kg > 0.5 ? '<p class="sm offer-sub">Making this change could cut about <strong>' + Math.round(kg).toLocaleString() + " kg CO₂e a year</strong> from your footprint.</p>" : "") +
+      '</div><div class="offer-grid">' +
       links.items
         .map(
           (l) =>
-            '<a class="link-row" href="' + esc(l.url) + '" target="_blank" rel="noopener"><span class="min0"><span class="fw-600 sm block">' + esc(l.label) +
-            '</span><span class="xs muted block">' + esc(l.note) + "</span></span>" + icon("arrowRight", "faint") + "</a>"
+            '<a class="offer" href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '">' +
+            '<div class="label-row">' + monogram(l) + '<span class="fw-600">' + esc(l.label) + "</span></div>" +
+            '<div class="offer-tags">' + (l.tags || []).map((t) => '<span class="offer-tag">' + esc(t) + "</span>").join("") + "</div>" +
+            '<p class="sm muted lh">' + esc(l.note) + "</p>" +
+            '<span class="offer-cta">Visit ' + esc(l.label.replace(/^The /, "")) + " " + icon("link") + "</span></a>"
         )
         .join("") +
-      '</div><p class="xs muted mt-3">Independent suggestions. We don\'t get paid for these links.</p></div>'
+      '</div><p class="xs muted mt-4">' +
+      (paid
+        ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you. We only list options we'd recommend anyway."
+        : "Independent suggestions. We don't get paid for these links.") +
+      "</p></div>"
+    );
+  }
+
+  // Compact logo chips for the same links, used in pop-ups and on Results.
+  function linkChips(cat, max) {
+    const links = linksFor(cat);
+    if (!links) return "";
+    return (
+      '<div class="chip-links">' +
+      links.items
+        .slice(0, max || links.items.length)
+        .map((l) => '<a class="chip-link" href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '">' + monogram(l) + esc(l.label) + "</a>")
+        .join("") +
+      "</div>"
     );
   }
 
