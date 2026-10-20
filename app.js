@@ -2062,7 +2062,7 @@
       '<div class="popup-body"><p class="sm">The <strong>Current Account Switch Service</strong> is free and run by Pay.UK, and most UK banks and building societies use it. ' +
       "Open an account with your new bank and ask for a full switch: it moves your balance, direct debits and standing orders in 7 working days, " +
       "redirects payments sent to your old account, and is protected by the Current Account Switch Guarantee.</p>" +
-      '<p class="sm">Greener banks to switch to:</p>' + linkChips("banking") +
+      '<p class="sm">Greener banks to switch to:</p>' + linkChips("banking", 0, "popup") +
       '<div><a class="btn btn-green" href="' + D.CASS_URL + '" target="_blank" rel="noopener">Go to the Current Account Switch Service ' + icon("arrowRight") + "</a></div>" +
       '<div class="panel p-4 mt-2"><p class="xs muted">' + support + "</p></div></div>"
     );
@@ -2106,6 +2106,24 @@
     return links && !(links.hideForDiets || []).includes(dietType(survey)) ? links : null;
   };
   const linkHref = (l) => esc(l.ref || l.url);
+  const linkKey = (cat, l) => cat + ":" + l.label.toLowerCase().replace(/^the /, "").replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const linkAttrs = (cat, l, place) =>
+    'href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '" data-link="' + linkKey(cat, l) + '" data-place="' + place + '"';
+
+  // Counts one click per person per link (the database ignores repeats), so
+  // the same browser only asks once.
+  function recordLinkClick(el) {
+    if (!sb || !currentUser) return;
+    const key = el.dataset.link;
+    const seenKey = "co2_link_clicks_" + currentUser.id;
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem(seenKey) || "[]"); } catch (e) {}
+    if (seen.includes(key)) return;
+    sb.rpc("record_link_click", { p_link: key, p_place: el.dataset.place || null }).then(({ error }) => {
+      if (error) return;
+      try { localStorage.setItem(seenKey, JSON.stringify(seen.concat(key))); } catch (e) {}
+    }, () => {});
+  }
   const monogram = (l) =>
     '<span class="mono mono-' + (l.tone || "leaf") + '">' + esc(l.label.replace(/^The /, "").replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("")) + "</span>";
 
@@ -2123,7 +2141,7 @@
       links.items
         .map(
           (l) =>
-            '<a class="offer" href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '">' +
+            '<a class="offer" ' + linkAttrs(cat, l, "guide") + ">" +
             '<div class="label-row">' + monogram(l) + '<span class="fw-600">' + esc(l.label) + "</span></div>" +
             '<div class="offer-tags">' + (l.tags || []).map((t) => '<span class="offer-tag">' + esc(t) + "</span>").join("") + "</div>" +
             '<p class="sm muted lh">' + esc(l.note) + "</p>" +
@@ -2139,14 +2157,14 @@
   }
 
   // Compact logo chips for the same links, used in pop-ups and on Results.
-  function linkChips(cat, max) {
+  function linkChips(cat, max, place) {
     const links = linksFor(cat);
     if (!links) return "";
     return (
       '<div class="chip-links">' +
       links.items
         .slice(0, max || links.items.length)
-        .map((l) => '<a class="chip-link" href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '">' + monogram(l) + esc(l.label) + "</a>")
+        .map((l) => '<a class="chip-link" ' + linkAttrs(cat, l, place || "results") + ">" + monogram(l) + esc(l.label) + "</a>")
         .join("") +
       "</div>"
     );
@@ -3958,6 +3976,8 @@
   };
 
   document.addEventListener("click", (e) => {
+    const link = e.target.closest("a[data-link]");
+    if (link) recordLinkClick(link);
     const el = e.target.closest("[data-action]");
     if (el && actions[el.dataset.action]) {
       actions[el.dataset.action](el, e);

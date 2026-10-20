@@ -1399,3 +1399,50 @@ $$;
 
 revoke all on function public.friends_progress() from public;
 grant execute on function public.friends_progress() to authenticated;
+
+-- ============================================================
+-- Link clicks: one row per person per link, so repeat clicks
+-- (including your own testing) are only ever counted once.
+-- ============================================================
+
+create table if not exists public.link_clicks (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  link_key text not null check (link_key ~ '^[a-z0-9_:-]{1,64}$'),
+  place text check (place is null or place ~ '^[a-z0-9_-]{1,32}$'),
+  first_clicked_at timestamptz not null default now(),
+  primary key (user_id, link_key)
+);
+
+-- No policies: people can't read or write the table directly, only
+-- through record_link_click below.
+alter table public.link_clicks enable row level security;
+
+create or replace function public.record_link_click(p_link text, p_place text default null)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.link_clicks (user_id, link_key, place)
+  select auth.uid(), lower(p_link), nullif(lower(p_place), '')
+  where auth.uid() is not null
+    and lower(p_link) ~ '^[a-z0-9_:-]{1,64}$'
+    and (p_place is null or p_place = '' or lower(p_place) ~ '^[a-z0-9_-]{1,32}$')
+  on conflict (user_id, link_key) do nothing;
+$$;
+
+revoke all on function public.record_link_click(text, text) from public;
+grant execute on function public.record_link_click(text, text) to authenticated;
+
+-- People per link. Open it in the Supabase table editor or run
+-- "select * from public.link_click_stats;". Not visible to app users.
+create or replace view public.link_click_stats as
+  select link_key,
+    count(*)::integer as people,
+    min(first_clicked_at) as first_click,
+    max(first_clicked_at) as latest_click
+  from public.link_clicks
+  group by link_key
+  order by people desc, link_key;
+
+revoke all on public.link_click_stats from public, anon, authenticated;
