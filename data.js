@@ -1002,6 +1002,7 @@
   const EXPLAINERS = {
   "meals": {
     "title": "Meals & Diet",
+    "fact": "A single beef portion can emit more than a week of plant-based meals.",
     "icon": "🍽️",
     "why": "What you eat is usually the single biggest lever in your personal footprint. Food production — especially animal agriculture — drives a large share of global emissions, plus land and water use. The good news: small, repeated swaps beat rare drastic changes.",
     "sections": [
@@ -1057,6 +1058,7 @@
   },
   "commute": {
     "title": "Commute & Travel",
+    "fact": "An electric car emits about a fifth as much per kilometre as a petrol one on today's grid.",
     "icon": "🚗",
     "why": "How you get around day-to-day adds up fast. A petrol car commute is one of the largest personal emission sources, and it repeats 200+ times a year — so even small shifts compound into big savings.",
     "sections": [
@@ -1072,7 +1074,7 @@
       {
         "dynamicKey": "ifDriving",
         "heading": "If you must drive",
-        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits roughly a quarter as much per km on the current grid — and far less on a green tariff."
+        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits about a fifth as much per km on the current grid — and far less on a green tariff."
       },
       {
         "heading": "Rethink the trip itself",
@@ -1114,6 +1116,7 @@
   },
   "flights": {
     "title": "Flights",
+    "fact": "A London–New York return in economy is about 1.7 t CO₂e, roughly two-thirds of a yearly 1.5°C budget.",
     "icon": "✈️",
     "why": "Flying is often the largest single chunk of a personal footprint. One long-haul return flight can emit more than an entire year of driving. Because flights are occasional but huge, they can quietly dominate your annual total.",
     "sections": [
@@ -1172,6 +1175,7 @@
   },
   "energy": {
     "title": "Home Energy",
+    "fact": "A renewable tariff can cut electricity emissions by over 80%, with no new equipment.",
     "icon": "⚡",
     "why": "Heating and powering your home is a major, recurring emission source. Because it runs every day, efficiency gains compound — and many changes are one-time decisions that keep paying off for years.",
     "sections": [
@@ -1227,6 +1231,7 @@
   },
   "water": {
     "title": "Water",
+    "fact": "A dripping tap can waste thousands of litres a year.",
     "icon": "💧",
     "why": "Treating and pumping water — and especially heating it — uses energy. It's a smaller slice of your footprint than food or energy, but the fixes are cheap, immediate, and often save money too.",
     "sections": [
@@ -1282,6 +1287,7 @@
   },
   "pets": {
     "title": "Pets",
+    "fact": "A medium dog's food can emit as much as a small car over a year.",
     "icon": "🐾",
     "why": "Pet food — especially meat-based diets — can make a surprising contribution. A medium dog's food can emit as much as a small car over a year. You don't need to give up a pet, but diet choices matter.",
     "sections": [
@@ -1328,6 +1334,7 @@
   },
   "banking": {
     "title": "Banking & Pension",
+    "fact": "The free Current Account Switch Service moves your account in 7 working days, with a guarantee.",
     "icon": "🏦",
     "why": "Your savings don't just sit in a vault — banks lend them out, and many finance fossil-fuel projects. This 'financed emission' can be one of your largest hidden contributions. Moving your money is a one-time action with a big ongoing effect.",
     "sections": [
