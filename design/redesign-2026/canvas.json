@@ -209,6 +209,42 @@
       "title": "Glass v2 · Intro / landing page",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Glass2-SurveyDone.dc.html": {
+      "x": 0,
+      "y": 14737,
+      "w": 1440,
+      "h": 1300,
+      "title": "Glass v2 · Survey, already completed",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Glass2-Friends.dc.html": {
+      "x": 1520,
+      "y": 14737,
+      "w": 1440,
+      "h": 1500,
+      "title": "Glass v2 · Friends",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Glass2-Account.dc.html": {
+      "x": 3040,
+      "y": 14737,
+      "w": 1440,
+      "h": 1300,
+      "title": "Glass v2 · Account",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Glass2-Guide.dc.html": {
+      "x": 4560,
+      "y": 11971,
+      "w": 1440,
+      "h": 2050,
+      "title": "Glass v2 · Guide page (Flights: take the train)",
+      "expand": "fill",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -297,7 +333,7 @@
       "y": 11671,
       "text": "Glass v2 · intro, results, category and survey pages",
       "kind": "title1",
-      "maxW": 6000
+      "maxW": 7520
     },
     "appicon": {
       "x": 0,
@@ -305,6 +341,13 @@
       "text": "App icon",
       "kind": "title1",
       "maxW": 1440
+    },
+    "glass2more": {
+      "x": 0,
+      "y": 14437,
+      "text": "Glass v2 · returning survey, friends and account",
+      "kind": "title1",
+      "maxW": 4480
     }
   },
   "order": [
@@ -331,7 +374,11 @@
     "Glass2-Results.dc.html",
     "Glass2-Category.dc.html",
     "Glass2-Survey.dc.html",
-    "App-Icon.dc.html"
+    "Glass2-Guide.dc.html",
+    "App-Icon.dc.html",
+    "Glass2-SurveyDone.dc.html",
+    "Glass2-Friends.dc.html",
+    "Glass2-Account.dc.html"
   ],
   "pages": [],
   "title": "CO2 Counter Redesign"

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Survey: already completed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.card{padding:28px;border-radius:28px;background:rgba(255,252,245,.65);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.choice{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.choice:hover{transform:translateY(-3px);box-shadow:0 16px 30px rgba(46,42,34,.1)}
+.tile{transition:background .2s}
+.tile:hover{background:rgba(255,252,245,.9)}
+.cta{transition:transform .2s cubic-bezier(.3,1.6,.5,1),filter .2s}
+.cta:active{transform:scale(.96)}
+.cta:hover{filter:brightness(1.05)}
+@keyframes pop{0%{transform:scale(.4) rotate(-20deg);opacity:0}70%{transform:scale(1.1)}100%{transform:none;opacity:1}}
+@keyframes draw{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.pop{animation:pop .6s cubic-bezier(.3,1.5,.5,1) both}
+.tick{stroke-dasharray:30;animation:draw .6s .35s ease-out both}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div style="position: absolute; right: -10%; top: -220px; width: 660px; height: 660px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; left: -8%; top: 520px; width: 520px; height: 520px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+      <a href="Glass2-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+      </a>
+      <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <a href="Glass2-SurveyDone.dc.html" aria-current="page" style="padding: 9px 18px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 15px; font-weight: 600; text-decoration: none">Survey</a>
+        <a href="Glass2-Results.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Results</a>
+        <a href="Glass2-Friends.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Friends</a>
+        <span aria-disabled="true" title="Habits are coming soon" style="padding: 9px 14px 9px 18px; border-radius: 99px; color: #8A8273; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px">Habits<span style="padding: 2px 7px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 11px; font-weight: 700">Soon</span></span>
+      </span>
+      <a href="Glass2-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
+    </nav>
+
+    <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between">
+      <svg width="320" height="320" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 44%; top: -40px; opacity: .07; transform: rotate(-8deg)" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4V3h6v1M9 12l2 2 4-4"></path></svg>
+      <div style="position: relative; flex: 1 1 460px; min-width: 0; display: flex; gap: 20px; align-items: flex-start">
+        <span class="pop" style="flex: none; width: 64px; height: 64px; border-radius: 20px; background: #3F5B3A; display: grid; place-items: center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+        <div>
+          <h1 class="hd" style="margin: 0; font-size: 44px; line-height: 1.08; font-weight: 800">You’ve completed your survey</h1>
+          <p style="margin: 10px 0 0; max-width: 560px; font-size: 18px; line-height: 1.6; color: #3A362D">You finished it on <b>20 October 2026</b>. Has anything changed since? A quick update starts from your last answers, so you only change what’s different.</p>
+        </div>
+      </div>
+      <div style="position: relative; text-align: right">
+        <div style="font-size: 15px; color: #4A453A">Your last result</div>
+        <div class="num" style="font-size: 56px; font-weight: 800; line-height: 1">{{countLabel}}</div>
+        <div style="margin-top: 4px; font-size: 15px; color: #4A453A">kg CO₂e a year</div>
+      </div>
+    </header>
+
+    <section style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+      <div class="choice rise d1" style="padding: 26px; border-radius: 24px; background: #3F5B3A; color: #F6F1E6; display: flex; flex-direction: column; gap: 12px">
+        <span style="align-self: flex-start; padding: 4px 10px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-size: 12px; font-weight: 800">Recommended</span>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"></path><path d="M13.5 7.5l3 3"></path></svg>
+        <h2 class="hd" style="margin: 0; font-size: 24px; font-weight: 800">Quick update</h2>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #DCE3D3; flex: 1">Start from your last answers and change only what’s different. Takes a couple of minutes.</p>
+        <a class="cta" href="Glass2-Survey.dc.html" style="min-height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #E8C88A; color: #2E2A22; font-weight: 800; font-size: 16px; text-decoration: none">Anything changed?</a>
+      </div>
+      <div class="choice card rise d2" style="padding: 26px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11A8 8 0 1 0 18 16.5"></path><path d="M20 4v7h-7"></path></svg>
+        <h2 class="hd" style="margin: 0; font-size: 24px; font-weight: 800">Start from scratch</h2>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A362D; flex: 1">A fresh survey with blank answers, if a lot has changed.</p>
+        <a class="cta" href="Glass2-Survey.dc.html" style="min-height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">Start a new survey</a>
+      </div>
+      <div class="choice card rise d3" style="padding: 26px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>
+        <h2 class="hd" style="margin: 0; font-size: 24px; font-weight: 800">View my results</h2>
+        <p style="margin: 0; font-size: 16px; line-height: 1.55; color: #3A362D; flex: 1">Nothing’s changed? Jump back to your breakdown and your to-dos.</p>
+        <a class="cta" href="Glass2-Results.dc.html" style="min-height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">See results<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+      </div>
+    </section>
+    <p style="margin: 12px 4px 0; font-size: 15px; color: #4A453A">Either way, your current results stay in your history, and you can cancel before you finish.</p>
+
+    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <section class="card" style="flex: 999 1 560px; min-width: 0">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+          <h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Your last answers</h2>
+          <span style="font-size: 15px; color: #4A453A">Change just one step</span>
+        </div>
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px">
+          <sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+            <a class="tile" href="Glass2-Survey.dc.html" onClick="{{s.go}}" aria-label="Change {{s.label}}" style="display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 18px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); color: #2E2A22; text-decoration: none">
+              <span style="display: flex; justify-content: space-between; align-items: center; gap: 10px">
+                <span class="hd" style="display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700"><span class="num" style="width: 30px; height: 30px; border-radius: 10px; background: rgba(63,91,58,.12); color: #3F5B3A; display: grid; place-items: center; font-size: 14px; font-weight: 800">{{s.n}}</span>{{s.label}}</span>
+                <span class="num" style="font-size: 16px; font-weight: 800">{{s.kg}} <span style="font-family: Karla, sans-serif; font-size: 12px; font-weight: 500; color: #4A453A">kg</span></span>
+              </span>
+              <span style="font-size: 15px; line-height: 1.5; color: #3A362D">{{s.line1}}</span>
+              <span style="font-size: 14px; line-height: 1.5; color: #5C5649">{{s.line2}}</span>
+              <span style="margin-top: auto; font-size: 14px; font-weight: 700; color: #3F5B3A">Change</span>
+            </a>
+          </sc-for>
+        </div>
+      </section>
+
+      <aside class="card" style="flex: 1 1 300px; min-width: 0">
+        <h2 class="hd" style="margin: 0; font-size: 22px; font-weight: 800">Your history</h2>
+        <ol style="list-style: none; margin: 18px 0 0; padding: 0; position: relative">
+          <span style="position: absolute; left: 11px; top: 12px; bottom: 12px; width: 2px; background: rgba(63,91,58,.2)"></span>
+          <li style="position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 14px; padding-bottom: 18px">
+            <span style="width: 24px; height: 24px; border-radius: 99px; background: #3F5B3A; border: 4px solid #EFE9DC; box-sizing: border-box"></span>
+            <div><div style="font-size: 14px; color: #4A453A">20 October 2026 · latest</div><div class="num" style="font-size: 24px; font-weight: 800">6,746 kg</div><div style="font-size: 14px; font-weight: 700; color: #3F5B3A">▼ 667 kg (9%) since your first</div></div>
+          </li>
+          <li style="position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 14px">
+            <span style="width: 24px; height: 24px; border-radius: 99px; background: #B7C4A4; border: 4px solid #EFE9DC; box-sizing: border-box"></span>
+            <div><div style="font-size: 14px; color: #4A453A">12 June 2026 · first survey</div><div class="num" style="font-size: 24px; font-weight: 800">7,413 kg</div></div>
+          </li>
+        </ol>
+        <p style="margin: 16px 0 0; font-size: 14px; line-height: 1.5; color: #5C5649">Retaking every few months shows how far you’ve come, and counts towards Most improved on the Friends page.</p>
+      </aside>
+    </div>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
+      <span>Sample dates and history shown for this design.</span>
+      <span style="display: flex; gap: 20px"><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a><a href="Glass2-Intro.dc.html">Terms</a></span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0 };
+  }
+  componentDidMount() {
+    const target = 6746, dur = 1300, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(target * (1 - Math.pow(1 - k, 4))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+    this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
+    window.addEventListener('scroll', this.onWin, { passive: true });
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('scroll', this.onWin);
+  }
+  renderVals() {
+    const s = Math.min(this.state.scroll, 800);
+    const k = this.props.parallax ?? 1;
+    const STEPS = [
+      { label: 'Meals', kg: '2,314', line1: 'Meat eater: 2× Chicken, 2× Vegetarian, 1× Beef, 1× Fish, 1× Pork', line2: 'Eat out 1× a week · Some food waste' },
+      { label: 'Commute', kg: '280', line1: '4× Car (petrol), 1× Train · 3.1 km each way', line2: 'No extra trips or long journeys' },
+      { label: 'Flights', kg: '367', line1: 'London Heathrow → Barcelona, return', line2: 'Economy · once this year' },
+      { label: 'Home & water', kg: '1,468', line1: '200 kWh electricity, 800 kWh gas a month', line2: '2 people at home · 4,000 L water a month' },
+      { label: 'Pets', kg: '385', line1: '1 dog', line2: 'No cats' },
+      { label: 'Money', kg: '1,931', line1: 'Barclays · £5,000 in savings', line2: 'Pension with Nest' }
+    ];
+    const names = ['Meals', 'Commute', 'Flights', 'Home & water', 'Pets', 'Money'];
+    return {
+      pBlobA: (s * 0.45 * k).toFixed(1), pBlobB: (-s * 0.2 * k).toFixed(1),
+      countLabel: this.state.count.toLocaleString('en-GB'),
+      steps: STEPS.map((x, i) => ({ ...x, n: i + 1, go: () => { try { localStorage.setItem('co2-survey-step', names[i]); } catch (e) {} } }))
+    };
+  }
+}
+</script>
+</body>
+</html>

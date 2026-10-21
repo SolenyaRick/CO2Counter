@@ -476,6 +476,11 @@ class Component extends DCLogic {
   }
   componentDidMount() {
     this.readyTimer = setTimeout(() => this.setState({ ready: true }), 200);
+    try {
+      const names = ['Meals', 'Commute', 'Flights', 'Home & water', 'Pets', 'Money'];
+      const want = names.indexOf(localStorage.getItem('co2-survey-step') || '');
+      if (want >= 0) { localStorage.removeItem('co2-survey-step'); this.setState({ step: want, visited: [want] }); }
+    } catch (e) {}
     this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
     window.addEventListener('scroll', this.onWin, { passive: true });
   }
