@@ -2201,6 +2201,8 @@
     // Path bar scale: room for now, the UK average and the budget.
     const scale = Math.max(now, ukTotal, budget) * 1.15;
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
+    // Labels near either end line up with the mark instead of centring, so they stay inside the card.
+    const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
     const realisticLine =
       after <= budget
         ? "Realistic changes put you inside the 1.5°C budget."
@@ -2238,8 +2240,8 @@
       (totalSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(totalSaving) + " kg · " + pct(totalSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
       '<div class="path' + (animate ? " animate" : "") + '">' +
-      '<span class="path-mark budget" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
-      '<span class="path-mark uk" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
+      '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
+      '<span class="path-mark uk' + edge(W(ukTotal)) + '" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
       '<span class="path-now" style="width:' + W(now) + '%"></span>' +
       '<span class="path-real" style="width:' + W(after) + '%"></span>' +
       '<span class="path-all" style="width:' + W(afterMax) + '%"></span></div>' +

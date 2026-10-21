@@ -3875,3 +3875,19 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 @media (prefers-reduced-motion: reduce) { .panel.just-copied { animation: none; } }
 .journey-foot { flex-wrap: wrap; gap: 8px; }
 .journey-foot .label-row { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ---------- Overflow fixes ---------- */
+.flight-grid { grid-template-columns: minmax(0, 1fr); }
+.flight-grid > div, .picker, .picker-label, .picker-label .truncate { min-width: 0; }
+@media (min-width: 640px) { .flight-grid { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); } }
+@media (max-width: 639px) { .picker-panel { width: 100%; } }
+.path-mark.edge-l i { left: -2px; transform: none; }
+.path-mark.edge-r i { left: auto; right: -2px; transform: none; }
+.review-bar { flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .review-bar { border-radius: 22px; }
+  .review-bar .btn { white-space: normal; height: auto; min-height: 44px; }
+  .review-bar .btn-green { flex: 1 1 auto; }
+}
+.picker-search input { min-width: 0; width: 100%; }
+.picker-item > span { min-width: 0; overflow-wrap: anywhere; }
