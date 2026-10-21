@@ -245,6 +245,15 @@
       "title": "Glass v2 · Guide page (Flights: take the train)",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Glass2-Sections.dc.html": {
+      "x": 6080,
+      "y": 11971,
+      "w": 1440,
+      "h": 1400,
+      "title": "Glass v2 · Section pop-ups (Fly less, train, cabin, commute, money)",
+      "expand": "fill",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -333,7 +342,7 @@
       "y": 11671,
       "text": "Glass v2 · intro, results, category and survey pages",
       "kind": "title1",
-      "maxW": 7520
+      "maxW": 9040
     },
     "appicon": {
       "x": 0,
@@ -375,6 +384,7 @@
     "Glass2-Category.dc.html",
     "Glass2-Survey.dc.html",
     "Glass2-Guide.dc.html",
+    "Glass2-Sections.dc.html",
     "App-Icon.dc.html",
     "Glass2-SurveyDone.dc.html",
     "Glass2-Friends.dc.html",

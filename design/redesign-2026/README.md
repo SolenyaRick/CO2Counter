@@ -24,6 +24,10 @@ canvas layout.
 - `Glass2-Guide.dc.html`: step-by-step guide for each category's top to-do
   (e.g. Flights: take the train), with a side-by-side comparison chart, what the
   saving looks like (trees, phones, driving, share of the 1.5°C budget) and steps.
+- `Glass2-Sections.dc.html`: the pop-ups behind category sections, restyled:
+  Fly less and shorter (flight tiers), take the train, fly economy (cabin
+  comparison), drive less (commute options), bank league table, switching
+  account, and savings and pensions (pension ranking).
 - `Glass2-SurveyDone.dc.html`: survey page once completed (quick update, start
   from scratch, view results), last answers per step and survey history.
 - `Glass2-Friends.dc.html`: leaderboard with podium, rank nudge, most improved,
