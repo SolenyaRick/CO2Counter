@@ -31,6 +31,18 @@
   const LEGAL_UPDATED = "19 October 2026";
 
   const D = window.ECO_DATA;
+  // The hand-picked airports in data.js come first (they're the list shown
+  // before you search); airports.js adds every other scheduled airport.
+  const POPULAR_AIRPORTS = D.AIRPORTS.length;
+  (window.ECO_AIRPORTS || "").split("\n").forEach((line) => {
+    const [code, city, country, lat, lon, name] = line.split("|");
+    if (!code) return;
+    const known = D.AIRPORTS.find((a) => a.code === code);
+    if (known) known.name = name; // full name helps search, e.g. "Kennedy"
+    else D.AIRPORTS.push({ code, city, country, lat: Number(lat), lon: Number(lon), name });
+  });
+  D.AIRPORTS.forEach((a) => (a.search = (a.city + " " + a.code + " " + a.country + " " + (a.name || "")).toLowerCase()));
+  const AIRPORT_BY_CODE = new Map(D.AIRPORTS.map((a) => [a.code, a]));
   const DAYS = D.DAYS;
   const CATEGORIES = Object.keys(D.EXPLAINERS);
 
@@ -132,6 +144,7 @@
     tree: '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7z"/><path d="M12 22v-3"/>',
     phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     chart: '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
@@ -457,7 +470,7 @@
   // ==================== calculations ====================
 
   function airport(code) {
-    return D.AIRPORTS.find((a) => a.code === code);
+    return AIRPORT_BY_CODE.get(code);
   }
 
   function greatCircleKm(a, b) {
@@ -1817,9 +1830,10 @@
             : unknown
               ? '<p class="xs muted mt-2">We don\'t know that place yet, so pick from the suggestions or type the km yourself.</p>'
               : "") +
-          '<div class="row-between mt-3"><label class="check-label"><input type="checkbox"' + (x.returnTrip ? " checked" : "") +
+          '<div class="row-between journey-foot mt-3"><label class="check-label"><input type="checkbox"' + (x.returnTrip ? " checked" : "") +
           ' data-travel="long" data-index="' + i + '" data-key="returnTrip" /> Return trip</label>' +
           '<span class="label-row"><span class="sm fw-500">' + (kg > 0 ? Math.round(kg).toLocaleString() + " kg CO₂e" : "") + "</span>" +
+          '<button type="button" class="dup-btn" data-action="dup-travel" data-kind="long" data-index="' + i + '" aria-label="Duplicate this journey">' + icon("copy") + "Duplicate</button>" +
           '<button type="button" class="icon-btn danger-hover" data-action="remove-travel" data-kind="long" data-index="' + i + '" aria-label="Remove journey">' + icon("trash") + "</button></span></div></div>"
         );
       })
@@ -1828,6 +1842,17 @@
       (rows ? '<div class="stack-3 mb-3">' + rows + "</div>" : "") +
       '<button type="button" class="q-add" data-action="add-travel" data-kind="long">' + icon("plus") + " Add a journey</button>"
     );
+  }
+
+  // Briefly highlight a freshly duplicated row so it's clear what happened.
+  function flashCopy(index, kind) {
+    const sel = kind ? '[data-action="dup-travel"][data-kind="' + kind + '"][data-index="' + index + '"]' : '[data-action="dup-flight"][data-index="' + index + '"]';
+    const btn = document.querySelector(sel);
+    const row = btn && btn.closest(".panel");
+    if (!row) return;
+    row.classList.add("just-copied");
+    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setTimeout(() => row.classList.remove("just-copied"), 1400);
   }
 
   function airportPicker(index, field, value, placeholder) {
@@ -1850,8 +1875,12 @@
 
   function airportOptions(value) {
     const q = ui.airportQuery.trim().toLowerCase();
-    const list = D.AIRPORTS.filter((a) => !q || (a.city + " " + a.code + " " + a.country).toLowerCase().includes(q));
-    if (!list.length) return '<p class="picker-empty">No airport found.</p>';
+    // Best matches first: exact code, then city starting with the search.
+    const rank = (a) => (a.code.toLowerCase() === q ? 0 : a.city.toLowerCase().startsWith(q) ? 1 : 2);
+    const list = q
+      ? D.AIRPORTS.filter((a) => a.search.includes(q)).sort((a, b) => rank(a) - rank(b)).slice(0, 50)
+      : D.AIRPORTS.slice(0, POPULAR_AIRPORTS);
+    if (!list.length) return '<p class="picker-empty">No airport found. Try the city or the 3-letter code.</p>';
     return list
       .map(
         (a) =>
@@ -1887,7 +1916,8 @@
           (km > 0
             ? '<div class="sm"><span class="muted">' + (km * legs(f)).toFixed(0) + ' km · </span><span class="fw-500">' + flightKg({ ...f, trips: 1 }).toFixed(0) + " kg CO₂e</span></div>"
             : "") +
-          '<button type="button" class="icon-btn danger-hover" data-action="remove-flight" data-index="' + i + '" aria-label="Remove flight">' + icon("trash") + "</button>" +
+          '<span class="label-row ml-auto"><button type="button" class="dup-btn" data-action="dup-flight" data-index="' + i + '" aria-label="Duplicate this flight">' + icon("copy") + "Duplicate</button>" +
+          '<button type="button" class="icon-btn danger-hover" data-action="remove-flight" data-index="' + i + '" aria-label="Remove flight">' + icon("trash") + "</button></span>" +
           "</div></div>"
         );
       })
@@ -4442,6 +4472,23 @@
       survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", returnTrip: true, date: new Date().toISOString().slice(0, 10) });
       surveyChanged();
       render();
+    },
+    // A copy goes straight under the original, ready to tweak (e.g. the date).
+    "dup-flight": (el) => {
+      const i = Number(el.dataset.index);
+      survey.flights = survey.flights.slice(0, i + 1).concat({ ...survey.flights[i] }, survey.flights.slice(i + 1));
+      ui.airport = null;
+      surveyChanged();
+      render();
+      flashCopy(i + 1);
+    },
+    "dup-travel": (el) => {
+      const i = Number(el.dataset.index);
+      const key = el.dataset.kind === "extra" ? "extraTravel" : "longTrips";
+      survey[key] = survey[key].slice(0, i + 1).concat({ ...survey[key][i] }, survey[key].slice(i + 1));
+      surveyChanged();
+      render();
+      flashCopy(i + 1, el.dataset.kind);
     },
     "remove-flight": (el) => {
       const i = Number(el.dataset.index);
