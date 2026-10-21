@@ -124,6 +124,13 @@
     plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
     minus: '<path d="M5 12h14"/>',
+    clipboard: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+    book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+    tree: '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7z"/><path d="M12 22v-3"/>',
+    phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
@@ -274,7 +281,9 @@
     const meta = (user && user.user_metadata) || {};
     if (meta.full_name) return meta.full_name;
     try {
-      const { data } = await sb.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+      let { data, error } = await sb.from("profiles").select("display_name, username").eq("id", user.id).maybeSingle();
+      if (error) ({ data } = await sb.from("profiles").select("display_name").eq("id", user.id).maybeSingle());
+      if (data && data.username) ui.username = data.username;
       if (data && data.display_name) return data.display_name;
     } catch (e) {}
     return "App user";
@@ -1089,9 +1098,22 @@
   const spinner = '<div class="center-pad"><div class="spinner"></div></div>';
 
   function setNav(path) {
-    document.querySelectorAll("#nav a").forEach((a) => {
+    document.querySelectorAll("#nav a, #nav-avatar").forEach((a) => {
       a.classList.toggle("active", a.getAttribute("data-route") === path);
     });
+    const av = document.getElementById("nav-avatar");
+    if (av) {
+      const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || currentUser?.email || "";
+      const label = currentUser ? initials(name) : "";
+      av.innerHTML = label ? label : icon("user");
+      av.setAttribute("aria-label", currentUser ? "Account" : "Sign in");
+    }
+  }
+
+  // "Alex Green" -> "AG", "sam_green" -> "SG", "sam@x.com" -> "S".
+  function initials(name) {
+    const words = String(name).split("@")[0].split(/[\s_.-]+/).filter(Boolean);
+    return words.slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "";
   }
 
   // ==================== state ====================
@@ -1109,6 +1131,7 @@
     authMsg: "",
     authErr: "",
     userName: "",
+    username: "", // the account's @username
     recovery: false,
     authSentTo: "", // email a confirmation link was just sent to
     flash: "", // one-off message shown at the top of the next page
@@ -1126,6 +1149,7 @@
     history: [], // completed surveys, newest first: { completedAt, totalYearly }
     showUk: lsGet(KEY_SHOW_UK, false), // UK average bars on the results chart
     chartMode: lsGet("co2_chart_mode", "donut"), // results chart: donut or bars
+    exampleMode: false, // drawing Results for the typical-UK example
     resultsSeen: false, // count-up animation plays on the first visit only
     confirmingPayment: false,
     paymentTimedOut: false,
@@ -1150,17 +1174,62 @@
   // from "Edit my answers" on the Results page instead.
   function renderSurveyDone() {
     const when = Date.parse(survey.completedAt);
-    const date = isNaN(when) ? "" : " on " + new Date(when).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+    const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+    const now = footprint(survey).totalYearly;
+    const hist = historyByDay();
+    const latest = hist[0];
+    const first = hist[hist.length - 1];
+    const change = hist.length > 1 ? latest.totalYearly - first.totalYearly : 0;
+    const choice = (cls, badge, ic, title, body, btn) =>
+      '<div class="choice ' + cls + ' rise">' + (badge ? '<span class="choice-badge">' + badge + "</span>" : "") + '<span class="choice-icon">' + icon(ic) + "</span>" +
+      '<h2 class="display">' + title + "</h2><p>" + body + "</p>" + btn + "</div>";
+    const historyHtml = hist.length
+      ? '<ol class="timeline-v2">' +
+        [latest].concat(hist.length > 1 ? [first] : [])
+          .map(
+            (h, i) =>
+              '<li class="' + (i === 0 ? "now" : "") + '"><span class="tl-dot"></span><div><p class="xs muted">' + esc(longDate(Date.parse(h.completedAt))) +
+              (i === 0 ? " · latest" : " · first survey") + '</p><p class="display tnum tl-kg">' + kgFmt(h.totalYearly) + " kg</p>" +
+              (i === 0 && hist.length > 1 && Math.abs(change) >= 1
+                ? '<p class="sm fw-700 ' + (change < 0 ? "green" : "clay") + '">' + (change < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(change)) + " kg (" +
+                  Math.round((Math.abs(change) / first.totalYearly) * 100) + "%) since your first</p>"
+                : "") + "</div></li>"
+          )
+          .join("") +
+        "</ol>" + (hist.length > 2 ? '<p class="xs muted mt-2">' + hist.length + " surveys in total.</p>" : "")
+      : '<p class="sm muted mt-3">Your surveys will show here, so you can see how far you\'ve come.</p>';
     return (
-      '<div class="container narrow">' + pageHeader("Carbon Footprint Survey") +
-      '<div class="card center fade-up"><div class="round-badge center-block mb-4">' + icon("check") + "</div>" +
-      '<h2 class="card-title mb-2">You\'ve already completed your survey</h2>' +
-      '<p class="sm muted max-sm center-block mb-5">You finished it' + date + ". Has anything changed since? A quick update is a new survey that starts from your last answers, so you only change what's different. Or start from scratch. " +
-      "Either way, your current results are kept in your history, and you can cancel before you finish. To change just a few answers, use <strong>Edit my answers</strong> at the bottom of your results.</p>" +
-      '<div class="chip-row" style="justify-content:center">' +
-      '<button type="button" class="btn btn-green" data-action="whats-changed">' + icon("pencil") + " Quick update: anything changed?</button>" +
-      '<button type="button" class="btn btn-outline" data-action="new-survey">' + icon("refresh") + " Start from scratch</button>" +
-      '<a class="btn btn-ghost" href="#/results">View my results ' + icon("arrowRight") + "</a></div></div></div>"
+      '<div class="container done-v2">' +
+      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("clipboard") + "</span>" +
+      '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
+      '<h1 class="cat-title display">You\'ve completed your survey</h1><p class="cat-why">' +
+      (isNaN(when) ? "" : "You finished it on <strong>" + esc(longDate(when)) + "</strong>. ") +
+      "Has anything changed since? A quick update starts from your last answers, so you only change what's different.</p></div></div>" +
+      '<div class="cat-figs"><div class="muted">Your last result</div><div class="cat-kg display tnum" data-countup="' + Math.round(now) + '">0</div><div class="muted">kg CO₂e a year</div></div></header>' +
+      '<section class="choices">' +
+      choice("lead", "Recommended", "pencil", "Quick update", "Start from your last answers and change only what's different. Takes a couple of minutes.",
+        '<button type="button" class="btn btn-honey btn-block" data-action="whats-changed">Anything changed?</button>') +
+      choice("glass", "", "refresh", "Start from scratch", "A fresh survey with blank answers, if a lot has changed.",
+        '<button type="button" class="btn btn-outline btn-block" data-action="new-survey">Start a new survey</button>') +
+      choice("glass", "", "chart", "View my results", "Nothing's changed? Jump back to your breakdown and next steps.",
+        '<a class="btn btn-outline btn-block" href="#/results">See results ' + icon("arrowRight") + "</a>") +
+      "</section>" +
+      '<p class="sm muted done-note">Either way, your current results stay in your history, and you can cancel before you finish.</p>' +
+      '<div class="cat-grid"><section class="glass guide-card cat-col"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
+      '<h2 class="display">Your last answers</h2><span class="muted">Change just one step</span></div><div class="answer-tiles">' +
+      STEPS.map((st, i) => {
+        const lines = answerSummary(st.key, survey);
+        return (
+          '<button type="button" class="answer-tile" data-action="quick-edit" data-step="' + i + '" aria-label="Change ' + esc(STEP_TAB[st.key]) + '">' +
+          '<span class="row-between"><span class="display answer-name"><span class="answer-n">' + (i + 1) + "</span>" + esc(STEP_TAB[st.key]) + "</span>" +
+          '<span class="display tnum fw-700">' + kgFmt(stepKg(st.key, survey)) + ' <small class="muted">kg</small></span></span>' +
+          '<span class="answer-l1">' + esc(lines[0] || "") + "</span>" + (lines[1] ? '<span class="answer-l2">' + esc(lines[1]) + "</span>" : "") +
+          '<span class="answer-change">Change</span></button>'
+        );
+      }).join("") +
+      "</div></section>" +
+      '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display">Your history</h2>' + historyHtml +
+      '<p class="xs muted mt-3">Updating every few months shows how far you\'ve come, and counts towards Most improved on the Friends page.</p></section></aside></div></div>'
     );
   }
 
@@ -1227,6 +1296,85 @@
         : '<h2 class="celebrate-title">All up to date</h2><p class="sm celebrate-sub">Nothing changed since last time. Your next step is below.</p>') +
       "</div>"
     );
+  }
+
+  // ---------- intro / landing page ----------
+
+  const KEY_SEEN_INTRO = "co2_seen_intro";
+  // New visitors see the intro first; anyone who has started or finished
+  // the survey goes straight to it.
+  function showIntroFirst() {
+    if (ui.newSurvey || ui.editing || survey.completedAt || lsGet(KEY_SEEN_INTRO, false)) return false;
+    return JSON.stringify(survey) === JSON.stringify(normaliseSurvey(null));
+  }
+
+  const INTRO_STEPS = [
+    ["clipboard", "Take the survey", "Six short steps about your week: meals, travel, flights, home, pets and money."],
+    ["chart", "Analyse your footprint", "We turn your answers into a yearly total, compared with the UK average and the 1.5°C budget."],
+    ["search", "Find where to improve", "See which parts of your life make up most of your footprint, and where the biggest savings are."],
+    ["book", "Learn the best ways", "Clear, ranked next steps for each area, starting with the change that saves the most."],
+    ["leaf", "Build habits", "Turn the changes you choose into habits, and watch your footprint fall over time.", true],
+  ];
+
+  function renderIntro() {
+    const cta = (label) => '<button type="button" class="btn btn-green intro-cta" data-action="start-survey">' + label + " " + icon("arrowRight") + "</button>";
+    const faq = [
+      ["Do I need an account?", "You can take the whole survey as a guest. To see your full results, create a free account: it also keeps your answers safe across your devices."],
+      ["How accurate is it?", "It's an estimate using typical lifecycle emission factors. It's built to show your biggest levers clearly, not to be a precise audit."],
+      ["What do I need to have to hand?", "Nothing essential. An energy bill helps with the home step, and a rough idea of your savings and pension helps with money, but ballpark answers are fine."],
+    ];
+    return (
+      '<div class="container intro-v2">' +
+      '<header class="intro-hero"><div class="intro-hero-main">' +
+      '<span class="eyebrow rise">Free for everyone · no ads</span>' +
+      '<h1 class="display intro-title rise" style="animation-delay:.08s">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
+      '<p class="intro-lead rise" style="animation-delay:.16s">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
+      '<div class="chip-row rise" style="animation-delay:.24s">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") +
+      '<a class="btn btn-outline" href="#/example">See an example result</a></div>' +
+      '<div class="intro-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((t) => "<span>" + icon("check") + t + "</span>").join("") + "</div></div>" +
+      '<div class="intro-floaty" aria-hidden="true"><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect class="ib1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect class="ib2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect class="ib3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg>' +
+      '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">2.5 t <small>a person, a year</small></span></div></div></header>' +
+      '<section class="intro-mission"><div class="intro-sec-head"><div><span class="eyebrow">Our mission</span><h2 class="display">From "what\'s my footprint?" to habits that stick</h2></div>' +
+      "<p>Most people don't know where their emissions really come from. We make it clear, then make it doable.</p></div>" +
+      '<ol class="mission">' +
+      INTRO_STEPS.map(
+        ([ic, t, b, soon], i) =>
+          '<li class="glass mission-step" style="--i:' + i + '"><span class="mission-dot display">' + (i + 1) + '</span><span class="mission-icon">' + icon(ic) + "</span>" +
+          '<h3 class="display">' + t + "</h3><p>" + b + "</p>" + (soon ? '<span class="nav-soon">Coming soon</span>' : "") + "</li>"
+      ).join("") +
+      "</ol></section>" +
+      '<section class="intro-split"><div><h2 class="display">What we look at</h2><p>Six parts of everyday life, including one most calculators miss: where your money sits.</p><ul class="intro-chips">' +
+      STEPS.map((st) => "<li>" + st.icon + esc(st.title) + "</li>").join("") +
+      '</ul></div><div class="intro-why"><span class="eyebrow">Why it matters</span><span class="display intro-why-num">2.5 t</span>' +
+      "<p>is roughly each person's yearly share of CO₂e if we're to keep warming to 1.5°C. Most of us in the UK are well above it, and small, repeated changes are how we close the gap.</p></div></section>" +
+      '<section class="intro-cards">' +
+      [
+        ["chart", "Built on official figures", 'We use UK government emission factors and published data from sources like DESNZ, Defra, Ofgem and the ONS. <a href="#/how-we-calculate">How we calculate</a>'],
+        ["shield", "Your data stays yours", "No ads, and we never sell your data. Answers stay on your device until you choose to create an account."],
+        ["heart", "Free, kept going by supporters", "Everything is free. If it helps you, you can chip in £2 a year to cover running costs."],
+      ].map(([ic, t, b]) => '<div class="glass intro-card"><span class="cat-badge">' + icon(ic) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
+      "</section>" +
+      '<section class="intro-faq"><h2 class="display">Questions people ask</h2>' +
+      faq.map(([q, a]) => '<details class="glass faq"><summary><span>' + q + "</span>" + icon("chevronDown") + "</summary><p>" + a + "</p></details>").join("") +
+      "</section>" +
+      '<section class="intro-final"><div><h2 class="display">Ready? Six short steps.</h2><p>Meals, commute, flights, home, pets and money.</p></div>' + cta("Start the survey") + "</section></div>"
+    );
+  }
+
+  // Results for a typical UK resident, so people can see what they'll get.
+  function renderExample() {
+    const own = survey;
+    const typical = JSON.parse(JSON.stringify(D.UK_TYPICAL_SURVEY));
+    survey = normaliseSurvey(typical);
+    survey.flights = typical.flights;
+    survey.meals = typical.meals;
+    ui.exampleMode = true;
+    try {
+      return renderResults();
+    } finally {
+      ui.exampleMode = false;
+      survey = own;
+    }
   }
 
   // ---------- "Anything changed?" review ----------
@@ -1914,13 +2062,16 @@
   const CAT_COLOR = { meals: "#3F5B3A", banking: "#6E8B5E", energy: "#A3B58F", pets: "#D9A441", flights: "#B8653D", commute: "#8C6A4F", water: "#7FA3AE" };
   const CAT_SHORT = { meals: "Meals", banking: "Money", energy: "Home", pets: "Pets", flights: "Flights", commute: "Commute", water: "Water" };
 
+  // On the example page, category links start the survey instead.
+  const catHref = (key) => (ui.exampleMode ? "#/" : "#/explainer/" + key);
+
   // Overview plus one tab per category, biggest first.
   function resultTabs(fp, current) {
     return (
       '<nav class="section-tabs" aria-label="Result sections">' +
       '<a href="#/results"' + (current ? "" : ' class="on" aria-current="page"') + ">Overview</a>" +
       fp.breakdown
-        .map((b) => '<a href="#/explainer/' + b.key + '"' + (current === b.key ? ' class="on" aria-current="page"' : "") + ">" + esc(CAT_SHORT[b.key] || b.label) + "</a>")
+        .map((b) => '<a href="' + catHref(b.key) + '"' + (current === b.key ? ' class="on" aria-current="page"' : "") + ">" + esc(CAT_SHORT[b.key] || b.label) + "</a>")
         .join("") +
       "</nav>"
     );
@@ -1949,7 +2100,7 @@
       fp.breakdown
         .map(
           (b) =>
-            '<li><a href="#/explainer/' + b.key + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + " kg, " + pct(b.yearly) + ' of your footprint. Open how to improve">' +
+            '<li><a href="' + catHref(b.key) + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + " kg, " + pct(b.yearly) + ' of your footprint. Open how to improve">' +
             '<span class="sw" style="background:' + CAT_COLOR[b.key] + '"></span><span class="nm">' + esc(b.label) + '</span><span class="muted tnum">' + pct(b.yearly) + "</span></a></li>"
         )
         .join("") +
@@ -1974,7 +2125,7 @@
             ? u == null ? "No UK figure" : Math.abs(b.yearly - u) / u < 0.03 ? "Same as UK" : (b.yearly > u ? "+" : "−") + kgFmt(Math.abs(b.yearly - u)) + " vs UK"
             : Math.max(1, Math.round((b.yearly / total) * 100)) + "%";
           return (
-            '<a class="bars-col" href="#/explainer/' + b.key + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + ' kg a year. Open how to improve">' +
+            '<a class="bars-col" href="' + catHref(b.key) + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + ' kg a year. Open how to improve">' +
             '<span class="bars-track"><span class="bar-you" style="--h:' + h(b.yearly) + "%;background:" + CAT_COLOR[b.key] + '"><b class="tnum">' + kgFmt(b.yearly) + "</b></span>" +
             (ui.showUk && u != null ? '<span class="bar-uk" style="--h:' + h(u) + '%"><b class="tnum">' + kgFmt(u) + "</b></span>" : "") +
             '</span><span class="bars-name">' + esc(CAT_SHORT[b.key]) + '</span><span class="bars-sub">' + esc(sub) + "</span></a>"
@@ -2024,9 +2175,14 @@
         ? "Going all the way puts you inside the 1.5°C budget."
         : "Every step down counts. The biggest wins are below.";
 
-    let html = '<div class="container results-v2">' + celebrationCard();
+    let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard());
+    if (ui.exampleMode) {
+      html +=
+        '<div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident\'s footprint, worked out the same way as yours will be.</p></div>' +
+        '<button type="button" class="btn btn-green" data-action="start-survey">Start your own ' + icon("arrowRight") + "</button></div>";
+    }
 
-    if (checkInDue()) {
+    if (!ui.exampleMode && checkInDue()) {
       html +=
         '<div class="card callout fade-up"><div class="callout-row"><div class="round-badge">' + icon("calendar") + '</div><div class="grow">' +
         '<h2 class="card-title mb-1">Time for your monthly check-in</h2><p class="sm muted mb-4 max-2xl">It\'s a new month since you last surveyed (' +
@@ -2035,7 +2191,7 @@
         '<a class="btn btn-green" href="#/">Update my survey ' + icon("arrowRight") + "</a></div></div></div>";
     }
 
-    html += resultTabs(fp, null);
+    if (!ui.exampleMode) html += resultTabs(fp, null);
 
     html +=
       '<section class="glass res-hero' + (animate ? " rise" : "") + '"><div class="res-hero-main">' +
@@ -2078,13 +2234,13 @@
       (lead
         ? '<section class="res-opp"><span class="eyebrow">Your biggest opportunity</span><h3 class="display">' + esc(lead.t.title) + "</h3>" +
           (lead.t.saving > 0.5 ? '<p class="res-opp-kg display tnum">−' + kgFmt(lead.t.saving) + " <small>kg a year</small></p>" : "") +
-          '<a class="btn btn-honey btn-block" href="#/explainer/' + lead.b.key + '">See how ' + icon("arrowRight") + "</a></section>"
+          '<a class="btn btn-honey btn-block" href="' + catHref(lead.b.key) + '">See how ' + icon("arrowRight") + "</a></section>"
         : "") +
       '<section class="glass res-three"><h3 class="display">Biggest three</h3><p class="sm">' +
       top3.map((b) => esc(b.label)).join(", ").replace(/, ([^,]*)$/, " and $1") + " make up <b>" + top3Pct + "%</b> of your footprint. Start there for the biggest difference.</p></section>" +
       "</aside></div>";
 
-    const hist = historyByDay();
+    const hist = ui.exampleMode ? [] : historyByDay();
     if (hist.length) {
       const recent = hist.slice(0, 6);
       const dateOf = (h) => new Date(h.completedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -2114,7 +2270,7 @@
         "</div>" +
         (hist.length < 2 ? '<p class="xs muted mt-3">Take a new survey in a few months to see how your footprint changes.</p>' : "") +
         "</div>";
-    } else if (snapshots.length) {
+    } else if (!ui.exampleMode && snapshots.length) {
       const recent = snapshots.slice(-6).reverse();
       html +=
         '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div><div class="stack-2">' +
@@ -2137,9 +2293,12 @@
         "</div>";
     }
 
+    if (ui.exampleMode) {
+      return html + '<div class="center mt-6"><button type="button" class="btn btn-green" data-action="start-survey">Start your own survey ' + icon("arrowRight") + "</button></div></div>";
+    }
     html +=
       '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
-      '<a class="btn btn-green" href="#/explainer/' + (lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
+      '<a class="btn btn-green" href="' + catHref(lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
       saveCard() + supportCard() +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
@@ -2213,7 +2372,8 @@
             '<li class="section-card todo rise' + (done ? " done" : na ? " na" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0" style="animation-delay:' + (0.06 * (k + 1)).toFixed(2) + 's">' +
             '<span class="num-badge' + (k === 0 && !done && !na ? " lead" : "") + '">' + (done ? icon("check") : k + 1) + "</span>" +
             '<div class="min0"><h3 class="todo-title display">' + esc(s.heading) + (tag ? " " + tag : "") + "</h3>" +
-            '<p class="todo-body">' + esc(s.body) + "</p>" + sectionTeaser(s) + "</div>" +
+            '<p class="todo-body">' + esc(s.body) + "</p>" + sectionTeaser(s) +
+            (k === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "") + "</div>" +
             '<span class="todo-more">' + icon("chevronRight") + "</span></li>"
           );
         })
@@ -2234,6 +2394,221 @@
       '<span><small>Previous</small><b>' + esc(prev.label) + "</b></span></a>" +
       '<a class="cat-step next" href="#/explainer/' + next.key + '"><span><small>Next</small><b>' + esc(next.label) + "</b></span>" + icon("chevronRight") + "</a></div></div>";
     return html;
+  }
+
+  // ---------- step-by-step guide pages ----------
+
+  // The first next step in each category, worked through with numbers from
+  // the person's own answers.
+  function guideSpec(cat) {
+    const tip = tipFor(cat, survey);
+    const kg = (v) => Math.round(v);
+    if (cat === "meals") {
+      const rows = D.MEAL_OPTIONS.slice().sort((a, b) => b.factor - a.factor).map((o) => [o.label, o.factor, o.emoji]);
+      const beef = byKey(D.MEAL_OPTIONS, "beef").factor;
+      const vegan = byKey(D.MEAL_OPTIONS, "vegan").factor;
+      return {
+        title: "Cut red meat first",
+        lede: "Beef and lamb are the outliers in any week. Swapping two or three red-meat days for chicken, fish or plants is usually the single biggest food change you can make.",
+        save: tip.saving, saveLabel: "Realistic saving for you",
+        vsTitle: "One day's main meals, kg CO₂e", headline: "1 beef day ≈ " + Math.round(beef / vegan) + " vegan days", unit: "kg", rows,
+        source: "CO2 Counter's meal factors (see How we calculate).",
+        steps: [
+          ["Pick your swap days", "Choose two or three red-meat days a week to change first. The same days each week makes it stick."],
+          ["Swap like for like", "Use chicken, lentils or beans in the same recipe: chilli, bolognese, curry, burgers."],
+          ["Keep the flavour", "Smoked paprika, soy sauce, mushrooms and tomato purée give the savoury depth people miss."],
+          ["Save beef for when it matters", "Keep it for the meals you love most, rather than the everyday ones."],
+        ],
+      };
+    }
+    if (cat === "banking") {
+      const b = survey.banking || {};
+      const amount = b.amount > 0 ? b.amount : 5000;
+      const mine = byKey(D.BANKS, b.bank);
+      const best = D.BANKS.reduce((m, x) => (x.factor < m.factor ? x : m), D.BANKS[0]);
+      const others = D.BANKS.filter((x) => !x.green);
+      const avg = others.reduce((t, x) => t + x.factor, 0) / Math.max(1, others.length);
+      const myF = mine ? mine.factor : avg;
+      const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
+      return {
+        title: "Move your money somewhere greener",
+        lede: "Banks lend out the money you keep with them. Some lend heavily to fossil fuels, others don't. Switching is a one-off job with a lasting effect.",
+        save: Math.max(0, (myF - best.factor) * amount), saveLabel: "Moving £" + amount.toLocaleString() + " to " + best.label,
+        vsTitle: "£" + amount.toLocaleString() + " kept for a year, kg CO₂e financed",
+        headline: myF > best.factor ? Math.round((1 - best.factor / myF) * 100) + "% less at " + best.label : "You're already with the best bank here", unit: "kg",
+        rows: [[(mine ? mine.label + " (yours)" : "Average high-street bank"), amount * myF, "🏦"], [best.label, amount * best.factor, "🌱"]],
+        source: "Bank factors from CO2 Counter's data (MotherTree bank league table).",
+        steps: [
+          ["Check how your bank ranks", "Independent league tables rank UK banks by the emissions your money helps finance."],
+          ["Pick a greener bank", "Banks like Triodos, the Co-operative Bank and Nationwide avoid or limit fossil-fuel lending."],
+          ["Use the switch service", "The free Current Account Switch Service moves your balance, direct debits and standing orders in 7 working days, with a guarantee."],
+          ["Ask about your pension", (pension && pension.key !== "other" ? "Ask " + pension.label : "Ask your provider") + " which climate-focused funds it offers. Pensions can matter even more than bank accounts."],
+        ],
+      };
+    }
+    if (cat === "energy") {
+      const e = survey.energy || {};
+      const hh = Math.max(1, e.household || 1);
+      const year = (f) => (12 * (e.electricityKwh || 0) * f) / hh;
+      const std = year(D.ELECTRICITY_FACTOR);
+      const green = year(D.GREEN_ELECTRICITY_FACTOR);
+      return {
+        title: "Switch to a green electricity tariff",
+        lede: e.greenTariff
+          ? "You're already on a green tariff, which is the biggest single step. Here's what it's saving, and what to do next."
+          : "You're on a standard tariff. A 100% renewable one takes a few clicks, needs no new kit, and your supply never stops.",
+        save: e.greenTariff ? 0 : std - green, saveLabel: e.greenTariff ? "Already saving you" : "Your share of the saving",
+        saveOverride: e.greenTariff ? std - green : null,
+        vsTitle: "Your electricity for a year, kg CO₂e", headline: Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100) + "% less", unit: "kg",
+        rows: [["Standard tariff", std, "⚡"], ["Green tariff", green, "🌱"]],
+        source: (e.electricityKwh || 0) + " kWh a month shared by " + hh + (hh === 1 ? " person" : " people") + ". " + D.ELECTRICITY_FACTOR + " kg/kWh standard grid, " + D.GREEN_ELECTRICITY_FACTOR + " kg/kWh green.",
+        steps: [
+          ["Find your tariff", "It's on your bill or in your supplier's app."],
+          ["Look for 100% renewable", "Ask your supplier whether the tariff is backed by 100% renewable electricity."],
+          ["Switch", "It takes minutes. Your new supplier handles the move, and the power never cuts out."],
+          ["Then turn it down 1°C", "Saves about 8% of heating energy. You'll barely notice."],
+        ],
+      };
+    }
+    if (cat === "pets") {
+      return {
+        title: "Choose food made from by-products",
+        lede: "Most of a pet's footprint is its food. Brands made from by-products that would otherwise be wasted have a far smaller footprint than premium cuts.",
+        save: tip.saving, saveLabel: "Realistic saving for you",
+        vsTitle: "A year of pet food, kg CO₂e", headline: "Dogs ≈ " + (D.DOG_YEARLY / D.CAT_YEARLY).toFixed(1) + "× cats", unit: "kg",
+        rows: [["Dog", D.DOG_YEARLY, "🐕"], ["Cat", D.CAT_YEARLY, "🐈"]],
+        source: "Typical yearly figures from CO2 Counter's data. Yours is shared across your household.",
+        steps: [
+          ["Check the label", "Look for \u201cby-products\u201d or \u201canimal derivatives\u201d rather than prime cuts."],
+          ["Avoid beef-based recipes", "Chicken or fish recipes are lower."],
+          ["Measure portions", "Follow your vet's guidance. Overfeeding wastes food and isn't good for them."],
+          ["Ask your vet before big changes", "Especially for insect-based or plant-mixed foods."],
+        ],
+      };
+    }
+    if (cat === "flights") {
+      return {
+        title: "Take the train for trips under 700 km",
+        lede: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
+        save: tip.saving, saveLabel: "Realistic saving for you", eqFlights: true,
+        vsTitle: "London → Paris and back, per person", headline: Math.round((1 - TRAIN_TO_FLIGHT_RATIO) * 100) + "% less by train", unit: "kg",
+        rows: [["Plane", PARIS_FLIGHT_KG, "✈️"], ["Train", PARIS_FLIGHT_KG * TRAIN_TO_FLIGHT_RATIO, "🚆"]],
+        source: "Eurostar's independently commissioned figures, as used in CO2 Counter.",
+        steps: [
+          ["Check the train first", "For trips under about 700 km, compare door-to-door times, not just the journey itself."],
+          ["Book ahead", "Advance rail fares are usually the cheapest."],
+          ["Make the journey part of the trip", "No security queues or liquids rules, and you can work, read or watch something the whole way."],
+          ["If you do fly, fly economy and direct", "Economy spreads the plane's emissions over more people, and direct routes avoid extra take-offs."],
+        ],
+      };
+    }
+    if (cat === "commute") {
+      const c = survey.commute || {};
+      const d = c.distance || 0;
+      const carKey = DAYS.map((x) => c[x]).find((m) => MOTOR_MODES.includes(m)) || "car_petrol";
+      const car = byKey(D.COMMUTE_MODES, carKey);
+      const day = (k) => byKey(D.COMMUTE_MODES, k).factor * d * 2;
+      const n = carDaysOf(survey).length;
+      return {
+        title: n ? "Swap one car day a week" : "Keep your commute low-carbon",
+        lede: n
+          ? "You drive " + n + (n === 1 ? " day" : " days") + " a week. Swapping " + (n === 1 ? "it" : "one") + " for the train, the bike or working from home cuts that day's commute to almost nothing."
+          : "You don't drive to work, which is already the biggest win. Here's how your options compare.",
+        save: tip.saving, saveLabel: n ? "Realistic saving for you" : "Saving so far",
+        vsTitle: "Your " + d + " km commute, one day there and back", headline: car && day(carKey) > 0 ? "Train: " + Math.round((1 - day("train") / day(carKey)) * 100) + "% less" : "", unit: "kg",
+        rows: [[car.label + (n ? " (yours)" : ""), day(carKey), car.emoji], ["Bus", day("bus"), "🚌"], ["Train", day("train"), "🚆"], ["Walk or bike", 0, "🚲"]],
+        source: "DESNZ 2026 factors used in CO2 Counter.",
+        steps: [
+          ["Pick one day", "Choose the day that's easiest to change, like one with fewer bags or appointments."],
+          [d <= ACTIVE_TRAVEL_MAX_KM ? "Try the bike" : "Try the train or bus", d <= ACTIVE_TRAVEL_MAX_KM ? "At " + d + " km, cycling takes most people about " + Math.max(5, Math.round((d / 15) * 60)) + " minutes, with zero emissions." : "At " + d + " km, the train or bus is the realistic swap, and you can read or rest on the way."],
+          ["Or work from home", "One work-from-home day removes that day's commute entirely."],
+          ["Plan for an EV later", "When it's time to replace the car, an electric one emits about a fifth as much per km on today's grid."],
+        ],
+      };
+    }
+    // water
+    const w = survey.water || {};
+    const hh = Math.max(1, (survey.energy || {}).household || 1);
+    const ukW = D.UK_TYPICAL_SURVEY.water.liters / Math.max(1, D.UK_TYPICAL_SURVEY.energy.household || 1);
+    const mine = (w.liters || 0) / hh;
+    return {
+      title: "Shorter showers",
+      lede: "Water is a small part of your footprint, but the fixes are free, quick and lower your energy bill too.",
+      save: tip.saving, saveLabel: "Realistic saving for you",
+      vsTitle: "Water per person a month, litres", headline: mine < ukW ? "Already below typical" : Math.round((mine / ukW - 1) * 100) + "% above typical", unit: "L",
+      rows: [["UK typical", ukW, "💧"], ["You", mine, "💧"]],
+      source: "UK typical from CO2 Counter's UK average profile.",
+      steps: [
+        ["Aim for 4–5 minutes", "A song or two is about right. Heating the water is where most of the energy goes."],
+        ["Fit a low-flow showerhead", "A one-off change that cuts hot water use every day."],
+        ["Full loads only", "Run the dishwasher and washing machine only when they're full."],
+      ],
+    };
+  }
+
+  function renderGuide(cat) {
+    const ex = D.EXPLAINERS[cat];
+    if (!ex) {
+      location.replace("#/results");
+      return "";
+    }
+    const fp = footprint(survey);
+    const g = guideSpec(cat);
+    const idx = Math.max(0, fp.breakdown.findIndex((b) => b.key === cat));
+    const item = fp.breakdown[idx] || { yearly: 0 };
+    const next = fp.breakdown[(idx + 1) % fp.breakdown.length];
+    const shownSave = g.saveOverride != null ? g.saveOverride : g.save;
+    const eqKg = g.eqFlights ? item.yearly : shownSave > 0.5 ? shownSave : item.yearly;
+    const eq = equivalents(eqKg);
+    const max = Math.max(1e-9, ...g.rows.map((r) => r[1]));
+    const val = (v) => (v < 10 && v > 0 ? v.toFixed(2) : kgFmt(v));
+    const colours = ["#B8653D", "#D9A441", "#A3B58F", "#6E8B5E", "#3F5B3A"];
+    const rowColour = (i, n) => (n <= 2 ? (i === 0 ? colours[0] : colours[4]) : colours[Math.min(4, Math.round((i / (n - 1)) * 4))]);
+    const diet = cat === "meals" ? D.DIET_EXPLAINERS[dietType(survey)] : null;
+    const others = ((diet && diet.sections) || ex.sections).map((x) => x.heading).filter((h) => h !== g.title).slice(0, 3);
+    const budgetPct = (eqKg / D.BUDGET_YEARLY) * 100;
+    const repeat = (n, ic, cap) => Array.from({ length: Math.min(n, cap) }, () => icon(ic)).join("") + (n > cap ? '<span class="xs muted">+' + (n - cap) + "</span>" : "");
+    return (
+      '<div class="container guide-v2">' + resultTabs(fp, cat) +
+      '<p class="crumbs"><a href="#/results">Overview</a> › <a href="#/explainer/' + cat + '">' + esc(ex.title) + "</a> › <span>Guide</span></p>" +
+      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
+      '<div class="cat-hero-main"><span class="tag done-tag">Your biggest step here</span><h1 class="cat-title display">' + esc(g.title) + '</h1><p class="cat-why">' + esc(g.lede) + "</p></div>" +
+      '<div class="cat-hero-side"><div class="cat-figs"><div class="muted">' + esc(g.saveLabel) + '</div><div class="cat-kg display tnum green-dark">−' + kgFmt(shownSave) +
+      '</div><div class="muted">kg CO₂e a year</div></div></div></header>' +
+      '<section class="glass guide-card rise" style="animation-delay:.06s"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:flex-end"><div><span class="eyebrow">Side by side</span>' +
+      '<h2 class="display">' + esc(g.vsTitle) + "</h2></div>" + (g.headline ? '<span class="display guide-headline">' + esc(g.headline) + "</span>" : "") + "</div>" +
+      '<ul class="vs-list">' +
+      g.rows
+        .map(
+          (r, i) =>
+            '<li><span class="vs-icon" style="color:' + rowColour(i, g.rows.length) + '">' + r[2] + '</span><span class="vs-label">' + esc(r[0]) + "</span>" +
+            '<span class="vs-track"><span style="width:' + Math.max(r[1] > 0 ? 1.5 : 0.6, (r[1] / max) * 100).toFixed(1) + "%;background:" + rowColour(i, g.rows.length) + ";animation-delay:" + (i * 0.12).toFixed(2) + 's"></span></span>' +
+            '<span class="vs-val"><b class="display tnum">' + val(r[1]) + "</b> " + g.unit + "</span></li>"
+        )
+        .join("") +
+      '</ul><p class="xs muted mt-3">' + esc(g.source) + "</p></section>" +
+      (eqKg > 0.5
+        ? '<section class="glass guide-card rise" style="animation-delay:.12s"><span class="eyebrow">What that looks like</span><h2 class="display">' +
+          (g.eqFlights ? "What your " + kgFmt(eqKg) + " kg of flying a year looks like" : "What −" + kgFmt(eqKg) + " kg a year looks like") + "</h2>" +
+          '<div class="eq-grid">' +
+          '<div class="eq"><div class="row-between"><span>Trees needed to soak it up</span><b class="display tnum">' + kgFmt(eq.trees) + '</b></div><div class="eq-icons green-dark">' + repeat(eq.trees, "tree", 18) + '</div><p class="xs muted">A mature tree absorbs about 20 kg of CO₂ a year.</p></div>' +
+          '<div class="eq"><div class="row-between"><span>Share of the 1.5°C budget</span><b class="display tnum">' + (budgetPct < 1 ? budgetPct.toFixed(1) : Math.round(budgetPct)) + '%</b></div><div class="eq-bar"><span style="width:' + Math.min(100, budgetPct).toFixed(1) + '%"></span></div><p class="xs muted">Of one person\'s yearly 2.5 t.</p></div>' +
+          '<div class="eq"><div class="row-between"><span>The same as driving</span><b class="display tnum">' + kgFmt(eq.drivingKm) + ' km</b></div><p class="xs muted">In an average car. London to Edinburgh is about 650 km.</p></div>' +
+          '<div class="eq"><div class="row-between"><span>New phones</span><b class="display tnum">' + kgFmt(eq.phones) + '</b></div><div class="eq-icons">' + repeat(eq.phones, "phone", 8) + '</div><p class="xs muted">Making and charging one phone for a year: about 61 kg.</p></div>' +
+          "</div></section>"
+        : "") +
+      '<div class="cat-grid"><section class="glass guide-card cat-col"><h2 class="display">How to do it</h2><ol class="howto">' +
+      g.steps.map((st, i) => '<li><span class="num-badge display">' + (i + 1) + '</span><div><h3 class="display">' + esc(st[0]) + "</h3><p>" + esc(st[1]) + "</p></div></li>").join("") +
+      "</ol></section>" +
+      '<aside class="cat-aside">' + (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
+      (others.length
+        ? '<section class="glass cat-drop"><h3 class="display">More ways to cut it</h3><ul class="more-ways">' +
+          others.map((h) => '<li><a href="#/explainer/' + cat + '">' + esc(h) + icon("chevronRight") + "</a></li>").join("") + "</ul></section>"
+        : "") +
+      "</aside></div>" +
+      '<div class="cat-steps"><a class="cat-step" href="#/explainer/' + cat + '">' + icon("chevronLeft") + "<span><small>Back to</small><b>" + esc(ex.title) + "</b></span></a>" +
+      '<a class="cat-step next" href="#/guide/' + next.key + '"><span><small>Next guide</small><b>' + esc(next.label) + "</b></span>" + icon("chevronRight") + "</a></div></div>"
+    );
   }
 
   // ---------- banking league tables ----------
@@ -2917,34 +3292,35 @@
     }
     friends.loaded = true;
     friends.loading = false;
-    if (currentPath() === "/friends") render();
+    if (currentPath() === "/friends" || currentPath() === "/account") render();
   }
 
+  const ordinal = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+
   // "You're 2nd of 5" and what it would take to move up.
-  function rankSummary() {
+  function rankInfo() {
     const board = friends.board;
     const i = board.findIndex((b) => b.is_self);
-    if (i < 0 || board.length < 2) return "";
+    if (i < 0 || board.length < 2) return null;
     const me = board[i];
-    const ord = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+    const best = CATEGORIES.map((c) => ({ c, tip: tipFor(c, survey) })).sort((a, b) => b.tip.saving - a.tip.saving)[0];
+    const href = best && best.tip.saving > 0.5 ? "#/explainer/" + best.c : "";
     let nudge;
     if (i === 0) {
       const next = board[1];
-      nudge = "You're in the lead, " + fixed(next.total_yearly - me.total_yearly) + " kg a year ahead of " + esc(next.display_name) + ". Keep it up!";
+      nudge = "You're in the lead, " + kgFmt(next.total_yearly - me.total_yearly) + " kg a year ahead of " + esc(next.display_name) + ". Keep it up!";
     } else {
       const ahead = board[i - 1];
       const gap = me.total_yearly - ahead.total_yearly;
-      const best = CATEGORIES.map((c) => ({ c, tip: tipFor(c, survey) })).sort((a, b) => b.tip.saving - a.tip.saving)[0];
       nudge =
-        "You're " + fixed(gap) + " kg a year behind " + esc(ahead.display_name) + ". " +
-        (best && best.tip.saving > 0.5
-          ? (best.tip.saving >= gap
-              ? "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong> would save about " + fixed(best.tip.saving) + " kg and put you ahead."
-              : "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong>, your biggest win, would close " + Math.round((best.tip.saving / gap) * 100) + "% of the gap.") +
-            ' <a class="link-btn" href="#/explainer/' + best.c + '">See how</a>'
+        "You're " + kgFmt(gap) + " kg a year behind " + esc(ahead.display_name) + ". " +
+        (href
+          ? best.tip.saving >= gap
+            ? "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong> would save about " + kgFmt(best.tip.saving) + " kg and put you ahead."
+            : "<strong>" + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + "</strong>, your biggest win, would close " + Math.round((best.tip.saving / gap) * 100) + "% of the gap."
           : "");
     }
-    return '<div class="rank-banner"><p class="rank-big">You\'re ' + ord(i + 1) + " of " + board.length + '</p><p class="sm">' + nudge + "</p></div>";
+    return { label: ordinal(i + 1) + " of " + board.length, nudge, href };
   }
 
   function mostImprovedHtml() {
@@ -2981,76 +3357,86 @@
     const incoming = friends.rows.filter((f) => f.status === "pending" && !f.iAsked);
     const outgoing = friends.rows.filter((f) => f.status === "pending" && f.iAsked);
     const accepted = friends.rows.filter((f) => f.status === "accepted");
-    const row = (f, buttons) =>
-      '<div class="friend-row"><span class="sm fw-500 truncate">' + esc(f.name) + '</span><span class="chip-row">' +
-      buttons.map(([label, action, cls]) => '<button type="button" class="btn btn-sm ' + cls + '" data-action="' + action + '" data-id="' + f.id + '">' + label + "</button>").join("") +
-      "</span></div>";
-    const section = (title, body) => '<div class="card"><h2 class="card-title mb-4">' + title + "</h2>" + body + "</div>";
-    let html = '<div class="container narrow">' + pageHeader("Friends", "Compare footprints with people you know", "user");
-    if (friends.error) html += '<p class="sm red mb-4">' + esc(friends.error) + "</p>";
+    const btns = (f, list) =>
+      '<span class="chip-row">' + list.map(([label, action, cls]) => '<button type="button" class="btn btn-sm ' + cls + '" data-action="' + action + '" data-id="' + f.id + '">' + label + "</button>").join("") + "</span>";
+    const side = (title, body) => '<section class="glass cat-drop"><h2 class="display side-title">' + title + "</h2>" + body + "</section>";
+    const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
+    const rank = accepted.length ? rankInfo() : null;
+    const meOnBoard = friends.board.find((b) => b.is_self);
+
+    let html =
+      '<div class="container friends-v2">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
+      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("user") + "</span>" +
+      '<div class="cat-hero-main"><span class="eyebrow">Friends</span><h1 class="cat-title display">Compare with people you know</h1>' +
+      "<p class=\"cat-why\">Friends only ever see each other's yearly totals, never your answers.</p></div>" +
+      (rank
+        ? '<div class="rank-side"><p class="display rank-big">You\'re ' + rank.label + '</p><p class="sm">' + rank.nudge + "</p>" +
+          (rank.href ? '<a class="todo-guide" href="' + rank.href + '">See how ' + icon("arrowRight") + "</a>" : "") + "</div>"
+        : "") +
+      "</header>";
 
     // Leaderboard
-    const meOnBoard = friends.board.find((b) => b.is_self);
-    const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     let board;
-    if (!accepted.length) board = '<p class="sm muted">Add friends below to compare your yearly footprints.</p>';
+    if (!accepted.length) board = '<p class="sm muted mt-3">Add friends to compare your yearly footprints. Lowest footprint wins.</p>';
     else {
       const podium = friends.board.slice(0, 3);
+      const maxT = Math.max(1, ...friends.board.map((b) => b.total_yearly));
       board =
-        rankSummary() +
         (podium.length >= 2
           ? '<div class="podium">' +
             [1, 0, 2]
               .filter((i) => podium[i])
               .map(
                 (i) =>
-                  '<div class="podium-spot place-' + (i + 1) + (podium[i].is_self ? " me" : "") + '"><span class="podium-medal">' + ["1st", "2nd", "3rd"][i] + "</span>" +
-                  '<span class="podium-name">' + esc(nameOf(podium[i])) + '</span><span class="podium-total">' + (podium[i].total_yearly / 1000).toFixed(1) + " t</span>" +
-                  '<span class="podium-step"></span></div>'
+                  '<div class="podium-spot place-' + (i + 1) + (podium[i].is_self ? " me" : "") + '"><span class="podium-name">' + esc(nameOf(podium[i])) + "</span>" +
+                  '<span class="podium-total display">' + (podium[i].total_yearly / 1000).toFixed(1) + ' t</span><span class="podium-step"><b class="display">' + (i + 1) + "</b></span></div>"
               )
               .join("") +
             "</div>"
           : "") +
-        '<div class="stack-2">' +
+        '<ol class="board">' +
         friends.board
           .map(
             (b, i) =>
-              '<div class="month-row' + (b.is_self ? " me" : "") + '"><div class="label-row min0"><span class="num-badge' + (i < 3 ? " rank-" + (i + 1) : "") + '">' + (i + 1) +
-              '</span><span class="sm fw-500 truncate">' + esc(nameOf(b)) + '</span></div><div class="label-row shrink0"><span class="fw-600">' +
-              (b.total_yearly / 1000).toFixed(1) + '</span><span class="xs muted">t / yr</span></div></div>'
+              '<li class="' + (b.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(nameOf(b)) + "</span>" +
+              '<span class="board-bar"><span style="width:' + ((b.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span>' +
+              '<span class="board-t"><b class="display tnum">' + (b.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>'
           )
           .join("") +
-        "</div>" +
+        "</ol>" +
         (!meOnBoard ? '<p class="xs muted mt-3">Finish the survey to appear on the leaderboard.</p>' : "") +
-        (accepted.length > friends.board.filter((b) => !b.is_self).length
-          ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey yet won\'t appear until they do.</p>'
-          : "");
+        (accepted.length > friends.board.filter((b) => !b.is_self).length ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey yet won\'t appear until they do.</p>' : "");
     }
-    html += section("Leaderboard", board + '<p class="xs muted mt-3">Lowest footprint first. Friends only ever see each other\'s yearly totals, never your answers.</p>');
-    if (accepted.length) html += section("Most improved", mostImprovedHtml());
-
-    // Your name
-    html += section(
-      "Your name",
-      '<p class="xs muted mb-3">This is what your friends see.</p><form id="name-form" class="chip-row"><input class="input grow" id="display-name" maxlength="40" placeholder="e.g. Sam" value="' +
-        esc(friends.myName) + '" /><button type="submit" class="btn btn-outline">Save</button></form>'
-    );
-
-    // Add a friend
-    html += section(
-      "Add a friend",
-      '<form id="friend-form" class="chip-row"><input class="input grow" type="text" id="friend-email" placeholder="Their username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send request</button></form>' +
-        '<p class="xs muted mt-2">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p>' +
-        (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
-    );
-
-    if (incoming.length)
-      html += section("Requests for you", '<div class="stack-2">' + incoming.map((f) => row(f, [["Accept", "friend-accept", "btn-green"], ["Decline", "friend-remove", "btn-outline"]])).join("") + "</div>");
-    if (outgoing.length)
-      html += section("Waiting for a reply", '<div class="stack-2">' + outgoing.map((f) => row(f, [["Cancel", "friend-remove", "btn-outline"]])).join("") + "</div>");
-    if (accepted.length)
-      html += section("Your friends", '<div class="stack-2">' + accepted.map((f) => row(f, [["Remove", "friend-remove", "btn-outline"]])).join("") + "</div>");
-    return html + "</div>";
+    html +=
+      '<div class="cat-grid"><div class="cat-col stack-5">' +
+      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Leaderboard</h2><span class="muted">Lowest footprint first</span></div>' + board + "</section>" +
+      (accepted.length
+        ? '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Most improved</h2><span class="muted">Since each person\'s first survey</span></div><div class="mt-4">' +
+          mostImprovedHtml() + "</div></section>"
+        : "") +
+      '</div><aside class="cat-aside">' +
+      side(
+        "Add a friend",
+        '<p class="sm muted mb-3">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p><form id="friend-form" class="stack-2"><input class="input" type="text" id="friend-email" placeholder="Their username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green btn-block">Send request</button></form>' +
+          (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
+      ) +
+      (incoming.length ? side("Requests for you", '<div class="stack-2">' + incoming.map((f) => '<div class="friend-row"><span class="sm fw-600 truncate">' + esc(f.name) + "</span>" + btns(f, [["Accept", "friend-accept", "btn-green"], ["Decline", "friend-remove", "btn-outline"]]) + "</div>").join("") + "</div>") : "") +
+      (outgoing.length ? side("Waiting for a reply", '<div class="stack-2">' + outgoing.map((f) => '<div class="friend-row"><span class="sm fw-600 truncate">' + esc(f.name) + "</span>" + btns(f, [["Cancel", "friend-remove", "btn-outline"]]) + "</div>").join("") + "</div>") : "") +
+      (accepted.length
+        ? side(
+            "Your friends · " + accepted.length,
+            '<div class="stack-2">' +
+              accepted.map((f) => '<div class="friend-row"><span class="label-row min0"><span class="nav-avatar sm-av">' + esc(initials(f.name) || "?") + '</span><span class="sm fw-600 truncate">' + esc(f.name) + "</span></span>" + btns(f, [["Remove", "friend-remove", "btn-outline"]]) + "</div>").join("") +
+              "</div>"
+          )
+        : "") +
+      side(
+        "Your name",
+        '<p class="sm muted mb-3">This is what your friends see.</p><form id="name-form" class="stack-2"><input class="input" id="display-name" maxlength="40" placeholder="e.g. Sam" aria-label="Your display name" value="' +
+          esc(friends.myName) + '" /><button type="submit" class="btn btn-outline btn-block">Save</button></form>'
+      ) +
+      "</aside></div></div>";
+    return html;
   }
 
   async function addFriend(email) {
@@ -3347,9 +3733,12 @@
   function renderAccount() {
     const fp = footprint(survey);
     const habitCount = CATEGORIES.reduce((sum, c) => sum + committedHabits(c).length, 0);
-    const profile =
-      '<div class="row-between gap-3"><div class="min0 grow"><p class="fw-600 truncate">' + esc(ui.userName || "App user") + '</p><p class="sm muted truncate">' +
-      esc(currentUser.email) + '</p></div><button type="button" class="btn btn-outline btn-sm" data-action="sign-out">' + icon("logOut") + " Sign out</button></div>";
+    const hist = historyByDay();
+    const change = hist.length > 1 ? hist[0].totalYearly - hist[hist.length - 1].totalYearly : 0;
+    if (!friends.loaded && !friends.loading) loadFriends();
+    const friendCount = friends.rows.filter((f) => f.status === "accepted").length;
+    const rank = friendCount ? rankInfo() : null;
+    const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || "Your account";
     const m = membership || {};
     let plan;
     if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
@@ -3366,22 +3755,32 @@
           : "");
     }
 
+    const tile = (label, value, sub, cls) =>
+      '<div class="stat-tile' + (cls ? " " + cls : "") + '"><span class="sm muted">' + label + '</span><span class="display tnum stat-tile-num">' + value + "</span>" + (sub ? '<span class="xs">' + sub + "</span>" : "") + "</div>";
     return (
-      '<div class="container narrow">' + pageHeader("Account", "Your profile & saved data", "user") +
-      '<div class="card"><div class="label-row mb-4">' + icon("user", "green") + '<span class="sm fw-500 upper green-dark">Profile</span></div>' + profile + "</div>" +
-      '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<span class="sm fw-500 upper green-dark">' + (FREE_MODE ? "Your plan" : "Membership") + "</span></div>" + plan + "</div>" +
-      (FREE_MODE && !m.owner && !isSupporter() ? supportCard() : "") +
-      '<div class="card"><div class="label-row mb-4">' + icon("database", "green") + '<span class="sm fw-500 upper green-dark">Your saved data</span></div>' +
-      '<div class="grid-2 gap-3"><div class="data-box"><p class="xs muted">Footprint</p><p class="stat-num">' + fp.totalYearly.toFixed(0) +
-      '</p><p class="xs muted">kg CO₂e / year</p></div><div class="data-box"><p class="xs muted">Committed habits</p><p class="stat-num">' + habitCount +
-      '</p><p class="xs muted">across ' + CATEGORIES.length + " categories</p></div></div>" +
-      '<div class="chip-row mt-5"><a class="btn btn-outline btn-sm" href="#/">' + icon("leaf") + ' Retake survey</a><a class="btn btn-outline btn-sm" href="#/results">' +
-      icon("chart") + " View results</a></div></div>" +
-      '<div class="card"><div class="label-row mb-1">' + icon("trash", "red") + '<span class="sm fw-500 upper red">Data management</span></div>' +
-      '<p class="xs muted mb-4">Clear stored data from this device. This can\'t be undone.</p><div class="chip-row">' +
-      '<button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">' + icon("trash") + " Clear habits</button>" +
-      '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">' + icon("trash") + " Clear everything</button></div></div>" +
-      deleteAccountCard() + "</div>"
+      '<div class="container account-v2">' +
+      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("user") + "</span>" +
+      '<div class="account-id"><span class="account-av display">' + esc(initials(name) || "?") + "</span><div class=\"min0\">" +
+      '<span class="eyebrow">Account</span><h1 class="cat-title display account-name">' + esc(name) + "</h1>" +
+      '<p class="cat-why">' + (ui.username ? "@" + esc(ui.username) + " · " : "") + esc(currentUser.email) + "</p></div></div>" +
+      '<button type="button" class="btn btn-outline" data-action="sign-out">' + icon("logOut") + " Sign out</button></header>" +
+      '<div class="cat-grid"><div class="cat-col stack-5">' +
+      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Your saved data</h2><span class="muted">' +
+      (canSync() ? "Synced across your devices" : "Saved on this device") + '</span></div><div class="stat-tiles">' +
+      tile("Footprint", '<span data-countup="' + Math.round(fp.totalYearly) + '">0</span>', "kg CO₂e a year") +
+      tile("Surveys taken", Math.max(hist.length, survey.completedAt ? 1 : 0), hist.length > 1 && Math.abs(change) >= 1 ? '<b class="' + (change < 0 ? "green" : "clay") + '">' + (change < 0 ? "▼ " : "▲ ") + Math.round((Math.abs(change) / hist[hist.length - 1].totalYearly) * 100) + "% since your first</b>" : "") +
+      tile("Friends", friendCount, rank ? "You're " + rank.label : "") +
+      tile("Habits", habitCount, "tracking coming soon", "honey") +
+      '</div><div class="chip-row mt-5"><a class="btn btn-green" href="#/">Retake survey</a><a class="btn btn-outline" href="#/results">View results</a><a class="btn btn-outline" href="#/friends">Friends</a></div></section>' +
+      '<section class="glass guide-card"><span class="eyebrow">' + (FREE_MODE ? "Your plan" : "Membership") + "</span><div class=\"mt-2\">" + plan + "</div>" +
+      (FREE_MODE && !m.owner && !isSupporter() && !isNativeApp() && STRIPE_PAYMENT_LINK
+        ? '<div class="mt-4"><a class="btn btn-green" href="' + esc(supportUrl()) + '">' + icon("heart") + ' Support for £2 a year</a><p class="xs muted mt-2">Secure payment by Stripe. Cancel any time. No ads, and we never sell your data.</p></div>'
+        : "") +
+      "</section></div>" +
+      '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display side-title">Clear data on this device</h2><p class="sm muted">This can\'t be undone.</p>' +
+      '<div class="chip-row mt-3"><button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">Clear habits</button>' +
+      '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">Clear everything</button></div></section>' +
+      deleteAccountCard() + "</aside></div></div>"
     );
   }
 
@@ -3410,9 +3809,7 @@
         '<div class="chip-row mt-3"><button type="button" class="btn btn-sm btn-delete" data-action="confirm-delete">Delete my account permanently</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-action="cancel-delete">Cancel</button></div>';
     }
-    return (
-      '<div class="card"><div class="label-row mb-1">' + icon("user", "red") + '<span class="sm fw-500 upper red">Delete account</span></div>' + body + "</div>"
-    );
+    return '<section class="glass cat-drop danger-card"><h2 class="display side-title">Delete account</h2>' + body + "</section>";
   }
 
   const MIN_PASSWORD = 8;
@@ -3957,19 +4354,20 @@
     else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
     else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate"].includes(path)) html = renderChooseUsername();
-    else if (path === "/") html = renderSurvey();
+    else if (path === "/welcome") html = renderIntro();
+    else if (path === "/example") html = renderExample();
+    else if (path === "/") html = showIntroFirst() ? renderIntro() : renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
+    else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPending();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
-    setNav(parts[0] === "explainer" ? "" : path);
-    const accountLink = document.querySelector('#nav a[data-route="/account"]');
-    if (accountLink) accountLink.textContent = currentUser ? "Account" : "Sign in";
+    setNav(parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
     if (ui.flash && html !== spinner) {
       html =
         '<div class="flash" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
@@ -4123,6 +4521,14 @@
       setPath(survey, el.dataset.field, v);
       surveyChanged();
       render();
+    },
+    // A link inside a clickable card: let the link do its job.
+    go: () => {},
+    "start-survey": () => {
+      lsSet(KEY_SEEN_INTRO, true);
+      if (location.hash === "#/" || location.hash === "") render();
+      else location.hash = "#/";
+      window.scrollTo(0, 0);
     },
     "pick-meal-day": (el) => {
       ui.mealDay = el.dataset.day;
@@ -4353,6 +4759,12 @@
       ui.editing = false;
       render();
       window.scrollTo(0, 0);
+    },
+    // "Change" on one step of the completed-survey page: a quick update
+    // that opens straight on that step.
+    "quick-edit": (el) => {
+      actions["whats-changed"]();
+      actions["review-edit"](el);
     },
     "review-edit": (el) => {
       ui.reviewing = false;
