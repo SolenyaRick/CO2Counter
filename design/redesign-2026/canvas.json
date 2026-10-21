@@ -200,6 +200,15 @@
       "title": "Glass v2 · Survey, all 6 steps",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Glass2-Intro.dc.html": {
+      "x": -1520,
+      "y": 11971,
+      "w": 1440,
+      "h": 2300,
+      "title": "Glass v2 · Intro / landing page",
+      "expand": "fill",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -284,11 +293,11 @@
       "y": 964
     },
     "glass2": {
-      "x": 0,
+      "x": -1520,
       "y": 11671,
-      "text": "Glass v2 · from scratch: overview + category pages",
+      "text": "Glass v2 · intro, results, category and survey pages",
       "kind": "title1",
-      "maxW": 4480
+      "maxW": 6000
     },
     "appicon": {
       "x": 0,
@@ -318,6 +327,7 @@
     "Laptop-Glass.dc.html",
     "Earth-Results.dc.html",
     "Earth-Survey.dc.html",
+    "Glass2-Intro.dc.html",
     "Glass2-Results.dc.html",
     "Glass2-Category.dc.html",
     "Glass2-Survey.dc.html",

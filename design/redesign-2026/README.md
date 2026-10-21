@@ -9,6 +9,9 @@ canvas layout.
 
 ## Chosen direction: Glass v2
 
+- `Glass2-Intro.dc.html`: intro / landing page. Mission as a five-step flow
+  (survey, analyse, find where to improve, learn the best ways, build habits),
+  what we look at, why it matters, trust and privacy, FAQ and "Start the survey".
 - `Glass2-Results.dc.html`: results overview. Count-up total, "path down"
   bar (now / realistic / all the way), donut that converts into a bar chart
   with an optional UK average comparison, biggest opportunity and the
