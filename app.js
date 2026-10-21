@@ -123,6 +123,7 @@
     refresh: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
     plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+    minus: '<path d="M5 12h14"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
@@ -1098,7 +1099,8 @@
   let survey = null;
   const ui = {
     step: 0,
-    commuteOpen: null, // day whose mode picker is open
+    commuteOpen: null, // commute day being answered
+    mealDay: null, // meal day being answered
     airport: null, // { index, field } of the open airport picker
     airportQuery: "",
     selectedCategory: null, // Results page bar/tip selection
@@ -1113,6 +1115,7 @@
     pendingVerify: null, // { tokenHash, type } from an email link, until tapped
     authUsername: "",
     needUsername: false, // signed in, but the account has no username yet
+    shownStep: null, // survey step last drawn, so cards only fade in on a new step
     newSurvey: false, // taking a new survey; the finished one is kept until it's done
     reviewing: false, // on the "Anything changed?" summary of a new survey
     fromReview: false, // editing one step, opened from that summary
@@ -1340,6 +1343,8 @@
     const step = STEPS[ui.step];
     const n = STEPS.length;
     const pct = Math.round(((ui.step + 1) / n) * 100);
+    qAnimate = ui.shownStep !== ui.step;
+    ui.shownStep = ui.step;
     const tabs = STEPS.map((s, i) => {
       const on = i === ui.step;
       const done = !on && i < ui.step;
@@ -1362,14 +1367,14 @@
     return (
       '<div class="container survey-v2">' + newBanner +
       '<nav class="section-tabs" aria-label="Survey steps">' + tabs + "</nav>" +
-      '<header class="glass step-hero rise"><span class="cat-watermark" aria-hidden="true">' + step.icon + "</span>" +
+      '<header class="glass step-hero' + (qAnimate ? " rise" : "") + '"><span class="cat-watermark" aria-hidden="true">' + step.icon + "</span>" +
       '<div class="step-hero-main"><span class="eyebrow">Step ' + (ui.step + 1) + " of " + n + "</span>" +
       '<h1 class="cat-title display">' + esc(step.title) + '</h1><p class="cat-why">' + esc(STEP_INTRO[step.key] || step.subtitle) + "</p></div>" +
       '<div class="cat-hero-side"><div class="cat-figs"><div class="step-kg display tnum">' + kgFmt(kg) + '</div><div class="muted">kg CO₂e a year so far</div></div>' +
       '<figure class="cat-share"><svg viewBox="0 0 42 42" role="img" aria-label="Step ' + (ui.step + 1) + " of " + n + '"><circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>' +
       '<circle cx="21" cy="21" r="10" fill="none" stroke="#3F5B3A" stroke-width="20" pathLength="100" stroke-dasharray="' + pct + ' 100" transform="rotate(-90 21 21)"></circle></svg>' +
       "<figcaption><span>" + (ui.step + 1) + " of " + n + " steps</span></figcaption></figure></div></header>" +
-      '<div class="survey-card step-body fade-in">' + step.render() + "</div>" +
+      '<div class="step-body">' + step.render() + "</div>" +
       '<div class="step-nav-v2">' +
       (prev
         ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back: " + esc(STEP_TAB[prev.key]) + "</button>"
@@ -1396,102 +1401,165 @@
     );
   }
 
+  // ---------- numbered question cards ----------
+
+  // Cards fade in when a step opens, not every time an answer changes.
+  let qAnimate = false;
+
+  // One question: a numbered badge, the question, a hint and its answers.
+  function qCard(n, title, hint, body, opts) {
+    const o = opts || {};
+    return (
+      '<li class="q' + (qAnimate ? " rise" : "") + (o.note ? " q-note" : "") + '" style="animation-delay:' + (0.06 * n).toFixed(2) + 's">' +
+      '<span class="qn' + (n === 1 && !o.note ? " lead" : "") + '">' + (o.note ? icon("info") : n) + "</span>" +
+      '<div class="min0"><h2 class="qt">' + title + (o.optional ? ' <span class="q-opt">Optional</span>' : "") + "</h2>" +
+      (hint ? '<p class="qh">' + hint + "</p>" : "") + (body ? '<div class="q-body">' + body + "</div>" : "") + "</div></li>"
+    );
+  }
+  const qList = (cards) => '<ol class="q-list">' + cards.join("") + "</ol>";
+  const goodToKnow = (text) => qCard(0, "Good to know", text, "", { note: true });
+
+  // A number with − and + buttons either side.
+  function stepper(field, value, step, min, unit, label) {
+    return (
+      '<div class="stepper"><button type="button" class="step-btn" data-action="step-field" data-field="' + field + '" data-delta="' + -step + '" data-min="' + min +
+      '" aria-label="Less">' + icon("minus") + '</button><input class="stepper-input display tnum" type="number" inputmode="decimal" min="' + min + '" value="' + esc(value) +
+      '" data-field="' + field + '" aria-label="' + esc(label) + '" /><button type="button" class="step-btn" data-action="step-field" data-field="' + field + '" data-delta="' + step +
+      '" data-min="' + min + '" aria-label="More">' + icon("plus") + "</button>" + (unit ? '<span class="muted">' + unit + "</span>" : "") + "</div>"
+    );
+  }
+
+  const fieldInput = (field, value, unit, label, prefix) =>
+    '<div class="field-row">' + (prefix ? '<span class="display field-prefix">' + prefix + "</span>" : "") +
+    '<input class="input field-big tnum" type="number" min="0" inputmode="numeric" value="' + esc(value) + '" data-field="' + field + '" aria-label="' + esc(label) + '" />' +
+    (unit ? '<span class="muted">' + unit + "</span>" : "") + "</div>";
+
+  const chip = (on, attrs, label, sub) =>
+    '<button type="button" class="q-chip' + (on ? " on" : "") + '" aria-pressed="' + !!on + '" ' + attrs + ">" + label + (sub ? '<span class="q-chip-sub tnum">' + sub + "</span>" : "") + "</button>";
+
+  const DAY_NAMES = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+  // Colour dot for a day: clay for the heaviest, honey, sage, then moss.
+  const dayDot = (kg, hi, mid, lo) => (kg >= hi ? "#B8653D" : kg >= mid ? "#D9A441" : kg >= lo ? "#8FA58A" : "#3F5B3A");
+
   function renderMealsStep() {
     const m = survey.meals;
     const diet = m.diet || "";
-    let html = '<p class="muted sm mb-6">First, what\'s your overall diet?</p><div class="grid-2-4 mb-8">';
-    html += D.DIETS.map((d) =>
-      optionCard(
-        diet === d.key,
-        'data-action="set-diet" data-key="' + d.key + '"',
-        '<span class="emoji-lg">' + d.emoji + '</span><span class="fw-500 sm">' + esc(d.label) + '</span><span class="muted xs">' + esc(d.desc) + "</span>"
-      )
-    ).join("");
-    html += "</div>";
-
-    if (diet === "meat_eater") {
-      html += '<div class="divider-label"><span></span><em>Pick each day\'s main meal</em><span></span></div><div class="day-grid">';
-      html += DAYS.map((day) => {
-        const chosen = byKey(D.MEAL_OPTIONS, m[day]);
-        return (
-          '<div class="panel p-4"><div class="row-between mb-3"><span class="fw-500">' + day + "</span>" +
-          (chosen ? '<span class="pill">' + chosen.factor + " kg</span>" : "") +
-          '</div><div class="meal-grid">' +
-          D.MEAL_OPTIONS.map(
-            (o) =>
-              '<button type="button" title="' + esc(o.label) + '" class="meal-btn' + (m[day] === o.key ? " selected" : "") +
-              '" data-action="set-meal" data-day="' + day + '" data-key="' + o.key + '"><span class="emoji-md">' + o.emoji +
-              '</span><span class="tiny">' + esc(o.label) + "</span></button>"
+    const cards = [];
+    cards.push(
+      qCard(
+        1,
+        "What's your overall diet?",
+        "If you mix it up, choose <strong>Meat eater</strong> and pick day by day.",
+        '<div class="q-grid">' +
+          D.DIETS.map((d) =>
+            optionCard(diet === d.key, 'data-action="set-diet" data-key="' + d.key + '"', '<span class="opt-title display">' + esc(d.label) + '</span><span class="opt-sub">' + esc(d.desc) + "</span>", "q-opt-card")
           ).join("") +
-          "</div></div>"
-        );
-      }).join("");
-      html += "</div>";
+          "</div>"
+      )
+    );
+    let n = 2;
+    if (diet === "meat_eater") {
+      const day = DAYS.includes(ui.mealDay) ? ui.mealDay : DAYS.find((d) => !m[d]) || "Mon";
+      const cur = m[day];
+      const days =
+        '<div class="day-pick">' +
+        DAYS.map((d) => {
+          const o = byKey(D.MEAL_OPTIONS, m[d]);
+          return (
+            '<button type="button" class="day-btn' + (d === day ? " on" : "") + '" data-action="pick-meal-day" data-day="' + d + '" aria-pressed="' + (d === day) +
+            '" aria-label="' + DAY_NAMES[d] + ": " + (o ? esc(o.label) : "not chosen") + '"><span class="display">' + d + "</span>" +
+            '<i style="background:' + (o ? dayDot(o.factor, 8, 3, 2) : "transparent") + '"' + (o ? "" : ' class="empty"') + "></i>" +
+            '<span class="day-val">' + (o ? esc(o.key === "veggie" ? "Veggie" : o.label) : "Choose") + '</span><span class="day-kg tnum">' + (o ? o.factor.toFixed(2) + " kg" : "") + "</span></button>"
+          );
+        }).join("") +
+        "</div>";
+      const chosen = byKey(D.MEAL_OPTIONS, cur);
+      const veg = byKey(D.MEAL_OPTIONS, "veggie");
+      const tip =
+        chosen && veg && chosen.factor > veg.factor * 2
+          ? '<p class="q-tip">Swapping ' + DAY_NAMES[day] + "'s " + esc(chosen.label.toLowerCase()) + " for a vegetarian meal would save about " +
+            kgFmt((chosen.factor - veg.factor) * D.WEEKS_PER_YEAR) + " kg a year.</p>"
+          : "";
+      cards.push(
+        qCard(
+          n++,
+          "What was each day's main meal?",
+          "Pick a day, then choose what you ate.",
+          days +
+            '<div class="q-sub"><p class="q-sub-title display">' + DAY_NAMES[day] + '</p><div class="chip-wrap">' +
+            D.MEAL_OPTIONS.map((o) => chip(cur === o.key, 'data-action="set-meal" data-day="' + day + '" data-key="' + o.key + '"', esc(o.label), o.factor.toFixed(2) + " kg")).join("") +
+            "</div>" + tip + "</div>"
+        )
+      );
     } else if (diet) {
       const d = byKey(D.DIETS, diet);
-      html +=
-        '<div class="note-green">✅ We\'ll estimate your week based on a ' + esc(d.label.toLowerCase()) +
-        ' diet. Switch to <span class="fw-500">Meat eater</span> to customise day by day.</div>';
+      cards.push(qCard(n++, "Your week", "We'll estimate your week from a " + esc(d.label.toLowerCase()) + " diet. Choose <strong>Meat eater</strong> above to pick day by day.", ""));
     }
-
     if (diet) {
-      html +=
-        '<div class="mt-8 mb-2"><p class="sm fw-500 mb-1">How often do you eat out or get a takeaway?</p>' +
-        '<p class="muted xs mb-4">Restaurant meals have a higher footprint (bigger portions, more waste). We apply a 1.78× multiplier to each eating-out day.</p></div>' +
-        '<div class="chip-row mb-8">' +
-        D.EAT_OUT_OPTIONS.map(
-          (o) =>
-            '<button type="button" class="choice-chip' + ((m.eatOut || 0) === o.value ? " selected" : "") +
-            '" data-action="set-eatout" data-value="' + o.value + '">' + esc(o.label) + "</button>"
-        ).join("") +
-        "</div>" +
-        '<div class="mb-2"><p class="sm fw-500 mb-1">How much food do you waste?</p>' +
-        '<p class="muted xs mb-4">Wasted food means wasted emissions. Pick the level that best matches your household.</p></div>' +
-        '<div class="grid-2-4">' +
-        D.FOOD_WASTE.map((o) =>
-          optionCard(
-            (m.foodWaste || "low") === o.key,
-            'data-action="set-waste" data-key="' + o.key + '"',
-            '<span class="emoji-md2">' + o.emoji + '</span><span class="fw-500 sm">' + esc(o.label) + '</span><span class="tiny muted">×' + o.multiplier + " footprint</span>",
-            "compact"
-          )
-        ).join("") +
-        "</div>";
+      cards.push(
+        qCard(
+          n++,
+          "How often do you eat out or get a takeaway?",
+          "Each one counts as " + D.EAT_OUT_MULTIPLIER + "× a meal at home: bigger portions and more waste.",
+          '<div class="chip-wrap">' + D.EAT_OUT_OPTIONS.map((o) => chip((m.eatOut || 0) === o.value, 'data-action="set-eatout" data-value="' + o.value + '"', esc(o.label))).join("") + "</div>"
+        )
+      );
+      cards.push(
+        qCard(
+          n++,
+          "How much food do you throw away?",
+          "Wasted food means wasted emissions.",
+          '<div class="q-grid">' +
+            D.FOOD_WASTE.map((o) =>
+              optionCard((m.foodWaste || "low") === o.key, 'data-action="set-waste" data-key="' + o.key + '"', '<span class="opt-title display">' + esc(o.label.split(" ")[0]) + '</span><span class="opt-sub tnum">' + esc((o.label.match(/\((.*)\)/) || [])[1] || "") + "</span>", "q-opt-card")
+            ).join("") +
+            "</div>"
+        )
+      );
     }
-    return html;
+    return qList(cards);
   }
 
   function renderCommuteStep() {
     const c = survey.commute;
     const distance = c.distance == null ? 10 : c.distance;
-    let html =
-      '<p class="muted sm mb-6">Tap each day to log how you commuted — your week, at a glance.</p>' +
-      '<div class="panel p-4 mb-6"><label class="sm fw-500" for="commute-distance">Average one-way distance (km)</label>' +
-      '<input id="commute-distance" class="input mt-2 w-160" type="number" min="0" value="' + esc(distance) + '" data-field="commute.distance" data-rerender="1" /></div>' +
-      '<div class="timeline">';
-    html += DAYS.map((day) => {
-      const mode = byKey(D.COMMUTE_MODES, c[day]);
-      const open = ui.commuteOpen === day;
-      let row =
-        '<div class="timeline-row"><span class="timeline-dot"></span>' +
-        '<button type="button" class="day-row" data-action="toggle-commute" data-day="' + day + '">' +
-        '<span class="day-label">' + day + '</span><span class="emoji-row">' + (mode ? mode.emoji : "➕") + "</span>" +
-        '<span class="grow"><span class="sm fw-500 block truncate">' + (mode ? esc(mode.label) : "Tap to choose") + "</span>" +
-        (mode && distance > 0 ? '<span class="xs muted block">' + (mode.factor * distance * 2).toFixed(2) + " kg CO₂e / day (there and back)</span>" : "") +
-        '</span><span class="xs muted">change</span></button></div>';
-      if (open) {
-        row +=
-          '<div class="popover-inline"><p class="xs muted mb-2">How did you commute on ' + day + '?</p><div class="grid-2 gap-sm">' +
-          D.COMMUTE_MODES.map(
-            (o) =>
-              '<button type="button" class="mode-btn' + (c[day] === o.key ? " selected" : "") + '" data-action="set-commute" data-day="' + day +
-              '" data-key="' + o.key + '"><span class="emoji-md">' + o.emoji + '</span><span class="xs">' + esc(o.label) + "</span></button>"
-          ).join("") +
-          "</div></div>";
-      }
-      return row;
-    }).join("");
-    return html + "</div>" + renderExtraTravel() + renderLongTrips();
+    const day = DAYS.includes(ui.commuteOpen) ? ui.commuteOpen : DAYS.find((d) => !c[d]) || "Mon";
+    const cur = byKey(D.COMMUTE_MODES, c[day]);
+    const perDay = (o) => o.factor * distance * 2;
+    const days =
+      '<div class="day-pick">' +
+      DAYS.map((d) => {
+        const o = byKey(D.COMMUTE_MODES, c[d]);
+        const kg = o ? perDay(o) : 0;
+        return (
+          '<button type="button" class="day-btn' + (d === day ? " on" : "") + '" data-action="toggle-commute" data-day="' + d + '" aria-pressed="' + (d === day) +
+          '" aria-label="' + DAY_NAMES[d] + ": " + (o ? esc(o.label) : "not chosen") + '"><span class="display">' + d + "</span>" +
+          '<i style="background:' + (o ? dayDot(kg, 3, 1.5, 0.01) : "transparent") + '"' + (o ? "" : ' class="empty"') + "></i>" +
+          '<span class="day-val">' + (o ? esc(o.label) : "Choose") + '</span><span class="day-kg tnum">' + (o && distance > 0 ? kg.toFixed(2) + " kg" : "") + "</span></button>"
+        );
+      }).join("") +
+      "</div>";
+    const train = byKey(D.COMMUTE_MODES, "train");
+    const tip =
+      cur && MOTOR_MODES.includes(cur.key) && distance > 0
+        ? '<p class="q-tip">Taking the train on ' + DAY_NAMES[day] + "s instead would save about " +
+          kgFmt((perDay(cur) - perDay(train)) * D.WEEKS_PER_YEAR) + " kg a year" +
+          (distance <= ACTIVE_TRAVEL_MAX_KM ? ", and walking or cycling about " + kgFmt(perDay(cur) * D.WEEKS_PER_YEAR) + " kg." : ".") + "</p>"
+        : "";
+    return qList([
+      qCard(1, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km")),
+      qCard(
+        2,
+        "How did you get there each day?",
+        "Pick a day, then how you travelled. Leave a day as it is if you didn't commute.",
+        days +
+          '<div class="q-sub"><p class="q-sub-title display">' + DAY_NAMES[day] + '</p><div class="chip-wrap">' +
+          D.COMMUTE_MODES.map((o) => chip(c[day] === o.key, 'data-action="set-commute" data-day="' + day + '" data-key="' + o.key + '"', esc(o.label), distance > 0 ? perDay(o).toFixed(2) + " kg" : "")).join("") +
+          "</div>" + tip + "</div>"
+      ),
+      qCard(3, "Any other regular travel each week?", "Trips outside your commute, like the school run, the weekly shop or visiting family. A rough weekly total is fine.", renderExtraTravel(), { optional: true }),
+      qCard(4, "Long journeys by land this year?", "Trains or drives like London to Cornwall or Scotland. Type where you go from and to, and we'll work out the distance. Flights come in the next step.", renderLongTrips(), { optional: true }),
+    ]);
   }
 
   function travelModeSelect(kind, i, value) {
@@ -1516,10 +1584,8 @@
       })
       .join("");
     return (
-      '<div class="panel p-5 mt-8"><h3 class="sm fw-600">Other travel each week</h3>' +
-      '<p class="xs muted mt-1 mb-4">Regular trips outside your commute, like the school run, the weekly shop or visiting family. Add a rough total distance for the week.</p>' +
-      '<div class="stack-3">' + rows + "</div>" +
-      '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="add-travel" data-kind="extra">' + icon("plus") + " Add weekly travel</button></div>"
+      (rows ? '<div class="stack-3 mb-3">' + rows + "</div>" : "") +
+      '<button type="button" class="q-add" data-action="add-travel" data-kind="extra">' + icon("plus") + " Add weekly travel</button>"
     );
   }
 
@@ -1606,10 +1672,8 @@
       })
       .join("");
     return (
-      '<div class="panel p-5 mt-4"><h3 class="sm fw-600">Long journeys each year</h3>' +
-      '<p class="xs muted mt-1 mb-4">Trips by land, like a train to Cornwall or Spain, or a drive to Scotland. Type where you go from and to, and we\'ll work out the distance. Flights go in the next step.</p>' +
-      '<div class="stack-3">' + rows + "</div>" +
-      '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="add-travel" data-kind="long">' + icon("plus") + " Add a journey</button></div>"
+      (rows ? '<div class="stack-3 mb-3">' + rows + "</div>" : "") +
+      '<button type="button" class="q-add" data-action="add-travel" data-kind="long">' + icon("plus") + " Add a journey</button>"
     );
   }
 
@@ -1647,13 +1711,10 @@
 
   function renderFlightsStep() {
     const flights = survey.flights;
-    let html =
-      '<p class="muted sm mb-6">This is your standing <span class="fw-500 fg">flight checklist</span> — add trips as you book them and they stay saved, so you only enter each one once. Pick a start and end airport and when you flew; we\'ll work out the distance. Tick <span class="fw-500 fg">Return trip</span> for there-and-back journeys.</p>' +
-      '<div class="stack-3 max-2xl">';
+    let html = '<div class="stack-3">';
     if (!flights.length) {
       html +=
-        '<div class="empty-box">' + icon("plane", "muted big") +
-        '<p class="muted sm">No flights added yet. Great if you don\'t fly — or tap below to add one.</p></div>';
+        '<p class="q-tip green-tip">No flights in the last 12 months? Nice. You can skip to the next step.</p>';
     }
     html += flights
       .map((f, i) => {
@@ -1678,7 +1739,16 @@
         );
       })
       .join("");
-    return html + '</div><button type="button" class="btn btn-outline mt-4" data-action="add-flight">' + icon("plus") + " Add a flight</button>";
+    html += '</div><button type="button" class="q-add mt-3" data-action="add-flight">' + icon("plus") + " Add a flight</button>";
+    return qList([
+      qCard(
+        1,
+        "Which flights did you take in the last 12 months?",
+        "Add each trip airport to airport, with when you flew. Tick <strong>Return trip</strong> for there and back. Trips stay saved, so you only add each one once.",
+        html
+      ),
+      goodToKnow("Economy spreads a plane's emissions over more people, so business and first class can double or triple your share. For trips under about 700 km, the train is often as fast door to door."),
+    ]);
   }
 
   function numberCard(label, field, value, hint, min, extraCls) {
@@ -1692,55 +1762,56 @@
   function renderEnergyStep() {
     const e = survey.energy;
     const w = survey.water;
-    return (
-      '<p class="muted sm mb-6">Enter your monthly home energy and water usage. Both are split across your household.</p>' +
-      '<div class="grid-2 gap-4 max-xl">' +
-      numberCard("Electricity (kWh / month)", "energy.electricityKwh", e.electricityKwh == null ? 0 : e.electricityKwh, "Typical household: 200–400 kWh") +
-      numberCard("Gas (kWh / month)", "energy.gasKwh", e.gasKwh == null ? 0 : e.gasKwh, "Typical household: 500–1200 kWh") +
-      "</div>" +
-      '<div class="panel p-5 mt-4 max-xl row-between"><div><label class="sm fw-500">Green / renewable electricity tariff</label>' +
-      '<p class="xs muted mt-1">Cuts electricity emissions by up to 80%.</p></div>' +
-      '<button type="button" role="switch" aria-checked="' + !!e.greenTariff + '" class="switch' + (e.greenTariff ? " on" : "") +
-      '" data-action="toggle-green"><span></span></button></div>' +
-      '<div class="mt-4 max-xl">' + numberCard("Water (litres / month)", "water.liters", w.liters == null ? 0 : w.liters, "A typical person uses ~3,000–5,000 L per month.") + "</div>" +
-      '<div class="mt-4 max-xl">' +
-      numberCard("People in your home", "energy.household", e.household == null ? 2 : e.household, "Energy, water and pet footprints are split across your household.", 1, "w-120") +
-      "</div>"
-    );
+    const hh = e.household == null ? 2 : e.household;
+    return qList([
+      qCard(1, "How much electricity does your home use a month?", "It's on your bill or in your supplier's app. A typical home uses 200–400 kWh a month.", fieldInput("energy.electricityKwh", e.electricityKwh == null ? 0 : e.electricityKwh, "kWh a month", "Electricity per month in kWh")),
+      qCard(2, "And gas?", "A typical home uses 500–1,200 kWh of gas a month. Put 0 if you don't have gas.", fieldInput("energy.gasKwh", e.gasKwh == null ? 0 : e.gasKwh, "kWh a month", "Gas per month in kWh")),
+      qCard(
+        3,
+        "Are you on a green electricity tariff?",
+        "A 100% renewable tariff cuts electricity emissions by up to 80%.",
+        '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>"
+      ),
+      qCard(4, "How many people live in your home?", "We share the home's energy, water and pets between everyone who lives there.", stepper("energy.household", hh, 1, 1, hh === 1 ? "person" : "people", "People in your home")),
+      qCard(5, "How much water do you use?", "For the whole home, per month. A typical person uses about 3,000–5,000 litres.", fieldInput("water.liters", w.liters == null ? 0 : w.liters, "litres a month", "Water per month in litres")),
+    ]);
   }
 
   function renderPetsStep() {
     const p = survey.pets;
-    return (
-      '<p class="muted sm mb-6">How many pets do you have? Their diet adds to your footprint.</p>' +
-      '<div class="grid-2 gap-4 max-xl">' +
-      numberCard("🐕 Dogs", "pets.dogs", p.dogs == null ? 0 : p.dogs, "~770 kg CO₂e / year each") +
-      numberCard("🐈 Cats", "pets.cats", p.cats == null ? 0 : p.cats, "~310 kg CO₂e / year each") +
-      "</div>"
-    );
+    return qList([
+      qCard(1, "How many dogs do you have?", "About " + D.DOG_YEARLY + " kg CO₂e a year each, mostly from their food.", stepper("pets.dogs", p.dogs == null ? 0 : p.dogs, 1, 0, "", "Dogs")),
+      qCard(2, "And cats?", "About " + D.CAT_YEARLY + " kg CO₂e a year each. Put 0 if you don't have any.", stepper("pets.cats", p.cats == null ? 0 : p.cats, 1, 0, "", "Cats")),
+      goodToKnow("A medium dog's food can emit as much as a small car over a year. You don't need to change your pet, just what goes in the bowl."),
+    ]);
   }
 
   function renderBankingStep() {
     const b = survey.banking;
     const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
-    return (
-      '<p class="muted sm mb-6">Your bank and pension invest your money in projects and companies — this matters more than people think.</p>' +
-      '<div class="grid-2 gap-4 max-xl">' +
-      numberCard("Total savings / deposits (£)", "banking.amount", b.amount == null ? 0 : b.amount) +
-      '<div class="panel p-5"><label class="sm fw-500">Your bank</label><select class="input mt-2" data-field="banking.bank" data-type="text">' +
-      '<option value=""' + (b.bank ? "" : " selected") + " disabled>Select your bank</option>" +
-      D.BANKS.map((x) => '<option value="' + x.key + '"' + (x.key === b.bank ? " selected" : "") + ">" + (x.green ? "🌱 " : "") + esc(x.label) + "</option>").join("") +
-      "</select></div></div>" +
-      '<p class="sm fw-500 mt-8 mb-1">Your pension</p><p class="xs muted mb-4">Add up your workplace and personal pension pots. Leave it at 0 if you don\'t have one.</p>' +
-      '<div class="grid-2 gap-4 max-xl">' +
-      numberCard("Pension pot (£)", "banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot) +
-      '<div class="panel p-5"><label class="sm fw-500">Pension provider</label><select class="input mt-2" data-field="banking.pensionProvider" data-type="text" data-rerender="1">' +
-      '<option value=""' + (b.pensionProvider ? "" : " selected") + " disabled>Select your provider</option>" +
-      D.PENSION_PROVIDERS.map((x) => '<option value="' + x.key + '"' + (x.key === b.pensionProvider ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
-      "</select>" +
-      (pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "") +
-      "</div></div>"
-    );
+    return qList([
+      qCard(
+        1,
+        "Who do you bank with?",
+        "Your main current account. Banks lend out your money, and some finance fossil fuels.",
+        '<select class="input q-select" data-field="banking.bank" data-type="text" aria-label="Your bank">' +
+          '<option value=""' + (b.bank ? "" : " selected") + " disabled>Select your bank</option>" +
+          D.BANKS.map((x) => '<option value="' + x.key + '"' + (x.key === b.bank ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
+          "</select>"
+      ),
+      qCard(2, "Roughly how much do you keep in savings and current accounts?", "A ballpark is fine. It's never shared.", fieldInput("banking.amount", b.amount == null ? 0 : b.amount, "", "Savings in pounds", "£")),
+      qCard(
+        3,
+        "Who runs your pension?",
+        "Pensions are often the biggest money lever. Choose <strong>Other / not sure</strong> if you don't know.",
+        '<select class="input q-select" data-field="banking.pensionProvider" data-type="text" data-rerender="1" aria-label="Pension provider">' +
+          '<option value=""' + (b.pensionProvider ? "" : " selected") + " disabled>Select your provider</option>" +
+          D.PENSION_PROVIDERS.map((x) => '<option value="' + x.key + '"' + (x.key === b.pensionProvider ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
+          "</select>" +
+          (pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "")
+      ),
+      qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
+    ]);
   }
 
   // ==================== Results page ====================
@@ -1967,7 +2038,7 @@
     html += resultTabs(fp, null);
 
     html +=
-      '<section class="glass res-hero rise"><div class="res-hero-main">' +
+      '<section class="glass res-hero' + (animate ? " rise" : "") + '"><div class="res-hero-main">' +
       '<p class="fw-600 muted">Your footprint this year</p>' +
       '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
       '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ".</p>" +
@@ -3920,6 +3991,7 @@
 
   function onRouteChange() {
     closeModal();
+    ui.shownStep = null;
     ui.flash = "";
     if (currentPath() === "/friends") {
       friends.loaded = false;
@@ -3971,6 +4043,8 @@
     },
     "set-meal": (el) => {
       survey.meals = { ...survey.meals, [el.dataset.day]: el.dataset.key };
+      const i = DAYS.indexOf(el.dataset.day);
+      if (i < DAYS.length - 1) ui.mealDay = DAYS[i + 1];
       surveyChanged();
       render();
     },
@@ -3985,12 +4059,13 @@
       render();
     },
     "toggle-commute": (el) => {
-      ui.commuteOpen = ui.commuteOpen === el.dataset.day ? null : el.dataset.day;
+      ui.commuteOpen = el.dataset.day;
       render();
     },
     "set-commute": (el) => {
       survey.commute = { ...survey.commute, [el.dataset.day]: el.dataset.key };
-      ui.commuteOpen = null;
+      const i = DAYS.indexOf(el.dataset.day);
+      ui.commuteOpen = i < DAYS.length - 1 ? DAYS[i + 1] : el.dataset.day;
       surveyChanged();
       render();
     },
@@ -4034,6 +4109,23 @@
       survey.flights = survey.flights.map((f, i) => (i === index ? { ...f, [field]: el.dataset.code } : f));
       ui.airport = null;
       surveyChanged();
+      render();
+    },
+    "set-green": (el) => {
+      survey.energy = { ...survey.energy, greenTariff: el.dataset.value === "1" };
+      surveyChanged();
+      render();
+    },
+    "step-field": (el) => {
+      const [x, y] = el.dataset.field.split(".");
+      const now = Number((survey[x] || {})[y]) || 0;
+      const v = Math.max(Number(el.dataset.min) || 0, Math.round((now + Number(el.dataset.delta)) * 10) / 10);
+      setPath(survey, el.dataset.field, v);
+      surveyChanged();
+      render();
+    },
+    "pick-meal-day": (el) => {
+      ui.mealDay = el.dataset.day;
       render();
     },
     "toggle-green": () => {
