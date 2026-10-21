@@ -3198,7 +3198,7 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .donut-legend .nm { flex: 1; font-weight: 600; }
 
 .bars-plot { position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; height: 340px; padding: 0 0 52px 44px; }
-.bars-grid { position: absolute; left: 44px; right: 0; border-top: 1px dashed rgba(46, 42, 34, 0.15); margin-bottom: 52px; }
+.bars-grid { position: absolute; left: 44px; right: 0; border-top: 1px dashed rgba(46, 42, 34, 0.15); }
 .bars-grid i { position: absolute; right: calc(100% + 6px); top: -8px; font-style: normal; font-size: 11px; font-weight: 600; color: var(--muted-fg); }
 .bars-col { position: relative; display: block; color: var(--fg); border-radius: 14px; z-index: 1; }
 .bars-col:hover { background: rgba(255, 252, 245, 0.6); }
@@ -3841,3 +3841,27 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
   .sheet-tile b { font-size: 22px; }
 }
 .over-tag { padding: 1px 7px; border-radius: 999px; background: rgba(184, 101, 61, 0.15); color: #8a4424; font-size: 11px; font-weight: 800; }
+
+/* ---------- Results chart: phone fit ---------- */
+.bars { padding-top: 26px; }
+.nm-short { display: none; }
+@media (max-width: 640px) {
+  .bars { padding-top: 0; }
+  .bars-plot { height: auto; }
+  .bars-col { grid-template-columns: 68px minmax(0, 1fr); padding: 4px 6px; }
+  .bars-track { margin-right: 46px; height: 34px; }
+  .with-uk .bars-track { height: 40px; }
+  .bar-you { top: 8px; }
+  .donut-wrap { gap: 16px; }
+  .donut { width: min(190px, 70%); }
+  .donut-mid .display { font-size: 22px; }
+  .donut-legend { flex-basis: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 6px; }
+  .donut-legend a { min-height: 36px; padding: 0 6px; gap: 7px; font-size: 13px; }
+  .donut-legend .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nm-long { display: none; }
+  .nm-short { display: inline; }
+}
+@media (max-width: 360px) {
+  .donut-legend a { font-size: 12px; gap: 5px; padding: 0 4px; }
+  .donut-legend .sw { width: 10px; height: 10px; }
+}

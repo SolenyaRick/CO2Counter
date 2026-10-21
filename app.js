@@ -2106,7 +2106,7 @@
         .map(
           (b) =>
             '<li><a href="' + catHref(b.key) + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + " kg, " + pct(b.yearly) + ' of your footprint. Open how to improve">' +
-            '<span class="sw" style="background:' + CAT_COLOR[b.key] + '"></span><span class="nm">' + esc(b.label) + '</span><span class="muted tnum">' + pct(b.yearly) + "</span></a></li>"
+            '<span class="sw" style="background:' + CAT_COLOR[b.key] + '"></span><span class="nm"><span class="nm-long">' + esc(b.label) + '</span><span class="nm-short">' + esc(CAT_SHORT[b.key] || b.label) + '</span></span><span class="muted tnum">' + pct(b.yearly) + "</span></a></li>"
         )
         .join("") +
       "</ul></div>"
@@ -2120,7 +2120,7 @@
     const top = niceCeil(max);
     const h = (v) => ((v / top) * 100).toFixed(2);
     const total = fp.totalYearly || 1;
-    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => '<span class="bars-grid" style="bottom:' + f * 100 + '%"><i class="tnum">' + kgFmt(top * f) + "</i></span>").join("");
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => '<span class="bars-grid" style="bottom:calc(52px + (100% - 52px) * ' + f + ')"><i class="tnum">' + kgFmt(top * f) + "</i></span>").join("");
     return (
       '<div class="bars' + (ui.showUk ? " with-uk" : "") + '"><div class="bars-plot">' + grid +
       fp.breakdown
