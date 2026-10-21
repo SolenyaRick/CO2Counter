@@ -1134,7 +1134,7 @@
     "sections": [
       {
         "heading": "Fly less, and shorter",
-        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is around 110 kg; by Eurostar, just a few kg.",
+        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is about 123 kg; by Eurostar, about 4 kg.",
         "dynamicKey": "flightTiers"
       },
       {
