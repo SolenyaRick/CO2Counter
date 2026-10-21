@@ -2620,7 +2620,6 @@
 
   const bankRating = (bank) => D.BANK_RATING_BANDS.find((b) => bank.factor <= b.max);
   const rateChip = (key, label) => '<span class="rate rate-' + key + '">' + esc(label) + "</span>";
-  const WHICH_LABELS = { green: "Eco", amber: "Amber", red: "Red" };
   const kgFmt = (n) => Math.round(n).toLocaleString();
 
   function pensionRating(score) {
@@ -2662,83 +2661,7 @@
     return cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving") && carDaysOf(survey).length === 0;
   }
 
-  // Your car commute against swapping 1 day, about half your car days, or
-  // all of them, to each alternative. Uses your distance and the same DESNZ
-  // 2026 factors as the rest of the app; swaps the highest-emitting car days
-  // first.
-  function commuteSwapHtml() {
-    const c = survey.commute || {};
-    const km = Number(c.distance) || 0;
-    const carDays = carDaysOf(survey);
-    const n = carDays.length;
-    if (!n || !km) return '<div class="popup-body"><p class="sm">Add your commute distance and the days you drive in the survey to see your options.</p></div>';
-    const perDay = (mode) => factorOf(D.COMMUTE_MODES, mode) * km * 2;
-    const yearly = (kgPerWeek) => kgPerWeek * D.WEEKS_PER_YEAR;
-    const carDayKg = carDays.map((d) => perDay(c[d])).sort((a, b) => b - a);
-    const weekNow = DAYS.reduce((t, d) => t + perDay(c[d]), 0);
-    const steps = [...new Set([1, Math.ceil(n / 2), n])].filter((k) => k >= 1 && k <= n);
-    const stepLabel = (k) => (k === n ? (n === 1 ? "Your 1 day" : "All " + n) : k + (k === 1 ? " day" : " days"));
-    const active = km <= ACTIVE_TRAVEL_MAX_KM;
-    const alts = [
-      { label: "Train", mode: "train" },
-      { label: "Bus", mode: "bus" },
-      active ? { label: km <= 3 ? "Walk or cycle" : "Cycle", mode: "walk_bike" } : null,
-      { label: "Work from home", mode: "wfh" },
-    ].filter(Boolean);
-    const saving = (k, mode) => yearly(carDayKg.slice(0, k).reduce((t, kg) => t + (kg - perDay(mode)), 0));
-    const rows = alts
-      .map(
-        (a) =>
-          "<tr><td>" + esc(a.label) + "</td>" +
-          steps.map((k) => '<td class="num"><span class="green-dark fw-600">−' + kgFmt(Math.max(0, saving(k, a.mode))) + "</span></td>").join("") + "</tr>"
-      )
-      .join("");
-    return (
-      '<div class="popup-body"><p class="sm">You drive <strong>' + n + (n === 1 ? " day" : " days") + " a week</strong>, " + Number(km.toFixed(1)) +
-      " km each way. Your commute comes to about <strong>" + kgFmt(yearly(weekNow)) + " kg CO₂e a year</strong>.</p>" +
-      '<p class="xs fw-600 upper muted">kg saved a year if you swap car days a week for…</p>' +
-      '<div class="league-wrap"><table class="league"><thead><tr><th>Instead</th>' + steps.map((k) => '<th class="num">' + stepLabel(k) + "</th>").join("") + "</tr></thead><tbody>" +
-      rows + "</tbody></table></div>" +
-      (active
-        ? ""
-        : '<p class="xs muted">At ' + fixed(km) + " km each way, walking or cycling isn\'t realistic for most people (most cycle commutes are under 10 km), so it\'s left out. An e-bike or cycling to the station can still help.</p>") +
-      '<p class="xs muted">kg CO₂e a year, using DESNZ 2026 factors for your car, national rail and an average local bus, and your distance there and back. Swaps start with your highest-emitting car days.</p></div>'
-    );
-  }
 
-  // Your flights priced in each cabin class (DESNZ 2026 factors). DESNZ has
-  // no short-haul premium economy or first class, so those use economy and
-  // business, which the note explains.
-  function cabinComparisonHtml() {
-    const flights = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
-    if (!flights.length) {
-      return '<div class="popup-body"><p class="sm">You haven\'t added any flights, so there\'s nothing to compare. If you do fly, economy is always the lowest-carbon seat.</p></div>';
-    }
-    const current = flights.reduce((t, f) => t + flightKm(f.from, f.to) * flightFactor(f.from, f.to, f.cabin) * legs(f), 0);
-    const rows = D.CABINS.map((c) => ({ c, kg: flights.reduce((t, f) => t + flightKm(f.from, f.to) * flightFactor(f.from, f.to, c.key) * legs(f), 0) }));
-    const max = Math.max(...rows.map((x) => x.kg), 1);
-    const economy = rows[0].kg;
-    const allEconomy = flights.every((f) => (f.cabin || "economy") === "economy");
-    const business = rows.find((x) => x.c.key === "business").kg;
-    const summary = allEconomy
-      ? "You already fly economy, the lowest-carbon seat. The same flights in business would add about <strong>" + kgFmt(business - economy) + " kg</strong> a year."
-      : "Flying all of these in economy would save about <strong>" + kgFmt(current - economy) + " kg a year</strong> (" + Math.round((1 - economy / current) * 100) + "% of your flight emissions).";
-    return (
-      '<div class="popup-body"><p class="sm">' + summary + "</p>" +
-      '<p class="xs fw-600 upper muted">Your ' + flights.length + (flights.length === 1 ? " flight" : " flights") + " in each cabin</p>" +
-      '<div class="stack-2">' +
-      rows
-        .map(
-          (x) =>
-            '<div class="cabin-row"><span class="sm fw-500 cabin-label">' + esc(x.c.label) + '</span><div class="cabin-track"><div style="width:' + ((x.kg / max) * 100).toFixed(1) +
-            '%"></div></div><span class="sm fw-600 nowrap">' + kgFmt(x.kg) + " kg</span></div>"
-        )
-        .join("") +
-      "</div>" +
-      '<p class="sm">As you booked them: <strong>' + kgFmt(current) + " kg CO₂e a year</strong>.</p>" +
-      '<p class="xs muted">Bigger seats take up more of the plane, so each passenger is responsible for more of its fuel. Figures use DESNZ 2026 flight factors, which have no premium economy or first class for short-haul flights, so those use economy and business. We don\'t have figures for direct versus connecting or daytime versus night flights.</p></div>'
-    );
-  }
 
   // One line on the card itself, so the comparison is visible before tapping.
   function sectionTeaser(s) {
@@ -2762,96 +2685,8 @@
     return "";
   }
 
-  function bankLeagueHtml() {
-    const b = survey.banking || {};
-    const bank = byKey(D.BANKS, b.bank);
-    const best = D.BANKS.reduce((m, x) => (x.factor < m.factor ? x : m), D.BANKS[0]);
-    let mine;
-    if (!bank) {
-      mine = '<p class="sm">Choose your bank in the survey\'s Banking step to see your personal comparison.</p>';
-    } else {
-      const rt = bankRating(bank);
-      const amount = Number(b.amount) || 0;
-      mine =
-        '<p class="sm label-row" style="flex-wrap:wrap"><strong>Your bank: ' + esc(bank.label) + "</strong>" + rateChip(rt.key, rt.label) +
-        (D.WHICH_BANK_RATINGS[bank.key] ? '<span class="xs muted">Which?: ' + WHICH_LABELS[D.WHICH_BANK_RATINGS[bank.key]] + "</span>" : "") + "</p>" +
-        (amount > 0
-          ? '<p class="sm mt-2">Your £' + amount.toLocaleString() + " there finances about <strong>" + kgFmt(amount * bank.factor) + " kg CO₂e a year</strong>. " +
-            (bank.key === best.key
-              ? "That's already the greenest bank in the table."
-              : "At " + esc(best.label) + ", the greenest bank in the table, it would be about " + kgFmt(amount * best.factor) + " kg: <strong>" +
-                kgFmt(amount * (bank.factor - best.factor)) + " kg less</strong> (" + Math.round((1 - best.factor / bank.factor) * 100) + "% lower).") + "</p>"
-          : '<p class="xs muted mt-2">Add your savings in the survey to see how much CO₂ your money finances.</p>');
-    }
-    const rows = D.BANKS.slice()
-      .sort((x, y) => x.factor - y.factor)
-      .map((x, i) => {
-        const rt = bankRating(x);
-        const w = D.WHICH_BANK_RATINGS[x.key];
-        return (
-          '<tr' + (bank && x.key === bank.key ? ' class="me"' : "") + "><td>" + (i + 1) + "</td><td>" + esc(x.label) + (bank && x.key === bank.key ? " (you)" : "") +
-          "</td><td class=\"num\">" + kgFmt(x.factor * 1000) + "</td><td>" + rateChip(rt.key, rt.label) + "</td><td>" +
-          (w ? rateChip(w === "green" ? "vgood" : w === "amber" ? "bad" : "vbad", WHICH_LABELS[w]) : '<span class="xs muted">–</span>') + "</td></tr>"
-        );
-      })
-      .join("");
-    return (
-      '<div class="popup-body"><div class="panel green p-4">' + mine + "</div>" +
-      '<p class="xs fw-600 upper muted mt-2">Independent league table</p>' +
-      '<div class="league-wrap"><table class="league league-banks"><thead><tr><th>#</th><th>Bank</th><th class="num">kg per £1k</th><th>Rating</th><th>Which?</th></tr></thead><tbody>' +
-      rows + "</tbody></table></div>" +
-      '<p class="xs muted">Emissions: MotherTree bank carbon emissions league table (2021), CO₂e financed per pound held. Our rating bands: Very good under 45 kg, Good under 75, Bad under 150, Very bad 150+ per £1,000. ' +
-      "kg per £1k: kg CO₂e a year for every £1,000 held. Which?: Which? and Reclaim Finance review of fossil-fuel policies (October 2023); Eco = Which? Eco Provider, with no fossil-fuel exposure; – = not assessed. The two can disagree: Lloyds and Halifax finance relatively little but lack a full fossil-fuel exclusion policy, so Which? rates them red.</p></div>"
-    );
-  }
 
-  function switchAccountHtml() {
-    const support =
-      isNativeApp() || !STRIPE_PAYMENT_LINK
-        ? "Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step."
-        : 'Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step. <a class="link-btn" href="' + esc(supportUrl()) + '">Help us build it by supporting CO2 Counter</a>.';
-    return (
-      '<div class="popup-body"><p class="sm">The <strong>Current Account Switch Service</strong> is free and run by Pay.UK, and most UK banks and building societies use it. ' +
-      "Open an account with your new bank and ask for a full switch: it moves your balance, direct debits and standing orders in 7 working days, " +
-      "redirects payments sent to your old account, and is protected by the Current Account Switch Guarantee.</p>" +
-      '<p class="sm">Greener banks to switch to:</p>' + linkChips("banking", 0, "popup") +
-      '<div><a class="btn btn-green" href="' + D.CASS_URL + '" target="_blank" rel="noopener">Go to the Current Account Switch Service ' + icon("arrowRight") + "</a></div>" +
-      '<div class="panel p-4 mt-2"><p class="xs muted">' + support + "</p></div></div>"
-    );
-  }
 
-  function savingsPensionsHtml() {
-    const b = survey.banking || {};
-    const mine = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
-    const chosen = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
-    let mineHtml;
-    if (mine) {
-      const rt = pensionRating(mine.score);
-      mineHtml =
-        '<p class="sm label-row" style="flex-wrap:wrap"><strong>Your provider: ' + esc(mine.label) + "</strong>" + rateChip(rt.key, rt.label) + "</p>" +
-        '<p class="sm mt-2">Ranked <strong>' + mine.rank + " of 12</strong> with " + mine.score + "/10 for climate action.</p>";
-    } else if (chosen && chosen.key !== "other") {
-      mineHtml = '<p class="sm"><strong>Your provider: ' + esc(chosen.label) + "</strong> isn't in this ranking, which covers the 12 largest workplace pension providers.</p>";
-    } else {
-      mineHtml = '<p class="sm">Choose your pension provider in the survey\'s Banking step to see how it ranks.</p>';
-    }
-    const rows = D.PENSION_CLIMATE_RANKING.map((x) => {
-      const rt = pensionRating(x.score);
-      const me = mine && x.key === mine.key;
-      return '<tr' + (me ? ' class="me"' : "") + "><td>" + x.rank + "</td><td>" + esc(x.label) + (me ? " (you)" : "") + '</td><td class="num">' + x.score.toFixed(1) + "</td><td>" + rateChip(rt.key, rt.label) + "</td></tr>";
-    }).join("");
-    return (
-      '<div class="popup-body"><p class="sm"><strong>Savings:</strong> a bank lends out savings just like current-account money, so the bank league table applies here too. ' +
-      "Building societies and ethical banks such as Nationwide, The Co-operative Bank and Triodos tend to come out best.</p>" +
-      '<p class="sm"><strong>Pensions:</strong> often the biggest lever. Ask your provider or HR for a climate-focused or fossil-free fund; switching usually takes a few minutes online.</p>' +
-      '<div class="panel green p-4">' + mineHtml + "</div>" +
-      '<p class="xs fw-600 upper muted mt-2">Independent pension ranking</p>' +
-      '<div class="league-wrap"><table class="league"><thead><tr><th>#</th><th>Provider</th><th class="num">/10</th><th>Rating</th></tr></thead><tbody>' +
-      rows + "</tbody></table></div>" +
-      '<p class="xs muted">Make My Money Matter, Climate Action Report 2025 (February 2025): climate commitments, targets, fossil fuels, deforestation and stewardship. It rates providers\' climate action, not the carbon footprint of your fund; ' +
-      "your footprint figure uses each provider\'s own published (TCFD) data. Not financial advice.</p></div>"
-    );
-  }
 
   const linksFor = (cat) => {
     const links = D.USEFUL_LINKS[cat];
@@ -2943,33 +2778,304 @@
   }
 
   function openSectionDialog(cat, index) {
+    const ex = D.EXPLAINERS[cat];
+    if (!ex) return;
     const diet = cat === "meals" ? D.DIET_EXPLAINERS[dietType(survey)] : null;
-    const sections = (diet && diet.sections) || D.EXPLAINERS[cat].sections;
-    const habits = (diet && diet.habits) || D.EXPLAINERS[cat].habits;
+    const sections = (diet && diet.sections) || ex.sections;
+    const habits = (diet && diet.habits) || ex.habits;
     const s = sections[index];
     if (!s) return;
-    let content = null;
-    if (s.dynamicKey === "flightTiers") content = flightTiersContent();
-    if (s.dynamicKey === "trainComparison") content = trainContent();
-    const subtitle = habits[index] ? "Pairs with habit: " + habits[index].label : null;
+    const shown = sections.map((x, i) => ({ x, i })).filter(({ x }) => !(diet && sectionDone(cat, x)) && !sectionHidden(cat, x));
+    const pos = Math.max(0, shown.findIndex((o) => o.i === index));
+    const prev = shown[(pos + shown.length - 1) % shown.length];
+    const next = shown[(pos + 1) % shown.length];
 
     let body;
-    if (s.dynamicKey === "bankLeague") body = bankLeagueHtml();
-    else if (s.dynamicKey === "cabinComparison") body = cabinComparisonHtml();
-    else if (s.dynamicKey === "commuteSwap") body = commuteSwapHtml();
-    else if (s.dynamicKey === "switchAccount") body = switchAccountHtml();
-    else if (s.dynamicKey === "savingsPensions") body = savingsPensionsHtml();
-    else if (content && content.isTrainPopup) body = trainPopupHtml(content);
-    else if (content) body = flightPopupHtml(content);
-    else body = '<div class="empty-box small"><p class="sm muted">Detailed guide coming soon.</p></div>';
+    if (s.dynamicKey === "flightTiers") body = tiersSheet();
+    else if (s.dynamicKey === "trainComparison") body = trainSheet();
+    else if (s.dynamicKey === "cabinComparison") body = cabinSheet();
+    else if (s.dynamicKey === "commuteSwap") body = commuteSheet();
+    else if (s.dynamicKey === "bankLeague") body = bankSheet();
+    else if (s.dynamicKey === "switchAccount") body = switchSheet();
+    else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
+    else body = pos === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "";
 
-    modalRoot.innerHTML =
-      '<div class="modal-backdrop" data-action="close-modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">' +
-      '<button type="button" class="modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button>" +
-      '<h2 id="modal-title" class="modal-title">' + icon("info", "green") + esc(s.heading) + "</h2>" +
-      (subtitle ? '<p class="sm green-dark">' + esc(subtitle) + "</p>" : "") + body + "</div></div>";
-    modalRoot.innerHTML = glyphify(modalRoot.innerHTML);
+    modalRoot.innerHTML = glyphify(
+      '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
+        (shown.length > 1
+          ? '<div class="sheet-tabs" role="tablist" aria-label="' + esc(ex.title) + ' next steps">' +
+            shown.map(({ x, i }) => '<button type="button" role="tab" aria-selected="' + (i === index) + '" class="' + (i === index ? "on" : "") + '" data-action="open-section" data-index="' + i + '">' + esc(x.heading) + "</button>").join("") +
+            "</div>"
+          : "") +
+        '<div class="sheet-body"><div class="sheet-head"><span class="cat-badge sheet-icon">' + ex.icon + '</span><div class="min0"><h2 id="sheet-title" class="display">' + esc(s.heading) + "</h2>" +
+        (habits[index] ? '<p class="sheet-habit">Pairs with habit: ' + esc(habits[index].label) + "</p>" : "") + "</div>" +
+        '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+        '<p class="sheet-lede">' + esc(s.body) + "</p>" + body +
+        (shown.length > 1
+          ? '<div class="sheet-nav"><button type="button" class="btn btn-outline" data-action="open-section" data-index="' + prev.i + '">' + icon("chevronLeft") + " " + esc(prev.x.heading) + "</button>" +
+            '<button type="button" class="btn btn-outline" data-action="open-section" data-index="' + next.i + '">' + esc(next.x.heading) + " " + icon("chevronRight") + "</button></div>"
+          : "") +
+        "</div></div></div>"
+    );
     document.body.classList.add("modal-open");
+    const sheet = modalRoot.querySelector(".sheet");
+    if (sheet) sheet.scrollTop = 0;
+  }
+
+  // ---------- pop-up sheets (Glass v2) ----------
+
+  const sheetBar = (label, value, max, colour, extra) =>
+    '<li class="sbar' + (extra && extra.mine ? " mine" : "") + '"><span class="sbar-label">' + label + "</span>" +
+    '<span class="sbar-track"><span style="width:' + Math.max(value > 0 ? 1.5 : 0.8, (value / Math.max(max, 1e-9)) * 100).toFixed(1) + "%;background:" + colour + '"></span></span>' +
+    '<span class="sbar-val display tnum">' + (extra && extra.text != null ? extra.text : kgFmt(value)) + "</span></li>";
+  const chipBig = (text) => '<span class="sheet-chip display">' + text + "</span>";
+  const panel = (label, inner, chip) =>
+    '<section class="sheet-panel"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="eyebrow">' + label + "</span>" + (chip || "") + "</div>" + inner + "</section>";
+  const tiles = (list) =>
+    '<div class="sheet-tiles">' + list.map(([n, t, cls]) => '<div class="sheet-tile' + (cls ? " " + cls : "") + '"><b class="display tnum">' + n + "</b><span>" + t + "</span></div>").join("") + "</div>";
+
+  function tiersSheet() {
+    const mine = flightTier(survey).tier;
+    const totals = flightTotals(survey);
+    const heights = [70, 105, 145, 185];
+    const colours = ["rgba(143,165,138,.3)", "rgba(143,165,138,.3)", "rgba(217,164,65,.35)", "rgba(184,101,61,.4)"];
+    const stairs =
+      '<div class="stairs">' +
+      D.FLIGHT_TIERS.map(
+        (t, j) =>
+          '<div class="stair-col">' + (t.tier === mine ? '<span class="you-here display">You are here</span>' : "") +
+          '<div class="stair' + (t.tier === mine ? " mine" : "") + '" style="height:' + heights[j] + "px;background:" + (t.tier === mine ? "var(--em-600)" : colours[j]) + ";animation-delay:" + j * 0.1 + 's"><span class="display">' + t.label + "</span>" +
+          '<span class="stair-planes">' + icon("plane").repeat([0, 2, 4, 6][j]) + "</span></div></div>"
+      ).join("") +
+      '</div><div class="stair-notes">' + D.FLIGHT_TIERS.map((t) => "<div><b>" + esc(t.criteria) + "</b><br><span>" + esc(t.description) + "</span></div>").join("") + "</div>";
+    let html = panel("How often you fly", stairs);
+    if (totals.items.length) {
+      html += panel(
+        "Your flights",
+        '<ul class="sbars">' +
+          totals.items.map((f) => sheetBar(esc(f.label), f.co2, D.BUDGET_YEARLY, "var(--clay)", { text: kgFmt(f.co2) + " kg" })).join("") +
+          '</ul><p class="xs muted mt-2">Bar length against your yearly 1.5°C budget of 2,500 kg.</p>'
+      );
+      const eq = equivalents(totals.total);
+      html += tiles([
+        [Math.round(totals.pctOfTarget) + "%", "of your yearly 1.5°C budget", "clay"],
+        [kgFmt(eq.trees), "trees to soak it up for a year"],
+        [kgFmt(eq.phones), "new phones made and charged"],
+        [kgFmt(eq.drivingKm), "km driven in a petrol car"],
+      ]);
+      html += '<p class="sheet-close-line display">One less flight a year, however many you take, is a real step in the right direction.</p>';
+    } else {
+      html += '<p class="sheet-close-line display">No flights this year: you\'re in the lowest tier. Nice.</p>';
+    }
+    return html;
+  }
+
+  function trainSheet() {
+    const ratio = PARIS_TRAIN_KG / PARIS_FLIGHT_KG;
+    const trips = (survey.flights || []).filter((f) => {
+      const km = flightKm(f.from, f.to);
+      return km > 0 && km < MEDIUM_HAUL_KM;
+    });
+    const routes = [{ label: "London → Paris, return", plane: PARIS_FLIGHT_KG, train: PARIS_TRAIN_KG, note: "Eurostar's independently commissioned figures." }].concat(
+      trips.map((f) => ({ label: "Your trip: " + routeLabel(f), plane: flightKg(f), train: flightKg(f) * ratio, note: "Train estimated at the same ratio as London–Paris." }))
+    );
+    const max = Math.max(...routes.map((r) => r.plane));
+    let html = panel(
+      "Plane or train, per person",
+      routes
+        .map(
+          (r) =>
+            '<div class="route"><p class="display route-label">' + esc(r.label) + '</p><ul class="sbars">' +
+            sheetBar(icon("plane") + " Plane", r.plane, max, "var(--clay)", { text: kgFmt(r.plane) + " kg" }) +
+            sheetBar("🚆 Train", r.train, max, "var(--em-600)", { text: (r.train < 10 ? r.train.toFixed(1) : kgFmt(r.train)) + " kg" }) +
+            '</ul><p class="xs muted">' + esc(r.note) + "</p></div>"
+        )
+        .join(""),
+      chipBig(Math.round((1 - ratio) * 100) + "% less by train")
+    );
+    const saving = trips.reduce((t, f) => t + flightKg(f) * (1 - ratio), 0);
+    const beefDay = factorOf(D.MEAL_OPTIONS, "beef");
+    html += tiles(
+      (saving > 0.5
+        ? [
+            ["−" + kgFmt(saving) + " kg", trips.length === 1 ? "if your trip went by train" : "if your short trips went by train", "lead"],
+            [kgFmt(equivalents(saving).trees) + " trees", "that's how much it would save"],
+          ]
+        : [["−" + kgFmt(PARIS_FLIGHT_KG - PARIS_TRAIN_KG) + " kg", "London–Paris return by train instead", "lead"]]
+      ).concat([[PARIS_TRAIN_KG < beefDay ? "Less than a beef day" : kgFmt(PARIS_TRAIN_KG) + " kg", "London–Paris return by train, vs a day of beef meals (" + beefDay.toFixed(1) + " kg)"]])
+    );
+    if (!trips.length) html += '<p class="xs muted mt-2">None of your flights are under 4,000 km, so there\'s no train swap to show for them.</p>';
+    return html;
+  }
+
+  function cabinSheet() {
+    const flights = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+    const econ = byKey(D.CABINS, "economy");
+    const longX = D.CABINS.map((c, j) => [
+      j === 0 ? "1×" : (c.long / econ.long).toFixed(1).replace(/\.0$/, "") + "×",
+      c.label.replace(" class", "").replace(" economy", ""),
+      ["var(--em-600)", "#4a6b45", "#8a6420", "#8a4424"][j],
+      ["rgba(63,91,58,.12)", "rgba(143,165,138,.2)", "rgba(217,164,65,.2)", "rgba(184,101,61,.16)"][j],
+    ]);
+    const longHtml =
+      '<div class="cabin-x">' + longX.map(([x, l, ink, bg]) => '<div style="background:' + bg + '"><b class="display" style="color:' + ink + '">' + x + "</b><span>" + esc(l) + "</span></div>").join("") + "</div>" +
+      '<p class="sm mt-3">Direct routes help too: take-off and landing burn the most fuel, so fewer legs mean fewer emissions.</p>';
+    if (!flights.length) return panel("On long-haul, by seat", longHtml) + '<p class="xs muted mt-2">You haven\'t added any flights. If you do fly, economy is always the lowest-carbon seat.</p>';
+    const kgFor = (key) => flights.reduce((t, f) => t + flightKm(f.from, f.to) * flightFactor(f.from, f.to, key) * legs(f) * (f.trips || 1), 0);
+    const rows = D.CABINS.map((c) => ({ c, kg: kgFor(c.key) }));
+    const max = Math.max(...rows.map((r) => r.kg), 1);
+    const cabinsUsed = [...new Set(flights.map((f) => f.cabin || "economy"))];
+    const mineKey = cabinsUsed.length === 1 ? cabinsUsed[0] : null;
+    const colours = ["var(--em-600)", "#8fa58a", "var(--honey)", "var(--clay)"];
+    const bus = rows.find((r) => r.c.key === "business").kg / Math.max(rows[0].kg, 1e-9);
+    const title = flights.length === 1 ? "Your " + routeLabel(flights[0]).replace(/^.*[→⇄] ?/, "") + " trip, by seat" : "Your " + flights.length + " flights, by seat";
+    return (
+      panel(
+        title,
+        '<ul class="sbars">' +
+          rows.map((r, j) => sheetBar(esc(r.c.label) + (r.c.key === mineKey ? ' <span class="tag done-tag">Yours</span>' : ""), r.kg, max, colours[j], { text: kgFmt(r.kg) + " kg", mine: r.c.key === mineKey })).join("") +
+          '</ul><p class="xs muted mt-2">DESNZ 2026 flight factors. Short-haul has no premium economy or first class in DESNZ, so those use economy and business.</p>',
+        chipBig("Business = " + bus.toFixed(1).replace(/\.0$/, "") + "× economy")
+      ) + panel("On long-haul the gap grows", longHtml)
+    );
+  }
+
+  function commuteSheet() {
+    const c = survey.commute || {};
+    const km = Number(c.distance) || 0;
+    const days = carDaysOf(survey);
+    const n = days.length;
+    if (!n || !km) return '<p class="sm">Add your commute distance and the days you drive in the survey to see your options.</p>';
+    const W = D.WEEKS_PER_YEAR;
+    const perDay = (mode) => factorOf(D.COMMUTE_MODES, mode) * km * 2;
+    const carKey = c[days[0]];
+    const car = byKey(D.COMMUTE_MODES, carKey);
+    const year = (mode) => perDay(mode) * n * W;
+    const modes = [
+      [car.label + " (yours)", year(carKey), "var(--clay)"],
+      ["Bus", year("bus"), "var(--honey)"],
+      ["Electric car", year("ev"), "#8fa58a"],
+      ["Train", year("train"), "#6e8b5e"],
+      [km <= ACTIVE_TRAVEL_MAX_KM ? "Walk or bike" : "Walk or bike (far at " + km + " km)", 0, "var(--em-600)"],
+      ["Work from home", 0, "var(--em-600)"],
+    ].filter((m) => m[0] !== "Electric car" || carKey !== "ev");
+    const max = Math.max(...modes.map((m) => m[1]), 1);
+    const carDayKg = days.map((d) => perDay(c[d])).sort((x, y) => y - x);
+    const swap = (k) => carDayKg.slice(0, k).reduce((t, kg) => t + kg - perDay("train"), 0) * W;
+    return (
+      panel(
+        "Your " + n + " driving " + (n === 1 ? "day" : "days") + ", for a year",
+        '<ul class="sbars">' + modes.map(([l, v, col]) => sheetBar(esc(l), v, max, col, { text: kgFmt(v) + " kg" })).join("") + "</ul>" +
+          '<p class="xs muted mt-2">' + km + " km each way, there and back, DESNZ 2026 factors.</p>",
+        chipBig("Train saves " + kgFmt(year(carKey) - year("train")) + " kg")
+      ) +
+      panel(
+        "Swap some days to the train",
+        '<div class="swap-tiles">' +
+          Array.from({ length: n }, (_, i) => i + 1)
+            .map((k) => '<div style="--a:' + (0.12 + (k / n) * 0.8).toFixed(2) + '" class="' + (k / n > 0.55 ? "dark" : "") + '"><span>' + k + (k === 1 ? " day" : " days") + ' a week</span><b class="display tnum">−' + kgFmt(swap(k)) + " kg</b><small>a year</small></div>")
+            .join("") +
+          "</div>"
+      )
+    );
+  }
+
+  function bankSheet() {
+    const b = survey.banking || {};
+    const bank = byKey(D.BANKS, b.bank);
+    const sorted = D.BANKS.slice().sort((x, y) => x.factor - y.factor);
+    const best = sorted[0];
+    const max = sorted[sorted.length - 1].factor * 1000;
+    const bandColour = { vgood: "var(--em-600)", good: "#8fa58a", bad: "var(--honey)", vbad: "var(--clay)" };
+    const legend =
+      '<span class="band-legend">' + D.BANK_RATING_BANDS.map((x) => '<span><i style="background:' + bandColour[x.key] + '"></i>' + x.label + "</span>").join("") + "</span>";
+    let html = panel(
+      "kg CO₂e financed per £1,000, a year",
+      legend + '<ul class="sbars bank-bars">' +
+        sorted
+          .map((x) => {
+            const me = bank && x.key === bank.key;
+            const which = D.WHICH_BANK_RATINGS[x.key] === "green" ? ' <span class="which-eco">Which? Eco</span>' : "";
+            return sheetBar(esc(x.label) + (me ? " (yours)" : "") + which, x.factor * 1000, max, bandColour[bankRating(x).key], { text: kgFmt(x.factor * 1000), mine: me });
+          })
+          .join("") +
+        "</ul>"
+    );
+    const amount = Number(b.amount) || 0;
+    if (bank && amount > 0) {
+      const rt = bankRating(bank);
+      html +=
+        '<div class="sheet-tiles two"><div class="sheet-tile ' + (rt.key === "vgood" ? "lead" : "clay-soft") + '"><span>' + esc(bank.label) + " · your bank · " + rt.label + '</span><b class="display tnum">' + kgFmt(amount * bank.factor) +
+        " kg a year</b><span>financed by your £" + amount.toLocaleString() + "</span></div>" +
+        (bank.key === best.key
+          ? '<div class="sheet-tile lead"><span>You\'re with the greenest bank here</span><b class="display">Nothing to switch</b><span>Your money is already working well.</span></div>'
+          : '<div class="sheet-tile lead"><span>At ' + esc(best.label) + " · " + bankRating(best).label + '</span><b class="display tnum">' + kgFmt(amount * best.factor) + " kg a year</b><span>the same £" +
+            amount.toLocaleString() + ", " + Math.round((1 - best.factor / bank.factor) * 100) + "% less</span></div>") +
+        "</div>";
+    } else {
+      html += '<p class="sm mt-3">' + (bank ? "Add your savings in the survey to see how much CO₂ your money finances." : "Choose your bank in the survey's Money step to see your own comparison.") + "</p>";
+    }
+    return (
+      html +
+      '<p class="xs muted mt-3">Source: MotherTree bank carbon emissions league table (2021). Which? Eco: a Which? Eco Provider with no fossil-fuel exposure (Which? and Reclaim Finance, October 2023). ' +
+      "The two can disagree: Lloyds and Halifax finance relatively little but lack a full fossil-fuel exclusion policy, so Which? rates them red.</p>"
+    );
+  }
+
+  function switchSheet() {
+    const greener = D.BANKS.slice().sort((x, y) => x.factor - y.factor).slice(0, 5);
+    const support =
+      isNativeApp() || !STRIPE_PAYMENT_LINK
+        ? "Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step."
+        : 'Coming soon: a CO2 Counter assistant (MCP) to help you switch, step by step. <a class="link-btn" href="' + esc(supportUrl()) + '">Help us build it by supporting CO2 Counter</a>.';
+    return (
+      panel(
+        "Three steps, about 7 working days",
+        '<ol class="howto">' +
+          [
+            ["Pick a greener bank", "One rated Very good or Good on the league table."],
+            ["Open an account, choose a switch date", "Ask for a full switch using the Current Account Switch Service."],
+            ["Done, guaranteed", "Your balance, direct debits and standing orders move for you. Payments to your old account are redirected."],
+          ].map(([t, b2], i) => '<li><span class="num-badge display">' + (i + 1) + '</span><div><h3 class="display">' + t + "</h3><p>" + b2 + "</p></div></li>").join("") +
+          '</ol><div class="mt-4"><a class="btn btn-green" href="' + D.CASS_URL + '" target="_blank" rel="noopener">Go to the Current Account Switch Service ' + icon("arrowRight") + "</a></div>"
+      ) +
+      panel(
+        "Greener banks to switch to",
+        '<div class="chip-wrap mt-3">' + greener.map((x) => '<span class="q-chip static">' + esc(x.label) + '<span class="q-chip-sub tnum">' + kgFmt(x.factor * 1000) + "</span></span>").join("") + "</div>" +
+          '<p class="xs muted mt-2">kg CO₂e financed per £1,000 a year. The service is free, run by Pay.UK, and used by most UK banks and building societies.</p>' +
+          (linksFor("banking") ? '<p class="sm fw-600 mt-3 mb-2">Switch pages:</p>' + linkChips("banking", 0, "popup") : "")
+      ) +
+      '<p class="xs muted mt-3">' + support + "</p>"
+    );
+  }
+
+  function pensionSheet() {
+    const b = survey.banking || {};
+    const mine = D.PENSION_CLIMATE_RANKING.find((x) => x.key && x.key === b.pensionProvider);
+    const chosen = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
+    const top = D.PENSION_CLIMATE_RANKING[0];
+    const max = Math.max(...D.PENSION_CLIMATE_RANKING.map((x) => x.score));
+    const note = mine
+      ? ""
+      : chosen && chosen.key !== "other"
+      ? '<p class="sm mt-2">' + esc(chosen.label) + " isn't in this ranking, which covers the 12 largest workplace pension providers.</p>"
+      : '<p class="sm mt-2">Choose your pension provider in the survey\'s Money step to see where it ranks.</p>';
+    return (
+      '<div class="sheet-two">' +
+      '<section class="sheet-panel"><span class="eyebrow">Savings</span><p class="sm mt-2">Banks lend out savings just like current-account money, so the bank league table applies here too. Keep savings with a greener bank.</p></section>' +
+      '<section class="sheet-panel"><span class="eyebrow">Pension</span><p class="sm mt-2">Often the biggest money lever. Ask your provider which climate-focused fund options they offer and whether you can switch.</p></section></div>' +
+      panel(
+        "Workplace pension climate ranking",
+        '<ol class="sbars rank-bars">' +
+          D.PENSION_CLIMATE_RANKING.map((x) => {
+            const me = mine && x === mine;
+            return sheetBar('<span class="rank-n display">' + x.rank + "</span>" + esc(x.label) + (me ? " (yours)" : ""), x.score, max, me ? "var(--em-600)" : "#8fa58a", { text: x.score.toFixed(1), mine: me });
+          }).join("") +
+          "</ol>" + note +
+          '<p class="xs muted mt-2">Higher is better, out of 10. Make My Money Matter, Climate Action Report 2025: climate commitments, targets, fossil fuels, deforestation and stewardship. It rates climate action, not your fund\'s footprint. Not financial advice.</p>',
+        chipBig(mine ? esc(mine.label) + " is " + mine.rank : esc(top.label) + " is 1st")
+      )
+    );
   }
 
   function closeModal() {
@@ -2977,175 +3083,15 @@
     document.body.classList.remove("modal-open");
   }
 
-  const EQUIV_ICONS = { Target: "🎯", TreePine: "🌳", Smartphone: "📱", Car: "🚗", Globe: "🌍" };
 
-  function flightTiersContent() {
-    const tier = flightTier(survey);
-    const totals = flightTotals(survey);
-    if (tier.total === 0) {
-      return {
-        executiveSummary: "You haven't logged any flights — you're in Tier 1 with zero aviation emissions. That's the lowest-impact tier.",
-        userTier: 1,
-        equivalents: [],
-      };
-    }
-    const eq = equivalents(totals.total);
-    const pct = Math.round(totals.pctOfTarget);
-    return {
-      executiveSummary: {
-        text: "This will be one of the most impactful changes, for the least amount of effort. The reason being it does not require you to change anything about your day to day life, but rather stop doing things in your day-to-day life. However, it is a lot easier said than done. The introduction largely explains why we need to reduce flights but to make it more understandable I have put some more metrics below.",
-        reminder: "Remember, 1 less flight a year, no matter how many you take is an important step in the right direction!",
-      },
-      userTier: tier.tier,
-      perFlight: totals.items,
-      equivalents: [
-        { category: "1.5°C target", icon: "Target", count: null, label: pct + "% of 1.5°C target", sub: "one person's yearly budget", extra: totals.total.toFixed(0) + " kg CO₂e / year · target 2,500 kg" },
-        { category: "Tree equivalent", icon: "TreePine", count: eq.trees, label: eq.trees + " mature trees", sub: "absorbing CO₂ for a whole year" },
-        { category: "Phone equivalent", icon: "Smartphone", count: eq.phones, label: eq.phones + " iPhones (14)", sub: "manufacturing + charging for a year" },
-        { category: "Driving equivalent", icon: "Car", count: null, label: eq.drivingKm.toLocaleString() + " km driven", sub: "in a petrol car" },
-      ],
-    };
-  }
-
-  function flightPopupHtml(c) {
-    const label = (t) => '<p class="eyebrow-xs">' + t + "</p>";
-    let html = '<div class="popup-body"><div>' + label("Executive Summary");
-    if (typeof c.executiveSummary === "string") html += '<p class="sm muted lh">' + esc(c.executiveSummary) + "</p>";
-    else
-      html +=
-        '<p class="sm muted lh">' + esc(c.executiveSummary.text) + "</p>" +
-        (c.executiveSummary.reminder ? '<p class="sm fw-500 lh mt-2">' + esc(c.executiveSummary.reminder) + "</p>" : "");
-    html += "</div><div>" + label("Flight Frequency Tiers") + '<div class="stack-2">';
-    html += D.FLIGHT_TIERS.map((t) => {
-      const mine = t.tier === c.userTier;
-      return (
-        '<div class="tier' + (mine ? " mine" : "") + '"><div class="label-row mb-0"><span class="xs fw-700 ' + (mine ? "green-dark" : "muted") + '">' + t.label + "</span>" +
-        (mine ? '<span class="tag solid">YOU ARE HERE</span>' : "") + '</div><p class="xs fw-500">' + esc(t.criteria) + '</p><p class="xs muted mt-0">' + esc(t.description) + "</p></div>"
-      );
-    }).join("");
-    html += "</div></div>";
-    if (c.equivalents.length) {
-      html += "<div>" + label("Your Flight Equivalents") + '<div class="stack-4">';
-      html += c.equivalents
-        .map((e) => {
-          const em = EQUIV_ICONS[e.icon] || "ℹ️";
-          const visual = e.count
-            ? '<div class="icon-row">' + em.repeat(Math.min(e.count, 60)) + (e.count > 60 ? '<span class="xs green fw-500"> +' + (e.count - 60) + "</span>" : "") + "</div>"
-            : '<div class="emoji-lg mb-2">' + em + "</div>";
-          return (
-            '<div class="equiv"><p class="eyebrow-xs amber">' + esc(e.category) + "</p>" + visual + '<p class="equiv-label">' + esc(e.label) + '</p><p class="xs muted">' + esc(e.sub) + "</p>" +
-            (e.extra ? '<p class="xs muted">' + esc(e.extra) + "</p>" : "") + "</div>"
-          );
-        })
-        .join("");
-      html += "</div></div>";
-    }
-    if (c.perFlight && c.perFlight.length) {
-      html +=
-        "<div>" + label("Breakdown by flight") + '<div class="stack-2">' +
-        c.perFlight
-          .map(
-            (f) =>
-              '<div class="mini-row"><span class="xs fw-500 truncate">' + esc(f.label) + '</span><span class="xs muted nowrap">' + f.co2.toFixed(0) + " kg · " +
-              f.pctOfTarget.toFixed(1) + "% of target</span></div>"
-          )
-          .join("") +
-        "</div></div>";
-    }
-    return html + "</div>";
-  }
 
   const PARIS_FLIGHT_KG = 123;
   const PARIS_TRAIN_KG = 4;
 
-  function trainContent() {
-    const ratio = PARIS_TRAIN_KG / PARIS_FLIGHT_KG;
-    const rows = (survey.flights || [])
-      .filter((f) => {
-        const km = flightKm(f.from, f.to);
-        return km > 0 && km < MEDIUM_HAUL_KM;
-      })
-      .map((f) => {
-        const kg = flightKg(f);
-        return { label: routeLabel(f), flightKg: kg, trainKg: kg * ratio };
-      });
-    return {
-      isTrainPopup: true,
-      text:
-        "This may not be most impactful for your entire footprint, due to longer haul flights that cannot be replaced by train. What is important is that 1 short-haul flight replaced by yourself vs one short-haul flight replaced by someone that barely flies still has the same impact for the planet!\n" +
-        "According to independently-commissioned figures, EuroStar reports a return journey from London-to-Paris is ~4kg CO₂ per person, whereas a flight is ~123kg CO₂. 97% less! But also, less than most meat-based meals. If we again compare this to our 1.5°C target per year, 4kg = 0.16% whereas 123kg = 4.92%. What a difference!\n" +
-        "Here are some more equivalence figures below, for the stats nerds.",
-      rows: [{ label: "London → Paris (return)", flightKg: PARIS_FLIGHT_KG, trainKg: PARIS_TRAIN_KG }].concat(rows),
-      equivalents: [
-        { type: "target", category: "1.5°C target", icon: "Target", sub: "CO₂ emissions / 2,500 kg yearly target" },
-        { type: "icons", category: "Tree equivalence", icon: "TreePine", sub: "20 kg CO₂ absorbed per mature tree / year", perKg: 20, unit: "trees" },
-        { type: "icons", category: "Phone equivalence", icon: "Smartphone", sub: "61 kg CO₂ per iPhone 14 (manufacture + a year's charging)", perKg: 61, unit: "phones" },
-        { type: "bars", category: "Driving equivalence", icon: "Car", sub: PETROL_KM + " kg CO₂e per km in a petrol car (DESNZ 2026)", perKm: PETROL_KM },
-      ],
-      seeNote: "See Tier 3 or 4",
-    };
-  }
 
-  const one = (n) => (Math.round(n * 10) / 10).toFixed(1);
 
-  function compareRows(label, flightVal, trainVal, max, fmt) {
-    const w = (v) => Math.max(3, (v / max) * 100) + "%";
-    const line = (em, v, cls) =>
-      '<div class="cmp-line"><span class="cmp-emoji">' + em + '</span><div class="cmp-track"><div class="' + cls + '" style="width:' + w(v) + '"></div></div><span class="cmp-val ' + cls + '">' + fmt(v) + "</span></div>";
-    return '<div class="mini-card"><p class="xs fw-500 mb-1">' + esc(label) + "</p>" + line("✈️", flightVal, "flight") + line("🚆", trainVal, "train") + "</div>";
-  }
 
-  function iconCount(count, em, cls) {
-    const whole = Math.floor(count);
-    const frac = count - whole;
-    const cap = 60;
-    const shown = Math.min(whole, cap);
-    let html = '<div class="icon-row ' + cls + '">';
-    for (let i = 0; i < shown; i++) html += "<span>" + em + "</span>";
-    if (frac > 0 && shown < cap) html += '<span style="opacity:' + frac.toFixed(2) + '">' + em + "</span>";
-    if (count > cap) html += '<span class="xs fw-500"> +' + one(count - cap) + "</span>";
-    return html + "</div>";
-  }
 
-  function trainPopupHtml(c) {
-    const rows = c.rows;
-    let html =
-      '<div class="popup-body"><div><p class="eyebrow-xs">Executive Summary</p><p class="sm muted lh pre-line">' + esc(c.text) + "</p></div>" +
-      '<div><p class="eyebrow-xs">Equivalence</p><div class="stack-5">';
-    html += c.equivalents
-      .map((e) => {
-        const em = EQUIV_ICONS[e.icon] || "ℹ️";
-        let body = "";
-        if (e.type === "target") {
-          const vals = rows.map((r) => ({ f: (r.flightKg / D.BUDGET_YEARLY) * 100, t: (r.trainKg / D.BUDGET_YEARLY) * 100 }));
-          const max = Math.max(...vals.flatMap((v) => [v.f, v.t]), 1);
-          body = rows.map((r, i) => compareRows(r.label, vals[i].f, vals[i].t, max, (v) => v.toFixed(2) + "%")).join("");
-        } else if (e.type === "bars") {
-          const vals = rows.map((r) => ({ f: r.flightKg / e.perKm, t: r.trainKg / e.perKm }));
-          const max = Math.max(...vals.flatMap((v) => [v.f, v.t]), 1);
-          body = rows.map((r, i) => compareRows(r.label, vals[i].f, vals[i].t, max, (v) => Math.round(v).toLocaleString() + " km")).join("");
-        } else {
-          body = rows
-            .map((r) => {
-              const f = r.flightKg / e.perKg;
-              const t = r.trainKg / e.perKg;
-              return (
-                '<div class="mini-card"><p class="xs fw-500 mb-1">' + esc(r.label) + "</p>" +
-                '<div class="cmp-line"><span class="cmp-emoji">✈️</span><div class="grow min0">' + iconCount(f, em, "flight") + '</div><span class="cmp-val flight nowrap">' + one(f) + " " + e.unit + "</span></div>" +
-                '<div class="cmp-line"><span class="cmp-emoji">🚆</span><div class="grow min0">' + iconCount(t, em, "train") + '</div><span class="cmp-val train nowrap">' + one(t) + " " + e.unit + "</span></div></div>"
-              );
-            })
-            .join("");
-        }
-        return (
-          '<div class="equiv"><div class="label-row mb-0"><span>' + em + '</span><p class="eyebrow-xs amber mb-0">' + esc(e.category) + '</p></div><p class="xs muted mb-2">' + esc(e.sub) +
-          '</p><div class="stack-2">' + body + "</div></div>"
-        );
-      })
-      .join("");
-    html += "</div></div>" + (c.seeNote ? '<p class="xs muted italic center">' + esc(c.seeNote) + "</p>" : "");
-    return html + "</div>";
-  }
 
   // ==================== How we calculate page ====================
 
