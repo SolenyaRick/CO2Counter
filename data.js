@@ -126,7 +126,6 @@
   const PORTION = 0.15; // kg per portion
   const MEAT_PER_KG = {
   "chicken": 18.2,
-  "fish": 2.72,
   "pork": 24,
   "beef": 155,
   "lamb": 58.4
@@ -178,10 +177,13 @@
     "color": "#84cc16"
   },
   {
+    // A whole fish-eater day, like the vegan and vegetarian days above:
+    // 2.72 kg CO2e per day (Choręziak & Rzymski 2025, Nutrients 17:1377).
+    // It isn't a per-kg figure, so it isn't multiplied by a portion.
     "key": "fish",
     "label": "Fish",
     "emoji": "🐟",
-    "factor": 0.41,
+    "factor": 2.72,
     "color": "#06b6d4"
   },
   {

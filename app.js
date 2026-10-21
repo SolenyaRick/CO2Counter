@@ -665,7 +665,7 @@
     const veganKg = 1.38;
     const veggieKg = 2.45;
     const chickenKg = D.MEAT_PER_KG.chicken * D.PORTION;
-    const fishKg = D.MEAT_PER_KG.fish * D.PORTION;
+    const fishKg = factorOf(D.MEAL_OPTIONS, "fish");
     const W = D.WEEKS_PER_YEAR;
     switch (dietType(s)) {
       case "red_meat_high":
@@ -965,12 +965,15 @@
     );
   }
 
+  // Every "the same as driving" uses the survey's petrol car (DESNZ 2026).
+  const PETROL_KM = byKey(D.COMMUTE_MODES, "car_petrol").factor;
+
   function equivalents(kg) {
     if (kg <= 0) return { trees: 0, phones: 0, drivingKm: 0 };
     return {
       trees: Math.round(kg / 20),
       phones: Math.round(kg / 61),
-      drivingKm: Math.round(kg / 0.17625),
+      drivingKm: Math.round(kg / PETROL_KM),
     };
   }
 
@@ -1273,7 +1276,7 @@
     const close = '<button type="button" class="modal-close" data-action="dismiss-celebrate" aria-label="Dismiss">' + icon("x") + "</button>";
     if (c.saved >= 0.05) {
       const pct = c.before ? (c.saved / c.before) * 100 : 0;
-      const km = c.saved / byKey(D.COMMUTE_MODES, "car_petrol").factor;
+      const km = c.saved / PETROL_KM;
       const title = c.saved < 25 ? "Every bit counts. Nice one!" : c.saved < 250 ? "Great progress!" : "Brilliant work!";
       return (
         '<div class="card celebrate fade-up" role="status">' + close + '<div class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
@@ -2593,7 +2596,7 @@
           '<div class="eq-grid">' +
           '<div class="eq"><div class="row-between"><span>Trees needed to soak it up</span><b class="display tnum">' + kgFmt(eq.trees) + '</b></div><div class="eq-icons green-dark">' + repeat(eq.trees, "tree", 18) + '</div><p class="xs muted">A mature tree absorbs about 20 kg of CO₂ a year.</p></div>' +
           '<div class="eq"><div class="row-between"><span>Share of the 1.5°C budget</span><b class="display tnum">' + (budgetPct < 1 ? budgetPct.toFixed(1) : Math.round(budgetPct)) + '%</b></div><div class="eq-bar"><span style="width:' + Math.min(100, budgetPct).toFixed(1) + '%"></span></div><p class="xs muted">Of one person\'s yearly 2.5 t.</p></div>' +
-          '<div class="eq"><div class="row-between"><span>The same as driving</span><b class="display tnum">' + kgFmt(eq.drivingKm) + ' km</b></div><p class="xs muted">In an average car. London to Edinburgh is about 650 km.</p></div>' +
+          '<div class="eq"><div class="row-between"><span>The same as driving</span><b class="display tnum">' + kgFmt(eq.drivingKm) + ' km</b></div><p class="xs muted">In a petrol car. London to Edinburgh is about 650 km.</p></div>' +
           '<div class="eq"><div class="row-between"><span>New phones</span><b class="display tnum">' + kgFmt(eq.phones) + '</b></div><div class="eq-icons">' + repeat(eq.phones, "phone", 8) + '</div><p class="xs muted">Making and charging one phone for a year: about 61 kg.</p></div>' +
           "</div></section>"
         : "") +
@@ -2997,7 +3000,7 @@
         { category: "1.5°C target", icon: "Target", count: null, label: pct + "% of 1.5°C target", sub: "one person's yearly budget", extra: totals.total.toFixed(0) + " kg CO₂e / year · target 2,500 kg" },
         { category: "Tree equivalent", icon: "TreePine", count: eq.trees, label: eq.trees + " mature trees", sub: "absorbing CO₂ for a whole year" },
         { category: "Phone equivalent", icon: "Smartphone", count: eq.phones, label: eq.phones + " iPhones (14)", sub: "manufacturing + charging for a year" },
-        { category: "Driving equivalent", icon: "Car", count: null, label: eq.drivingKm.toLocaleString() + " km driven", sub: "equivalent car emissions" },
+        { category: "Driving equivalent", icon: "Car", count: null, label: eq.drivingKm.toLocaleString() + " km driven", sub: "in a petrol car" },
       ],
     };
   }
@@ -3075,7 +3078,7 @@
         { type: "target", category: "1.5°C target", icon: "Target", sub: "CO₂ emissions / 2,500 kg yearly target" },
         { type: "icons", category: "Tree equivalence", icon: "TreePine", sub: "20 kg CO₂ absorbed per mature tree / year", perKg: 20, unit: "trees" },
         { type: "icons", category: "Phone equivalence", icon: "Smartphone", sub: "61 kg CO₂ per iPhone 14 (manufacture + a year's charging)", perKg: 61, unit: "phones" },
-        { type: "bars", category: "Driving equivalence", icon: "Car", sub: "0.17625 kg CO₂ per km in an average car", perKm: 0.17625 },
+        { type: "bars", category: "Driving equivalence", icon: "Car", sub: PETROL_KM + " kg CO₂e per km in a petrol car (DESNZ 2026)", perKm: PETROL_KM },
       ],
       seeNote: "See Tier 3 or 4",
     };
