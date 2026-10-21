@@ -662,16 +662,18 @@
     const chicken = count(["chicken"]);
     const fish = count(["fish"]);
     const veggie = count(["veggie"]);
-    const veganKg = 1.38;
-    const veggieKg = 2.45;
-    const chickenKg = D.MEAT_PER_KG.chicken * D.PORTION;
+    const veganKg = factorOf(D.MEAL_OPTIONS, "vegan");
+    const veggieKg = factorOf(D.MEAL_OPTIONS, "veggie");
+    const chickenKg = factorOf(D.MEAL_OPTIONS, "chicken");
     const fishKg = factorOf(D.MEAL_OPTIONS, "fish");
     const W = D.WEEKS_PER_YEAR;
     switch (dietType(s)) {
       case "red_meat_high":
         return {
           title: "Cut back on red meat (>2×/week)",
-          body: "Beef and lamb are the most carbon-intensive foods by far — a single beef portion emits over 8× more than chicken and ~17× more than a vegan day. With red meat on more than two days a week, this is your biggest food lever. Drop to 1–2 red-meat days and swap the rest for chicken, fish or plant-based meals to cut well over 1,800 kg CO₂e a year.",
+          body:
+            "Beef and lamb are the most carbon-intensive foods by far: a beef day emits over 4× a chicken day and about 13× a vegan day. With red meat on more than two days a week, this is your biggest food lever. Swapping your red-meat days for chicken would save about " +
+            kgFmt(redMeatSaving(s)) + " kg CO₂e a year.",
           saving: redMeatSaving(s),
         };
       case "red_meat_low":
@@ -729,9 +731,9 @@
 
   // Saving from swapping every beef/lamb day for chicken.
   function redMeatSaving(s) {
-    const beef = D.MEAT_PER_KG.beef * D.PORTION;
-    const lamb = D.MEAT_PER_KG.lamb * D.PORTION;
-    const chicken = D.MEAT_PER_KG.chicken * D.PORTION;
+    const beef = factorOf(D.MEAL_OPTIONS, "beef");
+    const lamb = factorOf(D.MEAL_OPTIONS, "lamb");
+    const chicken = factorOf(D.MEAL_OPTIONS, "chicken");
     return (
       DAYS.reduce((sum, d) => {
         const m = s.meals && s.meals[d];
@@ -3179,7 +3181,9 @@
           "typical published emission factor for that activity, measured in kilograms of CO₂-equivalent. CO₂-equivalent includes other greenhouse gases " +
           "such as methane from livestock.</p>" +
           "<p>Weekly habits are scaled up to a year, and household energy, water and pets are shared between the people you live with. " +
-          "Flight distances are calculated between the two airports, with an allowance for real-world routing.</p>"
+          "Flight distances are calculated between the two airports, with an allowance for real-world routing.</p>" +
+          "<p>Food is counted a whole day at a time. Vegan, vegetarian and fish days use the measured daily footprints of each diet group in Choręziak &amp; Rzymski (2025, <em>Nutrients</em>). " +
+          "A meat day is a vegetarian day plus a 150 g portion of that meat, using Poore &amp; Nemecek's (2018, <em>Science</em>) global averages per kilogram.</p>"
       ) +
       section(
         "Banking and pensions",
