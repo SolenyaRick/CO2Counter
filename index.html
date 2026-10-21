@@ -26,24 +26,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Karla:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="style.css?v=56" />
-<script src="vendor/supabase.js?v=56"></script>
-<script src="data.js?v=56"></script>
+<link rel="stylesheet" href="style.css?v=59" />
+<script src="vendor/supabase.js?v=59"></script>
+<script src="data.js?v=59"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <a href="#/" class="brand">
+      <a href="#/welcome" class="brand">
         <span class="brand-mark"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg></span>
         <span class="brand-name">CO2 Counter</span>
       </a>
-      <nav class="nav" id="nav">
+      <nav class="nav" id="nav" aria-label="Main">
         <a href="#/" data-route="/">Survey</a>
         <a href="#/results" data-route="/results">Results</a>
-        <a href="#/habits" data-route="/habits">Habits <span class="nav-soon">Soon</span></a>
         <a href="#/friends" data-route="/friends">Friends</a>
-        <a href="#/account" data-route="/account">Account</a>
+        <a href="#/habits" data-route="/habits">Habits <span class="nav-soon">Soon</span></a>
       </nav>
+      <a href="#/account" class="nav-avatar" id="nav-avatar" data-route="/account" aria-label="Account"></a>
     </div>
   </header>
 
@@ -57,6 +57,6 @@
   </footer>
   <div id="modal-root"></div>
 
-  <script src="app.js?v=56"></script>
+  <script src="app.js?v=59"></script>
 </body>
 </html>
