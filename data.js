@@ -123,13 +123,23 @@
   const DOG_YEARLY = 770;
   const CAT_YEARLY = 310;
   const EAT_OUT_MULTIPLIER = 1.78;
-  const PORTION = 0.15; // kg per portion
+  const PORTION = 0.15; // kg of meat in a main meal
+  // Meat, kg CO2e per kg of product: Poore & Nemecek (2018), Science
+  // 360:987, global means (via Our World in Data): beef herd, lamb & mutton,
+  // pig meat, poultry meat. The same dataset underlies Scarborough et al.
+  // (2023), Nature Food, on UK diets.
   const MEAT_PER_KG = {
-  "chicken": 18.2,
-  "pork": 24,
-  "beef": 155,
-  "lamb": 58.4
-};
+    chicken: 9.87,
+    pork: 12.31,
+    beef: 99.48,
+    lamb: 39.72,
+  };
+  // Every day in the survey is a whole day of food. Vegan, vegetarian and
+  // fish days are measured daily footprints (Choręziak & Rzymski 2025,
+  // Nutrients 17:1377). A meat day is the vegetarian day plus a 150 g
+  // portion of that meat.
+  const VEGGIE_DAY = 2.45;
+  const meatDay = (key) => Math.round((VEGGIE_DAY + PORTION * MEAT_PER_KG[key]) * 100) / 100;
 
   const DIETS = [
   {
@@ -166,14 +176,14 @@
     "key": "vegan",
     "label": "Vegan",
     "emoji": "🥗",
-    "factor": 1.38,
+    "factor": 1.38, // Choręziak & Rzymski 2025, vegan group's mean day
     "color": "#10b981"
   },
   {
     "key": "veggie",
     "label": "Vegetarian",
     "emoji": "🧀",
-    "factor": 2.45,
+    "factor": VEGGIE_DAY,
     "color": "#84cc16"
   },
   {
@@ -190,28 +200,28 @@
     "key": "chicken",
     "label": "Chicken",
     "emoji": "🍗",
-    "factor": 2.73,
+    "factor": meatDay("chicken"),
     "color": "#f59e0b"
   },
   {
     "key": "pork",
     "label": "Pork",
     "emoji": "🥓",
-    "factor": 3.6,
+    "factor": meatDay("pork"),
     "color": "#f97316"
   },
   {
     "key": "beef",
     "label": "Beef",
     "emoji": "🥩",
-    "factor": 23.25,
+    "factor": meatDay("beef"),
     "color": "#ef4444"
   },
   {
     "key": "lamb",
     "label": "Lamb",
     "emoji": "🍖",
-    "factor": 8.76,
+    "factor": meatDay("lamb"),
     "color": "#b91c1c"
   }
 ];
@@ -1417,11 +1427,11 @@
     "sections": [
       {
         "heading": "Drop a red-meat day or two",
-        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals can cut over 1,800 kg CO₂e a year."
+        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals saves hundreds of kilograms a year, and about 2,000 kg if three of them are beef days."
       },
       {
         "heading": "Choose chicken over beef",
-        "body": "A beef portion emits roughly 8× more than chicken and ~17× more than a vegan meal. When you do keep meat, lean chicken or fish trims the impact sharply."
+        "body": "A beef day emits over 4× a chicken day and about 13× a vegan day. When you do keep meat, chicken or fish trims the impact sharply."
       },
       {
         "heading": "Build a few plant-based go-tos",
