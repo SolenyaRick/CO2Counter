@@ -3865,3 +3865,13 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
   .donut-legend a { font-size: 12px; gap: 5px; padding: 0 4px; }
   .donut-legend .sw { width: 10px; height: 10px; }
 }
+
+/* ---------- Duplicate a flight or journey ---------- */
+.dup-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid rgba(63, 91, 58, 0.25); border-radius: 999px; background: rgba(255, 252, 245, 0.7); color: var(--em-700, #2b4128); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.dup-btn:hover { background: rgba(63, 91, 58, 0.1); }
+.dup-btn .icon { width: 15px; height: 15px; }
+.panel.just-copied { animation: copied 1.4s ease-out; }
+@keyframes copied { 0% { box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.7); } 100% { box-shadow: 0 0 0 3px rgba(217, 164, 65, 0); } }
+@media (prefers-reduced-motion: reduce) { .panel.just-copied { animation: none; } }
+.journey-foot { flex-wrap: wrap; gap: 8px; }
+.journey-foot .label-row { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
