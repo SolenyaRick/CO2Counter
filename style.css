@@ -3826,3 +3826,18 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .sheet .btn { white-space: normal; height: auto; min-height: 46px; padding-top: 10px; padding-bottom: 10px; text-align: left; max-width: 100%; }
 .sheet .chip-links { max-width: 100%; }
 .sheet .chip-link { max-width: 100%; }
+/* phone polish for sheets */
+.you-here { max-width: 100%; text-align: center; }
+.sheet-tabs { position: relative; }
+@media (max-width: 600px) {
+  .you-here { white-space: normal; line-height: 1.15; font-size: 10px; padding: 4px 6px; }
+  .sheet-tabs { padding: 10px 12px 0; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .sheet-tabs button { padding: 9px 12px 11px; font-size: 13px; }
+  .sheet-head { align-items: flex-start; gap: 12px; }
+  .sheet-head h2 { font-size: 22px; }
+  .sheet-habit { font-size: 13px; }
+  .sheet .sheet-close { width: 44px; height: 44px; }
+  .stair-planes .icon { width: 11px; height: 11px; }
+  .sheet-tile b { font-size: 22px; }
+}
+.over-tag { padding: 1px 7px; border-radius: 999px; background: rgba(184, 101, 61, 0.15); color: #8a4424; font-size: 11px; font-weight: 800; }

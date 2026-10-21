@@ -2818,15 +2818,18 @@
         "</div></div></div>"
     );
     document.body.classList.add("modal-open");
-    const sheet = modalRoot.querySelector(".sheet");
-    if (sheet) sheet.scrollTop = 0;
+    const backdrop = modalRoot.querySelector(".sheet-backdrop");
+    if (backdrop) backdrop.scrollTop = 0;
+    // Keep the open step's tab in view in the sideways-scrolling strip.
+    const tab = modalRoot.querySelector(".sheet-tabs .on");
+    if (tab) tab.parentNode.scrollLeft = tab.offsetLeft - 16;
   }
 
   // ---------- pop-up sheets (Glass v2) ----------
 
   const sheetBar = (label, value, max, colour, extra) =>
     '<li class="sbar' + (extra && extra.mine ? " mine" : "") + '"><span class="sbar-label">' + label + "</span>" +
-    '<span class="sbar-track"><span style="width:' + Math.max(value > 0 ? 1.5 : 0.8, (value / Math.max(max, 1e-9)) * 100).toFixed(1) + "%;background:" + colour + '"></span></span>' +
+    '<span class="sbar-track"><span style="width:' + Math.min(100, Math.max(value > 0 ? 1.5 : 0.8, (value / Math.max(max, 1e-9)) * 100)).toFixed(1) + "%;background:" + colour + '"></span></span>' +
     '<span class="sbar-val display tnum">' + (extra && extra.text != null ? extra.text : kgFmt(value)) + "</span></li>";
   const chipBig = (text) => '<span class="sheet-chip display">' + text + "</span>";
   const panel = (label, inner, chip) =>
@@ -2853,7 +2856,9 @@
       html += panel(
         "Your flights",
         '<ul class="sbars">' +
-          totals.items.map((f) => sheetBar(esc(f.label), f.co2, D.BUDGET_YEARLY, "var(--clay)", { text: kgFmt(f.co2) + " kg" })).join("") +
+          totals.items
+            .map((f) => sheetBar(esc(f.label) + (f.co2 > D.BUDGET_YEARLY ? ' <span class="over-tag">' + (f.co2 / D.BUDGET_YEARLY).toFixed(1) + "× your budget</span>" : ""), f.co2, D.BUDGET_YEARLY, "var(--clay)", { text: kgFmt(f.co2) + " kg" }))
+            .join("") +
           '</ul><p class="xs muted mt-2">Bar length against your yearly 1.5°C budget of 2,500 kg.</p>'
       );
       const eq = equivalents(totals.total);
