@@ -5,42 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>CO2 Counter</title>
 <meta name="description" content="Work out your yearly carbon footprint, see where it comes from, and find your biggest opportunities to cut it." />
-<meta name="theme-color" content="#12403a" />
+<meta name="theme-color" content="#efe9dc" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="CO2 Counter" />
 <meta property="og:title" content="CO2 Counter" />
 <meta property="og:description" content="Work out your yearly carbon footprint, see where it comes from, and find your biggest opportunities to cut it." />
 <meta property="og:url" content="https://co2counter.co.uk/" />
-<meta property="og:image" content="https://co2counter.co.uk/icons/icon-512.png?v=2" />
+<meta property="og:image" content="https://co2counter.co.uk/icons/icon-512.png?v=3" />
 <meta name="twitter:card" content="summary" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="CO2 Counter" />
 <link rel="manifest" href="manifest.json" />
-<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=2" />
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=2" />
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=2" />
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2" />
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=3" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=3" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png?v=3" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3" />
 <!-- Bump ?v= whenever these files change, so browsers that cached the
      previous version (GitHub Pages sends max-age=600) fetch the new one. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="style.css?v=50" />
-<script src="vendor/supabase.js?v=50"></script>
-<script src="data.js?v=50"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Karla:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="style.css?v=54" />
+<script src="vendor/supabase.js?v=54"></script>
+<script src="data.js?v=54"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <a href="#/" class="brand">
-        <span class="brand-mark" data-icon="leaf"></span>
+        <span class="brand-mark"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg></span>
         <span class="brand-name">CO2 Counter</span>
       </a>
       <nav class="nav" id="nav">
         <a href="#/" data-route="/">Survey</a>
         <a href="#/results" data-route="/results">Results</a>
-        <a href="#/habits" data-route="/habits">Habits</a>
+        <a href="#/habits" data-route="/habits">Habits <span class="nav-soon">Soon</span></a>
         <a href="#/friends" data-route="/friends">Friends</a>
         <a href="#/account" data-route="/account">Account</a>
       </nav>
@@ -57,6 +57,6 @@
   </footer>
   <div id="modal-root"></div>
 
-  <script src="app.js?v=50"></script>
+  <script src="app.js?v=54"></script>
 </body>
 </html>

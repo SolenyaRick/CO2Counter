@@ -1121,7 +1121,9 @@
     draft: null,
     prevSurvey: null,
     history: [], // completed surveys, newest first: { completedAt, totalYearly }
-    showUk: lsGet(KEY_SHOW_UK, true), // UK average bars on the results chart
+    showUk: lsGet(KEY_SHOW_UK, false), // UK average bars on the results chart
+    chartMode: lsGet("co2_chart_mode", "donut"), // results chart: donut or bars
+    resultsSeen: false, // count-up animation plays on the first visit only
     confirmingPayment: false,
     paymentTimedOut: false,
     editing: false, // editing a completed survey (from Results)
@@ -1336,38 +1338,57 @@
     if (ui.newSurvey && ui.reviewing) return renderReview();
     if (survey.completedAt && !ui.editing) return renderSurveyDone();
     const step = STEPS[ui.step];
-    const pct = ((ui.step + 1) / STEPS.length) * 100;
-    const chips = STEPS.map((s, i) => {
-      const cls = i === ui.step ? "current" : i < ui.step ? "done" : "";
+    const n = STEPS.length;
+    const pct = Math.round(((ui.step + 1) / n) * 100);
+    const tabs = STEPS.map((s, i) => {
+      const on = i === ui.step;
+      const done = !on && i < ui.step;
       return (
-        '<button type="button" class="step-chip ' + cls + '" data-action="goto-step" data-step="' + i + '">' +
-        "<span>" + s.icon + '</span><span class="hide-sm">' + esc(s.title) + "</span></button>"
+        '<button type="button" class="' + (on ? "on" : "") + '" data-action="goto-step" data-step="' + i + '"' + (on ? ' aria-current="step"' : "") + ">" +
+        '<span class="tab-dot' + (on ? " on" : done ? " done" : "") + '">' + (done ? icon("check") : i + 1) + "</span>" + esc(STEP_TAB[s.key] || s.title) + "</button>"
       );
     }).join("");
-    const last = ui.step === STEPS.length - 1;
+    const last = ui.step === n - 1;
+    const prev = STEPS[ui.step - 1];
+    const next = STEPS[ui.step + 1];
+    const kg = stepKg(step.key, survey);
     const newBanner = ui.fromReview
-      ? '<div class="panel p-4 mb-6 row-between gap-3" style="flex-wrap:wrap"><p class="sm">Update what\'s changed, then go back to your summary.</p>' +
+      ? '<div class="panel p-4 mb-5 row-between gap-3" style="flex-wrap:wrap"><p class="sm">Update what\'s changed, then go back to your summary.</p>' +
         '<button type="button" class="btn btn-green btn-sm" data-action="review-back">' + icon("check") + " Back to summary</button></div>"
       : ui.newSurvey
-      ? '<div class="panel p-4 mb-6 row-between gap-3" style="flex-wrap:wrap"><p class="sm">You\'re taking a new survey. Your previous results stay saved until you finish, and are kept in your history.</p>' +
+      ? '<div class="panel p-4 mb-5 row-between gap-3" style="flex-wrap:wrap"><p class="sm">You\'re taking a new survey. Your previous results stay saved until you finish, and are kept in your history.</p>' +
         '<button type="button" class="btn btn-outline btn-sm" data-action="cancel-new-survey">' + icon("x") + " Cancel new survey</button></div>"
       : "";
     return (
-      '<div class="container">' +
-      pageHeader("Carbon Footprint Survey", "Step " + (ui.step + 1) + " of " + STEPS.length) + newBanner +
-      '<div class="mb-8"><div class="progress thin"><div style="width:' + pct + '%"></div></div>' +
-      '<div class="step-chips">' + chips + "</div></div>" +
-      '<div class="survey-card">' +
-      '<div class="mb-6"><h2 class="step-title">' + esc(step.title) + '</h2><p class="muted sm">' + esc(step.subtitle) + "</p></div>" +
-      '<div class="step-body fade-in">' + step.render() + "</div>" +
-      '<div class="step-nav">' +
-      '<button type="button" class="btn btn-ghost" data-action="prev-step"' + (ui.step === 0 ? " disabled" : "") + ">" +
-      icon("chevronLeft") + " Back</button>" +
+      '<div class="container survey-v2">' + newBanner +
+      '<nav class="section-tabs" aria-label="Survey steps">' + tabs + "</nav>" +
+      '<header class="glass step-hero rise"><span class="cat-watermark" aria-hidden="true">' + step.icon + "</span>" +
+      '<div class="step-hero-main"><span class="eyebrow">Step ' + (ui.step + 1) + " of " + n + "</span>" +
+      '<h1 class="cat-title display">' + esc(step.title) + '</h1><p class="cat-why">' + esc(STEP_INTRO[step.key] || step.subtitle) + "</p></div>" +
+      '<div class="cat-hero-side"><div class="cat-figs"><div class="step-kg display tnum">' + kgFmt(kg) + '</div><div class="muted">kg CO₂e a year so far</div></div>' +
+      '<figure class="cat-share"><svg viewBox="0 0 42 42" role="img" aria-label="Step ' + (ui.step + 1) + " of " + n + '"><circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>' +
+      '<circle cx="21" cy="21" r="10" fill="none" stroke="#3F5B3A" stroke-width="20" pathLength="100" stroke-dasharray="' + pct + ' 100" transform="rotate(-90 21 21)"></circle></svg>' +
+      "<figcaption><span>" + (ui.step + 1) + " of " + n + " steps</span></figcaption></figure></div></header>" +
+      '<div class="survey-card step-body fade-in">' + step.render() + "</div>" +
+      '<div class="step-nav-v2">' +
+      (prev
+        ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back: " + esc(STEP_TAB[prev.key]) + "</button>"
+        : ui.newSurvey || ui.editing ? '<a class="btn btn-outline" href="#/results">Back to results</a>' : "<span></span>") +
       '<button type="button" class="btn btn-green" data-action="next-step">' +
-      (last ? (ui.editing ? "Save and see results" : "See my results") : "Continue") + " " + icon("chevronRight") + "</button>" +
-      "</div></div></div>"
+      (last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + "</button>" +
+      "</div></div>"
     );
   }
+
+  const STEP_TAB = { meals: "Meals", commute: "Commute", flights: "Flights", energy: "Home & water", pets: "Pets", banking: "Money" };
+  const STEP_INTRO = {
+    meals: "A few quick questions about what you eat. Food is often the biggest part of a footprint.",
+    commute: "How you get around day to day. It repeats over 200 times a year, so it adds up.",
+    flights: "Flights are rare but large. Add the trips you took in the last 12 months.",
+    energy: "Your energy and water use. Have a recent bill handy if you can.",
+    pets: "Just two quick counts.",
+    banking: "Where your money sits can matter as much as what you buy.",
+  };
 
   function optionCard(selected, attrs, inner, extraCls) {
     return (
@@ -1724,7 +1745,6 @@
 
   // ==================== Results page ====================
 
-  const BAR_COLORS = ["#2f6b4f", "#4a95a5", "#dca23a", "#8a73c9", "#d2728c", "#b5895a", "#7b8a83"];
 
   // The typical UK resident's yearly kg per category (the same profile as
   // the UK comparison), for the dashed markers on the chart.
@@ -1736,49 +1756,23 @@
     return out;
   }
 
-  function barChart(breakdown, selectedKey) {
-    const uk = ui.showUk ? ukAverageByKey() : {};
-    // Sized to the screen so labels stay readable on phones.
-    const W = Math.round(Math.max(300, Math.min(900, window.innerWidth - 64)));
-    const H = 280;
-    const left = 40;
-    const bottom = 70;
-    const top = 10;
-    const max = Math.max(1, ...breakdown.map((b) => Math.max(b.yearly, uk[b.key] || 0)));
-    const niceMax = niceCeil(max);
-    const plotH = H - top - bottom;
-    const slot = (W - left - 10) / breakdown.length;
-    // The UK average is drawn exactly over your bar as a see-through,
-    // dashed-outline bar of the same colour.
-    const barW = slot * 0.7;
-    let svg = '<svg class="bar-chart" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Yearly emissions by category">';
-    for (let i = 0; i <= 4; i++) {
-      const v = (niceMax / 4) * i;
-      const y = top + plotH - (v / niceMax) * plotH;
-      svg += '<text x="' + (left - 6) + '" y="' + (y + 4) + '" class="axis" text-anchor="end">' + Math.round(v) + "</text>";
-      svg += '<line x1="' + left + '" x2="' + W + '" y1="' + y + '" y2="' + y + '" class="grid-line" />';
-    }
-    breakdown.forEach((b, i) => {
-      const h = Math.max(0, (b.yearly / niceMax) * plotH);
-      const x = left + i * slot + (slot - barW) / 2;
-      const y = top + plotH - h;
-      const colour = BAR_COLORS[i % BAR_COLORS.length];
-      const ukH = uk[b.key] != null ? Math.max(0, (uk[b.key] / niceMax) * plotH) : 0;
-      const op = selectedKey === b.key ? 1 : 0.45;
-      svg +=
-        '<g class="bar" data-action="select-category" data-key="' + b.key + '"><title>' + esc(b.label) + ": " + b.yearly.toFixed(0) +
-        " kg CO₂e / year" + (uk[b.key] != null ? " (UK average " + uk[b.key].toFixed(0) + " kg)" : "") +
-        '</title><rect x="' + (left + i * slot) + '" y="' + top + '" width="' + slot + '" height="' + plotH + '" fill="transparent" />' +
-        '<path d="' + roundedTop(x, y, barW, h, 8) + '" fill="' + colour + '" opacity="' + op + '" />' +
-        (ukH > 0
-          ? '<path class="uk-bar" d="' + roundedTop(x, top + plotH - ukH, barW, ukH, 8) + '" fill="' + colour + '" stroke="' + colour + '" />'
-          : "") +
-        "</g>";
-      const lx = x + barW / 2;
-      const ly = top + plotH + 12;
-      svg += '<text x="' + lx + '" y="' + ly + '" class="axis small" text-anchor="end" transform="rotate(-40 ' + lx + " " + ly + ')">' + esc(b.label) + "</text>";
+  // Big totals count up from zero the first time Results is shown.
+  function countUp() {
+    app.querySelectorAll("[data-countup]").forEach((el) => {
+      const to = Number(el.dataset.countup);
+      if (el.textContent !== "0" || !to) return;
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        el.textContent = to.toLocaleString();
+        return;
+      }
+      const t0 = performance.now();
+      const tick = (t) => {
+        const k = Math.min(1, (t - t0) / 1400);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
     });
-    return svg + "</svg>";
   }
 
   function niceCeil(v) {
@@ -1789,14 +1783,7 @@
     return 10 * step;
   }
 
-  function roundedTop(x, y, w, h, r) {
-    if (h <= 0) return "";
-    r = Math.min(r, h, w / 2);
-    return (
-      "M" + x + "," + (y + h) + " V" + (y + r) + " Q" + x + "," + y + " " + (x + r) + "," + y +
-      " H" + (x + w - r) + " Q" + (x + w) + "," + y + " " + (x + w) + "," + (y + r) + " V" + (y + h) + " Z"
-    );
-  }
+
 
   function savingSummary(tip) {
     let html = "";
@@ -1852,93 +1839,179 @@
     );
   }
 
+  // Category colours and short names for tabs and charts (Glass v2).
+  const CAT_COLOR = { meals: "#3F5B3A", banking: "#6E8B5E", energy: "#A3B58F", pets: "#D9A441", flights: "#B8653D", commute: "#8C6A4F", water: "#7FA3AE" };
+  const CAT_SHORT = { meals: "Meals", banking: "Money", energy: "Home", pets: "Pets", flights: "Flights", commute: "Commute", water: "Water" };
+
+  // Overview plus one tab per category, biggest first.
+  function resultTabs(fp, current) {
+    return (
+      '<nav class="section-tabs" aria-label="Result sections">' +
+      '<a href="#/results"' + (current ? "" : ' class="on" aria-current="page"') + ">Overview</a>" +
+      fp.breakdown
+        .map((b) => '<a href="#/explainer/' + b.key + '"' + (current === b.key ? ' class="on" aria-current="page"' : "") + ">" + esc(CAT_SHORT[b.key] || b.label) + "</a>")
+        .join("") +
+      "</nav>"
+    );
+  }
+
+  function donutChart(fp) {
+    const total = fp.totalYearly || 1;
+    let acc = 0;
+    const segs = fp.breakdown
+      .map((b) => {
+        const len = (b.yearly / total) * 100;
+        const dash = Math.max(0.15, len - 0.6);
+        const out =
+          '<circle cx="21" cy="21" r="15.9" fill="none" stroke="' + CAT_COLOR[b.key] + '" stroke-width="7" pathLength="100" stroke-dasharray="' +
+          dash.toFixed(2) + " " + (100 - dash).toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '" transform="rotate(-90 21 21)"><title>' +
+          esc(b.label) + "</title></circle>";
+        acc += len;
+        return out;
+      })
+      .join("");
+    const pct = (v) => Math.max(1, Math.round((v / total) * 100)) + "%";
+    return (
+      '<div class="donut-wrap"><div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Share of your footprint by category">' + segs + "</svg>" +
+      '<div class="donut-mid"><span class="display tnum">' + kgFmt(fp.totalYearly) + '</span><span class="xs muted">kg a year</span></div></div>' +
+      '<ul class="donut-legend">' +
+      fp.breakdown
+        .map(
+          (b) =>
+            '<li><a href="#/explainer/' + b.key + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + " kg, " + pct(b.yearly) + ' of your footprint. Open how to improve">' +
+            '<span class="sw" style="background:' + CAT_COLOR[b.key] + '"></span><span class="nm">' + esc(b.label) + '</span><span class="muted tnum">' + pct(b.yearly) + "</span></a></li>"
+        )
+        .join("") +
+      "</ul></div>"
+    );
+  }
+
+  // Columns on wider screens, rows on phones (the same markup, laid out by CSS).
+  function barsChart(fp) {
+    const uk = ui.showUk ? ukAverageByKey() : {};
+    const max = Math.max(1, ...fp.breakdown.map((b) => Math.max(b.yearly, uk[b.key] || 0)));
+    const top = niceCeil(max);
+    const h = (v) => ((v / top) * 100).toFixed(2);
+    const total = fp.totalYearly || 1;
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => '<span class="bars-grid" style="bottom:' + f * 100 + '%"><i class="tnum">' + kgFmt(top * f) + "</i></span>").join("");
+    return (
+      '<div class="bars' + (ui.showUk ? " with-uk" : "") + '"><div class="bars-plot">' + grid +
+      fp.breakdown
+        .map((b) => {
+          const u = uk[b.key];
+          const sub = ui.showUk
+            ? u == null ? "No UK figure" : Math.abs(b.yearly - u) / u < 0.03 ? "Same as UK" : (b.yearly > u ? "+" : "−") + kgFmt(Math.abs(b.yearly - u)) + " vs UK"
+            : Math.max(1, Math.round((b.yearly / total) * 100)) + "%";
+          return (
+            '<a class="bars-col" href="#/explainer/' + b.key + '" aria-label="' + esc(b.label) + ", " + kgFmt(b.yearly) + ' kg a year. Open how to improve">' +
+            '<span class="bars-track"><span class="bar-you" style="--h:' + h(b.yearly) + "%;background:" + CAT_COLOR[b.key] + '"><b class="tnum">' + kgFmt(b.yearly) + "</b></span>" +
+            (ui.showUk && u != null ? '<span class="bar-uk" style="--h:' + h(u) + '%"><b class="tnum">' + kgFmt(u) + "</b></span>" : "") +
+            '</span><span class="bars-name">' + esc(CAT_SHORT[b.key]) + '</span><span class="bars-sub">' + esc(sub) + "</span></a>"
+          );
+        })
+        .join("") +
+      "</div></div>"
+    );
+  }
+
   function renderResults() {
     const fp = footprint(survey);
-    const savings = fp.breakdown.map((b) => {
-      const t = tipFor(b.key, survey);
-      return { key: b.key, saving: t.saving, max: t.maxSaving };
-    });
-    const totalSaving = savings.reduce((sum, s) => sum + s.saving, 0);
-    const totalMax = savings.reduce((sum, s) => sum + s.max, 0);
-    const after = Math.max(0, fp.totalYearly - totalSaving);
-    const afterMax = Math.max(0, fp.totalYearly - totalMax);
-    const pct = (v) => (fp.totalYearly ? Math.round((v / fp.totalYearly) * 100) : 0);
-    const savingFor = (key) => savings.find((s) => s.key === key) || { saving: 0, max: 0 };
+    const tips = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) }));
+    const totalSaving = tips.reduce((sum, x) => sum + x.t.saving, 0);
+    const totalMax = tips.reduce((sum, x) => sum + x.t.maxSaving, 0);
+    const now = fp.totalYearly;
+    const after = Math.max(0, now - totalSaving);
+    const afterMax = Math.max(0, now - totalMax);
+    const pct = (v) => (now ? Math.round((v / now) * 100) : 0);
     const cmp = ukComparison(fp);
-    const budgetPct = Math.round((fp.totalYearly / D.BUDGET_YEARLY) * 100);
-    const selected = ui.selectedCategory || fp.biggest.key;
-    const tip = tipFor(selected, survey);
+    const budget = D.BUDGET_YEARLY;
+    const ukTotal = cmp.uk;
+    const best = tips.slice().sort((x, y) => y.t.saving - x.t.saving)[0];
+    const lead = best && best.t.saving > 0.5 ? best : tips[0];
+    const top3 = fp.breakdown.slice(0, 3);
+    const top3Pct = pct(top3.reduce((t, b) => t + b.yearly, 0));
     const snapshots = getSnapshots();
+    const mode = ui.showUk ? "bars" : ui.chartMode || "donut";
+    const animate = !ui.resultsSeen;
+    ui.resultsSeen = true;
 
-    let html = '<div class="container">' + pageHeader("Your Carbon Footprint");
-    html += celebrationCard();
+    const ratio = now / budget;
+    const ukText =
+      cmp.pct < 5 ? "about the same as the UK average" : '<span class="' + (cmp.above ? "clay" : "green") + ' fw-700">' + cmp.pct + "% " + (cmp.above ? "above" : "below") + "</span> the UK average";
+    const budgetText =
+      ratio <= 1 ? "inside the 1.5°C budget" : ratio < 1.5 ? Math.round((ratio - 1) * 100) + "% over the 1.5°C budget" : ratio.toFixed(1).replace(/\.0$/, "") + " times the 1.5°C budget";
 
-    html +=
-      '<div class="card hero fade-up"><div class="glow"></div><div class="rel">' +
-      '<p class="sm muted">Your estimated footprint</p>' +
-      '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) + '</span><span class="unit">kg CO₂e / year</span></div>' +
-      '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
-      '<div class="chip-row mt-5">' + ukPill(cmp) + '<span class="stat-pill solid">' + icon("target", "sm") + budgetPct +
-      "% of the 1.5°C budget</span></div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>";
+    // Path bar scale: room for now, the UK average and the budget.
+    const scale = Math.max(now, ukTotal, budget) * 1.15;
+    const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
+    const realisticLine =
+      after <= budget
+        ? "Realistic changes put you inside the 1.5°C budget."
+        : after < ukTotal
+        ? "Realistic changes take you below the UK average." + (afterMax <= budget ? " Going all the way puts you inside the 1.5°C budget." : "")
+        : afterMax <= budget
+        ? "Going all the way puts you inside the 1.5°C budget."
+        : "Every step down counts. The biggest wins are below.";
+
+    let html = '<div class="container results-v2">' + celebrationCard();
 
     if (checkInDue()) {
       html +=
         '<div class="card callout fade-up"><div class="callout-row"><div class="round-badge">' + icon("calendar") + '</div><div class="grow">' +
         '<h2 class="card-title mb-1">Time for your monthly check-in</h2><p class="sm muted mb-4 max-2xl">It\'s a new month since you last surveyed (' +
         esc(monthLabel(snapshots[snapshots.length - 1].month)) +
-        '). Re-take the survey to see how your footprint has changed and keep your progress chart up to date.</p>' +
-        '<a class="btn btn-green" href="#/">Re-take the survey ' + icon("arrowRight") + "</a></div></div></div>";
+        '). Update your answers to see how your footprint has changed.</p>' +
+        '<a class="btn btn-green" href="#/">Update my survey ' + icon("arrowRight") + "</a></div></div></div>";
     }
 
+    html += resultTabs(fp, null);
+
     html +=
-      '<div class="card"><div class="row-between gap-3 mb-1" style="flex-wrap:wrap"><h2 class="card-title">Where it comes from</h2>' +
+      '<section class="glass res-hero rise"><div class="res-hero-main">' +
+      '<p class="fw-600 muted">Your footprint this year</p>' +
+      '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
+      '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ".</p>" +
+      '<details class="res-more"><summary>What about shopping and public services?</summary>' + sharedLine(now) + "</details></div>" +
+      '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
+      (totalSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(totalSaving) + " kg · " + pct(totalSaving) + "% less</span>" : "") +
+      '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
+      '<div class="path' + (animate ? " animate" : "") + '">' +
+      '<span class="path-mark budget" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
+      '<span class="path-mark uk" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
+      '<span class="path-now" style="width:' + W(now) + '%"></span>' +
+      '<span class="path-real" style="width:' + W(after) + '%"></span>' +
+      '<span class="path-all" style="width:' + W(afterMax) + '%"></span></div>' +
+      '<div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">' + kgFmt(afterMax) + "</b></span>" +
+      '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
+      '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(now) + "</b></span></div>" +
+      '<p class="sm muted mt-2">' + realisticLine + "</p>" +
+      '<p class="xs muted mt-1">*The UK average leaves out banking and pensions, as there\'s no UK figure for them. On the same basis you\'re at ' +
+      (cmp.mine / 1000).toFixed(1) + " t.</p></div></section>";
+
+    html +=
+      '<div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
+      '<div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap a category to see how to improve it</p></div>' +
+      '<div class="chip-row" style="align-items:center">' +
       '<button type="button" class="uk-toggle' + (ui.showUk ? " on" : "") + '" data-action="toggle-uk" aria-pressed="' + (ui.showUk ? "true" : "false") + '">' +
-      '<span class="uk-toggle-track"><span class="uk-toggle-knob"></span></span>UK average</button></div>' +
-      '<p class="sm muted mb-3">Tap a bar to see how to improve it.</p>' +
-      (ui.showUk ? '<div class="chart-legend xs muted mb-4"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span></div>' : "") +
-      '<div class="chart-wrap">' + barChart(fp.breakdown, selected) + "</div>" +
+      '<span class="uk-toggle-track"><span class="uk-toggle-knob"></span></span>UK average</button>' +
+      '<div class="seg" role="group" aria-label="Chart type">' +
+      '<button type="button" data-action="chart-mode" data-mode="donut" aria-pressed="' + (mode === "donut") + '"' + (mode === "donut" ? ' class="on"' : "") + ">Donut</button>" +
+      '<button type="button" data-action="chart-mode" data-mode="bars" aria-pressed="' + (mode === "bars") + '"' + (mode === "bars" ? ' class="on"' : "") + ">Bars</button></div></div></div>" +
+      (ui.showUk ? '<div class="chart-legend xs muted mt-3"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span><span>No UK figure for money</span></div>' : "") +
+      '<div class="res-chart-body">' + (mode === "bars" ? barsChart(fp) : donutChart(fp)) + "</div>" +
       (ui.showUk
-        ? '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting. ' +
-          "There's no UK average for banking and pensions.</p>"
+        ? '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting.</p>'
         : "") +
-      "</div>";
-
-    html +=
-      '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + "</span>" +
-      '<span class="eyebrow">' + (ui.selectedCategory ? "How to improve this" : "Your biggest opportunity") + "</span></div>" +
-      '<h3 class="tip-title">' + esc(tip.title) + '</h3><p class="sm muted lh mb-5 max-2xl">' + esc(tip.body) + "</p>" +
-      (tip.saving > 0.5 || tip.maxSaving > 0.5 ? savingSummary(tip) : "") +
-      (!ui.selectedCategory ? '<p class="xs muted mt-4">This is your largest source of emissions. Tap any bar above to explore other areas.</p>' : "") +
-      '<div><a class="btn btn-green mt-5" href="#/explainer/' + selected + '">Learn how to reduce &amp; build habits ' + icon("arrowRight") + "</a></div></div>";
-
-    if (totalMax > 0.5) {
-      html +=
-        '<div class="card fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("trendDown") + '</span><h2 class="card-title">If you build these habits</h2></div>' +
-        '<p class="sm muted mb-6 max-2xl">Realistic changes across your categories could cut your footprint by about <span class="fw-600 green-dark">' +
-        pct(totalSaving) + "%</span> (" + totalSaving.toFixed(0) + " kg CO₂e a year). Going all the way, it could fall by up to <span class=\"fw-600 green-dark\">" +
-        pct(totalMax) + "%</span> (" + totalMax.toFixed(0) + ' kg).</p><div class="stack-3">' +
-        compareBar("Now", fp.totalYearly, fp.totalYearly, "muted") +
-        compareBar("With realistic changes", after, fp.totalYearly, "emerald") +
-        compareBar("Going all the way", afterMax, fp.totalYearly, "deep") +
-        "</div></div>";
-    }
-
-    html += '<div class="grid-2 gap-3 mb-8">';
-    html += fp.breakdown
-      .map((b) => {
-        const sv = savingFor(b.key);
-        return (
-          '<div class="cat-row' + (selected === b.key ? " selected" : "") + '"><button type="button" class="cat-main" data-action="select-category" data-key="' + b.key + '">' +
-          '<span class="emoji-row">' + b.icon + '</span><span class="min0"><span class="fw-500 sm block">' + esc(b.label) + '</span><span class="xs muted block truncate">' +
-          esc(b.detail) + "</span></span></button>" +
-          '<div class="cat-side"><div class="right"><p class="fw-600">' + b.yearly.toFixed(0) + '</p><p class="xs muted">kg/yr</p>' +
-          (sv.saving > 0.5 ? '<p class="tiny green">−' + sv.saving.toFixed(0) + " realistic</p>" : "") +
-          (sv.max > sv.saving + 0.5 ? '<p class="tiny muted">up to −' + sv.max.toFixed(0) + "</p>" : "") +
-          '</div><a class="icon-btn round" href="#/explainer/' + b.key + '" aria-label="Learn how to reduce ' + esc(b.label) + '">' + icon("arrowRight") + "</a></div></div>"
-        );
-      })
-      .join("");
-    html += "</div>";
+      "</section>" +
+      '<aside class="res-aside">' +
+      (lead
+        ? '<section class="res-opp"><span class="eyebrow">Your biggest opportunity</span><h3 class="display">' + esc(lead.t.title) + "</h3>" +
+          (lead.t.saving > 0.5 ? '<p class="res-opp-kg display tnum">−' + kgFmt(lead.t.saving) + " <small>kg a year</small></p>" : "") +
+          '<a class="btn btn-honey btn-block" href="#/explainer/' + lead.b.key + '">See how ' + icon("arrowRight") + "</a></section>"
+        : "") +
+      '<section class="glass res-three"><h3 class="display">Biggest three</h3><p class="sm">' +
+      top3.map((b) => esc(b.label)).join(", ").replace(/, ([^,]*)$/, " and $1") + " make up <b>" + top3Pct + "%</b> of your footprint. Start there for the biggest difference.</p></section>" +
+      "</aside></div>";
 
     const hist = historyByDay();
     if (hist.length) {
@@ -1994,14 +2067,22 @@
     }
 
     html +=
-      '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
-      '<button type="button" class="btn btn-green" data-action="top-opportunity">' + icon("arrowRight") + " Show my top opportunity</button></div>" +
+      '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
+      '<a class="btn btn-green" href="#/explainer/' + (lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
       saveCard() + supportCard() +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
   }
 
   // ==================== Explainer page ====================
+
+  // One line about the person's own answers for a category page.
+  function categorySummary(cat) {
+    if (cat === "water") return answerSummary("energy", survey)[1].split(" · ")[1] || "";
+    const step = cat === "energy" ? "energy" : cat;
+    const lines = answerSummary(step, survey);
+    return cat === "energy" ? lines[0] : lines.join(" · ");
+  }
 
   function renderExplainer(cat) {
     const ex = D.EXPLAINERS[cat];
@@ -2013,52 +2094,74 @@
     const fp = footprint(survey);
     const diet = cat === "meals" ? D.DIET_EXPLAINERS[dietType(survey)] : null;
     const sections = (diet && diet.sections) || ex.sections;
-    const item = fp.breakdown.find((b) => b.key === cat);
-    const budgetPct = item ? Math.round((item.yearly / D.BUDGET_YEARLY) * 100) : null;
+    const idx = Math.max(0, fp.breakdown.findIndex((b) => b.key === cat));
+    const item = fp.breakdown[idx] || { yearly: 0, label: ex.title };
+    const total = fp.totalYearly || 1;
+    const share = Math.max(item.yearly > 0 ? 1 : 0, Math.round((item.yearly / total) * 100));
+    const uk = ukAverageByKey()[cat];
+    const n = fp.breakdown.length;
+    const rank = idx < 3 ? "Your #" + (idx + 1) + " source" : "#" + (idx + 1) + " of " + n + " sources";
+    const ukLine =
+      uk == null
+        ? "No UK average for banking and pensions"
+        : "UK average " + kgFmt(uk) + " kg · you're " +
+          (Math.abs(item.yearly - uk) / uk < 0.03 ? "about the same" : item.yearly > uk ? Math.round((item.yearly / uk - 1) * 100) + "% above" : Math.round((1 - item.yearly / uk) * 100) + "% below");
+    const prev = fp.breakdown[(idx + n - 1) % n];
+    const next = fp.breakdown[(idx + 1) % n];
+    const sMax = Math.max(item.yearly, uk || 0, 1);
+    const bar = (label, v, cls) =>
+      '<div><div class="row-between"><span>' + label + '</span><b class="display tnum">' + kgFmt(v) + ' kg</b></div><div class="drop-track"><span class="' + cls + '" style="width:' + Math.max(0, (v / sMax) * 100).toFixed(1) + '%"></span></div></div>';
 
     let html =
-      '<div class="container narrow"><a class="btn btn-ghost btn-sm back-link" href="#/results">' + icon("arrowLeft") + " Back</a>" +
-      '<div class="mb-8 fade-up"><div class="label-row mb-3"><span class="emoji-xl">' + ex.icon + '</span><h1 class="explainer-title">' + esc(ex.title) +
-      '</h1></div><p class="muted lh">' + esc(ex.why) + "</p></div>" +
-      '<div class="grid-2 gap-3 mb-8">' +
-      '<div class="panel green p-5"><div class="eyebrow-sm green-dark">' + icon("trendDown") + ' Your potential saving</div><p class="stat">' +
-      (tip.saving > 0.5 ? "~" + tip.saving.toFixed(0) : "—") + '<span class="sm muted normal"> kg CO₂e / year</span></p><p class="xs muted mt-1">Realistic: ' +
-      esc(tip.realisticLabel || tip.title) + "</p>" +
-      (tip.maxSaving > tip.saving + 0.5
-        ? '<p class="xs muted mt-1">Up to ~' + tip.maxSaving.toFixed(0) + " kg going all the way: " + esc(tip.maxLabel || "") + "</p>"
-        : "") +
-      "</div>" +
-      (budgetPct !== null
-        ? '<div class="panel p-5"><div class="eyebrow-sm muted">' + icon("target") + ' vs 1.5°C budget</div><p class="stat">' + budgetPct +
-          '%<span class="sm muted normal"> of yearly target</span></p><p class="xs muted mt-1">Target is 2,500 kg a year (2.5 t)</p></div>'
-        : "") +
-      "</div>";
+      '<div class="container cat-v2">' + resultTabs(fp, cat) +
+      '<a class="back-overview" href="#/results">' + icon("chevronLeft") + " Back to overview</a>" +
+      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
+      '<div class="cat-hero-main"><div class="label-row"><span class="cat-badge">' + ex.icon + '</span><span class="eyebrow">' + rank + "</span></div>" +
+      '<h1 class="cat-title display">' + esc(ex.title) + '</h1><p class="cat-why">' + esc(ex.why) + "</p></div>" +
+      '<div class="cat-hero-side"><div class="cat-figs"><div class="cat-kg display tnum">' + kgFmt(item.yearly) + "</div>" +
+      '<div class="muted">kg CO₂e a year</div><div class="cat-yours">' + esc(categorySummary(cat)) + "</div>" +
+      '<div class="cat-uk">' + esc(ukLine) + "</div></div>" +
+      '<figure class="cat-share"><svg viewBox="0 0 42 42" role="img" aria-label="' + share + '% of your total footprint"><circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>' +
+      '<circle cx="21" cy="21" r="10" fill="none" stroke="#3F5B3A" stroke-width="20" pathLength="100" stroke-dasharray="' + share + ' 100" transform="rotate(-90 21 21)"></circle></svg>' +
+      '<figcaption><b class="display">' + share + '%</b><span>of your footprint</span></figcaption></figure></div></header>';
 
     // Diet cards the survey shows are already done are left out (habits are
     // separate: they track changes from here). Flight cards stay, marked
     // Done, so people come back to them.
     const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s));
     html +=
-      '<div class="stack-6 mb-10">' +
+      '<div class="cat-grid"><section class="cat-col"><div class="row-between gap-3 cat-sub" style="flex-wrap:wrap;align-items:baseline">' +
+      '<h2 class="display">Your ' + (shown.length === 1 ? "next step" : shown.length + " next steps") + '</h2><span class="muted">Tap one for the details</span></div>' +
+      '<ol class="todo-list">' +
       shown
-        .map(({ s, i }, n) => {
+        .map(({ s, i }, k) => {
           const na = sectionNA(cat, s);
           const done = !na && (cat === "flights" || cat === "banking") && sectionDone(cat, s);
-          const tag = done ? '<span class="tag done-tag ml-auto">Done</span>' : na ? '<span class="tag na-tag ml-auto">Not applicable</span>' : "";
+          const tag = done ? '<span class="tag done-tag">Done</span>' : na ? '<span class="tag na-tag">Not applicable</span>' : "";
           return (
-            '<div class="section-card fade-up' + (done ? " done" : na ? " na" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0"><h2 class="label-row fw-600 mb-2">' +
-            '<span class="num-badge">' + (done ? icon("check") : n + 1) + "</span>" + esc(s.heading) +
-            (tag ? tag + icon("info", "faint") : icon("info", "ml-auto faint")) +
-            '</h2><p class="sm muted lh">' + esc(s.body) + "</p>" + sectionTeaser(s) + "</div>"
+            '<li class="section-card todo rise' + (done ? " done" : na ? " na" : "") + '" data-action="open-section" data-index="' + i + '" role="button" tabindex="0" style="animation-delay:' + (0.06 * (k + 1)).toFixed(2) + 's">' +
+            '<span class="num-badge' + (k === 0 && !done && !na ? " lead" : "") + '">' + (done ? icon("check") : k + 1) + "</span>" +
+            '<div class="min0"><h3 class="todo-title display">' + esc(s.heading) + (tag ? " " + tag : "") + "</h3>" +
+            '<p class="todo-body">' + esc(s.body) + "</p>" + sectionTeaser(s) + "</div>" +
+            '<span class="todo-more">' + icon("chevronRight") + "</span></li>"
           );
         })
         .join("") +
-      "</div>";
-
-    html +=
-      usefulLinksCard(cat) +
-      habitsComingSoonCard() +
-      '<div class="center mt-8"><a class="btn btn-outline" href="#/">' + icon("arrowLeft") + " Back to survey</a></div></div>";
+      "</ol>" + usefulLinksCard(cat) + "</section>" +
+      '<aside class="cat-aside"><section class="glass cat-drop"><h3 class="display">What this could drop to</h3><div class="stack-3 mt-4">' +
+      bar("Now", item.yearly, "d-now") +
+      bar("Realistic", Math.max(0, item.yearly - tip.saving), "d-real") +
+      bar("All the way", Math.max(0, item.yearly - tip.maxSaving), "d-all") +
+      (uk != null ? '<div class="drop-uk">' + bar("Typical UK resident", uk, "d-uk") + "</div>" : "") +
+      "</div>" +
+      (tip.saving > 0.5 ? '<p class="xs muted mt-3">Realistic: ' + esc(tip.realisticLabel || tip.title) + ".</p>" : "") +
+      "</section>" +
+      (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
+      '<section class="cat-plan"><h3 class="display">Build the habit</h3><p class="sm">Habit tracking is coming soon, so you can tick these off week by week.</p>' +
+      '<span class="soon-pill">Coming soon</span></section></aside></div>' +
+      '<div class="cat-steps"><a class="cat-step" href="#/explainer/' + prev.key + '">' + icon("chevronLeft") +
+      '<span><small>Previous</small><b>' + esc(prev.label) + "</b></span></a>" +
+      '<a class="cat-step next" href="#/explainer/' + next.key + '"><span><small>Next</small><b>' + esc(next.label) + "</b></span>" + icon("chevronRight") + "</a></div></div>";
     return html;
   }
 
@@ -3805,6 +3908,7 @@
     // someone just typed.
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(html);
+    countUp();
     kept.forEach(([id, el]) => {
       const now = document.getElementById(id);
       if (now) now.value = el.value;
@@ -3938,7 +4042,15 @@
       render();
     },
     "select-category": (el) => {
-      ui.selectedCategory = el.dataset.key;
+      location.hash = "#/explainer/" + el.dataset.key;
+    },
+    "chart-mode": (el) => {
+      ui.chartMode = el.dataset.mode;
+      if (ui.chartMode === "donut" && ui.showUk) {
+        ui.showUk = false;
+        lsSet(KEY_SHOW_UK, false);
+      }
+      lsSet("co2_chart_mode", ui.chartMode);
       render();
     },
     "top-opportunity": () => {
