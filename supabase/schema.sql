@@ -1446,3 +1446,112 @@ create or replace view public.link_click_stats as
   order by people desc, link_key;
 
 revoke all on public.link_click_stats from public, anon, authenticated;
+
+-- ---------- Inputs: live emission factors, edited by admins ----------
+-- The figures the app calculates with (built in to data.js) can be
+-- overridden here from the admin Inputs page (#/inputs). Everyone can read
+-- the current figures; only admins can change them, through save_input().
+-- Every change is logged, and a public change log is shown on the
+-- "How we calculate" page through input_changelog().
+
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+-- No policies: managed in the Supabase dashboard (SQL editor) only.
+alter table public.admins enable row level security;
+
+create table if not exists public.inputs (
+  key text primary key check (key ~ '^[a-z0-9_]{1,64}$'),
+  value double precision not null check (value >= 0 and value < 1e9),
+  source text not null default '' check (char_length(source) <= 1000),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id) on delete set null
+);
+alter table public.inputs enable row level security;
+drop policy if exists "Anyone can read the inputs" on public.inputs;
+create policy "Anyone can read the inputs" on public.inputs
+  for select to anon, authenticated using (true);
+-- No insert/update/delete policies: changes go through save_input().
+-- Only the columns the app needs are readable (not who made the change).
+revoke all on public.inputs from anon, authenticated;
+grant select (key, value, source, updated_at) on public.inputs to anon, authenticated;
+
+create table if not exists public.input_changes (
+  id bigint generated always as identity primary key,
+  key text not null,
+  old_value double precision,
+  new_value double precision not null,
+  source text not null default '',
+  changed_at timestamptz not null default now(),
+  changed_by uuid references auth.users (id) on delete set null
+);
+-- No policies: read through input_changelog(), written by save_input().
+alter table public.input_changes enable row level security;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  -- The app owner (same email as membership_status above), plus anyone in admins.
+  select coalesce(lower(auth.jwt() ->> 'email') = 'jack.s.brown@outlook.com', false)
+    or exists (select 1 from public.admins where user_id = auth.uid());
+$$;
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+
+-- p_old_value is the figure the admin saw before changing it (the built-in
+-- one if the input had never been edited), for the change log.
+create or replace function public.save_input(p_key text, p_value double precision, p_source text, p_old_value double precision default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  prev double precision;
+begin
+  if not public.is_admin() then
+    raise exception 'Only admins can change inputs';
+  end if;
+  if p_key !~ '^[a-z0-9_]{1,64}$' then
+    raise exception 'Bad input key';
+  end if;
+  if p_value is null or p_value < 0 or p_value >= 1e9 or p_value = 'NaN'::double precision then
+    raise exception 'The figure must be a number of 0 or more';
+  end if;
+  select value into prev from public.inputs where key = p_key;
+  insert into public.input_changes (key, old_value, new_value, source, changed_by)
+  values (p_key, coalesce(prev, p_old_value), p_value, left(coalesce(p_source, ''), 1000), auth.uid());
+  insert into public.inputs (key, value, source, updated_at, updated_by)
+  values (p_key, p_value, left(coalesce(p_source, ''), 1000), now(), auth.uid())
+  on conflict (key) do update
+    set value = excluded.value, source = excluded.source, updated_at = now(), updated_by = auth.uid();
+end;
+$$;
+revoke all on function public.save_input(text, double precision, text, double precision) from public;
+grant execute on function public.save_input(text, double precision, text, double precision) to authenticated;
+
+-- The public change log: what changed and when, not who changed it.
+create or replace function public.input_changelog(p_limit integer default 50)
+returns table (key text, old_value double precision, new_value double precision, source text, changed_at timestamptz)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select c.key, c.old_value, c.new_value, c.source, c.changed_at
+  from public.input_changes c
+  order by c.changed_at desc, c.id desc
+  limit least(greatest(coalesce(p_limit, 50), 1), 200);
+$$;
+revoke all on function public.input_changelog(integer) from public;
+grant execute on function public.input_changelog(integer) to anon, authenticated;
+
+-- The app owner is always an admin. To add someone else:
+--   insert into public.admins (user_id)
+--   select id from auth.users where email = 'their@email.com'
+--   on conflict do nothing;

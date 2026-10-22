@@ -126,6 +126,28 @@ screens. Set `OPERATOR_NAME` and `CONTACT_EMAIL` near the top of `app.js`;
 until then the pages show placeholders. This isn't legal advice, so have
 them checked if you can.
 
+## Inputs (changing the figures live)
+
+Every figure the footprint is worked out with (83 of them: food, travel,
+flights, energy, pets, each bank and pension provider, and the shared and
+assumed lines) is listed in `INPUT_DEFS` in `data.js`, with its source.
+Admins can change any of them on the Inputs page (`#/inputs`, linked from
+the Account page): new figure, new source, Save. The change reaches every
+visitor the next time they load the site, with no deploy.
+
+- The built-in values stay in `data.js`; edits are stored in the `inputs`
+  table and override them. Every edit is logged in `input_changes`, with
+  Undo on the Inputs page and a public "Figure updates" list on How we
+  calculate.
+- A finished survey keeps the figures it was worked out with
+  (`survey.factors`), so past totals and history never move. Results show
+  a "New figures since your survey" note with a Quick update button; the
+  next survey uses the latest figures.
+- The app owner is always an admin; add others with the snippet at the end
+  of the "Inputs" section of `supabase/schema.sql` (run that section once).
+- Export CSV on the Inputs page downloads every figure with its source,
+  for the emission factors spreadsheet.
+
 ## Bank figures
 
 The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held
