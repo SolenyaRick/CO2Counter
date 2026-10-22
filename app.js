@@ -63,8 +63,8 @@
   // Savings assumptions (see tipFor).
   const ACTIVE_TRAVEL_MAX_KM = 10; // one-way; beyond this, train/bus is the realistic swap
   const MOTOR_MODES = ["car_petrol", "car_diesel", "ev", "motorcycle"];
-  const TRAIN_TO_FLIGHT_RATIO = 4 / 123; // Eurostar vs flight, London–Paris
-  const HEAT_PUMP_COP = 3;
+  const A = D.ASSUMPTIONS; // editable on the Inputs page, so read at use
+  const trainToFlightRatio = () => A.PARIS_TRAIN_KG / A.PARIS_FLIGHT_KG; // Eurostar vs flight, London–Paris
   const MEDIUM_HAUL_KM = 4000;
   const STAGE_DAYS = 7;
   const DAY_MS = 864e5;
@@ -302,6 +302,122 @@
     return "App user";
   }
 
+  // ==================== live inputs (emission factors) ====================
+  // Every figure on the admin Inputs page (#/inputs). data.js holds the
+  // built-in values; the admin's edits are kept in Supabase (inputs table)
+  // and override them. A finished survey keeps the figures it was worked out
+  // with (survey.factors), so past totals never move; new surveys use the
+  // latest figures.
+
+  const KEY_INPUTS = "co2_inputs"; // last overrides seen, for a fast, offline start
+  const INPUT_DEFS = D.INPUT_DEFS;
+
+  // "NAME", "NAME.field" or "LIST[key].field" -> [object, field]
+  function inputRef(path) {
+    const m = path.match(/^([A-Z_]+)(?:\[([a-z0-9_]+)\])?(?:\.(\w+))?$/);
+    if (!m[2] && !m[3]) return [D, m[1]];
+    const obj = m[2] ? byKey(D[m[1]], m[2]) : D[m[1]];
+    return [obj, m[3]];
+  }
+  const inputGet = (d) => { const [o, f] = inputRef(d.path); return o[f]; };
+  const inputSet = (d, v) => { const [o, f] = inputRef(d.path); o[f] = v; };
+
+  const BUILT_IN = {};
+  INPUT_DEFS.forEach((d) => (BUILT_IN[d.key] = Math.round(inputGet(d) * 1e6) / 1e6));
+  let liveInputs = BUILT_IN;
+  let inputMeta = {}; // key -> { source, updatedAt } for inputs the admin has set
+  let appliedInputs = BUILT_IN;
+
+  function setLiveInputs(rows) {
+    const next = { ...BUILT_IN };
+    const meta = {};
+    (Array.isArray(rows) ? rows : []).forEach((r) => {
+      const v = Number(r.value);
+      if (BUILT_IN[r.key] == null || !isFinite(v) || v < 0) return;
+      next[r.key] = v;
+      meta[r.key] = { source: r.source || "", updatedAt: r.updated_at || "" };
+    });
+    liveInputs = next;
+    inputMeta = meta;
+  }
+  setLiveInputs(lsGet(KEY_INPUTS, []));
+
+  // Returns true when the figures changed, so the page can redraw.
+  async function loadInputs() {
+    if (!sb) return false;
+    try {
+      const { data, error } = await sb.from("inputs").select("key, value, source, updated_at");
+      if (error || !Array.isArray(data)) return false;
+      const before = JSON.stringify(liveInputs);
+      lsSet(KEY_INPUTS, data);
+      setLiveInputs(data);
+      return JSON.stringify(liveInputs) !== before;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Puts a set of figures into D, then works out the values built from them.
+  function applyInputs(values) {
+    if (values === appliedInputs) return;
+    appliedInputs = values;
+    INPUT_DEFS.forEach((d) => inputSet(d, values[d.key] != null ? values[d.key] : BUILT_IN[d.key]));
+    const veggie = byKey(D.MEAL_OPTIONS, "veggie").factor;
+    ["chicken", "pork", "beef", "lamb"].forEach((k) => (byKey(D.MEAL_OPTIONS, k).factor = Math.round((veggie + D.PORTION * D.MEAT_PER_KG[k]) * 100) / 100));
+    const shop = D.ASSUMED_SHOPPING;
+    shop.totalKg = shop.clothesKg + shop.householdKg + shop.electronicsKg + shop.hobbiesKg;
+    const shared = D.SHARED_FOOTPRINT;
+    shared.totalKg = shared.publicServicesKg + shared.infrastructureKg;
+  }
+
+  // The figures a survey is worked out with: its own once finished (built-in
+  // ones for surveys finished before figures were kept), else the latest.
+  function factorsFor(s) {
+    if (!s || !s.completedAt) return liveInputs;
+    return s.factors || BUILT_IN;
+  }
+
+  function withInputs(values, fn) {
+    const prev = appliedInputs;
+    applyInputs(values);
+    try {
+      return fn();
+    } finally {
+      applyInputs(prev);
+    }
+  }
+
+  // Inputs whose latest figure differs from the one this survey used.
+  function inputsChangedSince(s) {
+    const used = factorsFor(s);
+    if (used === liveInputs) return [];
+    return INPUT_DEFS.filter((d) => Math.abs((used[d.key] != null ? used[d.key] : BUILT_IN[d.key]) - liveInputs[d.key]) > 1e-9);
+  }
+
+  // Figures quoted in sentences, worked out from the current inputs.
+  function fillTokens(html) {
+    if (html.indexOf("{{") < 0) return html;
+    const day = (k) => byKey(D.MEAL_OPTIONS, k).factor;
+    const times = (r) => {
+      const n = Math.round(r);
+      return r - n >= 0.15 ? "over " + n + "×" : "about " + n + "×";
+    };
+    const share = (f) => {
+      const words = { 2: "half", 3: "a third", 4: "a quarter", 5: "a fifth", 6: "a sixth", 7: "a seventh", 8: "an eighth", 9: "a ninth", 10: "a tenth" };
+      const n = Math.round(1 / f);
+      return f > 0.6 ? "about " + Math.round(f * 100) + "%" : words[n] ? "about " + words[n] : "under a tenth";
+    };
+    const t = {
+      paris_plane: kgFmt(A.PARIS_FLIGHT_KG),
+      paris_train: kgFmt(A.PARIS_TRAIN_KG),
+      three_beef_days: kgFmt(Math.round((3 * (day("beef") - day("chicken")) * D.WEEKS_PER_YEAR) / 100) * 100),
+      beef_vs_chicken: times(day("beef") / day("chicken")),
+      beef_vs_vegan: times(day("beef") / day("vegan")),
+      ev_share: share(byKey(D.COMMUTE_MODES, "ev").factor / petrolKm()),
+    };
+    return html.replace(/\{\{(\w+)\}\}/g, (m, k) => (t[k] != null ? t[k] : m));
+  }
+
   // ==================== survey storage ====================
 
   function normaliseSurvey(s) {
@@ -334,6 +450,7 @@
           const s = normaliseSurvey(data.survey_data);
           // Saved before completedAt existed: they've been seeing results.
           if (!s.completedAt) s.completedAt = data.survey_data && data.survey_data.completedAt ? data.survey_data.completedAt : "earlier";
+          if (pinFactors(s)) saveSurveyRemote(s);
           lsSet(KEY_SURVEY, s);
           return s;
         }
@@ -347,7 +464,16 @@
     // Finished before completedAt existed: a monthly snapshot is the tell.
     const snaps = getSnapshots();
     if (!local.completedAt && lsGet(KEY_SURVEY, null) && snaps.length) local.completedAt = snaps[snaps.length - 1].savedAt || "earlier";
+    if (pinFactors(local)) lsSet(KEY_SURVEY, local);
     return local;
+  }
+
+  // A survey finished before figures were kept with it was worked out with
+  // the built-in ones, so it keeps those. Returns true if it changed.
+  function pinFactors(s) {
+    if (!s.completedAt || s.factors) return false;
+    s.factors = { ...BUILT_IN };
+    return true;
   }
 
   async function saveSurveyRemote(s) {
@@ -356,7 +482,7 @@
     try {
       // total_yearly lets friends see your total (friends_footprints()).
       // If the database doesn't have that column yet, save without it.
-      const { error } = await sb.from("survey_responses").upsert({ ...row, total_yearly: Math.round(footprint(s).totalYearly) });
+      const { error } = await sb.from("survey_responses").upsert({ ...row, total_yearly: Math.round(withInputs(factorsFor(s), () => footprint(s).totalYearly)) });
       if (error && /total_yearly/.test(error.message || "")) await sb.from("survey_responses").upsert(row);
     } catch (e) {}
   }
@@ -820,10 +946,10 @@
           parts.push("a short-haul trip in economy instead of long-haul");
         }
         if (short.length >= 3) {
-          remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * trainToFlightRatio();
           parts.push("one short-haul trip in economy, the rest by train");
         } else if (short.length > 0) {
-          remaining += short.length * avg(short, economyKg) * TRAIN_TO_FLIGHT_RATIO;
+          remaining += short.length * avg(short, economyKg) * trainToFlightRatio();
           parts.push("short trips by train");
         }
         return {
@@ -842,7 +968,7 @@
         maxLabel: "a green tariff and a heat pump instead of gas",
         maxSaving: (() => {
           const e = s.energy || {};
-          const after = (12 * ((e.electricityKwh || 0) + (e.gasKwh || 0) / HEAT_PUMP_COP) * D.GREEN_ELECTRICITY_FACTOR) / householdOf(s);
+          const after = (12 * ((e.electricityKwh || 0) + (e.gasKwh || 0) / A.HEAT_PUMP_COP) * D.GREEN_ELECTRICITY_FACTOR) / householdOf(s);
           return Math.max(0, categoryYearly("energy", s) - after);
         })(),
         title: "Switch to a green energy tariff",
@@ -981,14 +1107,14 @@
   }
 
   // Every "the same as driving" uses the survey's petrol car (DESNZ 2026).
-  const PETROL_KM = byKey(D.COMMUTE_MODES, "car_petrol").factor;
+  const petrolKm = () => byKey(D.COMMUTE_MODES, "car_petrol").factor;
 
   function equivalents(kg) {
     if (kg <= 0) return { trees: 0, phones: 0, drivingKm: 0 };
     return {
-      trees: Math.round(kg / 20),
-      phones: Math.round(kg / 61),
-      drivingKm: Math.round(kg / PETROL_KM),
+      trees: Math.round(kg / A.TREE_KG),
+      phones: Math.round(kg / A.PHONE_KG),
+      drivingKm: Math.round(kg / petrolKm()),
     };
   }
 
@@ -1262,6 +1388,9 @@
     }
     ui.reviewing = ui.fromReview = false;
     survey.completedAt = new Date().toISOString();
+    // Kept with the survey, so later edits on the Inputs page don't move it.
+    survey.factors = { ...liveInputs };
+    applyInputs(survey.factors);
     surveyChanged();
     ui.editing = false;
     saveSnapshot(footprint(survey).totalYearly);
@@ -1283,6 +1412,20 @@
     return { before: a.totalYearly, after: b.totalYearly, saved: a.totalYearly - b.totalYearly, cats };
   }
 
+  // Shown when the Inputs page has changed figures since this survey was taken.
+  function newFiguresCard() {
+    if (!survey.completedAt || ui.newSurvey) return "";
+    const changed = inputsChangedSince(survey);
+    if (!changed.length) return "";
+    const names = changed.slice(0, 2).map((d) => d.label).join(" and ") + (changed.length > 2 ? " and " + (changed.length - 2) + " more" : "");
+    return (
+      '<div class="glass new-figures fade-up" role="status"><span class="round-badge">' + icon("refresh") + '</span><div class="grow min0">' +
+      '<p class="fw-700">New figures since your survey</p><p class="sm muted">' + esc(names) + " " + (changed.length === 1 ? "has" : "have") +
+      " been updated. These results use the figures from when you took the survey; a quick update brings them up to date.</p></div>" +
+      '<button type="button" class="btn btn-green btn-sm" data-action="update-figures">Quick update</button></div>'
+    );
+  }
+
   function celebrationCard() {
     const c = ui.celebrate;
     if (!c) return "";
@@ -1291,7 +1434,7 @@
     const close = '<button type="button" class="modal-close" data-action="dismiss-celebrate" aria-label="Dismiss">' + icon("x") + "</button>";
     if (c.saved >= 0.05) {
       const pct = c.before ? (c.saved / c.before) * 100 : 0;
-      const km = c.saved / PETROL_KM;
+      const km = c.saved / petrolKm();
       const title = c.saved < 25 ? "Every bit counts. Nice one!" : c.saved < 250 ? "Great progress!" : "Brilliant work!";
       return (
         '<div class="card celebrate fade-up" role="status">' + close + '<div class="celebrate-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>' +
@@ -1759,7 +1902,6 @@
 
   // Straight-line distance between two towns plus 25% for the way roads
   // and railways wind (a common rule of thumb for land routes).
-  const LAND_ROUTE_UPLIFT = 1.25;
   // Same number as the ?v= on the scripts in index.html.
   const ASSET_VERSION = (document.querySelector('script[src*="app.js?v="]') || { src: "" }).src.split("v=")[1] || "1";
   let placeIndex = null;
@@ -1781,7 +1923,7 @@
     const a = findPlace(from);
     const b = findPlace(to);
     if (!a || !b || a === b) return null;
-    return Math.round(greatCircleKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) * LAND_ROUTE_UPLIFT);
+    return Math.round(greatCircleKm({ lat: a[1], lon: a[2] }, { lat: b[1], lon: b[2] }) * A.LAND_ROUTE_UPLIFT);
   }
 
   // One shared suggestion list for every From / To box. The place list is
@@ -2212,7 +2354,7 @@
         ? "Going all the way puts you inside the 1.5°C budget."
         : "Every step down counts. The biggest wins are below.";
 
-    let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard());
+    let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
     if (ui.exampleMode) {
       html +=
         '<div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident\'s footprint, worked out the same way as yours will be.</p></div>' +
@@ -2337,7 +2479,8 @@
       '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
       '<a class="btn btn-green" href="' + catHref(lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
       saveCard() + supportCard() +
-      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
+      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. Figures last updated ' +
+      esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
     return html;
   }
 
@@ -2528,8 +2671,8 @@
         title: "Take the train for trips under 700 km",
         lede: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
         save: tip.saving, saveLabel: "Realistic saving for you", eqFlights: true,
-        vsTitle: "London → Paris and back, per person", headline: Math.round((1 - TRAIN_TO_FLIGHT_RATIO) * 100) + "% less by train", unit: "kg",
-        rows: [["Plane", PARIS_FLIGHT_KG, "✈️"], ["Train", PARIS_FLIGHT_KG * TRAIN_TO_FLIGHT_RATIO, "🚆"]],
+        vsTitle: "London → Paris and back, per person", headline: Math.round((1 - trainToFlightRatio()) * 100) + "% less by train", unit: "kg",
+        rows: [["Plane", A.PARIS_FLIGHT_KG, "✈️"], ["Train", A.PARIS_FLIGHT_KG * trainToFlightRatio(), "🚆"]],
         source: "Eurostar's independently commissioned figures, as used in CO2 Counter.",
         steps: [
           ["Check the train first", "For trips under about 700 km, compare door-to-door times, not just the journey itself."],
@@ -2559,7 +2702,7 @@
           ["Pick one day", "Choose the day that's easiest to change, like one with fewer bags or appointments."],
           [d <= ACTIVE_TRAVEL_MAX_KM ? "Try the bike" : "Try the train or bus", d <= ACTIVE_TRAVEL_MAX_KM ? "At " + d + " km, cycling takes most people about " + Math.max(5, Math.round((d / 15) * 60)) + " minutes, with zero emissions." : "At " + d + " km, the train or bus is the realistic swap, and you can read or rest on the way."],
           ["Or work from home", "One work-from-home day removes that day's commute entirely."],
-          ["Plan for an EV later", "When it's time to replace the car, an electric one emits about a fifth as much per km on today's grid."],
+          ["Plan for an EV later", "When it's time to replace the car, an electric one emits {{ev_share}} as much per km on today's grid."],
         ],
       };
     }
@@ -2832,7 +2975,7 @@
     else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
     else body = pos === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "";
 
-    modalRoot.innerHTML = glyphify(
+    modalRoot.innerHTML = glyphify(fillTokens(
       '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
         (shown.length > 1
           ? '<div class="sheet-tabs" role="tablist" aria-label="' + esc(ex.title) + ' next steps">' +
@@ -2848,7 +2991,7 @@
             '<button type="button" class="btn btn-outline" data-action="open-section" data-index="' + next.i + '">' + esc(next.x.heading) + " " + icon("chevronRight") + "</button></div>"
           : "") +
         "</div></div></div>"
-    );
+    ));
     document.body.classList.add("modal-open");
     const backdrop = modalRoot.querySelector(".sheet-backdrop");
     if (backdrop) backdrop.scrollTop = 0;
@@ -2908,12 +3051,12 @@
   }
 
   function trainSheet() {
-    const ratio = PARIS_TRAIN_KG / PARIS_FLIGHT_KG;
+    const ratio = A.PARIS_TRAIN_KG / A.PARIS_FLIGHT_KG;
     const trips = (survey.flights || []).filter((f) => {
       const km = flightKm(f.from, f.to);
       return km > 0 && km < MEDIUM_HAUL_KM;
     });
-    const routes = [{ label: "London → Paris, return", plane: PARIS_FLIGHT_KG, train: PARIS_TRAIN_KG, note: "Eurostar's independently commissioned figures." }].concat(
+    const routes = [{ label: "London → Paris, return", plane: A.PARIS_FLIGHT_KG, train: A.PARIS_TRAIN_KG, note: "Eurostar's independently commissioned figures." }].concat(
       trips.map((f) => ({ label: "Your trip: " + routeLabel(f), plane: flightKg(f), train: flightKg(f) * ratio, note: "Train estimated at the same ratio as London–Paris." }))
     );
     const max = Math.max(...routes.map((r) => r.plane));
@@ -2938,8 +3081,8 @@
             ["−" + kgFmt(saving) + " kg", trips.length === 1 ? "if your trip went by train" : "if your short trips went by train", "lead"],
             [kgFmt(equivalents(saving).trees) + " trees", "that's how much it would save"],
           ]
-        : [["−" + kgFmt(PARIS_FLIGHT_KG - PARIS_TRAIN_KG) + " kg", "London–Paris return by train instead", "lead"]]
-      ).concat([[PARIS_TRAIN_KG < beefDay ? "Less than a beef day" : kgFmt(PARIS_TRAIN_KG) + " kg", "London–Paris return by train, vs a day of beef meals (" + beefDay.toFixed(1) + " kg)"]])
+        : [["−" + kgFmt(A.PARIS_FLIGHT_KG - A.PARIS_TRAIN_KG) + " kg", "London–Paris return by train instead", "lead"]]
+      ).concat([[A.PARIS_TRAIN_KG < beefDay ? "Less than a beef day" : kgFmt(A.PARIS_TRAIN_KG) + " kg", "London–Paris return by train, vs a day of beef meals (" + beefDay.toFixed(1) + " kg)"]])
     );
     if (!trips.length) html += '<p class="xs muted mt-2">None of your flights are under 4,000 km, so there\'s no train swap to show for them.</p>';
     return html;
@@ -3122,8 +3265,6 @@
 
 
 
-  const PARIS_FLIGHT_KG = 123;
-  const PARIS_TRAIN_KG = 4;
 
 
 
@@ -3166,7 +3307,7 @@
           "<p>Weekly habits are scaled up to a year, and household energy, water and pets are shared between the people you live with. " +
           "Flight distances are calculated between the two airports, with an allowance for real-world routing.</p>" +
           "<p>Food is counted a whole day at a time. Vegan, vegetarian and fish days use the measured daily footprints of each diet group in Choręziak &amp; Rzymski (2025, <em>Nutrients</em>). " +
-          "A meat day is a vegetarian day plus a 150 g portion of that meat, using Poore &amp; Nemecek's (2018, <em>Science</em>) global averages per kilogram.</p>"
+          "A meat day is a vegetarian day plus a " + Math.round(D.PORTION * 1000) + " g portion of that meat, using Poore &amp; Nemecek's (2018, <em>Science</em>) global averages per kilogram.</p>"
       ) +
       section(
         "Banking and pensions",
@@ -3202,7 +3343,7 @@
       section(
         "Your shared footprint",
         "<p>Some emissions belong to everyone in the UK together: the NHS, schools, councils and defence, and the roads, buildings and equipment the country invests in. " +
-          "The government's official carbon footprint figures split these across the whole population, which comes to about 2.4 tonnes per person a year. " +
+          "The government's official carbon footprint figures split these across the whole population, which comes to about " + (D.SHARED_FOOTPRINT.totalKg / 1000).toFixed(1) + " tonnes per person a year. " +
           "We show it as a fixed line under your total, because it's the same for everyone and your answers don't change it.</p>" +
           "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about 10 tonnes per person. Some spending, like insurance, phone contracts and other services, isn't in the survey yet.</p>"
       ) +
@@ -3233,6 +3374,7 @@
           ]) +
           "<p>Savings are capped so no area can save more than it emits.</p>"
       ) +
+      figureUpdatesSection() +
       section(
         "Limitations",
         list([
@@ -3245,6 +3387,181 @@
       "</div>" +
       '<div class="center"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a></div></div>"
     );
+  }
+
+  // ==================== Inputs (admin) ====================
+  // Every figure the footprint is worked out with: name, number and source.
+  // Saving goes through save_input() in Supabase, which only admins can
+  // call; the page itself is only shown to admins.
+
+  const inputLog = { loaded: false, loading: false, rows: [] };
+  async function loadInputLog() {
+    if (!sb || inputLog.loading) return;
+    inputLog.loading = true;
+    try {
+      const { data, error } = await sb.rpc("input_changelog", { p_limit: 50 });
+      inputLog.rows = !error && Array.isArray(data) ? data : [];
+    } catch (e) {
+      inputLog.rows = [];
+    }
+    inputLog.loaded = true;
+    inputLog.loading = false;
+    const path = currentPath();
+    if (path === "/inputs" || path === "/how-we-calculate") render();
+  }
+
+  async function checkAdmin() {
+    ui.isAdmin = false;
+    if (!currentUser || !sb) return;
+    try {
+      const { data } = await sb.rpc("is_admin");
+      ui.isAdmin = data === true;
+    } catch (e) {}
+  }
+
+  const inputDef = (key) => INPUT_DEFS.find((d) => d.key === key);
+  const shortDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const numText = (v) => (v == null || !isFinite(v) ? "–" : String(Math.round(v * 1e6) / 1e6));
+
+  // The newest edit, or the day the built-in figures were last checked.
+  function figuresUpdated() {
+    const dates = Object.values(inputMeta).map((m) => m.updatedAt).filter(Boolean).sort();
+    return dates.length ? dates[dates.length - 1] : D.FIGURES_BUILT_IN;
+  }
+
+  // Sources due a new edition, grouped so one report shows once.
+  function inputReminders() {
+    const now = new Date();
+    const groups = {};
+    INPUT_DEFS.forEach((d) => {
+      if (!d.asOf || !d.every) return;
+      const edited = inputMeta[d.key] && inputMeta[d.key].updatedAt;
+      const from = edited ? new Date(edited) : new Date(d.asOf + "-01");
+      const due = new Date(from.getFullYear(), from.getMonth() + d.every, 1);
+      if (due > now) return;
+      const src = edited ? inputMeta[d.key].source || d.source : d.source;
+      const g = (groups[src] ||= { source: src, due, labels: [] });
+      if (due < g.due) g.due = due;
+      g.labels.push(d.label);
+    });
+    return Object.values(groups).sort((a, b) => a.due - b.due);
+  }
+
+  function inputRow(d) {
+    const v = liveInputs[d.key];
+    const meta = inputMeta[d.key];
+    const src = meta ? meta.source : d.source;
+    const edited = meta && Math.abs(v - BUILT_IN[d.key]) > 1e-9;
+    return (
+      '<div class="inp-row" data-input-row="' + d.key + '">' +
+      '<div class="inp-name"><label class="fw-700" for="inp-' + d.key + '">' + esc(d.label) + '</label><span class="xs muted">' + esc(d.unit) + "</span></div>" +
+      '<input class="input inp-val tnum" id="inp-' + d.key + '" type="number" step="any" min="0" inputmode="decimal" value="' + esc(numText(v)) + '" data-input-key="' + d.key + '" data-was="' + esc(numText(v)) + '" />' +
+      '<textarea class="input inp-src" rows="2" maxlength="1000" aria-label="Source for ' + esc(d.label) + '" data-input-src="' + d.key + '" data-was="' + esc(src) + '">' + esc(src) + "</textarea>" +
+      '<div class="inp-foot"><span class="xs muted">' +
+      (meta ? "Changed " + esc(shortDate(meta.updatedAt)) + (edited ? " · built-in " + esc(numText(BUILT_IN[d.key])) : "") : "Built-in figure") + "</span>" +
+      '<span class="inp-btns">' +
+      (edited ? '<button type="button" class="link-btn xs" data-action="reset-input" data-key="' + d.key + '">Reset to built-in</button>' : "") +
+      '<button type="button" class="btn btn-green btn-sm" data-action="save-input" data-key="' + d.key + '" disabled>Save</button></span></div></div>'
+    );
+  }
+
+  function renderInputs() {
+    if (!inputLog.loaded) loadInputLog();
+    const q = (ui.inputQuery || "").trim().toLowerCase();
+    const defs = INPUT_DEFS.filter((d) => !q || (d.label + " " + d.group + " " + d.unit + " " + d.key).toLowerCase().includes(q));
+    const groups = [...new Set(defs.map((d) => d.group))];
+    const edits = Object.keys(inputMeta).length;
+    const reminders = inputReminders();
+    const day = (k) => Math.round((liveInputs.food_veggie_day + liveInputs.portion * liveInputs["meat_" + k]) * 100) / 100;
+    const derived = {
+      Food: "Meat days worked out from these: chicken " + day("chicken") + " · pork " + day("pork") + " · beef " + day("beef") + " · lamb " + day("lamb") + " kg CO₂e a day.",
+      Flights: "Train vs plane for other trips: " + Math.round((liveInputs.paris_train / liveInputs.paris_plane) * 1000) / 10 + "% of the flight's emissions.",
+    };
+    let html =
+      '<div class="container inputs-page">' + pageHeader("Inputs", "The figures every footprint is worked out with", "chart") +
+      (ui.inputMsg ? '<p class="inp-msg ' + (ui.inputMsg.ok ? "ok" : "err") + '" role="status">' + esc(ui.inputMsg.text) + "</p>" : "") +
+      '<section class="glass inp-summary"><div><p class="eyebrow">Figures last updated</p><p class="display inp-date">' + esc(shortDate(figuresUpdated())) + "</p>" +
+      '<p class="xs muted">' + INPUT_DEFS.length + " inputs · " + edits + " changed from built-in. Saving updates the site for everyone straight away. " +
+      "Finished surveys keep the figures they were worked out with; new surveys use these.</p></div>" +
+      '<div class="inp-tools"><input class="input" type="search" id="input-search" placeholder="Search inputs" aria-label="Search inputs" value="' + esc(ui.inputQuery || "") + '" />' +
+      '<button type="button" class="btn btn-outline btn-sm" data-action="export-inputs">' + icon("arrowRight") + " Export CSV</button></div></section>";
+    if (reminders.length) {
+      html +=
+        '<details class="glass inp-due"><summary><span class="card-title">Due for a check</span><span class="inp-due-count">' + reminders.length + (reminders.length === 1 ? " source" : " sources") +
+        '</span></summary><p class="xs muted mb-2">These sources have usually published a new edition by now. Check each one and save any new figures.</p><ul>' +
+        reminders.map((r) => "<li><b>" + esc(r.source) + '</b><span class="xs muted">' + esc(r.labels.slice(0, 4).join(", ") + (r.labels.length > 4 ? " and " + (r.labels.length - 4) + " more" : "")) + " · due since " + esc(r.due.toLocaleDateString(undefined, { month: "short", year: "numeric" })) + "</span></li>").join("") +
+        "</ul></details>";
+    }
+    html += groups
+      .map((g) => '<section class="glass inp-group"><h2 class="card-title">' + esc(g) + "</h2>" + (derived[g] && !q ? '<p class="xs muted mb-2">' + esc(derived[g]) + "</p>" : "") + defs.filter((d) => d.group === g).map(inputRow).join("") + "</section>")
+      .join("");
+    if (!defs.length) html += '<p class="muted center mt-4">No inputs match “' + esc(q) + "”.</p>";
+    html += '<section class="glass inp-group"><h2 class="card-title">Change log</h2>';
+    if (!inputLog.loaded) html += '<p class="sm muted">Loading…</p>';
+    else if (!inputLog.rows.length) html += '<p class="sm muted">No changes yet. Everything is on the built-in figures.</p>';
+    else {
+      html +=
+        '<ul class="inp-log">' +
+        inputLog.rows
+          .map((r, i) => {
+            const d = inputDef(r.key);
+            return (
+              '<li><span class="xs muted">' + esc(shortDate(r.changed_at)) + '</span><span class="min0"><b>' + esc(d ? d.label : r.key) + '</b> <span class="tnum">' + esc(numText(r.old_value)) + " → " + esc(numText(r.new_value)) + "</span>" +
+              (r.source ? '<span class="xs muted inp-log-src">' + esc(r.source) + "</span>" : "") + "</span>" +
+              (d && r.old_value != null && i === inputLog.rows.findIndex((x) => x.key === r.key) ? '<button type="button" class="link-btn xs" data-action="undo-input" data-index="' + i + '">Undo</button>' : "") +
+              "</li>"
+            );
+          })
+          .join("") +
+        "</ul>";
+    }
+    return html + "</section></div>";
+  }
+
+  async function saveInput(key, value, source, note) {
+    const d = inputDef(key);
+    const was = liveInputs[key];
+    const { error } = await sb.rpc("save_input", { p_key: key, p_value: value, p_source: source, p_old_value: was });
+    if (error) {
+      ui.inputMsg = { ok: false, text: "Couldn't save " + d.label + ": " + (error.message || "please try again.") };
+    } else {
+      await loadInputs();
+      inputLog.loaded = false;
+      ui.inputMsg = { ok: true, text: (note || "Saved") + ": " + d.label + " " + numText(was) + " → " + numText(value) + "." };
+    }
+    render();
+  }
+
+  // The public log on "How we calculate".
+  function figureUpdatesSection() {
+    if (!inputLog.loaded) loadInputLog();
+    const rows = inputLog.rows.slice(0, 10);
+    return (
+      '<div class="section-card static fade-up"><h2 class="fw-600 mb-2">Figure updates</h2><div class="sm muted lh method">' +
+      "<p>We update the figures as soon as new data is published. Figures last updated: <strong>" + esc(shortDate(figuresUpdated())) + "</strong>. " +
+      "Your results keep the figures from when you took the survey; your next survey uses the latest ones.</p>" +
+      (rows.length
+        ? "<ul>" + rows.map((r) => { const d = inputDef(r.key); return "<li>" + esc(shortDate(r.changed_at)) + ": " + esc(d ? d.label : r.key) + " " + esc(numText(r.old_value)) + " → " + esc(numText(r.new_value)) + (d ? " " + esc(d.unit) : "") + (r.source ? " (" + esc(r.source) + ")" : "") + "</li>"; }).join("") + "</ul>"
+        : "<p>No changes since the figures were last checked on " + esc(shortDate(D.FIGURES_BUILT_IN)) + ".</p>") +
+      "</div></div>"
+    );
+  }
+
+  function exportInputs() {
+    const cell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+    const lines = [["Group", "Input", "Value", "Unit", "Built-in", "Source", "Last changed", "Key"].map(cell).join(",")];
+    INPUT_DEFS.forEach((d) => {
+      const meta = inputMeta[d.key];
+      lines.push([d.group, d.label, numText(liveInputs[d.key]), d.unit, numText(BUILT_IN[d.key]), meta ? meta.source : d.source, meta ? meta.updatedAt.slice(0, 10) : "", d.key].map(cell).join(","));
+    });
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "co2counter-inputs-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   // ==================== Friends page ====================
@@ -3766,7 +4083,12 @@
       (FREE_MODE && !m.owner && !isSupporter() && !isNativeApp() && STRIPE_PAYMENT_LINK
         ? '<div class="mt-4"><a class="btn btn-green" href="' + esc(supportUrl()) + '">' + icon("heart") + ' Support for £2 a year</a><p class="xs muted mt-2">Secure payment by Stripe. Cancel any time. No ads, and we never sell your data.</p></div>'
         : "") +
-      "</section></div>" +
+      "</section>" +
+      (ui.isAdmin
+        ? '<section class="glass guide-card"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
+          esc(shortDate(figuresUpdated())) + '.</p><a class="btn btn-green mt-4" href="#/inputs">Open Inputs ' + icon("arrowRight") + "</a></section>"
+        : "") +
+      "</div>" +
       '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display side-title">Clear data on this device</h2><p class="sm muted">This can\'t be undone.</p>' +
       '<div class="chip-row mt-3"><button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">Clear habits</button>' +
       '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">Clear everything</button></div></section>' +
@@ -4160,6 +4482,7 @@
     await ensureUsername();
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
+    await checkAdmin();
     if (canSync()) {
       // Answers entered on this device as a guest are uploaded if the
       // account has nothing saved yet.
@@ -4333,6 +4656,7 @@
     const path = currentPath();
     // While a new survey is open, every other page shows the finished one.
     if (ui.newSurvey) survey = path === "/" ? ui.draft : ui.prevSurvey;
+    applyInputs(path === "/example" ? liveInputs : factorsFor(survey));
     // Leaving the survey ends an edit; the Survey tab asks again next time.
     if (path !== "/") ui.editing = false;
     if (path !== "/results") ui.celebrate = null;
@@ -4350,6 +4674,8 @@
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
+    else if (path === "/inputs")
+      html = ui.isAdmin ? renderInputs() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to change the figures.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
@@ -4366,7 +4692,7 @@
     // Re-rendering a form after an error shouldn't wipe the passwords
     // someone just typed.
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
-    app.innerHTML = glyphify(html);
+    app.innerHTML = glyphify(fillTokens(html));
     countUp();
     kept.forEach(([id, el]) => {
       const now = document.getElementById(id);
@@ -4381,6 +4707,7 @@
     closeModal();
     ui.shownStep = null;
     ui.flash = "";
+    ui.inputMsg = null;
     if (currentPath() === "/friends") {
       friends.loaded = false;
       friends.msg = "";
@@ -4644,10 +4971,42 @@
       ui.flash = "";
       render();
     },
+    "update-figures": () => {
+      if (location.hash !== "#/") history.pushState(null, "", "#/");
+      actions["whats-changed"]();
+    },
+    "save-input": (el) => {
+      const key = el.dataset.key;
+      const d = inputDef(key);
+      const val = document.querySelector('[data-input-key="' + key + '"]');
+      const src = document.querySelector('[data-input-src="' + key + '"]');
+      const value = Number(val.value);
+      if (val.value.trim() === "" || !isFinite(value) || value < 0) {
+        ui.inputMsg = { ok: false, text: d.label + " needs a number of 0 or more." };
+        return render();
+      }
+      const was = liveInputs[key];
+      if (was > 0 && Math.abs(value - was) / was > 0.5 && !window.confirm(d.label + " would change by " + Math.round((Math.abs(value - was) / was) * 100) + "% (" + numText(was) + " → " + numText(value) + "). Save it?")) return;
+      el.disabled = true;
+      el.textContent = "Saving…";
+      saveInput(key, value, src.value.trim());
+    },
+    "reset-input": (el) => {
+      const key = el.dataset.key;
+      saveInput(key, BUILT_IN[key], inputDef(key).source, "Reset to built-in");
+    },
+    "undo-input": (el) => {
+      const r = inputLog.rows[Number(el.dataset.index)];
+      if (!r || r.old_value == null) return;
+      const before = inputLog.rows.find((x, i) => i > Number(el.dataset.index) && x.key === r.key);
+      saveInput(r.key, r.old_value, before ? before.source : inputDef(r.key).source, "Undone");
+    },
+    "export-inputs": () => exportInputs(),
     "sign-out": async () => {
       if (sb) await sb.auth.signOut();
       currentUser = null;
       membership = null;
+      ui.isAdmin = false;
       friends.loaded = false;
       friends.rows = [];
       friends.board = [];
@@ -4758,6 +5117,7 @@
       ui.prevSurvey = survey;
       const copy = JSON.parse(JSON.stringify(survey));
       delete copy.completedAt;
+      delete copy.factors; // a new survey uses the latest figures
       ui.draft = normaliseSurvey(copy);
       survey = ui.draft;
       ui.newSurvey = true;
@@ -4860,6 +5220,22 @@
       const list = document.getElementById("airport-list");
       const f = survey.flights[ui.airport.index];
       if (list) list.innerHTML = airportOptions(f && f[ui.airport.field]);
+      return;
+    }
+    if (t.id === "input-search") {
+      ui.inputQuery = t.value;
+      render();
+      const box = document.getElementById("input-search");
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+      return;
+    }
+    if (t.dataset.inputKey || t.dataset.inputSrc) {
+      const key = t.dataset.inputKey || t.dataset.inputSrc;
+      const row = t.closest(".inp-row");
+      const dirty = [...row.querySelectorAll("[data-was]")].some((x) => x.value.trim() !== x.dataset.was);
+      row.classList.toggle("dirty", dirty);
+      row.querySelector('[data-action="save-input"][data-key="' + key + '"]').disabled = !dirty;
       return;
     }
     if (t.dataset.field && t.tagName === "INPUT") {
@@ -4992,7 +5368,10 @@
       await ensureUsername();
       ui.userName = await displayName(currentUser);
       await checkMembership();
+      checkAdmin().then(() => ui.isAdmin && render());
     }
+    // The latest figures from the Inputs page (the cached ones are already in use).
+    loadInputs().then((changed) => changed && render());
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
     await loadHistory();

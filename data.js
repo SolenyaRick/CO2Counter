@@ -1070,7 +1070,7 @@
   },
   "commute": {
     "title": "Commute & Travel",
-    "fact": "An electric car emits about a fifth as much per kilometre as a petrol one on today's grid.",
+    "fact": "An electric car emits {{ev_share}} as much per kilometre as a petrol one on today's grid.",
     "icon": "🚗",
     "why": "How you get around day-to-day adds up fast. A petrol car commute is one of the largest personal emission sources, and it repeats 200+ times a year — so even small shifts compound into big savings.",
     "sections": [
@@ -1086,7 +1086,7 @@
       {
         "dynamicKey": "ifDriving",
         "heading": "If you must drive",
-        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits about a fifth as much per km on the current grid — and far less on a green tariff."
+        "body": "Combine errands into one trip, keep tyres inflated, and avoid idling. When it's time to replace your car, an electric vehicle emits {{ev_share}} as much per km on the current grid — and far less on a green tariff."
       },
       {
         "heading": "Rethink the trip itself",
@@ -1134,7 +1134,7 @@
     "sections": [
       {
         "heading": "Fly less, and shorter",
-        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is about 123 kg; by Eurostar, about 4 kg.",
+        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is about {{paris_plane}} kg; by Eurostar, about {{paris_train}} kg.",
         "dynamicKey": "flightTiers"
       },
       {
@@ -1427,11 +1427,11 @@
     "sections": [
       {
         "heading": "Drop a red-meat day or two",
-        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals saves hundreds of kilograms a year, and about 2,000 kg if three of them are beef days."
+        "body": "You're eating red meat more than twice a week — your single biggest food lever. Cutting to 1–2 red-meat days and filling the gap with chicken, fish or plant-based meals saves hundreds of kilograms a year, and about {{three_beef_days}} kg if three of them are beef days."
       },
       {
         "heading": "Choose chicken over beef",
-        "body": "A beef day emits over 4× a chicken day and about 13× a vegan day. When you do keep meat, chicken or fish trims the impact sharply."
+        "body": "A beef day emits {{beef_vs_chicken}} a chicken day and {{beef_vs_vegan}} a vegan day. When you do keep meat, chicken or fish trims the impact sharply."
       },
       {
         "heading": "Build a few plant-based go-tos",
@@ -1737,6 +1737,87 @@
   }
 };
   // Habits that are one-off goals (with a deadline) rather than daily ones.
+  // Assumptions the app's sums use (all editable on the admin Inputs page).
+  const ASSUMPTIONS = {
+    HEAT_PUMP_COP: 3, // kWh of heat per kWh of electricity
+    LAND_ROUTE_UPLIFT: 1.25, // straight line between two towns -> road or rail distance
+    PARIS_FLIGHT_KG: 123, // London–Paris return by plane, per person (Eurostar)
+    PARIS_TRAIN_KG: 4, // London–Paris return by Eurostar, per person (Eurostar)
+    TREE_KG: 20, // CO2 a mature tree absorbs in a year
+    PHONE_KG: 61, // making a smartphone and charging it for a year
+  };
+
+  // Every figure the admin can change on the Inputs page (#/inputs). "path"
+  // points at the value in this file: NAME, NAME.field or LIST[key].field.
+  // "asOf" is when the source was published and "every" how many months
+  // until a new edition is due, for the update reminders.
+  const DESNZ_2026 = "UK Government GHG conversion factors 2026 (DESNZ), incl. well-to-tank";
+  const DESNZ_FLIGHTS = "UK Government GHG conversion factors 2026 (DESNZ, same as 2025), business travel air with radiative forcing, plus well-to-tank";
+  const DEFRA_FOOTPRINT = "Defra UK carbon footprint 2023 (published June 2026) ÷ ONS mid-2023 UK population (68.265m)";
+  const PN2018 = "Poore & Nemecek (2018), Science 360:987, global mean per kg of product (via Our World in Data)";
+  const CR2025 = "Choręziak & Rzymski (2025), Nutrients 17:1377: measured daily footprint of the diet group";
+  const INPUT_DEFS = [
+    { group: "Benchmark", key: "budget", label: "1.5°C budget per person", unit: "kg CO₂e a year", path: "BUDGET_YEARLY", source: "About 2.5 t per person per year by 2030 (Hot or Cool Institute, 1.5-Degree Lifestyles, 2021)" },
+    { group: "Food", key: "food_vegan_day", label: "Vegan day", unit: "kg CO₂e a day", path: "MEAL_OPTIONS[vegan].factor", source: CR2025, asOf: "2025-04", every: 36 },
+    { group: "Food", key: "food_veggie_day", label: "Vegetarian day", unit: "kg CO₂e a day", path: "MEAL_OPTIONS[veggie].factor", source: CR2025 + ". Meat days are this plus a portion of meat.", asOf: "2025-04", every: 36 },
+    { group: "Food", key: "food_fish_day", label: "Fish day", unit: "kg CO₂e a day", path: "MEAL_OPTIONS[fish].factor", source: CR2025 + " (fish-eater group)", asOf: "2025-04", every: 36 },
+    { group: "Food", key: "meat_chicken", label: "Chicken (poultry meat)", unit: "kg CO₂e per kg", path: "MEAT_PER_KG.chicken", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Food", key: "meat_pork", label: "Pork (pig meat)", unit: "kg CO₂e per kg", path: "MEAT_PER_KG.pork", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Food", key: "meat_beef", label: "Beef (beef herd)", unit: "kg CO₂e per kg", path: "MEAT_PER_KG.beef", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Food", key: "meat_lamb", label: "Lamb and mutton", unit: "kg CO₂e per kg", path: "MEAT_PER_KG.lamb", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Food", key: "portion", label: "Meat in a main meal", unit: "kg", path: "PORTION", source: "Survey assumption: a medium 150 g portion" },
+    { group: "Food", key: "eat_out", label: "Eating out", unit: "× a home-cooked day", path: "EAT_OUT_MULTIPLIER", source: "RESOLVE working paper 02-10" },
+    { group: "Food", key: "waste_low", label: "Food waste: low (0–3%)", unit: "× food", path: "FOOD_WASTE[low].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_some", label: "Food waste: some (3–10%)", unit: "× food", path: "FOOD_WASTE[some].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_high", label: "Food waste: high (10–25%)", unit: "× food", path: "FOOD_WASTE[high].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_severe", label: "Food waste: severe (25%+)", unit: "× food", path: "FOOD_WASTE[severe].multiplier", source: "As 1 ÷ (1 − share wasted)" },
+    { group: "Travel", key: "train", label: "Train (national rail)", unit: "kg CO₂e per km", path: "COMMUTE_MODES[train].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "tube", label: "Tube (London Underground)", unit: "kg CO₂e per km", path: "COMMUTE_MODES[tube].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "bus", label: "Bus", unit: "kg CO₂e per km", path: "COMMUTE_MODES[bus].factor", source: DESNZ_2026 + " (average local bus)", asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "ev", label: "Electric car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[ev].factor", source: DESNZ_2026 + " (battery electric, average car)", asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "car_petrol", label: "Petrol car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[car_petrol].factor", source: DESNZ_2026 + " (average car). Also used for every “the same as driving” figure.", asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "car_diesel", label: "Diesel car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[car_diesel].factor", source: DESNZ_2026 + " (average car)", asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "motorcycle", label: "Motorcycle", unit: "kg CO₂e per km", path: "COMMUTE_MODES[motorcycle].factor", source: "No source recorded yet" },
+    { group: "Travel", key: "coach", label: "Coach", unit: "kg CO₂e per km", path: "TRAVEL_MODES[coach].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "intl_rail", label: "International train", unit: "kg CO₂e per km", path: "TRAVEL_MODES[intl_rail].factor", source: DESNZ_2026 + " (international rail, e.g. Eurostar)", asOf: "2026-06", every: 12 },
+    { group: "Travel", key: "land_uplift", label: "Road or rail distance vs straight line", unit: "×", path: "ASSUMPTIONS.LAND_ROUTE_UPLIFT", source: "App assumption: roads and railways wind. Checked against London–Exeter, London–Paris and Manchester–Edinburgh." },
+    { group: "Flights", key: "fly_domestic", label: "Domestic UK flight", unit: "kg CO₂e per km", path: "FLIGHT_DOMESTIC_FACTOR", source: DESNZ_FLIGHTS + " (average passenger)", asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_short_economy", label: "Short-haul economy", unit: "kg CO₂e per km", path: "CABINS[economy].short", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_short_premium", label: "Short-haul premium economy", unit: "kg CO₂e per km", path: "CABINS[premium].short", source: DESNZ_FLIGHTS + ". DESNZ has no short-haul premium, so this uses economy.", asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_short_business", label: "Short-haul business", unit: "kg CO₂e per km", path: "CABINS[business].short", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_short_first", label: "Short-haul first", unit: "kg CO₂e per km", path: "CABINS[first].short", source: DESNZ_FLIGHTS + ". DESNZ has no short-haul first, so this uses business.", asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_long_economy", label: "Long-haul economy", unit: "kg CO₂e per km", path: "CABINS[economy].long", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_long_premium", label: "Long-haul premium economy", unit: "kg CO₂e per km", path: "CABINS[premium].long", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_long_business", label: "Long-haul business", unit: "kg CO₂e per km", path: "CABINS[business].long", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_long_first", label: "Long-haul first", unit: "kg CO₂e per km", path: "CABINS[first].long", source: DESNZ_FLIGHTS, asOf: "2026-06", every: 12 },
+    { group: "Flights", key: "fly_long_km", label: "Long-haul starts at", unit: "km", path: "FLIGHT_LONG_HAUL_KM", source: "DESNZ definition: short-haul is up to 3,700 km" },
+    { group: "Flights", key: "fly_uplift", label: "Routing uplift on flight distance", unit: "×", path: "FLIGHT_DISTANCE_UPLIFT", source: "DESNZ guidance: add 8% for indirect routes and holding" },
+    { group: "Flights", key: "paris_plane", label: "London–Paris return by plane", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_FLIGHT_KG", source: "Eurostar (independently commissioned figures)" },
+    { group: "Flights", key: "paris_train", label: "London–Paris return by Eurostar", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_TRAIN_KG", source: "Eurostar (independently commissioned figures). The train-vs-plane ratio for other trips comes from these two." },
+    { group: "Home", key: "electricity", label: "Grid electricity", unit: "kg CO₂e per kWh", path: "ELECTRICITY_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ): generation + transmission & distribution + well-to-tank", asOf: "2025-06", every: 12 },
+    { group: "Home", key: "electricity_green", label: "Renewable tariff electricity", unit: "kg CO₂e per kWh", path: "GREEN_ELECTRICITY_FACTOR", source: "No source recorded yet" },
+    { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ), gross CV + well-to-tank", asOf: "2025-06", every: 12 },
+    { group: "Home", key: "water", label: "Mains water", unit: "kg CO₂e per 1,000 L", path: "WATER_FACTOR", source: DESNZ_2026 + ": supply + treatment", asOf: "2026-06", every: 12 },
+    { group: "Home", key: "heat_pump_cop", label: "Heat pump efficiency (COP)", unit: "kWh heat per kWh", path: "ASSUMPTIONS.HEAT_PUMP_COP", source: "App assumption for the “going all the way” saving" },
+    { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "No source recorded yet" },
+    { group: "Pets", key: "cat", label: "Cat", unit: "kg CO₂e a year", path: "CAT_YEARLY", source: "No source recorded yet" },
+  ];
+  BANKS.forEach((b) => INPUT_DEFS.push({ group: "Banks", key: "bank_" + b.key, label: b.label, unit: "kg CO₂e per £ a year", path: "BANKS[" + b.key + "].factor", source: "MotherTree bank carbon emissions league table (2021)", asOf: "2021-06", every: 12 }));
+  PENSION_PROVIDERS.forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
+  INPUT_DEFS.push(
+    { group: "Pensions", key: "pension_green", label: "Climate-focused fund (saving benchmark)", unit: "t CO₂e per £1m", path: "GREEN_PENSION_T_PER_MILLION", source: "Nest Ethical Fund, Nest TCFD report 2024/25", asOf: "2025-06", every: 12 },
+    { group: "Shared and assumed", key: "shop_clothes", label: "Assumed shopping: clothes and shoes", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.clothesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Shared and assumed", key: "shop_household", label: "Assumed shopping: household goods", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.householdKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Shared and assumed", key: "shop_electronics", label: "Assumed shopping: electronics and phones", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.electronicsKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Shared and assumed", key: "shop_hobbies", label: "Assumed shopping: hobbies and leisure", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.hobbiesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Shared and assumed", key: "shared_services", label: "Shared: public services", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.publicServicesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Shared and assumed", key: "shared_infra", label: "Shared: infrastructure and investment", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.infrastructureKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Comparisons", key: "tree", label: "A mature tree absorbs", unit: "kg CO₂ a year", path: "ASSUMPTIONS.TREE_KG", source: "No source recorded yet" },
+    { group: "Comparisons", key: "phone", label: "Making and charging a smartphone", unit: "kg CO₂e", path: "ASSUMPTIONS.PHONE_KG", source: "No source recorded yet" }
+  );
+  // When the built-in figures above were last checked.
+  const FIGURES_BUILT_IN = "2026-10-22";
+
   const GOAL_HABIT_IDS = [
   "plant_recipes",
   "ev_next",
@@ -1765,6 +1846,6 @@
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
-    DIET_EXPLAINERS, GOAL_HABIT_IDS,
+    DIET_EXPLAINERS, GOAL_HABIT_IDS, ASSUMPTIONS, INPUT_DEFS, FIGURES_BUILT_IN,
   };
 })();
