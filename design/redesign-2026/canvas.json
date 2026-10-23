@@ -254,6 +254,24 @@
       "title": "Glass v2 · Section pop-ups (Fly less, train, cabin, commute, money)",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Glass2-Switches.dc.html": {
+      "x": 0,
+      "y": 16580,
+      "w": 1440,
+      "h": 3000,
+      "title": "Glass v2 · Greener switches",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Glass2-About.dc.html": {
+      "x": 1520,
+      "y": 16580,
+      "w": 1440,
+      "h": 2200,
+      "title": "Glass v2 · About us",
+      "expand": "fill",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -357,6 +375,13 @@
       "text": "Glass v2 · returning survey, friends and account",
       "kind": "title1",
       "maxW": 4480
+    },
+    "glass2public": {
+      "x": 0,
+      "y": 16280,
+      "text": "Glass v2 · greener switches and about us",
+      "kind": "title1",
+      "maxW": 2960
     }
   },
   "order": [
@@ -388,7 +413,9 @@
     "App-Icon.dc.html",
     "Glass2-SurveyDone.dc.html",
     "Glass2-Friends.dc.html",
-    "Glass2-Account.dc.html"
+    "Glass2-Account.dc.html",
+    "Glass2-Switches.dc.html",
+    "Glass2-About.dc.html"
   ],
   "pages": [],
   "title": "CO2 Counter Redesign"

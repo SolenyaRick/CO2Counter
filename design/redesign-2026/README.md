@@ -34,6 +34,11 @@ canvas layout.
   add a friend, requests and your name.
 - `Glass2-Account.dc.html`: profile, saved data, plan and support, clearing data
   and account deletion.
+- `Glass2-Switches.dc.html`: greener switches. Each area (energy, banking, food,
+  flights, commute) shows your saving, a before/after comparison and partner
+  cards with tags and a clear call to action.
+- `Glass2-About.dc.html`: about us. What it is, who runs it, where the figures
+  come from, how partners are chosen and the affiliate disclosure.
 - `App-Icon.dc.html`: the "Leaf Ledger" app icon, sizes, variants and splash.
 
 Palette: oat `#EFE9DC`, moss `#3F5B3A`, sage `#8FA58A`, honey `#D9A441`,
