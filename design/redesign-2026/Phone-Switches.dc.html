@@ -20,8 +20,10 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 .srow{transition:background .3s}
 .srow:hover{background:rgba(246,241,230,.06)}
 .tog:focus-visible,.bub:focus-visible,.offer:focus-visible{outline:2px solid #E8C88A;outline-offset:3px}
-.bub{transition:transform .35s cubic-bezier(.3,1.5,.5,1),box-shadow .3s}
-.bub:hover{transform:translate(-50%,50%) scale(1.08)!important;box-shadow:0 14px 28px rgba(46,42,34,.22)}
+.bub{transition:transform .35s cubic-bezier(.3,1.5,.5,1),box-shadow .3s;animation:pop .7s cubic-bezier(.3,1.5,.5,1) backwards}
+.bub:hover{transform:scale(1.1);box-shadow:0 16px 30px rgba(46,42,34,.26)!important}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.qlab{position:absolute;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8A8273}
 .offer{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s}
 .offer:hover{transform:translateY(-4px);box-shadow:0 18px 34px rgba(46,42,34,.12);border-color:rgba(63,91,58,.4)}
 .offer:hover .go{background:#2B4128}
@@ -44,7 +46,15 @@ h1{font-size:40px!important;line-height:1.02!important}
 h2[style*="font-size: 3"],h2[style*="font-size: 4"]{font-size:28px!important}
 .feat{padding:22px!important;border-radius:24px!important}
 .board{padding:20px!important}
-.plot{height:300px!important}
+.plot{height:400px!important}
+.plot .area{left:52px!important;right:16px!important;bottom:56px!important}
+.plot .xaxis{left:52px!important;right:16px!important;font-size:11px!important}
+.plot .xaxis>span:nth-child(3){display:none}
+.plot .ytitle{font-size:11px!important;left:8px!important}
+.plot .area .num[style*="right: calc"]{font-size:11px!important}
+.blab .hd{font-size:14px!important}.blab .num{font-size:13px!important}.blab>span:last-child{display:none!important}
+.qlab{font-size:10px!important}
+.dropbadge .num{font-size:30px!important}
 .bigno{font-size:64px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
@@ -112,21 +122,43 @@ footer[style]{flex-direction:column;gap:10px!important}
           <div style="font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #3F5B3A">Where to start</div>
           <h2 class="hd" style="margin: 6px 0 0; font-size: 40px; line-height: 1.05; font-weight: 800">Impact against effort</h2>
         </div>
-        <p style="margin: 0; max-width: 380px; font-size: 16px; line-height: 1.55; color: #3A362D">Top left is big and easy. Click a bubble to jump to it.</p>
+        <p style="margin: 0; max-width: 380px; font-size: 16px; line-height: 1.55; color: #3A362D">Bigger bubbles save more. Start top left, where the saving is big and the effort is small. Click a bubble to jump to it.</p>
       </div>
-      <div class="plot" style="position: relative; margin-top: 20px; height: 380px; padding: 0 0 36px 52px; box-sizing: border-box; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08)">
-        <div style="position: absolute; left: 52px; top: 0; width: 45%; height: 55%; border-radius: 28px 0 24px 0; background: rgba(63,91,58,.08)"></div>
-        <span style="position: absolute; left: 68px; top: 16px; font-size: 13px; font-weight: 800; color: #3F5B3A; letter-spacing: .04em; text-transform: uppercase">Big and easy</span>
-        <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-size: 13px; font-weight: 700; color: #4A453A; white-space: nowrap">kg saved a year</span>
-        <span style="position: absolute; left: 52px; right: 20px; bottom: 10px; display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #4A453A"><span>One-off, minutes</span><span>Effort</span><span>Ongoing habit</span></span>
-        <div style="position: absolute; left: 52px; right: 20px; top: 20px; bottom: 36px">
-          <sc-for list="{{bubbles}}" as="p" hint-placeholder-count="5">
-            <a class="bub" href="#{{p.key}}" aria-label="{{p.aria}}" style="position: absolute; left: {{p.x}}%; bottom: {{p.y}}%; width: {{p.size}}px; height: {{p.size}}px; transform: translate(-50%, 50%); border-radius: 99px; background: {{p.bg}}; color: {{p.ink}}; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; text-align: center">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg>
-              <span class="hd" style="font-size: 14px; font-weight: 800">{{p.short}}</span>
-              <span class="num" style="font-size: 13px; font-weight: 700">−{{p.saveLabel}}</span>
-            </a>
+      <div class="plot" style="position: relative; margin-top: 20px; height: 480px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <span class="ytitle" style="position: absolute; left: 18px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center; margin-left: 10px; font-size: 13px; font-weight: 800; letter-spacing: .04em; color: #4A453A; white-space: nowrap">KG SAVED A YEAR ↑</span>
+        <div class="area" style="position: absolute; left: 92px; right: 40px; top: 32px; bottom: 64px">
+          <div style="position: absolute; left: 0; top: 0; width: 40%; height: 50%; border-radius: 18px 0 18px 0; background: linear-gradient(135deg, rgba(63,91,58,.16), rgba(63,91,58,.04))"></div>
+          <div style="position: absolute; left: 40%; top: 0; bottom: 0; border-left: 1.5px dashed rgba(46,42,34,.18)"></div>
+          <div style="position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed rgba(46,42,34,.18)"></div>
+          <sc-for list="{{ticks}}" as="t" hint-placeholder-count="6">
+            <div style="position: absolute; left: 0; right: 0; bottom: {{t.y}}%; border-top: 1px solid {{t.line}}">
+              <span class="num" style="position: absolute; right: calc(100% + 12px); top: -9px; font-size: 13px; font-weight: 700; color: #6B6455">{{t.label}}</span>
+            </div>
           </sc-for>
+          <span class="qlab" style="left: 12px; top: 12px; color: #2B4128">★ Quick wins</span>
+          <span class="qlab" style="right: 4px; top: calc(50% - 26px)">Big, but a habit</span>
+          <span class="qlab" style="left: 12px; bottom: 12px">Easy extras</span>
+          <span class="qlab" style="right: 4px; bottom: 12px">Slow burners</span>
+          <sc-for list="{{bubbles}}" as="p" hint-placeholder-count="5">
+            <div style="position: absolute; left: {{p.x}}%; bottom: 0; height: {{p.y}}%; border-left: 2px dotted {{p.bg}}; opacity: .55"></div>
+            <div style="position: absolute; left: {{p.x}}%; bottom: {{p.y}}%; width: 0; height: 0">
+              <a class="bub" href="#{{p.key}}" aria-label="{{p.aria}}" style="position: absolute; left: -{{p.half}}px; top: -{{p.half}}px; width: {{p.size}}px; height: {{p.size}}px; border-radius: 99px; background: {{p.bg}}; color: {{p.ink}}; display: grid; place-items: center; text-decoration: none; box-shadow: 0 10px 24px rgba(46,42,34,.18), inset 0 1px 0 rgba(255,255,255,.25); animation-delay: {{p.delay}}s">
+                <svg width="{{p.icon_s}}" height="{{p.icon_s}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg>
+              </a>
+              <span class="blab" style="position: absolute; left: {{p.lx}}px; top: 0; transform: translate({{p.tx}}%, -50%); text-align: {{p.align}}; white-space: nowrap; pointer-events: none">
+                <span class="hd" style="display: block; font-size: 17px; font-weight: 800; color: #2E2A22">{{p.short}}</span>
+                <span class="num" style="display: block; font-size: 15px; font-weight: 800; color: #3F5B3A">−{{p.saveLabel}} kg</span>
+                <span style="display: block; font-size: 12px; font-weight: 600; color: #6B6455">{{p.when}}</span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+        <div class="xaxis" style="position: absolute; left: 92px; right: 40px; bottom: 22px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #4A453A">
+          <span>Once, in minutes</span>
+          <span style="flex: 1; margin: 0 16px; height: 2px; background: linear-gradient(90deg, rgba(46,42,34,.08), rgba(46,42,34,.35))"></span>
+          <span style="font-weight: 800; letter-spacing: .04em">MORE EFFORT →</span>
+          <span style="flex: 1; margin: 0 16px; height: 2px; background: linear-gradient(90deg, rgba(46,42,34,.35), rgba(46,42,34,.08))"></span>
+          <span>Every day, a habit</span>
         </div>
       </div>
     </section>
@@ -136,14 +168,19 @@ footer[style]{flex-direction:column;gap:10px!important}
         <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: stretch; flex-direction: {{a.dir}}">
           <div style="flex: 1 1 320px; min-width: 0; border-radius: 26px; background: {{a.panel}}; color: {{a.panelInk}}; padding: 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; position: relative; overflow: hidden">
             <svg width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -50px; bottom: -50px; opacity: .14" aria-hidden="true"><path d="{{a.icon}}"></path></svg>
-            <span class="num bigno" style="position: relative; font-size: 84px; font-weight: 800; line-height: .9; opacity: .9">{{a.no}}</span>
+            <div style="position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px">
+              <span class="num bigno" style="font-size: 84px; font-weight: 800; line-height: .9; opacity: .9">{{a.no}}</span>
+              <span class="dropbadge" style="text-align: right; padding: 12px 16px; border-radius: 20px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18)"><span class="num" style="display: block; font-size: 40px; font-weight: 800; line-height: 1; color: {{a.dropInk}}">{{a.drop}}</span><span style="display: block; margin-top: 4px; font-size: 13px; font-weight: 700; opacity: .85">less CO₂e</span></span>
+            </div>
             <div style="position: relative">
               <div style="font-size: 14px; font-weight: 700; opacity: .85">{{a.vsTitle}}</div>
-              <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
-                <span style="padding: 10px 14px; border-radius: 14px; background: rgba(184,101,61,.9); color: #FFF7EE"><span class="num" style="font-size: 26px; font-weight: 800">{{a.before}}</span><span style="display: block; font-size: 12px; font-weight: 700">{{a.beforeLabel}}</span></span>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-                <span style="padding: 10px 14px; border-radius: 14px; background: #F6F1E6; color: #2B4128"><span class="num" style="font-size: 26px; font-weight: 800">{{a.after}}</span><span style="display: block; font-size: 12px; font-weight: 700">{{a.afterLabel}}</span></span>
-                <span class="num" style="font-size: 30px; font-weight: 800; color: {{a.dropInk}}">{{a.drop}}</span>
+              <div style="margin-top: 12px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px 12px; align-items: center">
+                <span style="font-size: 14px; font-weight: 700">{{a.beforeLabel}}</span>
+                <span style="height: 18px; border-radius: 99px; background: rgba(255,255,255,.12)"><span style="display: block; height: 100%; width: 100%; border-radius: 99px; background: repeating-linear-gradient(135deg, currentColor 0 4px, transparent 4px 8px); opacity: .45"></span></span>
+                <span class="num" style="font-size: 20px; font-weight: 800; text-align: right">{{a.before}}</span>
+                <span style="font-size: 14px; font-weight: 700">{{a.afterLabel}}</span>
+                <span style="height: 18px; border-radius: 99px; background: rgba(255,255,255,.12)"><span class="bar" style="display: block; height: 100%; width: {{a.afterW}}%; min-width: 18px; border-radius: 99px; background: currentColor"></span></span>
+                <span class="num" style="font-size: 20px; font-weight: 800; text-align: right">{{a.after}}</span>
               </div>
             </div>
           </div>
@@ -293,13 +330,21 @@ class Component extends DCLogic {
       allLabel: allOn ? 'Turn all off' : 'Turn all on',
       footLabel: fmt(st.shownFoot), footW: (st.shownFoot / 6746) * 100,
       savedLabel: saved > 0 ? '−' + fmt(saved) + ' kg a year (' + Math.round((saved / 6746) * 100) + '% less)' : 'Flip a switch to see the saving',
-      bubbles: A.map((a) => ({
-        key: a.key, short: a.short, icon: a.icon, saveLabel: fmt(a.save), aria: a.short + ': saves ' + fmt(a.save) + ' kg, ' + a.effort,
-        x: a.ex, y: Math.min(88, (a.save / 1200) * 100), size: Math.round(78 + (a.save / 1066) * 40),
-        bg: a.panel, ink: a.panelInk
-      })),
+      ticks: [0, 250, 500, 750, 1000, 1250].map((v) => ({ y: (v / 1250) * 100, label: fmt(v), line: v ? 'rgba(46,42,34,.07)' : 'rgba(46,42,34,.3)' })),
+      bubbles: A.map((a, i) => {
+        const size = Math.round(40 + Math.sqrt(a.save / 1066) * 48);
+        const left = a.key === 'meals';
+        return {
+          key: a.key, short: a.short, icon: a.icon, icon_s: Math.round(size * 0.36), saveLabel: fmt(a.save), when: a.effort.split(' · ')[1],
+          aria: a.short + ': saves ' + fmt(a.save) + ' kg a year, ' + a.effort,
+          x: a.ex, y: (a.save / 1250) * 100, size, half: size / 2, delay: (0.2 + i * 0.12).toFixed(2),
+          lx: left ? -(size / 2 + 12) : size / 2 + 12, tx: left ? -100 : 0, align: left ? 'right' : 'left',
+          bg: a.panel, ink: a.panelInk
+        };
+      }),
       areas: A.map((a, i) => ({
         ...a, no: '0' + (i + 1), saveLabel: fmt(a.save), dir: i % 2 ? 'row-reverse' : 'row',
+        afterW: (parseFloat(a.after.replace(/,/g, '')) / parseFloat(a.before.replace(/,/g, ''))) * 100,
         items: a.items.map(([label, url, tone, tags, note]) => ({
           label, url, tags, note, domain: domain(url), mono: mono(label), bg: TONE[tone][0], ink: TONE[tone][1],
           cta: a.verb + ' ' + (label === 'The Man in Seat 61' ? 'Seat 61' : label.replace(/^The /, ''))

@@ -39,8 +39,8 @@ canvas layout.
   then one numbered feature per switch (before/after panel, partner offer
   cards with a clear call to action).
 - `Glass2-About.dc.html`: about us. Statement headline and promises, three
-  beliefs, an animated diagram of official sources flowing through the
-  calculator into a result, who runs it, partner principles and an
+  beliefs, an animated diagram of your answers and official factors flowing as dots through the
+  calculator into an estimated footprint, who runs it, partner principles and an
   affiliate disclosure showing the exact tag.
 - `App-Icon.dc.html`: the "Leaf Ledger" app icon, sizes, variants and splash.
 

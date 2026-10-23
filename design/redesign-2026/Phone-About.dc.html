@@ -37,7 +37,13 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 .btn{transition:transform .25s cubic-bezier(.3,1.5,.5,1),background .25s}
 .btn:hover{transform:translateY(-2px)}
 .btn:focus-visible,.pcard:focus-visible{outline:2px solid #D9A441;outline-offset:3px}
-.vflow{display:none}
+.dia-phone{display:none}
+@keyframes travel{0%{offset-distance:0%;opacity:0}12%{opacity:1}88%{opacity:1}100%{offset-distance:100%;opacity:0}}
+.dot{animation-name:travel;animation-timing-function:cubic-bezier(.45,.05,.55,.95);animation-iteration-count:infinite;box-shadow:0 0 0 3px rgba(255,252,245,.7)}
+@keyframes drip{0%{top:-8px;opacity:0}15%{opacity:1}85%{opacity:1}100%{top:100%;opacity:0}}
+.vline{position:relative;width:3px;height:56px;margin:12px auto;background:repeating-linear-gradient(rgba(63,91,58,.25) 0 3px,transparent 3px 9px)}
+.vline span{position:absolute;left:-3.5px;width:10px;height:10px;border-radius:99px;animation:drip 1.2s ease-in-out infinite}
+@media (max-width: 1120px){.dia-desk{display:none!important}.dia-phone{display:block}}
 /* phone layout */
 @media (max-width: 640px){
 nav[aria-label="Main"]{gap:10px!important}
@@ -50,11 +56,7 @@ h2[style*="font-size: 4"]{font-size:30px!important}
 .belief h3{font-size:26px!important}
 .bno{font-size:34px!important}
 .belief p{grid-column:1 / -1}
-.diagram{flex-direction:column!important;align-items:stretch!important;padding:18px!important;border-radius:28px!important}
-.diagram>ul{flex:none!important}
-.diagram>a{flex:none!important}
-.wires{display:none!important}
-.vflow{display:block}
+.diagram{padding:18px!important;border-radius:28px!important}
 .band{padding:28px 22px!important;border-radius:26px!important}
 .founder{padding:24px!important}
 footer[style]{flex-direction:column;gap:10px!important}
@@ -86,7 +88,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       <h1 class="hd rise d1" style="margin: 20px 0 0; max-width: 960px; font-size: 84px; line-height: .96; font-weight: 800">Your footprint, counted honestly. <span style="color: #3F5B3A">Then made smaller.</span></h1>
       <p class="rise d2" style="margin: 24px 0 0; max-width: 620px; font-size: 21px; line-height: 1.6; color: #3A362D">CO2 Counter is a free, six-step survey that works out your yearly carbon footprint from official UK data, then shows you the changes that cut it the most.</p>
       <ul class="rise d3" aria-label="Our promises" style="list-style: none; margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px">
-        <sc-for each="promises" as="p">
+        <sc-for list="{{promises}}" as="p" hint-placeholder-count="4">
           <li style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 20px 10px 10px; border-radius: 99px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); font-size: 17px; font-weight: 700">
             <span style="width: 34px; height: 34px; border-radius: 99px; display: grid; place-items: center; background: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EFE9DC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
             {{p}}
@@ -98,7 +100,7 @@ footer[style]{flex-direction:column;gap:10px!important}
     <section aria-labelledby="beliefs" style="margin-top: 96px">
       <h2 id="beliefs" class="hd" style="margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6B6455">What we believe</h2>
       <ol style="list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid rgba(46,42,34,.14)">
-        <sc-for each="beliefs" as="b">
+        <sc-for list="{{beliefs}}" as="b" hint-placeholder-count="4">
           <li class="belief" style="display: grid; grid-template-columns: 120px minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; align-items: baseline; padding: 32px 16px; border-bottom: 1px solid rgba(46,42,34,.14); border-radius: 4px">
             <span class="num bno" style="font-size: 56px; font-weight: 800; color: #B7C4A4; line-height: 1">{{b.no}}</span>
             <h3 class="hd" style="margin: 0; font-size: 40px; line-height: 1.05; font-weight: 800">{{b.title}}</h3>
@@ -112,50 +114,91 @@ footer[style]{flex-direction:column;gap:10px!important}
       <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: end; justify-content: space-between">
         <div style="max-width: 640px">
           <div style="font-size: 15px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6B6455">Where the numbers come from</div>
-          <h2 id="sources" class="hd" style="margin: 10px 0 0; font-size: 46px; line-height: 1.02; font-weight: 800">Official data in. <span style="color: #3F5B3A">Your number out.</span></h2>
+          <h2 id="sources" class="hd" style="margin: 10px 0 0; font-size: 46px; line-height: 1.02; font-weight: 800">Official data in. <span style="color: #3F5B3A">Your estimate out.</span></h2>
         </div>
-        <p style="margin: 0; max-width: 380px; font-size: 17px; line-height: 1.6; color: #3A362D">Each answer is multiplied by a published UK factor. We update the factors as new figures come out.</p>
+        <div style="max-width: 420px; display: flex; gap: 12px; padding: 14px 16px; border-radius: 18px; background: rgba(217,164,65,.14); border: 1px solid rgba(217,164,65,.45)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A5F12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.01"></path></svg>
+          <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A362D"><strong>It’s an estimate, not a meter reading.</strong> The factors are UK averages, so your real footprint will differ a little. It’s accurate enough to show where your biggest savings are.</p>
+        </div>
       </div>
 
-      <div class="diagram" style="margin-top: 32px; display: flex; align-items: center; padding: 36px; border-radius: 36px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(24px)">
-        <ul aria-label="Data sources" style="list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; flex: 0 0 300px; max-width: 100%">
-          <sc-for each="sources" as="s">
-            <li class="src" style="display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 14px; border-radius: 16px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)">
-              <span class="hd" style="flex: none; min-width: 58px; height: 32px; padding: 0 8px; box-sizing: border-box; border-radius: 10px; display: grid; place-items: center; background: {{s.bg}}; color: {{s.ink}}; font-size: 13px; font-weight: 800">{{s.tag}}</span>
-              <span style="min-width: 0; font-size: 15px; line-height: 1.25; color: #3A362D">{{s.what}}</span>
-            </li>
-          </sc-for>
-        </ul>
+      <div class="diagram" style="margin-top: 32px; padding: 40px 48px; border-radius: 36px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(24px)">
+        <div class="dia-desk" style="position: relative; width: 1000px; height: 470px; margin: 0 auto">
+          <svg width="1000" height="470" viewBox="0 0 1000 470" aria-hidden="true" style="position: absolute; inset: 0; overflow: visible">
+            <g fill="none" stroke="#B7C4A4" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round">
+              <path d="M260 115C350 115 340 300 425 300"></path><path d="M260 177C350 177 340 300 425 300"></path><path d="M260 239C350 239 340 300 425 300"></path>
+              <path d="M260 301C350 301 340 300 425 300"></path><path d="M260 363C350 363 340 300 425 300"></path><path d="M260 425C350 425 340 300 425 300"></path>
+            </g>
+            <g fill="none" stroke="#E8C88A" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round">
+              <path d="M345 70C345 150 500 130 500 225"></path><path d="M407 70C407 150 500 130 500 225"></path><path d="M469 70C469 150 500 130 500 225"></path>
+              <path d="M531 70C531 150 500 130 500 225"></path><path d="M593 70C593 150 500 130 500 225"></path><path d="M655 70C655 150 500 130 500 225"></path>
+            </g>
+            <path d="M575 300H740" fill="none" stroke="#A3B58F" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round"></path>
+          </svg>
 
-        <svg class="wires" viewBox="0 0 160 374" preserveAspectRatio="none" aria-hidden="true" style="flex: 1 1 120px; height: 374px; min-width: 80px">
-          <sc-for each="wires" as="w">
-            <path d="{{w}}" fill="none" stroke="#A3B58F" stroke-width="2.5" stroke-linecap="round" class="flow"></path>
+          <div style="position: absolute; left: 0; top: 52px; width: 260px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">1 · Your answers</div>
+          <sc-for list="{{answers}}" as="q" hint-placeholder-count="6">
+            <div class="src" style="position: absolute; left: 0; top: {{q.top}}px; width: 260px; height: 50px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 16px; background: #FFFCF5; border: 1px solid rgba(46,42,34,.08); box-shadow: 0 6px 14px rgba(46,42,34,.05)">
+              <span style="flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(63,91,58,.12); color: #3F5B3A"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{q.icon}}"></path></svg></span>
+              <span style="min-width: 0; line-height: 1.2"><span class="hd" style="display: block; font-size: 15px; font-weight: 800">{{q.label}}</span><span style="display: block; font-size: 13px; color: #5C5649">{{q.value}}</span></span>
+            </div>
           </sc-for>
-        </svg>
-        <div class="vflow" aria-hidden="true" style="margin: 14px auto; width: 3px; height: 40px; background: repeating-linear-gradient(#A3B58F 0 6px, transparent 6px 12px)"></div>
 
-        <div style="flex: none; display: grid; justify-items: center; gap: 10px; text-align: center">
-          <div class="core" style="width: 168px; height: 168px; border-radius: 48px; display: grid; place-items: center; background: #3F5B3A; box-shadow: 0 24px 48px rgba(43,63,40,.35), inset 0 1px 0 rgba(255,255,255,.15)">
-            <svg width="96" height="96" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+          <div style="position: absolute; left: 300px; width: 400px; top: 0; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A5F12">2 · Official UK factors</div>
+          <sc-for list="{{factors}}" as="f" hint-placeholder-count="6">
+            <span class="hd" title="{{f.what}}" style="position: absolute; left: {{f.left}}px; top: 30px; width: 56px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: {{f.bg}}; color: {{f.ink}}; font-size: 13px; font-weight: 800; box-shadow: 0 6px 14px rgba(46,42,34,.1)">{{f.tag}}</span>
+          </sc-for>
+
+          <div aria-hidden="true">
+            <sc-for list="{{dots}}" as="d" hint-placeholder-count="20">
+              <span class="dot" style="position: absolute; left: 0; top: 0; width: {{d.s}}px; height: {{d.s}}px; border-radius: 99px; background: {{d.c}}; offset-path: path('{{d.path}}'); animation-duration: {{d.dur}}s; animation-delay: {{d.delay}}s"></span>
+            </sc-for>
           </div>
-          <div class="hd" style="font-size: 18px; font-weight: 800">The calculator</div>
-          <div style="max-width: 200px; font-size: 14px; line-height: 1.45; color: #5C5649">Your six answers × official factors</div>
+
+          <div class="core" style="position: absolute; left: 425px; top: 225px; width: 150px; height: 150px; border-radius: 44px; display: grid; place-items: center; background: #3F5B3A; box-shadow: 0 24px 48px rgba(43,63,40,.35), inset 0 1px 0 rgba(255,255,255,.15)">
+            <svg width="86" height="86" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+          </div>
+          <div style="position: absolute; left: 400px; width: 200px; top: 392px; text-align: center">
+            <div class="hd" style="font-size: 18px; font-weight: 800">The calculator</div>
+            <div style="margin-top: 2px; font-size: 14px; color: #5C5649">answers × factors</div>
+          </div>
+
+          <div style="position: absolute; left: 740px; top: 52px; width: 260px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">3 · Your footprint</div>
+          <a href="Phone-Results.dc.html" class="pcard" style="position: absolute; left: 740px; top: 180px; width: 260px; box-sizing: border-box; padding: 24px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; text-decoration: none">
+            <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 14px; font-weight: 700; color: #C9D3BC">Your footprint</span><span style="padding: 2px 9px; border-radius: 99px; background: rgba(232,200,138,.2); color: #E8C88A; font-size: 12px; font-weight: 800">Estimate</span></div>
+            <div class="num" style="margin-top: 6px; font-size: 56px; font-weight: 800; line-height: 1">6.7<span style="font-size: 24px; color: #C9D3BC"> t</span></div>
+            <div style="margin-top: 4px; font-size: 14px; color: #C9D3BC">CO₂e a year</div>
+            <div style="margin-top: 18px; display: flex; height: 10px; border-radius: 99px; overflow: hidden; gap: 2px" aria-hidden="true">
+              <sc-for list="{{mix}}" as="m" hint-placeholder-count="6"><span style="width: {{m.w}}%; background: {{m.c}}"></span></sc-for>
+            </div>
+            <div style="margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #E8C88A">See an example result<span aria-hidden="true">→</span></div>
+          </a>
         </div>
 
-        <svg class="wires" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true" style="flex: 1 1 90px; height: 40px; min-width: 60px">
-          <path d="M0 20H120" fill="none" stroke="#D9A441" stroke-width="3" stroke-linecap="round" class="flow"></path>
-        </svg>
-        <div class="vflow" aria-hidden="true" style="margin: 14px auto; width: 3px; height: 40px; background: repeating-linear-gradient(#D9A441 0 6px, transparent 6px 12px)"></div>
-
-        <a href="Phone-Results.dc.html" class="pcard" style="flex: 0 0 240px; display: block; padding: 24px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; text-decoration: none">
-          <div style="font-size: 14px; font-weight: 700; color: #C9D3BC">Your footprint</div>
-          <div class="num" style="margin-top: 6px; font-size: 56px; font-weight: 800; line-height: 1">6.7<span style="font-size: 24px; color: #C9D3BC"> t</span></div>
-          <div style="margin-top: 4px; font-size: 14px; color: #C9D3BC">CO₂e a year</div>
-          <div style="margin-top: 18px; display: flex; height: 10px; border-radius: 99px; overflow: hidden; gap: 2px" aria-hidden="true">
-            <sc-for each="mix" as="m"><span style="width: {{m.w}}%; background: {{m.c}}"></span></sc-for>
+        <div class="dia-phone">
+          <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">1 · Your answers</div>
+          <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+            <sc-for list="{{answers}}" as="q" hint-placeholder-count="6">
+              <div style="display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 14px; background: #FFFCF5; border: 1px solid rgba(46,42,34,.08)">
+                <span style="flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: rgba(63,91,58,.12); color: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{q.icon}}"></path></svg></span>
+                <span class="hd" style="font-size: 14px; font-weight: 800">{{q.label}}</span>
+              </div>
+            </sc-for>
           </div>
-          <div style="margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: #E8C88A">See an example result<span aria-hidden="true">→</span></div>
-        </a>
+          <div class="vline" aria-hidden="true"><span style="background: #3F5B3A"></span><span style="background: #3F5B3A; animation-delay: -.6s"></span></div>
+          <div style="display: grid; justify-items: center; gap: 10px; text-align: center">
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 6px">
+              <sc-for list="{{factors}}" as="f" hint-placeholder-count="6"><span class="hd" style="padding: 6px 9px; border-radius: 10px; background: {{f.bg}}; color: {{f.ink}}; font-size: 12px; font-weight: 800">{{f.tag}}</span></sc-for>
+            </div>
+            <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A5F12">2 · × official UK factors</div>
+            <div class="core" style="width: 110px; height: 110px; border-radius: 34px; display: grid; place-items: center; background: #3F5B3A"><svg width="64" height="64" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg></div>
+          </div>
+          <div class="vline" aria-hidden="true"><span style="background: #D9A441"></span><span style="background: #3F5B3A; animation-delay: -.6s"></span></div>
+          <a href="Phone-Results.dc.html" style="display: block; padding: 20px; border-radius: 24px; background: #2B3F28; color: #F6F1E6; text-decoration: none">
+            <div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #C9D3BC">3 · Your footprint</span><span style="padding: 2px 9px; border-radius: 99px; background: rgba(232,200,138,.2); color: #E8C88A; font-size: 12px; font-weight: 800">Estimate</span></div>
+            <div class="num" style="margin-top: 6px; font-size: 48px; font-weight: 800; line-height: 1">6.7<span style="font-size: 22px; color: #C9D3BC"> t</span> <span style="font-size: 14px; font-weight: 600; color: #C9D3BC">CO₂e a year</span></div>
+          </a>
+        </div>
       </div>
     </section>
 
@@ -174,7 +217,7 @@ footer[style]{flex-direction:column;gap:10px!important}
         <a href="mailto:CO2counter@outlook.com" class="btn" style="margin-top: 24px; display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 20px; border-radius: 16px; background: rgba(63,91,58,.1); color: #2B4128; font-weight: 700; font-size: 16px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>CO2counter@outlook.com</a>
       </div>
       <div style="flex: 1 1 300px; min-width: 0; display: grid; gap: 16px">
-        <sc-for each="stats" as="s">
+        <sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
           <div style="padding: 24px 28px; border-radius: 28px; background: {{s.bg}}; color: {{s.ink}}; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(46,42,34,.06)">
             <span class="num" style="font-size: 52px; font-weight: 800; line-height: 1; min-width: 84px">{{s.big}}</span>
             <span style="font-size: 17px; line-height: 1.45; font-weight: 600">{{s.text}}</span>
@@ -187,7 +230,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       <div style="font-size: 15px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6B6455">How we choose partners</div>
       <h2 id="principles" class="hd" style="margin: 10px 0 0; max-width: 760px; font-size: 46px; line-height: 1.02; font-weight: 800">The climate comes first. <span style="color: #3F5B3A">Every time.</span></h2>
       <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
-        <sc-for each="principles" as="p">
+        <sc-for list="{{principles}}" as="p" hint-placeholder-count="4">
           <div class="pcard" style="padding: 26px; border-radius: 28px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
             <span style="width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{p.bg}}">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{p.ink}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg>
@@ -258,11 +301,29 @@ class Component extends DCLogic {
   renderVals() {
     const s = Math.min(this.state.scroll, 3000);
     const k = this.props.parallax ?? 1;
-    // Six 54px source rows with 10px gaps; each wire curves into the middle of the 374px column
-    const wires = [0, 1, 2, 3, 4, 5].map((i) => {
-      const y = 27 + i * 64;
-      return 'M0 ' + y + 'C80 ' + y + ' 80 187 160 187';
-    });
+    const icons = {
+      meals: 'M4 11h16a8 8 0 0 1-16 0ZM8 4.5v3M12 3.5v4M16 4.5v3',
+      energy: 'M13 2 4 14h7l-1 8 9-12h-7Z',
+      flights: 'M3 14.5 21 7l-3 5-7 3.5L8 21l-1-5Z',
+      commute: 'M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1ZM3.5 12h17',
+      pets: 'M12 13c-3 0-5.5 3-5.5 5.5 0 1.5 1.5 2 3 1.5s3.5-.5 5 0 3 0 3-1.5C17.5 16 15 13 12 13ZM5 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M16 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M8.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M12.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0',
+      water: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z'
+    };
+    // Diagram geometry, in px on a 1000 × 470 stage: answers on the left, factors on top, calculator at (500, 300)
+    const answers = [
+      ['meals', 'Meals', 'Meat most days'], ['energy', 'Home energy', 'Gas heating, 3 beds'], ['flights', 'Flights', '2 short-haul returns'],
+      ['commute', 'Commute', '3 km by car'], ['pets', 'Pets', 'One dog'], ['water', 'Water', 'About average']
+    ].map(([k, label, value], i) => ({ label, value, icon: icons[k], top: 90 + i * 62, y: 115 + i * 62 }));
+    const factors = [
+      ['DESNZ', 'UK greenhouse gas conversion factors', '#3F5B3A', '#F6F1E6'], ['Defra', 'Environment and water data', '#8FA58A', '#1F2D1C'],
+      ['ONS', 'UK household statistics', '#7FA3AE', '#14262B'], ['Ofgem', 'Typical home energy use', '#D9A441', '#2E2A22'],
+      ['DfT', 'Travel statistics', '#B8653D', '#FFF7EE'], ['Food', 'Peer-reviewed food research', '#6F4E63', '#F6F1E6']
+    ].map(([tag, what, bg, ink], i) => ({ tag, what, bg, ink, left: 317 + i * 62, x: 345 + i * 62 }));
+    const dots = [
+      ...answers.flatMap((a, i) => [0, 1].map((j) => ({ path: 'M260 ' + a.y + 'C350 ' + a.y + ' 340 300 425 300', s: 9, c: '#3F5B3A', dur: 2.6, delay: -(i * 0.43 + j * 1.3).toFixed(2) }))),
+      ...factors.map((f, i) => ({ path: 'M' + f.x + ' 70C' + f.x + ' 150 500 130 500 225', s: 8, c: '#D9A441', dur: 2.2, delay: -(i * 0.37).toFixed(2) })),
+      ...[0, 1, 2, 3, 4].map((i) => ({ path: 'M575 300H740', s: 11, c: i % 2 ? '#D9A441' : '#3F5B3A', dur: 1.6, delay: -(i * 0.32).toFixed(2) }))
+    ];
     return {
       pBlobA: (s * 0.3 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
       promises: ['Free for everyone', 'Independent', 'Official UK data', 'Kept going by supporters'],
@@ -271,15 +332,9 @@ class Component extends DCLogic {
         { no: '02', title: 'Make the next step obvious.', body: 'A number alone changes nothing. We point to the few changes that matter most for you.' },
         { no: '03', title: 'Stay on your side.', body: 'Nobody pays to be ranked higher. Suggestions are picked for the climate, not for a fee.' }
       ],
-      sources: [
-        { tag: 'DESNZ', what: 'UK greenhouse gas conversion factors', bg: '#3F5B3A', ink: '#F6F1E6' },
-        { tag: 'Defra', what: 'Environment and water data', bg: '#8FA58A', ink: '#1F2D1C' },
-        { tag: 'ONS', what: 'UK household statistics', bg: '#7FA3AE', ink: '#14262B' },
-        { tag: 'Ofgem', what: 'Typical home energy use', bg: '#D9A441', ink: '#2E2A22' },
-        { tag: 'DfT', what: 'Travel statistics', bg: '#B8653D', ink: '#FFF7EE' },
-        { tag: 'Food', what: 'Peer-reviewed food research', bg: '#6F4E63', ink: '#F6F1E6' }
-      ],
-      wires,
+      answers,
+      factors,
+      dots,
       mix: [
         { w: 27, c: '#B8653D' }, { w: 16, c: '#D9A441' }, { w: 15, c: '#8FA58A' },
         { w: 6, c: '#7FA3AE' }, { w: 4, c: '#6F4E63' }, { w: 32, c: '#3F5B3A' }
