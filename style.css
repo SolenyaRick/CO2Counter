@@ -3968,3 +3968,16 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
   .an-bars .bars-sub { white-space: nowrap; }
   .an-bars .bars-track { margin-right: 10px; }
 }
+
+/* ---------- Greener switches & About ---------- */
+.switches-page { max-width: 1040px; }
+.switches-intro { padding: 22px 24px; margin-bottom: 24px; }
+.switches-intro .btn .glyph { width: 16px; height: 16px; }
+.switches-page .offer-card { scroll-margin-top: 90px; }
+.about-page .about-card { padding: 24px 28px; margin-bottom: 16px; }
+.about-page .about-card h2 { font-size: 22px; margin-bottom: 8px; }
+.about-body p + p { margin-top: 10px; }
+.center-row { justify-content: center; }
+@media (max-width: 640px) {
+  .switches-intro, .about-page .about-card { padding: 18px 16px; }
+}
