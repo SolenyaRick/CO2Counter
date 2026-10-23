@@ -14,8 +14,8 @@ canvas layout.
   what we look at, why it matters, trust and privacy, FAQ and "Start the survey".
 - `Glass2-Results.dc.html`: results overview. Count-up total, "path down"
   bar (now / realistic / all the way), donut that converts into a bar chart
-  with an optional UK average comparison, biggest opportunity and the
-  supporters card.
+  with an optional UK average comparison (horizontal bars on phones),
+  biggest opportunity and the supporters card.
 - `Glass2-Category.dc.html`: one page per category (tabs), with a share-of-
   footprint pie, UK average, three ranked to-dos with "Add to plan", and
   what the category could drop to.
@@ -34,11 +34,14 @@ canvas layout.
   add a friend, requests and your name.
 - `Glass2-Account.dc.html`: profile, saved data, plan and support, clearing data
   and account deletion.
-- `Glass2-Switches.dc.html`: greener switches. Each area (energy, banking, food,
-  flights, commute) shows your saving, a before/after comparison and partner
-  cards with tags and a clear call to action.
-- `Glass2-About.dc.html`: about us. What it is, who runs it, where the figures
-  come from, how partners are chosen and the affiliate disclosure.
+- `Glass2-Switches.dc.html`: greener switches. A switchboard of five toggles
+  that animates your footprint down, an impact-against-effort bubble plot,
+  then one numbered feature per switch (before/after panel, partner offer
+  cards with a clear call to action).
+- `Glass2-About.dc.html`: about us. Statement headline and promises, three
+  beliefs, an animated diagram of official sources flowing through the
+  calculator into a result, who runs it, partner principles and an
+  affiliate disclosure showing the exact tag.
 - `App-Icon.dc.html`: the "Leaf Ledger" app icon, sizes, variants and splash.
 
 Every Glass v2 page includes a phone layout (under 640 px wide: the nav links

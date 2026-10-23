@@ -13,6 +13,7 @@
 <style>
 body{margin:0;background:#EFE9DC}
 /* phone layout */
+.hbars{display:none}
 @media (max-width: 640px){
 nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
@@ -42,6 +43,8 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
 footer[style]{flex-direction:column;gap:10px!important}
+.vchart.is-bars{display:none!important}
+.hbars.is-bars{display:flex!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
 .serif{font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100}
@@ -148,7 +151,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
           </div>
         </div>
 
-        <div style="position: relative; margin-top: 36px; width: 100%; min-height: 360px; aspect-ratio: 640 / 360">
+        <div class="vchart {{chartMode}}" style="position: relative; margin-top: 36px; width: 100%; min-height: 360px; aspect-ratio: 640 / 360">
           <svg viewBox="0 0 640 360" style="position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible" role="img" aria-label="Share of your footprint by category">
             <sc-for list="{{segs}}" as="g" hint-placeholder-count="7">
               <path class="seg" pathLength="100" fill="none" stroke="{{g.color}}" stroke-linecap="butt" style="d: path('{{shape}}'); stroke-width: {{strokeW}}px; stroke-dasharray: {{g.dash}}; stroke-dashoffset: {{g.offset}}; transition-delay: 0s, 0s, 0s, {{g.delay}}"></path>
@@ -192,6 +195,23 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             </ol>
           </div>
         </div>
+        <ol class="hbars {{chartMode}}" style="list-style: none; margin: 20px 0 0; padding: 0; flex-direction: column; gap: 6px">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+            <li><a href="Glass2-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="display: block; padding: 10px 6px; border-radius: 14px; color: #2E2A22; text-decoration: none">
+              <span style="display: flex; align-items: center; gap: 10px">
+                <span style="width: 12px; height: 12px; border-radius: 4px; flex: none; background: {{c.color}}"></span>
+                <span style="flex: 1; font-weight: 700; font-size: 16px">{{c.label}}</span>
+                <span class="num" style="font-weight: 800; font-size: 17px">{{c.valueLabel}}</span>
+                <span style="font-size: 13px; color: #5C5649; min-width: 34px; text-align: right">{{c.share}}</span>
+              </span>
+              <span style="display: block; margin-top: 8px; height: 14px; border-radius: 99px; background: rgba(46,42,34,.06); overflow: hidden"><span style="display: block; height: 14px; width: {{c.hW}}%; border-radius: 99px; background: {{c.color}}; transition: width 1s cubic-bezier(.34,1.2,.5,1) {{c.bushDelay}}"></span></span>
+              <span style="display: flex; align-items: center; gap: 8px; margin-top: 5px; opacity: {{c.ukAlpha}}; transition: opacity .4s">
+                <span style="flex: 1; height: 8px; border-radius: 99px; overflow: hidden"><span style="display: block; height: 8px; width: {{c.hUkW}}%; box-sizing: border-box; border-radius: 99px; border: 1.5px dashed rgba(107,74,18,.7); background: repeating-linear-gradient(135deg, rgba(217,164,65,.3) 0 4px, transparent 4px 8px)"></span></span>
+                <span class="num" style="font-size: 13px; font-weight: 700; color: #6B4A12; min-width: 72px; text-align: right">{{c.ukText}}</span>
+              </span>
+            </a></li>
+          </sc-for>
+        </ol>
       </section>
 
       <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
@@ -302,6 +322,9 @@ class Component extends DCLogic {
       sub: ukOn ? (c.uk ? (Math.abs(c.v - c.uk) / c.uk < 0.03 ? 'Same as UK' : (c.v > c.uk ? '+' : '−') + fmt(Math.abs(c.v - c.uk)) + ' vs UK') : 'No UK figure') : Math.max(1, Math.round((c.v / total) * 100)) + '%',
       bushDelay: bars ? (0.85 + i * 0.09).toFixed(2) + 's' : '0s',
       labelBottom: (16.7 + Math.max(1.2, (c.v / 2500) * 77.3) + 1.5).toFixed(2),
+      hW: bars ? Math.max(1.5, (c.v / 2314) * 100) : 0,
+      hUkW: c.uk ? (c.uk / 2314) * 100 : 0,
+      ukText: c.uk ? 'UK ' + fmt(c.uk) : 'No UK figure',
       go: remember(c.key)
     }));
     let acc = 0;
@@ -341,7 +364,7 @@ class Component extends DCLogic {
       ghostNowW: W(6746), ghostNowA: ph >= 2 ? 1 : 0,
       ghostAllW: W(1654), ghostAllA: ph >= 3 ? 1 : 0, ghostAllS: ph >= 3 ? 1 : 0.4,
       chipAlpha: ph >= 2 ? 1 : 0,
-      cats, segs,
+      cats, segs, chartMode: bars ? 'is-bars' : 'is-pie',
       shape: bars ? line : pie,
       strokeW: bars ? 2 : 46,
       ukLegend: ukOn ? 1 : 0, ukOnAttr: ukOn ? 'true' : 'false', ukTrack: ukOn ? '#3F5B3A' : 'rgba(46,42,34,.22)', ukKnob: ukOn ? 19 : 3,
