@@ -1482,6 +1482,7 @@
     const faq = [
       ["Do I need an account?", "You can take the whole survey as a guest. To see your full results, create a free account: it also keeps your answers safe across your devices."],
       ["How accurate is it?", "It's an estimate using typical lifecycle emission factors. It's built to show your biggest levers clearly, not to be a precise audit."],
+      ["How is it free?", 'Supporters chip in £2 a year, and some partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="#/about">About us</a> · <a href="#/switches">Greener switches</a>'],
       ["What do I need to have to hand?", "Nothing essential. An energy bill helps with the home step, and a rough idea of your savings and pension helps with money, but ballpark answers are fine."],
     ];
     return (
@@ -2897,16 +2898,21 @@
     if (!links) return "";
     const tip = tipFor(cat, survey);
     const kg = tip.saving > 0.5 ? tip.saving : tip.maxSaving;
+    return offerCard(cat, links, "guide", kg > 0.5 ? "Making this change could cut about <strong>" + Math.round(kg).toLocaleString() + " kg CO₂e a year</strong> from your footprint." : "");
+  }
+
+  // One area's partner tiles, with the disclosure line under them.
+  function offerCard(cat, links, place, sub) {
     const paid = links.items.some((l) => l.ref);
     return (
-      '<div class="card offer-card mb-6 fade-up"><div class="offer-head"><span class="eyebrow">' + esc(links.eyebrow || "Useful links") + "</span>" +
+      '<div class="card offer-card mb-6 fade-up" id="switch-' + cat + '"><div class="offer-head"><span class="eyebrow">' + esc(links.eyebrow || "Useful links") + "</span>" +
       '<h2 class="offer-title">' + esc(links.title) + "</h2>" +
-      (kg > 0.5 ? '<p class="sm offer-sub">Making this change could cut about <strong>' + Math.round(kg).toLocaleString() + " kg CO₂e a year</strong> from your footprint.</p>" : "") +
+      (sub ? '<p class="sm offer-sub">' + sub + "</p>" : "") +
       '</div><div class="offer-grid">' +
       links.items
         .map(
           (l) =>
-            '<a class="offer" ' + linkAttrs(cat, l, "guide") + ">" +
+            '<a class="offer" ' + linkAttrs(cat, l, place) + ">" +
             '<div class="label-row">' + monogram(l) + '<span class="fw-600">' + esc(l.label) + "</span>" +
             (l.ref ? '<span class="tag affiliate-tag ml-auto">Affiliate</span>' : "") + "</div>" +
             '<div class="offer-tags">' + (l.tags || []).map((t) => '<span class="offer-tag">' + esc(t) + "</span>").join("") + "</div>" +
@@ -3565,6 +3571,66 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // ==================== Greener switches & About (public) ====================
+  // Open to everyone, signed in or not, so visitors and affiliate reviewers
+  // can see what we recommend and how partners are chosen.
+
+  const SWITCH_ORDER = ["energy", "banking", "meals", "flights", "commute"];
+
+  function renderSwitches() {
+    const cats = SWITCH_ORDER.filter((c) => D.USEFUL_LINKS[c]);
+    return (
+      '<div class="container switches-page">' + pageHeader("Greener switches", "Hand-picked options for the changes that cut emissions most", "leaf") +
+      '<section class="glass switches-intro"><p class="lh">These are the switches we suggest in your results, all in one place: renewable energy, banks that don\'t fund fossil fuels, ' +
+      "plant-forward food and getting there by train. Each one tackles one of the biggest parts of a typical UK footprint.</p>" +
+      '<nav class="chip-row mt-3" aria-label="Jump to an area">' +
+      cats.map((c) => '<a class="btn btn-outline btn-sm" href="#/switches" data-action="jump-switch" data-cat="' + c + '">' + (D.EXPLAINERS[c] || {}).icon + " " + esc(CAT_SHORT[c] || c) + "</a>").join("") +
+      "</nav>" +
+      '<p class="xs muted mt-3">Want to know which matters most for you? <a class="link-btn" href="#/">Take the free survey</a>. How we choose partners, and how affiliate links work, is on our <a class="link-btn" href="#/about">About page</a>.</p></section>' +
+      cats.map((c) => offerCard(c, D.USEFUL_LINKS[c], "switches", esc((D.EXPLAINERS[c] || {}).fact || ""))).join("") +
+      '<div class="center mt-6"><a class="btn btn-green" href="#/">Find your biggest switch ' + icon("arrowRight") + "</a></div></div>"
+    );
+  }
+
+  function renderAbout() {
+    const section = (title, body) => '<section class="glass about-card fade-up"><h2 class="display">' + esc(title) + '</h2><div class="lh about-body">' + body + "</div></section>";
+    const paidNow = Object.values(D.USEFUL_LINKS).some((c) => c.items.some((l) => l.ref));
+    return (
+      '<div class="container narrow about-page">' + pageHeader("About CO2 Counter", "Free, independent, built on official figures", "leaf") +
+      section(
+        "What it is",
+        "<p>CO2 Counter is a free carbon footprint calculator for people in the UK. Answer six short steps about your food, travel, flights, home, pets and money, " +
+          "and it shows your yearly footprint, where it really comes from, and the changes that would cut it most.</p>" +
+          "<p>It's free for everyone, with no adverts, and we never sell your data. People who find it useful can support it for £2 a year.</p>"
+      ) +
+      section(
+        "Who runs it",
+        "<p>CO2 Counter is an independent UK project run by " + esc(OPERATOR_NAME) + ". It isn't owned by, or funded by, any energy company, bank or other business.</p>" +
+          '<p>Get in touch: <a class="link-btn" href="mailto:' + esc(CONTACT_EMAIL) + '">' + esc(CONTACT_EMAIL) + "</a></p>"
+      ) +
+      section(
+        "Where the figures come from",
+        "<p>We use UK government emission factors (DESNZ and Defra), official statistics (ONS, Ofgem, the Department for Transport) and peer-reviewed research for food. " +
+          "We update the figures as new data is published. Figures last updated: <strong>" + esc(shortDate(figuresUpdated())) + "</strong>.</p>" +
+          '<p><a class="link-btn" href="#/how-we-calculate">How we calculate</a></p>'
+      ) +
+      section(
+        "How we choose partners",
+        "<p>The companies we suggest are picked for what they do for the climate first: renewable electricity, banks that don't finance fossil fuels, food that cuts waste and meat, and rail instead of flying. " +
+          "We include options that pay us nothing, such as The Man in Seat 61 and Fork Ranger, alongside those that might.</p>" +
+          "<p>Being a partner never changes anyone's footprint figures, savings or rankings. Our bank and pension suggestions aren't affiliate links, so the bank league tables stay independent.</p>" +
+          '<p><a class="link-btn" href="#/switches">See all our greener switches</a></p>'
+      ) +
+      section(
+        "Affiliate disclosure",
+        "<p>Some links to partner sites are affiliate (referral) links. If you use one to buy something or switch, CO2 Counter may earn a commission. It costs you nothing extra and helps keep the site free.</p>" +
+          "<p>Affiliate links are marked with an <span class=\"tag affiliate-tag\">Affiliate</span> tag wherever they appear." +
+          (paidNow ? "" : " At the moment none of our links are affiliate links.") + "</p>"
+      ) +
+      '<div class="chip-row center-row mt-6"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/switches">Greener switches</a></div></div>'
+    );
   }
 
   // ==================== Analytics (owner) ====================
@@ -4839,13 +4905,15 @@
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
     else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
-    else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate"].includes(path)) html = renderChooseUsername();
+    else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate", "/about", "/switches"].includes(path)) html = renderChooseUsername();
     else if (path === "/welcome") html = renderIntro();
     else if (path === "/example") html = renderExample();
     else if (path === "/") html = showIntroFirst() ? renderIntro() : renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
+    else if (path === "/about") html = renderAbout();
+    else if (path === "/switches") html = renderSwitches();
     else if (path === "/analytics")
       html = ui.isAdmin ? renderAnalytics() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to see the analytics.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
     else if (path === "/inputs")
@@ -5176,6 +5244,11 @@
       saveInput(r.key, r.old_value, before ? before.source : inputDef(r.key).source, "Undone");
     },
     "export-inputs": () => exportInputs(),
+    "jump-switch": (el, e) => {
+      e.preventDefault();
+      const card = document.getElementById("switch-" + el.dataset.cat);
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
     "refresh-analytics": () => {
       analytics.loaded = false;
       render();
