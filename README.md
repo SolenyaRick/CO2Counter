@@ -148,6 +148,25 @@ visitor the next time they load the site, with no deploy.
 - Export CSV on the Inputs page downloads every figure with its source,
   for the emission factors spreadsheet.
 
+## Analytics (owner)
+
+`#/analytics` (admins only, linked from the Account page) shows:
+
+- The average footprint across everyone's latest survey, with standard
+  deviation, median and counts. Each survey is worked out with the
+  figures it was taken with.
+- The average and standard deviation for each area, as a bar chart with
+  ±1 SD lines.
+- Each partner link's click-throughs (once per person), affiliate uses
+  (people who used the referral version, once a `ref` link is added), and
+  survey switches: people who clicked the link and in a later survey made
+  that change (renewable tariff, moving to that bank, fewer meat days,
+  fewer car commute days, fewer flights), with everyone who made the
+  change in brackets.
+
+Data comes from `owner_analytics()` in `supabase/schema.sql` ("Owner
+analytics" section, run once). People appear only as a scrambled id.
+
 ## Bank figures
 
 The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held

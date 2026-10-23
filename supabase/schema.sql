@@ -1555,3 +1555,67 @@ grant execute on function public.input_changelog(integer) to anon, authenticated
 --   insert into public.admins (user_id)
 --   select id from auth.users where email = 'their@email.com'
 --   on conflict do nothing;
+
+-- ---------- Owner analytics ----------
+-- Needs the "Link click tracking" and "Inputs" sections above.
+-- Link clicks also record whether the affiliate version of the link was
+-- used (once someone has used it, it stays counted).
+alter table public.link_clicks add column if not exists via_affiliate boolean not null default false;
+
+drop function if exists public.record_link_click(text, text);
+create or replace function public.record_link_click(p_link text, p_place text default null, p_affiliate boolean default false)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.link_clicks (user_id, link_key, place, via_affiliate)
+  select auth.uid(), lower(p_link), nullif(lower(p_place), ''), coalesce(p_affiliate, false)
+  where auth.uid() is not null
+    and lower(p_link) ~ '^[a-z0-9_:-]{1,64}$'
+    and (p_place is null or p_place = '' or lower(p_place) ~ '^[a-z0-9_-]{1,32}$')
+  on conflict (user_id, link_key) do update set via_affiliate = true
+    where excluded.via_affiliate and not public.link_clicks.via_affiliate;
+$$;
+revoke all on function public.record_link_click(text, text, boolean) from public;
+grant execute on function public.record_link_click(text, text, boolean) to authenticated;
+
+create or replace view public.link_click_stats as
+  select link_key,
+    count(*)::integer as people,
+    min(first_clicked_at) as first_click,
+    max(first_clicked_at) as latest_click,
+    count(*) filter (where via_affiliate)::integer as affiliate_people
+  from public.link_clicks
+  group by link_key
+  order by people desc, link_key;
+revoke all on public.link_click_stats from public, anon, authenticated;
+
+-- Everything the owner's Analytics page (#/analytics) needs, in one call:
+-- each person's latest survey, their survey history and their link clicks.
+-- People appear only as a scrambled id (so clicks can be matched to later
+-- survey changes), never by account, name or email. Admins only.
+create or replace function public.owner_analytics()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Admins only';
+  end if;
+  return jsonb_build_object(
+    'latest', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || r.user_id::text), 12), 'data', r.survey_data))
+      from public.survey_responses r where r.survey_data ? 'completedAt'), '[]'::jsonb),
+    'history', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || h.user_id::text), 12), 'at', h.completed_at, 'data', h.survey_data) order by h.completed_at)
+      from public.survey_history h), '[]'::jsonb),
+    'clicks', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || c.user_id::text), 12), 'link', c.link_key, 'place', c.place, 'aff', c.via_affiliate, 'at', c.first_clicked_at))
+      from public.link_clicks c), '[]'::jsonb),
+    'accounts', (select count(*) from auth.users)
+  );
+end;
+$$;
+revoke all on function public.owner_analytics() from public;
+grant execute on function public.owner_analytics() to authenticated;

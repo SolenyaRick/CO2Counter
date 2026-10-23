@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "19 October 2026";
+  const LEGAL_UPDATED = "23 October 2026";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -2870,20 +2870,23 @@
   const linkHref = (l) => esc(l.ref || l.url);
   const linkKey = (cat, l) => cat + ":" + l.label.toLowerCase().replace(/^the /, "").replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const linkAttrs = (cat, l, place) =>
-    'href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '" data-link="' + linkKey(cat, l) + '" data-place="' + place + '"';
+    'href="' + linkHref(l) + '" target="_blank" rel="noopener' + (l.ref ? " sponsored" : "") + '" data-link="' + linkKey(cat, l) + '" data-place="' + place + '"' + (l.ref ? ' data-aff="1"' : "");
 
   // Counts one click per person per link (the database ignores repeats), so
   // the same browser only asks once.
   function recordLinkClick(el) {
     if (!sb || !currentUser) return;
     const key = el.dataset.link;
+    const aff = el.dataset.aff === "1";
+    // Once per person per link, and once more if they later use the affiliate version.
+    const seenAs = key + (aff ? "#aff" : "");
     const seenKey = "co2_link_clicks_" + currentUser.id;
     let seen = [];
     try { seen = JSON.parse(localStorage.getItem(seenKey) || "[]"); } catch (e) {}
-    if (seen.includes(key)) return;
-    sb.rpc("record_link_click", { p_link: key, p_place: el.dataset.place || null }).then(({ error }) => {
+    if (seen.includes(seenAs)) return;
+    sb.rpc("record_link_click", aff ? { p_link: key, p_place: el.dataset.place || null, p_affiliate: true } : { p_link: key, p_place: el.dataset.place || null }).then(({ error }) => {
       if (error) return;
-      try { localStorage.setItem(seenKey, JSON.stringify(seen.concat(key))); } catch (e) {}
+      try { localStorage.setItem(seenKey, JSON.stringify(seen.concat(seenAs))); } catch (e) {}
     }, () => {});
   }
   const monogram = (l) =>
@@ -3564,6 +3567,173 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
+  // ==================== Analytics (owner) ====================
+  // Everyone's latest survey worked out with the figures it was taken with,
+  // as averages with standard deviations, plus each partner link's
+  // click-throughs, affiliate uses and the survey switches that followed.
+  // Data comes from owner_analytics() in Supabase (admins only), where
+  // people are a scrambled id, never an account.
+
+  const analytics = { loaded: false, loading: false, error: "", data: null, at: null };
+  async function loadAnalytics() {
+    if (!sb || analytics.loading) return;
+    analytics.loading = true;
+    try {
+      const { data, error } = await sb.rpc("owner_analytics");
+      if (error) throw error;
+      analytics.data = data || {};
+      analytics.error = "";
+      analytics.at = new Date();
+    } catch (e) {
+      analytics.error = (e && e.message) || "Couldn't load the analytics.";
+    }
+    analytics.loaded = true;
+    analytics.loading = false;
+    if (currentPath() === "/analytics") render();
+  }
+
+  function stats(values) {
+    const n = values.length;
+    if (!n) return { n: 0, mean: 0, sd: 0, median: 0 };
+    const mean = values.reduce((t, v) => t + v, 0) / n;
+    const sd = n > 1 ? Math.sqrt(values.reduce((t, v) => t + (v - mean) ** 2, 0) / (n - 1)) : 0;
+    const sorted = values.slice().sort((a, b) => a - b);
+    const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+    return { n, mean, sd, median };
+  }
+
+  // A saved survey's footprint, worked out with the figures it was taken with.
+  function savedFootprint(data) {
+    const s = normaliseSurvey(data);
+    return withInputs(s.factors || BUILT_IN, () => footprint(s));
+  }
+
+  // What counts as a survey switch for each category's links (prev -> next).
+  const MEAT_KEYS = ["chicken", "pork", "beef", "lamb"];
+  const meatDays = (s) => (s.meals.diet && s.meals.diet !== "meat_eater" ? 0 : D.DAYS.filter((d) => MEAT_KEYS.includes(s.meals[d])).length);
+  const carDays = (s) => ["Mon", "Tue", "Wed", "Thu", "Fri"].filter((d) => ["car_petrol", "car_diesel"].includes(s.commute[d])).length;
+  const SWITCH_RULES = {
+    meals: { label: "ate meat on fewer days", test: (a, b) => meatDays(b) < meatDays(a) },
+    commute: { label: "drove to work on fewer days", test: (a, b) => carDays(b) < carDays(a) },
+    flights: { label: "took fewer flights", test: (a, b) => b.flights.length < a.flights.length },
+    energy: { label: "moved to a renewable tariff", test: (a, b) => !a.energy.greenTariff && !!b.energy.greenTariff },
+    banking: { label: "moved to a greener bank", test: (a, b) => D.WHICH_BANK_RATINGS[a.banking.bank] !== "green" && D.WHICH_BANK_RATINGS[b.banking.bank] === "green" },
+  };
+  // A bank link only counts a move to that bank.
+  const bankFor = (label) => (D.BANKS.find((b) => b.label === label) || {}).key;
+
+  function analyticsModel() {
+    const d = analytics.data || {};
+    const fps = (d.latest || []).map((r) => savedFootprint(r.data));
+    const totals = stats(fps.map((f) => f.totalYearly));
+    const cats = CATEGORIES.map((key) => {
+      const vals = fps.map((f) => (f.breakdown.find((b) => b.key === key) || {}).yearly || 0);
+      return { key, ...stats(vals) };
+    }).sort((a, b) => b.mean - a.mean);
+    // Consecutive surveys per person, oldest first.
+    const byUser = {};
+    (d.history || []).forEach((h) => (byUser[h.u] ||= []).push({ at: new Date(h.at), s: normaliseSurvey(h.data) }));
+    const steps = [];
+    Object.entries(byUser).forEach(([u, list]) => {
+      list.sort((a, b) => a.at - b.at);
+      for (let i = 1; i < list.length; i++) steps.push({ u, at: list[i].at, a: list[i - 1].s, b: list[i].s });
+    });
+    const clicks = (d.clicks || []).map((c) => ({ ...c, at: new Date(c.at) }));
+    const known = new Set();
+    const rows = [];
+    Object.entries(D.USEFUL_LINKS).forEach(([cat, card]) => {
+      const rule = SWITCH_RULES[cat];
+      const switchers = rule ? new Set(steps.filter((x) => rule.test(x.a, x.b)).map((x) => x.u)) : new Set();
+      card.items.forEach((l) => {
+        const key = linkKey(cat, l);
+        known.add(key);
+        const mine = clicks.filter((c) => c.link === key);
+        const bank = cat === "banking" ? bankFor(l.label) : null;
+        const test = bank ? (a, b) => a.banking.bank !== bank && b.banking.bank === bank : rule && rule.test;
+        const after = test ? new Set(steps.filter((x) => test(x.a, x.b) && mine.some((c) => c.u === x.u && c.at < x.at)).map((x) => x.u)).size : null;
+        const all = bank ? new Set(steps.filter((x) => test(x.a, x.b)).map((x) => x.u)).size : switchers.size;
+        rows.push({ cat, label: l.label, key, clicks: mine.length, aff: mine.filter((c) => c.aff).length, hasRef: !!l.ref, pending: l.affiliate || "", after, all, rule: bank ? "moved to " + l.label : rule ? rule.label : "" });
+      });
+    });
+    // Links that have since been removed from the site.
+    const old = {};
+    clicks.filter((c) => !known.has(c.link)).forEach((c) => (old[c.link] ||= []).push(c));
+    Object.entries(old).forEach(([key, list]) => rows.push({ cat: key.split(":")[0], label: key.split(":")[1] + " (removed)", key, clicks: list.length, aff: list.filter((c) => c.aff).length, after: null, all: null, rule: "" }));
+    return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size };
+  }
+
+  // Mean bars with a ±1 SD whisker, laid out like the Results chart.
+  function sdChart(cats) {
+    const top = niceCeil(Math.max(1, ...cats.map((c) => c.mean + c.sd)));
+    const pct = (v) => (Math.max(0, Math.min(v, top)) / top) * 100;
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => '<span class="bars-grid" style="bottom:calc(52px + (100% - 52px) * ' + f + ')"><i class="tnum">' + kgFmt(top * f) + "</i></span>").join("");
+    return (
+      '<div class="bars an-bars"><div class="bars-plot">' + grid +
+      cats
+        .map(
+          (c) =>
+            '<div class="bars-col" aria-label="' + esc(CAT_SHORT[c.key]) + ": average " + kgFmt(c.mean) + " kg, standard deviation " + kgFmt(c.sd) + ' kg">' +
+            '<span class="bars-track"><span class="bar-you" style="--h:' + pct(c.mean).toFixed(2) + "%;background:" + CAT_COLOR[c.key] + '"></span>' +
+            (c.n > 1 ? '<span class="bar-sd" style="--lo:' + pct(c.mean - c.sd).toFixed(2) + "%;--hi:" + pct(c.mean + c.sd).toFixed(2) + '%"></span>' : "") +
+            '</span><span class="bars-name">' + esc(CAT_SHORT[c.key]) + '</span><span class="bars-sub tnum">' + kgFmt(c.mean) + " ± " + kgFmt(c.sd) + "</span></div>"
+        )
+        .join("") +
+      "</div></div>"
+    );
+  }
+
+  function renderAnalytics() {
+    if (!analytics.loaded) loadAnalytics();
+    let html = '<div class="container analytics-page">' + pageHeader("Analytics", "How people use CO2 Counter", "chart");
+    if (!analytics.loaded) return html + '<section class="glass an-card"><p class="muted">Loading…</p></section></div>';
+    if (analytics.error) return html + '<section class="glass an-card"><p class="fw-700">Couldn\'t load the analytics</p><p class="sm muted">' + esc(analytics.error) + '</p><button type="button" class="btn btn-outline btn-sm mt-3" data-action="refresh-analytics">Try again</button></section></div>';
+    const m = analyticsModel();
+    const t = m.totals;
+    const uk = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY).totalYearly);
+    const tile = (label, value, sub) => '<div class="an-tile"><span class="eyebrow">' + label + '</span><b class="display tnum">' + value + '</b><span class="xs muted">' + sub + "</span></div>";
+    html +=
+      '<section class="glass an-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="card-title">Average footprint</h2>' +
+      '<span class="xs muted">Latest survey of each person · updated ' + esc(analytics.at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })) +
+      ' <button type="button" class="link-btn xs" data-action="refresh-analytics">Refresh</button></span></div>' +
+      '<div class="an-tiles">' +
+      tile("Average", t.n ? kgFmt(t.mean) : "–", "kg CO₂e a year") +
+      tile("Standard deviation", t.n > 1 ? "± " + kgFmt(t.sd) : "–", t.n > 1 ? "two-thirds of people fall within " + kgFmt(Math.max(0, t.mean - t.sd)) + "–" + kgFmt(t.mean + t.sd) : "needs 2+ surveys") +
+      tile("Median", t.n ? kgFmt(t.median) : "–", "half are above, half below") +
+      tile("People", m.people, m.accounts + " accounts · " + m.surveys + " surveys taken") +
+      "</div>" +
+      '<p class="xs muted mt-3">For reference, a typical UK resident on today\'s figures: ' + kgFmt(uk) + " kg. Each survey is worked out with the figures it was taken with.</p></section>";
+    html +=
+      '<section class="glass an-card"><h2 class="card-title">Average by area</h2><p class="sm muted">Bars show the average; the line shows ± one standard deviation.</p>' +
+      (t.n ? '<div class="mt-4">' + sdChart(m.cats) + "</div>" : '<p class="muted mt-3">No finished surveys yet.</p>') +
+      "</section>";
+    const groups = [...new Set(m.rows.map((r) => r.cat))];
+    const totalClicks = m.rows.reduce((a, r) => a + r.clicks, 0);
+    html +=
+      '<section class="glass an-card"><h2 class="card-title">Partner links</h2><p class="sm muted">Counted once per person. <b>Switched after clicking</b> is people who clicked the link and, in a later survey, made that change; the number in brackets is everyone who made it.</p>' +
+      '<p class="xs muted mt-1">' + totalClicks + " click-throughs from " + m.clickPeople + (m.clickPeople === 1 ? " person" : " people") + ".</p>" +
+      '<div class="an-table" role="table"><div class="an-tr an-th" role="row"><span role="columnheader">Site</span><span role="columnheader">Click-throughs</span><span role="columnheader">Affiliate uses</span><span role="columnheader">Switched after clicking</span></div>' +
+      groups
+        .map((g) => {
+          const rows = m.rows.filter((r) => r.cat === g);
+          const rule = SWITCH_RULES[g];
+          return (
+            '<div class="an-group" role="row"><span role="cell">' + esc((D.EXPLAINERS[g] || {}).title || g) + (rule ? ' <span class="xs muted">· a switch is when someone ' + esc(rule.label) + "</span>" : "") + "</span></div>" +
+            rows
+              .map(
+                (r) =>
+                  '<div class="an-tr" role="row"><span role="cell" class="fw-700">' + esc(r.label) + "</span>" +
+                  '<span role="cell" class="tnum" data-label="Click-throughs">' + r.clicks + "</span>" +
+                  '<span role="cell" class="tnum" data-label="Affiliate uses">' + (r.hasRef ? r.aff : r.aff ? r.aff : '<span class="muted xs">' + (r.pending ? "no link yet (" + esc(r.pending.replace(/^pending:\s*/, "applied: ")) + ")" : "no programme") + "</span>") + "</span>" +
+                  '<span role="cell" class="tnum" data-label="Switched after clicking">' + (r.after == null ? "–" : r.after + ' <span class="muted xs">(' + r.all + ")</span>") + "</span></div>"
+              )
+              .join("")
+          );
+        })
+        .join("") +
+      "</div></section>";
+    return html + "</div>";
+  }
+
   // ==================== Friends page ====================
 
   const friends = { loaded: false, loading: false, rows: [], board: [], myName: "", error: "", msg: "" };
@@ -3805,6 +3975,7 @@
           ul([
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
+            "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
           ])
@@ -3814,6 +3985,7 @@
           ul([
             "To work out and show your footprint, save your answers to your account, and record any support you've chosen to give. The legal basis is performing our contract with you.",
             "To keep the service secure and working. The legal basis is our legitimate interests.",
+            "To produce overall statistics that help us improve CO2 Counter, such as average footprints and how many people open each partner link and later make that change. These only ever show totals and averages, never individuals. The legal basis is our legitimate interests.",
             "To keep payment records, as the law requires. The legal basis is legal obligation.",
           ]) +
             "<p>We don't sell your data, show adverts, or use tracking or analytics cookies.</p>",
@@ -4086,7 +4258,7 @@
       "</section>" +
       (ui.isAdmin
         ? '<section class="glass guide-card"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
-          esc(shortDate(figuresUpdated())) + '.</p><a class="btn btn-green mt-4" href="#/inputs">Open Inputs ' + icon("arrowRight") + "</a></section>"
+          esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
         : "") +
       "</div>" +
       '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display side-title">Clear data on this device</h2><p class="sm muted">This can\'t be undone.</p>' +
@@ -4674,6 +4846,8 @@
     else if (path === "/how-we-calculate") html = renderMethod();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
+    else if (path === "/analytics")
+      html = ui.isAdmin ? renderAnalytics() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to see the analytics.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
     else if (path === "/inputs")
       html = ui.isAdmin ? renderInputs() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to change the figures.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
@@ -5002,6 +5176,10 @@
       saveInput(r.key, r.old_value, before ? before.source : inputDef(r.key).source, "Undone");
     },
     "export-inputs": () => exportInputs(),
+    "refresh-analytics": () => {
+      analytics.loaded = false;
+      render();
+    },
     "sign-out": async () => {
       if (sb) await sb.auth.signOut();
       currentUser = null;
