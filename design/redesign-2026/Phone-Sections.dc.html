@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Section details</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+/* phone layout */
+@media (max-width: 640px){
+nav[aria-label="Main"]{gap:10px!important}
+nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
+nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
+[style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
+header[style]{padding:22px!important;border-radius:24px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
+.qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
+h1{font-size:34px!important;line-height:1.08!important}
+h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
+h3[style*="font-size: 2"]{font-size:19px!important}
+[style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
+[style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
+p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
+[style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 170px minmax(0, 1fr) 90px"]{grid-template-columns:104px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 150px minmax(0, 1fr) 40px"]{grid-template-columns:120px minmax(0,1fr) 36px!important}
+[style*="grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto"]{grid-template-columns:1fr!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]{grid-template-columns:44px minmax(0,1fr)!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]>button{grid-column:1 / -1}
+[style*="padding: 48px 24px"]{padding:10px 8px 40px!important}
+[style*="padding: 30px 34px"]{padding:20px 18px 24px!important}
+[style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
+[style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
+[style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+footer[style]{flex-direction:column;gap:10px!important}
+}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.panel{padding:22px;border-radius:22px;background:rgba(255,252,245,.85);border:1px solid rgba(46,42,34,.08)}
+.lbl{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3F5B3A}
+.tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.stab{transition:background .2s,color .2s,border-color .2s}
+.stab:hover{background:rgba(255,252,245,.9)}
+.stab:focus-visible,.x:focus-visible{outline:2px solid #3F5B3A;outline-offset:2px}
+.bar{transition:width 1.2s cubic-bezier(.2,.85,.25,1)}
+.stair{transform-origin:50% 100%;animation:grow .8s cubic-bezier(.34,1.35,.5,1) both}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes sheet{from{opacity:0;transform:translateY(30px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.sheet{animation:sheet .55s cubic-bezier(.2,.8,.2,1) both}
+.rise{animation:rise .6s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}
+.bob{animation:bob 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div aria-hidden="true" style="position: absolute; inset: 0; filter: blur(3px); opacity: .55; pointer-events: none">
+    <div style="position: absolute; left: -8%; top: -240px; width: 680px; height: 680px; border-radius: 99px; background: #B7C4A4; filter: blur(110px)"></div>
+    <div style="max-width: 1120px; margin: 0 auto; padding: 96px 32px 0">
+      <div style="height: 240px; border-radius: 28px; background: rgba(255,252,245,.7)"></div>
+      <div style="margin-top: 20px; display: flex; gap: 20px"><div style="flex: 2; height: 520px; border-radius: 28px; background: rgba(255,252,245,.6)"></div><div style="flex: 1; height: 520px; border-radius: 28px; background: rgba(255,252,245,.6)"></div></div>
+    </div>
+  </div>
+  <div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(46,42,34,.32)"></div>
+
+  <div style="position: relative; max-width: 940px; margin: 0 auto; padding: 48px 24px 64px">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sec-title" style="border-radius: 32px; background: #F4EFE4; box-shadow: 0 40px 80px rgba(46,42,34,.3); overflow: hidden">
+      <div class="tabs" role="tablist" aria-label="Sections" style="display: flex; gap: 6px; overflow-x: auto; padding: 14px 18px 0; background: rgba(63,91,58,.08); border-bottom: 1px solid rgba(46,42,34,.1)">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="7">
+          <button class="stab" role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="all: unset; box-sizing: border-box; flex: none; padding: 10px 14px 12px; border-radius: 12px 12px 0 0; margin-bottom: -1px; border-bottom: 2px solid {{t.line}}; background: {{t.bg}}; font-size: 14px; font-weight: {{t.weight}}; color: {{t.ink}}; cursor: pointer; white-space: nowrap"><span style="font-size: 11px; font-weight: 700; color: #6B6457; display: block">{{t.cat}}</span>{{t.label}}</button>
+        </sc-for>
+      </div>
+
+      <div style="padding: 30px 34px 34px">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px">
+          <div style="display: flex; gap: 16px; align-items: center">
+            <span style="flex: none; width: 56px; height: 56px; border-radius: 18px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.icon}}"></path></svg></span>
+            <div>
+              <h2 id="sec-title" class="hd" style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 800">{{s.title}}</h2>
+              <p style="margin: 6px 0 0; font-size: 15px; font-weight: 600; color: #3F5B3A">Pairs with habit: {{s.habit}}</p>
+            </div>
+          </div>
+          <a class="x" href="Phone-Category.dc.html" aria-label="Close" style="flex: none; width: 48px; height: 48px; border-radius: 99px; display: grid; place-items: center; background: rgba(46,42,34,.08); color: #2E2A22"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+        </div>
+        <p style="margin: 18px 0 0; max-width: 760px; font-size: 19px; line-height: 1.6; color: #3A362D">{{s.lede}}</p>
+
+        <sc-if value="{{isTiers}}" hint-placeholder-val="{{true}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div class="lbl">How often you fly</div>
+            <div style="margin-top: 16px; height: 230px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end">
+              <sc-for list="{{tiers}}" as="t" hint-placeholder-count="4">
+                <div style="position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%">
+                  <sc-if value="{{t.mine}}" hint-placeholder-val="{{false}}"><span class="bob num" style="align-self: center; margin-bottom: 8px; padding: 5px 12px; border-radius: 99px; background: #D9A441; color: #2E2A22; font-size: 13px; font-weight: 800; white-space: nowrap">You are here</span></sc-if>
+                  <div class="stair" style="height: {{t.h}}px; border-radius: 16px 16px 4px 4px; background: {{t.bg}}; color: {{t.ink}}; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; animation-delay: {{t.delay}}">
+                    <span class="hd" style="font-size: 18px; font-weight: 800">{{t.label}}</span>
+                    <span style="display: flex; gap: 3px; flex-wrap: wrap">
+                      <sc-for list="{{t.planes}}" as="p" hint-placeholder-count="2"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg></sc-for>
+                    </span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+              <sc-for list="{{tiers}}" as="t" hint-placeholder-count="4">
+                <div style="font-size: 14px; line-height: 1.45"><b>{{t.criteria}}</b><br><span style="color: #4A453A">{{t.desc}}</span></div>
+              </sc-for>
+            </div>
+          </section>
+          <section class="panel rise d2" style="margin-top: 16px">
+            <div class="lbl">Your flights</div>
+            <div style="margin-top: 14px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto; gap: 16px; align-items: center">
+              <div><div class="hd" style="font-size: 18px; font-weight: 700">London Heathrow → Barcelona</div><div style="font-size: 14px; color: #4A453A">Return · economy · once a year</div></div>
+              <div style="position: relative; height: 18px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 18px; width: {{flightBudgetW}}%; border-radius: 99px; background: #B8653D"></span><span style="position: absolute; right: 0; top: -20px; font-size: 12px; color: #4A453A">1.5°C budget, 2,500 kg</span></div>
+              <div style="text-align: right"><span class="num" style="font-size: 24px; font-weight: 800">367</span> <span style="font-size: 14px; color: #4A453A">kg</span></div>
+            </div>
+          </section>
+          <section class="rise d3" style="margin-top: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800; color: #8A4424">15%</div><div style="font-size: 14px; color: #3A362D">of your yearly 1.5°C budget</div></div>
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800">18</div><div style="font-size: 14px; color: #3A362D">trees to soak it up for a year</div></div>
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800">6</div><div style="font-size: 14px; color: #3A362D">new phones made and charged</div></div>
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800">2,082</div><div style="font-size: 14px; color: #3A362D">km driven in an average car</div></div>
+          </section>
+          <p class="hd rise d3" style="margin: 18px 0 0; font-size: 19px; font-weight: 700; color: #3F5B3A">One less flight a year, however many you take, is a real step in the right direction.</p>
+        </sc-if>
+
+        <sc-if value="{{isTrain}}" hint-placeholder-val="{{false}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap"><div class="lbl">Plane or train, per person, return</div><span class="num" style="padding: 8px 14px; border-radius: 14px; background: rgba(217,164,65,.22); color: #5A3E0E; font-size: 22px; font-weight: 800">97% less by train</span></div>
+            <sc-for list="{{routes}}" as="r" hint-placeholder-count="2">
+              <div style="margin-top: 20px">
+                <div class="hd" style="font-size: 18px; font-weight: 700">{{r.label}}</div>
+                <div style="margin-top: 10px; display: grid; grid-template-columns: 80px minmax(0, 1fr) 80px; gap: 14px; align-items: center">
+                  <span style="display: flex; align-items: center; gap: 8px; font-weight: 700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B8653D" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z"></path></svg>Plane</span>
+                  <span style="height: 20px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 20px; width: {{r.planeW}}%; border-radius: 99px; background: #B8653D"></span></span>
+                  <span class="num" style="text-align: right; font-size: 20px; font-weight: 800">{{r.plane}} kg</span>
+                  <span style="display: flex; align-items: center; gap: 8px; font-weight: 700"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM5 10h14M9 21l1.5-4M15 21l-1.5-4"></path></svg>Train</span>
+                  <span style="height: 20px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 20px; width: {{r.trainW}}%; border-radius: 99px; background: #3F5B3A; transition-delay: .25s"></span></span>
+                  <span class="num" style="text-align: right; font-size: 20px; font-weight: 800; color: #3F5B3A">{{r.train}} kg</span>
+                </div>
+                <p style="margin: 6px 0 0; font-size: 14px; color: #5C5649">{{r.note}}</p>
+              </div>
+            </sc-for>
+          </section>
+          <section class="rise d2" style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+            <div class="panel" style="padding: 18px; background: #3F5B3A; color: #F6F1E6; border: none"><div class="num" style="font-size: 30px; font-weight: 800">−355 kg</div><div style="font-size: 14px; color: #DCE3D3">if your trip went by train</div></div>
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800">18 trees</div><div style="font-size: 14px; color: #3A362D">that’s how much it would save</div></div>
+            <div class="panel" style="padding: 18px"><div class="num" style="font-size: 30px; font-weight: 800">Less than a steak</div><div style="font-size: 14px; color: #3A362D">London–Paris by train, return</div></div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isCabin}}" hint-placeholder-val="{{false}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap"><div class="lbl">Your Barcelona trip, by seat</div><span class="num" style="padding: 8px 14px; border-radius: 14px; background: rgba(217,164,65,.22); color: #5A3E0E; font-size: 22px; font-weight: 800">Business = 1.5× economy</span></div>
+            <ul style="list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+              <sc-for list="{{cabins}}" as="c" hint-placeholder-count="4">
+                <li style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 90px; gap: 14px; align-items: center">
+                  <span style="font-weight: 700; font-size: 17px">{{c.label}}<sc-if value="{{c.mine}}" hint-placeholder-val="{{false}}"><span style="margin-left: 8px; padding: 2px 8px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 11px; font-weight: 800">Yours</span></sc-if></span>
+                  <span style="height: 20px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 20px; width: {{c.w}}%; border-radius: 99px; background: {{c.color}}; transition-delay: {{c.delay}}"></span></span>
+                  <span class="num" style="text-align: right; font-size: 20px; font-weight: 800">{{c.kg}} kg</span>
+                </li>
+              </sc-for>
+            </ul>
+          </section>
+          <section class="panel rise d2" style="margin-top: 16px">
+            <div class="lbl">On long-haul the gap grows</div>
+            <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+              <sc-for list="{{longHaul}}" as="l" hint-placeholder-count="4">
+                <div style="padding: 16px; border-radius: 16px; background: {{l.bg}}; text-align: center"><div class="num" style="font-size: 34px; font-weight: 800; color: {{l.ink}}">{{l.x}}</div><div style="font-size: 14px; font-weight: 600">{{l.label}}</div></div>
+              </sc-for>
+            </div>
+            <p style="margin: 12px 0 0; font-size: 15px; color: #3A362D">Direct routes help too: take-off and landing burn the most fuel, so fewer legs mean fewer emissions.</p>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isCommute}}" hint-placeholder-val="{{false}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap"><div class="lbl">Your 4 driving days, for a year</div><span class="num" style="padding: 8px 14px; border-radius: 14px; background: rgba(217,164,65,.22); color: #5A3E0E; font-size: 22px; font-weight: 800">Train saves 216 kg</span></div>
+            <ul style="list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
+              <sc-for list="{{modes}}" as="m" hint-placeholder-count="6">
+                <li style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 90px; gap: 14px; align-items: center">
+                  <span style="font-weight: 700; font-size: 17px">{{m.label}}</span>
+                  <span style="height: 20px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 20px; width: {{m.w}}%; border-radius: 99px; background: {{m.color}}; transition-delay: {{m.delay}}"></span></span>
+                  <span class="num" style="text-align: right; font-size: 20px; font-weight: 800">{{m.kg}} kg</span>
+                </li>
+              </sc-for>
+            </ul>
+          </section>
+          <section class="panel rise d2" style="margin-top: 16px">
+            <div class="lbl">Swap some days to the train</div>
+            <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+              <sc-for list="{{swaps}}" as="w" hint-placeholder-count="4">
+                <div style="padding: 16px; border-radius: 16px; background: rgba(63,91,58,{{w.alpha}}); color: {{w.ink}}; text-align: center"><div style="font-size: 14px; font-weight: 700">{{w.label}}</div><div class="num" style="font-size: 28px; font-weight: 800">−{{w.kg}} kg</div><div style="font-size: 13px">a year</div></div>
+              </sc-for>
+            </div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isBank}}" hint-placeholder-val="{{false}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap"><div class="lbl">kg CO₂e financed per £1,000, a year</div>
+              <span style="display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; font-weight: 700"><span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #3F5B3A"></span>Very good</span><span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #8FA58A"></span>Good</span><span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #D9A441"></span>Bad</span><span style="display: inline-flex; align-items: center; gap: 5px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #B8653D"></span>Very bad</span></span>
+            </div>
+            <ul style="list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px">
+              <sc-for list="{{banks}}" as="b" hint-placeholder-count="16">
+                <li style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 40px; gap: 10px; align-items: center; padding: 4px 8px; border-radius: 10px; background: {{b.bg}}; outline: {{b.outline}}">
+                  <span style="font-weight: {{b.weight}}; font-size: 15px">{{b.label}}</span>
+                  <span style="height: 12px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 12px; width: {{b.w}}%; border-radius: 99px; background: {{b.color}}; transition-delay: {{b.delay}}"></span></span>
+                  <span class="num" style="text-align: right; font-size: 15px; font-weight: 800">{{b.v}}</span>
+                </li>
+              </sc-for>
+            </ul>
+          </section>
+          <section class="rise d2" style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <div class="panel" style="padding: 18px; background: rgba(184,101,61,.1); border-color: rgba(184,101,61,.25)"><div style="font-size: 14px; font-weight: 700">Barclays · your bank · Very bad</div><div class="num" style="font-size: 30px; font-weight: 800; color: #8A4424">1,188 kg a year</div><div style="font-size: 14px; color: #3A362D">financed by your £5,000</div></div>
+            <div class="panel" style="padding: 18px; background: rgba(63,91,58,.1); border-color: rgba(63,91,58,.25)"><div style="font-size: 14px; font-weight: 700">At Triodos · Very good</div><div class="num" style="font-size: 30px; font-weight: 800; color: #3F5B3A">159 kg a year</div><div style="font-size: 14px; color: #3A362D">the same £5,000, 87% less</div></div>
+          </section>
+          <p style="margin: 12px 0 0; font-size: 13px; color: #5C5649">Source: MotherTree bank carbon emissions league table (2021), as used in CO2 Counter.</p>
+        </sc-if>
+
+        <sc-if value="{{isSwitch}}" hint-placeholder-val="{{false}}">
+          <section class="panel rise d1" style="margin-top: 22px">
+            <div class="lbl">Three steps, about 7 working days</div>
+            <ol style="list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; position: relative">
+              <li style="padding: 20px; border-radius: 18px; background: rgba(63,91,58,.08)"><span class="num" style="width: 44px; height: 44px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-size: 20px; font-weight: 800">1</span><h3 class="hd" style="margin: 12px 0 0; font-size: 19px; font-weight: 700">Pick a greener bank</h3><p style="margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #3A362D">One rated Very good or Good on the league table.</p></li>
+              <li style="padding: 20px; border-radius: 18px; background: rgba(63,91,58,.08)"><span class="num" style="width: 44px; height: 44px; border-radius: 14px; background: rgba(63,91,58,.2); color: #3F5B3A; display: grid; place-items: center; font-size: 20px; font-weight: 800">2</span><h3 class="hd" style="margin: 12px 0 0; font-size: 19px; font-weight: 700">Open an account, choose a switch date</h3><p style="margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #3A362D">Ask for a full switch using the Current Account Switch Service.</p></li>
+              <li style="padding: 20px; border-radius: 18px; background: rgba(63,91,58,.08)"><span class="num" style="width: 44px; height: 44px; border-radius: 14px; background: rgba(63,91,58,.2); color: #3F5B3A; display: grid; place-items: center; font-size: 20px; font-weight: 800">3</span><h3 class="hd" style="margin: 12px 0 0; font-size: 19px; font-weight: 700">Done, guaranteed</h3><p style="margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #3A362D">Your balance, direct debits and standing orders move for you. Payments to your old account are redirected.</p></li>
+            </ol>
+          </section>
+          <section class="panel rise d2" style="margin-top: 16px">
+            <div class="lbl">Greener banks to switch to</div>
+            <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px">
+              <span style="padding: 10px 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 700">Triodos · 32</span>
+              <span style="padding: 10px 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 700">The Co-operative Bank · 33</span>
+              <span style="padding: 10px 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 700">Nationwide · 43</span>
+              <span style="padding: 10px 16px; border-radius: 14px; background: rgba(143,165,138,.35); font-weight: 700">Virgin Money · 52</span>
+              <span style="padding: 10px 16px; border-radius: 14px; background: rgba(143,165,138,.35); font-weight: 700">Starling · 61</span>
+            </div>
+            <p style="margin: 10px 0 0; font-size: 14px; color: #4A453A">kg CO₂e financed per £1,000 a year. The service is free, run by Pay.UK, and used by most UK banks and building societies.</p>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{isPension}}" hint-placeholder-val="{{false}}">
+          <section class="rise d1" style="margin-top: 22px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+            <div class="panel"><div class="lbl">Savings</div><p style="margin: 8px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Banks lend out savings just like current-account money, so the bank league table applies here too. Keep savings with a greener bank.</p></div>
+            <div class="panel"><div class="lbl">Pension</div><p style="margin: 8px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Often the biggest money lever. Ask your provider which climate-focused fund options they offer and whether you can switch.</p></div>
+          </section>
+          <section class="panel rise d2" style="margin-top: 16px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap"><div class="lbl">Workplace pension climate ranking</div><span class="num" style="padding: 8px 14px; border-radius: 14px; background: rgba(63,91,58,.14); color: #3F5B3A; font-size: 20px; font-weight: 800">Nest is 1st</span></div>
+            <ol style="list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px">
+              <sc-for list="{{pensions}}" as="p" hint-placeholder-count="12">
+                <li style="display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 36px; gap: 10px; align-items: center; padding: 4px 8px; border-radius: 10px; background: {{p.bg}}; outline: {{p.outline}}">
+                  <span class="num" style="font-size: 14px; font-weight: 800; color: #4A453A">{{p.rank}}</span>
+                  <span style="font-weight: {{p.weight}}; font-size: 15px">{{p.label}}</span>
+                  <span style="height: 10px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 10px; width: {{p.w}}%; border-radius: 99px; background: {{p.color}}; transition-delay: {{p.delay}}"></span></span>
+                  <span class="num" style="text-align: right; font-size: 15px; font-weight: 800">{{p.score}}</span>
+                </li>
+              </sc-for>
+            </ol>
+            <p style="margin: 12px 0 0; font-size: 13px; color: #5C5649">Higher score is better. Ranking as used in CO2 Counter’s data.</p>
+          </section>
+        </sc-if>
+
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+          <button class="stab" onClick="{{prev}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 20px; border-radius: 16px; border: 1.5px solid rgba(46,42,34,.2); display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; cursor: pointer">← {{prevLabel}}</button>
+          <button class="stab" onClick="{{next}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 22px; border-radius: 16px; background: #3F5B3A; color: #F6F1E6; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; cursor: pointer">{{nextLabel}} →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 0, ready: false };
+  }
+  componentDidMount() {
+    this.t = setTimeout(() => this.setState({ ready: true }), 200);
+  }
+  componentWillUnmount() {
+    clearTimeout(this.t);
+  }
+  go(i) {
+    clearTimeout(this.t);
+    this.setState({ sel: i, ready: false });
+    this.t = setTimeout(() => this.setState({ ready: true }), 60);
+  }
+  renderVals() {
+    const r = this.state.ready;
+    const P = 'M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z';
+    const SECTIONS = [
+      { key: 'tiers', cat: 'Flights', label: 'Fly less, and shorter', icon: P, habit: 'Set an annual flight cap',
+        lede: 'One of the most impactful changes for the least effort. It doesn’t change your day-to-day life, just how often you fly.' },
+      { key: 'train', cat: 'Flights', label: 'Take the train where you can', icon: 'M8 3h8a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3ZM5 10h14M9 21l1.5-4M15 21l-1.5-4', habit: 'Train under 700km',
+        lede: 'Swapping one short-haul flight for the train matters, whoever you are. By train, London to Paris and back is about 4 kg per person. By plane, it’s about 123 kg.' },
+      { key: 'cabin', cat: 'Flights', label: 'Fly economy, direct, daytime', icon: 'M6 20v-6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v6M8 12V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6M5 20h14', habit: 'Always fly economy',
+        lede: 'Bigger seats take up more of the plane, so they carry more of its emissions. Economy spreads them across the most people.' },
+      { key: 'commute', cat: 'Commute', label: 'Drive less, not never', icon: 'M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1ZM3.5 12h17', habit: '1 WFH day/week',
+        lede: 'You drive 4 days a week, 3.1 km each way. You don’t have to stop driving. Swapping even one day makes a difference.' },
+      { key: 'bank', cat: 'Money', label: 'Check your bank’s financing', icon: 'M3 9.5 12 4l9 5.5H3ZM5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18', habit: 'Look up your bank’s rating',
+        lede: 'Your bank lends out the money you keep with it. This is how much CO₂e each bank finances for every £1,000 you hold.' },
+      { key: 'switch', cat: 'Money', label: 'Switch your main account', icon: 'M7 7h11l-3-3M17 17H6l3 3', habit: 'Switch current account',
+        lede: 'The free Current Account Switch Service does the hard work, and every switch is guaranteed.' },
+      { key: 'pension', cat: 'Money', label: 'Move savings and pensions too', icon: 'M12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12ZM12 9V4M12 6.5c-1-2-3-3-5-2.5', habit: 'Switch pension to ESG fund',
+        lede: 'Savings and pensions are lent and invested too, often in larger amounts than your current account.' }
+    ];
+    const i = this.state.sel;
+    const s = SECTIONS[i];
+    const tabs = SECTIONS.map((x, j) => ({
+      cat: x.cat, label: x.label, on: j === i ? 'true' : 'false',
+      line: j === i ? '#3F5B3A' : 'transparent', bg: j === i ? '#F4EFE4' : 'transparent',
+      ink: j === i ? '#2E2A22' : '#4A453A', weight: j === i ? 700 : 500,
+      pick: () => this.go(j)
+    }));
+    const TIERS = [
+      ['Tier 1', 'No flights a year', 'Zero aviation emissions.', 0],
+      ['Tier 2', '1–2 short-haul flights', 'Light flying. Short-haul is under ~1,500 km.', 2],
+      ['Tier 3', '3–4 short-haul or 1–2 medium-haul', 'Moderate flying. Medium-haul is 1,500–4,000 km.', 4],
+      ['Tier 4', '5+ short-haul, 3+ medium or 2+ long-haul', 'Heavy flying. One long-haul return can exceed your whole yearly budget.', 6]
+    ];
+    const tiers = TIERS.map(([label, criteria, desc, planes], j) => {
+      const mine = j === 1;
+      return {
+        label, criteria, desc, mine, h: [70, 105, 145, 185][j], delay: (j * 0.1) + 's',
+        planes: Array.from({ length: planes }, () => ({})),
+        bg: mine ? '#3F5B3A' : ['rgba(143,165,138,.3)', 'rgba(143,165,138,.3)', 'rgba(217,164,65,.35)', 'rgba(184,101,61,.4)'][j],
+        ink: mine ? '#F6F1E6' : '#2E2A22'
+      };
+    });
+    const routes = [
+      { label: 'London → Paris, return', plane: 123, train: 4, note: 'Eurostar’s independently commissioned figures.' },
+      { label: 'Your trip: London → Barcelona, return', plane: 367, train: 12, note: 'Train estimated at the same ratio. Longer by train, but very possible.' }
+    ].map((x) => ({ ...x, planeW: r ? (x.plane / 367) * 100 : 0, trainW: r ? Math.max(1.5, (x.train / 367) * 100) : 0 }));
+    const cabins = [['Economy', 367, '#3F5B3A', true], ['Premium economy', 367, '#8FA58A'], ['Business', 551, '#D9A441'], ['First', 551, '#B8653D']]
+      .map(([label, kg, color, mine], j) => ({ label, kg, color, mine: !!mine, w: r ? (kg / 551) * 100 : 0, delay: (j * 0.1) + 's' }));
+    const longHaul = [['1×', 'Economy', '#3F5B3A'], ['1.6×', 'Premium', '#4A6B45'], ['2.9×', 'Business', '#8A6420'], ['4×', 'First', '#8A4424']]
+      .map(([x, label, ink], j) => ({ x, label, ink, bg: ['rgba(63,91,58,.12)', 'rgba(143,165,138,.2)', 'rgba(217,164,65,.2)', 'rgba(184,101,61,.16)'][j] }));
+    const modes = [['Petrol car (yours)', 267, '#B8653D'], ['Bus', 165, '#D9A441'], ['Electric car', 52, '#8FA58A'], ['Train', 51, '#6E8B5E'], ['Walk or bike', 0, '#3F5B3A'], ['Work from home', 0, '#3F5B3A']]
+      .map(([label, kg, color], j) => ({ label, kg, color, w: r ? Math.max(kg ? 1.5 : 0.8, (kg / 267) * 100) : 0, delay: (j * 0.08) + 's' }));
+    const swaps = [1, 2, 3, 4].map((n) => ({ label: n + ' day' + (n > 1 ? 's' : '') + ' a week', kg: n * 54, alpha: (0.12 + n * 0.2).toFixed(2), ink: n >= 3 ? '#F6F1E6' : '#2E2A22' }));
+    const BANKS = [['Triodos', 32], ['The Co-operative Bank', 33], ['Nationwide', 43], ['Virgin Money', 52], ['Starling', 61], ['Metro Bank', 69], ['Lloyds', 70], ['Halifax', 70], ['Monzo', 109], ['NatWest', 130], ['RBS', 130], ['Santander', 174], ['Chase', 190], ['HSBC', 217], ['First Direct', 217], ['Barclays', 238]];
+    const band = (v) => v < 45 ? '#3F5B3A' : v < 75 ? '#8FA58A' : v < 150 ? '#D9A441' : '#B8653D';
+    const banks = BANKS.map(([label, v], j) => {
+      const mine = label === 'Barclays';
+      return { label: mine ? 'Barclays (yours)' : label, v, color: band(v), w: r ? (v / 238) * 100 : 0, delay: (j * 0.04).toFixed(2) + 's', bg: mine ? 'rgba(184,101,61,.1)' : 'transparent', outline: mine ? '1.5px solid rgba(184,101,61,.5)' : 'none', weight: mine ? 800 : 600 };
+    });
+    const PENS = [['1st', 'Nest', 5.8], ['=2nd', 'Aviva', 5.5], ['=2nd', 'NOW: Pensions', 5.5], ['4th', 'Smart Pension', 5.4], ['5th', 'Legal & General', 4.8], ['6th', 'Scottish Widows', 4.7], ['7th', 'Aegon', 4.6], ['8th', 'Cushon', 3.9], ['9th', 'The People’s Pension', 3.7], ['10th', 'Fidelity', 3.6], ['11th', 'Standard Life', 3.5], ['12th', 'Royal London', 3.3]];
+    const pensions = PENS.map(([rank, label, score], j) => {
+      const mine = label === 'Nest';
+      return { rank, label: mine ? 'Nest (yours)' : label, score, w: r ? (score / 5.8) * 100 : 0, color: mine ? '#3F5B3A' : '#8FA58A', delay: (j * 0.05).toFixed(2) + 's', bg: mine ? 'rgba(63,91,58,.1)' : 'transparent', outline: mine ? '1.5px solid rgba(63,91,58,.45)' : 'none', weight: mine ? 800 : 600 };
+    });
+    const n = SECTIONS.length;
+    return {
+      tabs, s: { ...s, title: s.label },
+      isTiers: s.key === 'tiers', isTrain: s.key === 'train', isCabin: s.key === 'cabin', isCommute: s.key === 'commute',
+      isBank: s.key === 'bank', isSwitch: s.key === 'switch', isPension: s.key === 'pension',
+      tiers, flightBudgetW: r ? (367 / 2500) * 100 : 0,
+      routes, cabins, longHaul, modes, swaps, banks, pensions,
+      prevLabel: SECTIONS[(i + n - 1) % n].label, nextLabel: SECTIONS[(i + 1) % n].label,
+      prev: () => this.go((i + n - 1) % n), next: () => this.go((i + 1) % n)
+    };
+  }
+}
+</script>
+</body>
+</html>

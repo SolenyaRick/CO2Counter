@@ -272,6 +272,105 @@
       "title": "Glass v2 · About us",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Phone-Intro.dc.html": {
+      "x": 0,
+      "y": 19923,
+      "w": 390,
+      "h": 4300,
+      "title": "Phone · Intro",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Results.dc.html": {
+      "x": 470,
+      "y": 19923,
+      "w": 390,
+      "h": 3300,
+      "title": "Phone · Results",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Category.dc.html": {
+      "x": 940,
+      "y": 19923,
+      "w": 390,
+      "h": 3300,
+      "title": "Phone · Category",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Survey.dc.html": {
+      "x": 1410,
+      "y": 19923,
+      "w": 390,
+      "h": 3700,
+      "title": "Phone · Survey",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Guide.dc.html": {
+      "x": 1880,
+      "y": 19923,
+      "w": 390,
+      "h": 4300,
+      "title": "Phone · Guide",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Sections.dc.html": {
+      "x": 2350,
+      "y": 19923,
+      "w": 390,
+      "h": 3900,
+      "title": "Phone · Sections",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-SurveyDone.dc.html": {
+      "x": 2820,
+      "y": 19923,
+      "w": 390,
+      "h": 3100,
+      "title": "Phone · SurveyDone",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Friends.dc.html": {
+      "x": 3290,
+      "y": 19923,
+      "w": 390,
+      "h": 3500,
+      "title": "Phone · Friends",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Account.dc.html": {
+      "x": 3760,
+      "y": 19923,
+      "w": 390,
+      "h": 2700,
+      "title": "Phone · Account",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-Switches.dc.html": {
+      "x": 4230,
+      "y": 19923,
+      "w": 390,
+      "h": 6600,
+      "title": "Phone · Switches",
+      "is_interactive": true,
+      "radius": 40
+    },
+    "Phone-About.dc.html": {
+      "x": 4700,
+      "y": 19923,
+      "w": 390,
+      "h": 3700,
+      "title": "Phone · About",
+      "is_interactive": true,
+      "radius": 40
     }
   },
   "createdOnFiles": {
@@ -382,6 +481,13 @@
       "text": "Glass v2 · greener switches and about us",
       "kind": "title1",
       "maxW": 2960
+    },
+    "phones": {
+      "x": 0,
+      "y": 19623,
+      "text": "Glass v2 · phone versions",
+      "kind": "title1",
+      "maxW": 5100
     }
   },
   "order": [
@@ -415,7 +521,18 @@
     "Glass2-Friends.dc.html",
     "Glass2-Account.dc.html",
     "Glass2-Switches.dc.html",
-    "Glass2-About.dc.html"
+    "Glass2-About.dc.html",
+    "Phone-Intro.dc.html",
+    "Phone-Results.dc.html",
+    "Phone-Category.dc.html",
+    "Phone-Survey.dc.html",
+    "Phone-Guide.dc.html",
+    "Phone-Sections.dc.html",
+    "Phone-SurveyDone.dc.html",
+    "Phone-Friends.dc.html",
+    "Phone-Account.dc.html",
+    "Phone-Switches.dc.html",
+    "Phone-About.dc.html"
   ],
   "pages": [],
   "title": "CO2 Counter Redesign"

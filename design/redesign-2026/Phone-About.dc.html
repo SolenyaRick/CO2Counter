@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>About CO2 Counter</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+/* phone layout */
+@media (max-width: 640px){
+nav[aria-label="Main"]{gap:10px!important}
+nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
+nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
+[style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
+header[style]{padding:22px!important;border-radius:24px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
+.qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
+h1{font-size:34px!important;line-height:1.08!important}
+h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
+h3[style*="font-size: 2"]{font-size:19px!important}
+[style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
+[style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
+p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
+[style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 170px minmax(0, 1fr) 90px"]{grid-template-columns:104px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 150px minmax(0, 1fr) 40px"]{grid-template-columns:120px minmax(0,1fr) 36px!important}
+[style*="grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto"]{grid-template-columns:1fr!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]{grid-template-columns:44px minmax(0,1fr)!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]>button{grid-column:1 / -1}
+[style*="padding: 48px 24px"]{padding:10px 8px 40px!important}
+[style*="padding: 30px 34px"]{padding:20px 18px 24px!important}
+[style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
+[style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
+[style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+footer[style]{flex-direction:column;gap:10px!important}
+}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.card{padding:30px;border-radius:28px;background:rgba(255,252,245,.65);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.ico{width:52px;height:52px;border-radius:16px;background:rgba(63,91,58,.12);color:#3F5B3A;display:grid;place-items:center;flex:none}
+.p{margin:10px 0 0;font-size:17px;line-height:1.65;color:#3A362D}
+.src{transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.src:hover{transform:translateY(-3px)}
+.cta{transition:transform .2s cubic-bezier(.3,1.6,.5,1),filter .2s}
+.cta:hover{filter:brightness(1.05)}.cta:active{transform:scale(.96)}
+.b1,.b2,.b3{transform-box:fill-box;transform-origin:50% 100%}
+@keyframes s1{0%,12%{transform:scaleY(.2)}30%,100%{transform:scaleY(1)}}
+@keyframes s2{0%,20%{transform:scaleY(.2)}38%,55%{transform:scaleY(1.45)}75%,100%{transform:scaleY(1)}}
+@keyframes s3{0%,28%{transform:scaleY(.2)}46%,60%{transform:scaleY(2.6)}85%,100%{transform:scaleY(1)}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.splash .b1{animation:s1 4s cubic-bezier(.3,1.3,.5,1) infinite}
+.splash .b2{animation:s2 4s cubic-bezier(.3,1.3,.5,1) infinite}
+.splash .b3{animation:s3 4s cubic-bezier(.3,1.3,.5,1) infinite}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div style="position: absolute; right: -10%; top: -220px; width: 680px; height: 680px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; left: -8%; top: 640px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+      <a href="Phone-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+      </a>
+      <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <a href="Phone-SurveyDone.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
+        <a href="Phone-Results.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Results</a>
+        <a href="Phone-Friends.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Friends</a>
+        <span aria-disabled="true" title="Habits are coming soon" style="padding: 9px 14px 9px 18px; border-radius: 99px; color: #8A8273; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px">Habits<span style="padding: 2px 7px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 11px; font-weight: 700">Soon</span></span>
+      </span>
+      <a href="Phone-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
+    </nav>
+
+    <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 40px; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; justify-content: space-between">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">About us</div>
+        <h1 class="hd" style="margin: 10px 0 0; font-size: 56px; line-height: 1.02; font-weight: 800">Free, independent, built on official figures</h1>
+        <p style="margin: 16px 0 0; max-width: 600px; font-size: 20px; line-height: 1.6; color: #3A362D">CO2 Counter is a free carbon footprint calculator for people in the UK. It shows where your footprint really comes from, and the changes that would cut it most.</p>
+        <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px">
+          <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 15px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Free for everyone</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #2B4128; font-size: 15px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>No adverts</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #2B4128; font-size: 15px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Never sells your data</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #2B4128; font-size: 15px; font-weight: 700"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>Not funded by any company</span>
+        </div>
+      </div>
+      <svg class="splash" width="220" height="220" viewBox="0 0 100 100" aria-hidden="true" style="flex: none; filter: drop-shadow(0 24px 34px rgba(46,42,34,.2))"><rect width="100" height="100" rx="24" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect class="b1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect class="b2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect class="b3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+    </header>
+
+    <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px">
+      <section class="card rise d1">
+        <div style="display: flex; align-items: center; gap: 14px"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4V3h6v1M9 11l2 2 4-4M9 17h6"></path></svg></span><h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">What it is</h2></div>
+        <p class="p">Answer six short steps about your food, travel, flights, home, pets and money. You get your yearly footprint, what it’s made of, and the changes that would cut it most.</p>
+        <p class="p">It’s free for everyone. People who find it useful can support it for £2 a year.</p>
+      </section>
+      <section class="card rise d2">
+        <div style="display: flex; align-items: center; gap: 14px"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"></path></svg></span><h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Who runs it</h2></div>
+        <p class="p">An independent UK project run by Jack Brown. It isn’t owned or funded by any energy company, bank or other business.</p>
+        <a href="mailto:CO2counter@outlook.com" style="margin-top: 16px; display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 18px; border-radius: 14px; background: rgba(63,91,58,.1); color: #2B4128; font-weight: 700; font-size: 16px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>CO2counter@outlook.com</a>
+      </section>
+    </div>
+
+    <section class="card rise d2" style="margin-top: 20px">
+      <div style="display: flex; align-items: center; gap: 14px"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a1 1 0 0 1 1-1h10l5 5v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"></path><path d="M14 4v5h5M8 13h8M8 17h5"></path></svg></span><h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Where the figures come from</h2></div>
+      <p class="p" style="max-width: 760px">UK government emission factors, official statistics and peer-reviewed research for food. We update them as new data is published.</p>
+      <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px">
+        <sc-for list="{{sources}}" as="s" hint-placeholder-count="6">
+          <div class="src" style="padding: 16px; border-radius: 18px; background: rgba(255,252,245,.9); border: 1px solid rgba(46,42,34,.08)">
+            <div class="hd" style="font-size: 22px; font-weight: 800; color: #3F5B3A">{{s.abbr}}</div>
+            <div style="margin-top: 4px; font-size: 14px; line-height: 1.4; color: #3A362D">{{s.what}}</div>
+          </div>
+        </sc-for>
+      </div>
+      <a href="Phone-Intro.dc.html" style="margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px">How we calculate<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+    </section>
+
+    <section class="card rise d3" style="margin-top: 20px">
+      <div style="display: flex; align-items: center; gap: 14px"><span class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19C5 10.5 10.5 5 20 4c0 9.5-5.5 15-15 15Z"></path><path d="M5 19l7-7"></path></svg></span><h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">How we choose partners</h2></div>
+      <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px">
+        <div style="padding: 20px; border-radius: 20px; background: rgba(63,91,58,.08)"><span class="num" style="width: 40px; height: 40px; border-radius: 12px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-weight: 800">1</span><h3 class="hd" style="margin: 12px 0 0; font-size: 20px; font-weight: 700">Climate first</h3><p style="margin: 6px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Renewable electricity, banks that don’t finance fossil fuels, food that cuts waste and meat, and rail instead of flying.</p></div>
+        <div style="padding: 20px; border-radius: 20px; background: rgba(63,91,58,.08)"><span class="num" style="width: 40px; height: 40px; border-radius: 12px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-weight: 800">2</span><h3 class="hd" style="margin: 12px 0 0; font-size: 20px; font-weight: 700">Free options too</h3><p style="margin: 6px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">We list options that pay us nothing, like The Man in Seat 61 and Fork Ranger, alongside ones that might.</p></div>
+        <div style="padding: 20px; border-radius: 20px; background: rgba(63,91,58,.08)"><span class="num" style="width: 40px; height: 40px; border-radius: 12px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-weight: 800">3</span><h3 class="hd" style="margin: 12px 0 0; font-size: 20px; font-weight: 700">Figures never change</h3><p style="margin: 6px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Being a partner never changes anyone’s footprint, savings or rankings. Bank and pension suggestions are never affiliate links.</p></div>
+      </div>
+      <a href="Phone-Switches.dc.html" style="margin-top: 16px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px">See all our greener switches<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+    </section>
+
+    <section class="card" style="margin-top: 20px; background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
+      <div style="display: flex; align-items: center; gap: 14px"><span class="ico" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"></path><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"></path></svg></span><h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Affiliate disclosure</h2></div>
+      <p class="p" style="max-width: 820px">Some links to partner sites may be affiliate (referral) links. If you use one to buy something or switch, CO2 Counter may earn a commission. It costs you nothing extra and helps keep the site free.</p>
+      <p class="p" style="max-width: 820px">Affiliate links are always marked with an <span style="padding: 3px 9px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-size: 13px; font-weight: 800">Affiliate</span> tag. At the moment, none of our links are affiliate links.</p>
+    </section>
+
+    <section style="margin-top: 20px; padding: 40px 36px; border-radius: 32px; background: #3F5B3A; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+      <div>
+        <h2 class="hd" style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 800">See where your footprint comes from</h2>
+        <p style="margin: 8px 0 0; font-size: 18px; color: #DCE3D3">Six short steps. Free, no account needed to start.</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px">
+        <a class="cta" href="Phone-Survey.dc.html" style="min-height: 58px; padding: 0 28px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #E8C88A; color: #2E2A22; font-weight: 800; font-size: 18px; text-decoration: none">Take the survey<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+        <a class="cta" href="Phone-Switches.dc.html" style="min-height: 58px; padding: 0 24px; border-radius: 18px; display: inline-flex; align-items: center; border: 1.5px solid rgba(246,241,230,.5); color: #F6F1E6; font-weight: 700; font-size: 17px; text-decoration: none">Greener switches</a>
+      </div>
+    </section>
+
+    <footer style="margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
+      <span>Estimates use typical lifecycle emission factors.</span>
+      <span style="display: flex; gap: 20px"><a href="Phone-About.dc.html">About</a><a href="Phone-Switches.dc.html">Greener switches</a><a href="Phone-Intro.dc.html">How we calculate</a><a href="Phone-Intro.dc.html">Privacy</a></span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0 };
+  }
+  componentDidMount() {
+    this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
+    window.addEventListener('scroll', this.onWin, { passive: true });
+  }
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.onWin);
+  }
+  renderVals() {
+    const s = Math.min(this.state.scroll, 1600);
+    const k = this.props.parallax ?? 1;
+    return {
+      pBlobA: (s * 0.35 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
+      sources: [
+        { abbr: 'DESNZ', what: 'UK government emission factors for energy and travel' },
+        { abbr: 'Defra', what: 'Emission factors and UK food data' },
+        { abbr: 'ONS', what: 'Population and household statistics' },
+        { abbr: 'Ofgem', what: 'Typical home energy use' },
+        { abbr: 'DfT', what: 'How far and how people travel' },
+        { abbr: 'Research', what: 'Peer-reviewed studies for food' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

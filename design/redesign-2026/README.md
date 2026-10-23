@@ -41,6 +41,11 @@ canvas layout.
   come from, how partners are chosen and the affiliate disclosure.
 - `App-Icon.dc.html`: the "Leaf Ledger" app icon, sizes, variants and splash.
 
+Every Glass v2 page includes a phone layout (under 640 px wide: the nav links
+move to their own swipeable row, type and padding shrink, and multi-column
+grids collapse). `Phone-*.dc.html` are the same pages shown at 390 px on the
+canvas, linked to each other.
+
 Palette: oat `#EFE9DC`, moss `#3F5B3A`, sage `#8FA58A`, honey `#D9A441`,
 clay `#B8653D`. Type: Bricolage Grotesque (headings and numbers), Karla (body).
 Habits are shown as "coming soon".

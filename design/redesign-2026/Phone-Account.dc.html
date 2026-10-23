@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Account</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+/* phone layout */
+@media (max-width: 640px){
+nav[aria-label="Main"]{gap:10px!important}
+nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
+nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
+[style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
+header[style]{padding:22px!important;border-radius:24px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
+.qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
+h1{font-size:34px!important;line-height:1.08!important}
+h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
+h3[style*="font-size: 2"]{font-size:19px!important}
+[style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
+[style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
+p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
+[style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 170px minmax(0, 1fr) 90px"]{grid-template-columns:104px minmax(0,1fr) 62px!important;gap:10px!important}
+[style*="grid-template-columns: 150px minmax(0, 1fr) 40px"]{grid-template-columns:120px minmax(0,1fr) 36px!important}
+[style*="grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto"]{grid-template-columns:1fr!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]{grid-template-columns:44px minmax(0,1fr)!important}
+[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]>button{grid-column:1 / -1}
+[style*="padding: 48px 24px"]{padding:10px 8px 40px!important}
+[style*="padding: 30px 34px"]{padding:20px 18px 24px!important}
+[style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
+[style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
+[style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+footer[style]{flex-direction:column;gap:10px!important}
+}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.card{padding:28px;border-radius:28px;background:rgba(255,252,245,.65);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.fld{box-sizing:border-box;min-height:52px;padding:0 16px;border-radius:14px;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);font:600 17px Karla,system-ui,sans-serif;color:#2E2A22}
+.btn{all:unset;box-sizing:border-box;min-height:48px;padding:0 18px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .25s,opacity .25s}
+.btn:active{transform:scale(.96)}
+.btn:focus-visible,.fld:focus-visible{outline:2px solid #3F5B3A;outline-offset:2px}
+.solid{background:#3F5B3A;color:#F6F1E6}
+.ghost{border:1.5px solid rgba(46,42,34,.2);color:#2E2A22}
+.danger{border:1.5px solid rgba(154,62,30,.45);color:#8A3A1C}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.16s}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div style="position: absolute; left: -8%; top: -240px; width: 680px; height: 680px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; right: -8%; top: 460px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+      <a href="Phone-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+      </a>
+      <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <a href="Phone-SurveyDone.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
+        <a href="Phone-Results.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Results</a>
+        <a href="Phone-Friends.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Friends</a>
+        <span aria-disabled="true" title="Habits are coming soon" style="padding: 9px 14px 9px 18px; border-radius: 99px; color: #8A8273; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px">Habits<span style="padding: 2px 7px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 11px; font-weight: 700">Soon</span></span>
+      </span>
+      <a href="Phone-Account.dc.html" aria-current="page" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: #3F5B3A; color: #F6F1E6; font-weight: 800; text-decoration: none">AG</a>
+    </nav>
+
+    <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+      <svg width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 46%; top: -40px; opacity: .07; transform: rotate(-8deg)" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"></path></svg>
+      <div style="position: relative; display: flex; align-items: center; gap: 22px; flex-wrap: wrap">
+        <span class="hd" style="width: 88px; height: 88px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-size: 34px; font-weight: 800">AG</span>
+        <div>
+          <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">Account</div>
+          <h1 class="hd" style="margin: 6px 0 0; font-size: 44px; line-height: 1.05; font-weight: 800">Alex Green</h1>
+          <p style="margin: 6px 0 0; font-size: 17px; color: #3A362D">@alexg · alex@example.com</p>
+        </div>
+      </div>
+      <button class="btn ghost" onClick="{{signOut}}" style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>{{signOutLabel}}</button>
+    </header>
+
+    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <section class="card rise d1">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+            <h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Your saved data</h2>
+            <span style="font-size: 15px; color: #4A453A">Synced across your devices</span>
+          </div>
+          <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
+            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Footprint</div><div class="num" style="font-size: 34px; font-weight: 800">{{count}}</div><div style="font-size: 13px; color: #4A453A">kg CO₂e a year</div></div>
+            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Surveys taken</div><div class="num" style="font-size: 34px; font-weight: 800">2</div><div style="font-size: 13px; font-weight: 700; color: #3F5B3A">▼ 9% since your first</div></div>
+            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Friends</div><div class="num" style="font-size: 34px; font-weight: 800">4</div><div style="font-size: 13px; color: #4A453A">You’re 3rd of 5</div></div>
+            <div style="padding: 18px; border-radius: 18px; background: rgba(217,164,65,.14); border: 1px solid rgba(217,164,65,.35)"><div style="font-size: 14px; color: #4A453A">Habits</div><div class="num" style="font-size: 34px; font-weight: 800">3</div><div style="font-size: 13px; color: #6B4A12; font-weight: 700">in your plan · tracking soon</div></div>
+          </div>
+          <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px">
+            <a class="btn solid" href="Phone-SurveyDone.dc.html">Retake survey</a>
+            <a class="btn ghost" href="Phone-Results.dc.html">View results</a>
+            <a class="btn ghost" href="Phone-Friends.dc.html">Friends</a>
+          </div>
+        </section>
+
+        <section class="card rise d2" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between">
+          <div style="flex: 1 1 360px; min-width: 0">
+            <h2 class="hd" style="margin: 0; font-size: 22px; font-weight: 800">Your plan: Free</h2>
+            <p style="margin: 6px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Everything on CO2 Counter is free. If it’s helped you, you can chip in £2 a year to cover running costs. No ads, and we never sell your data.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px">
+            <a class="btn solid" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>Support for £2 a year</a>
+            <span style="font-size: 13px; color: #5C5649">Secure payment by Stripe. Cancel any time.</span>
+          </div>
+        </section>
+      </div>
+
+      <aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <section class="card">
+          <h2 class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Clear data on this device</h2>
+          <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #3A362D">This can’t be undone.</p>
+          <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px">
+            <button class="btn ghost" onClick="{{clearPlan}}">{{clearPlanLabel}}</button>
+            <button class="btn danger" onClick="{{clearAll}}">{{clearAllLabel}}</button>
+          </div>
+        </section>
+
+        <section class="card" style="background: rgba(184,101,61,.08); border-color: rgba(184,101,61,.25)">
+          <h2 class="hd" style="margin: 0; font-size: 20px; font-weight: 800; color: #8A3A1C">Delete account</h2>
+          <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #3A362D">Permanently delete your account and everything saved with it: your survey answers and any support record.</p>
+          <sc-if value="{{askDelete}}" hint-placeholder-val="{{false}}">
+            <button class="btn danger" onClick="{{startDelete}}" style="margin-top: 14px">Delete my account</button>
+          </sc-if>
+          <sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
+            <div class="rise" style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
+              <label style="font-size: 15px; font-weight: 600">Type <b>DELETE</b> to confirm
+                <input class="fld" type="text" value="{{typed}}" onChange="{{setTyped}}" autocomplete="off" style="margin-top: 6px; width: 100%">
+              </label>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px">
+                <button class="btn" onClick="{{doDelete}}" aria-disabled="{{deleteDisabled}}" style="background: #9A3E1E; color: #FFF8F0; opacity: {{deleteAlpha}}">Delete permanently</button>
+                <button class="btn ghost" onClick="{{cancelDelete}}">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{deleted}}" hint-placeholder-val="{{false}}"><p class="rise" style="margin: 14px 0 0; font-size: 15px; font-weight: 700; color: #8A3A1C">In the real app this would delete your account now.</p></sc-if>
+        </section>
+      </aside>
+    </div>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
+      <span>Sample account shown for this design.</span>
+      <span style="display: flex; gap: 20px"><a href="Phone-Intro.dc.html">How we calculate</a><a href="Phone-Intro.dc.html">Privacy</a><a href="Phone-Intro.dc.html">Terms</a></span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, count: 0, stage: 'idle', typed: '', signedOut: false, planCleared: false, allArmed: false };
+  }
+  componentDidMount() {
+    const target = 6746, dur = 1300, t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      this.setState({ count: Math.round(target * (1 - Math.pow(1 - k, 4))) });
+      if (k < 1) this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+    this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
+    window.addEventListener('scroll', this.onWin, { passive: true });
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this.raf);
+    window.removeEventListener('scroll', this.onWin);
+  }
+  renderVals() {
+    const st = this.state;
+    const s = Math.min(st.scroll, 800);
+    const k = this.props.parallax ?? 1;
+    const ok = st.typed.trim() === 'DELETE';
+    return {
+      pBlobA: (s * 0.5 * k).toFixed(1), pBlobB: (-s * 0.25 * k).toFixed(1),
+      count: st.count.toLocaleString('en-GB'),
+      signOut: () => this.setState({ signedOut: true }), signOutLabel: st.signedOut ? 'Signed out' : 'Sign out',
+      clearPlan: () => this.setState({ planCleared: true }), clearPlanLabel: st.planCleared ? 'Plan cleared' : 'Clear my plan',
+      clearAll: () => this.setState({ allArmed: !st.allArmed }), clearAllLabel: st.allArmed ? 'Tap again to clear everything' : 'Clear everything',
+      askDelete: st.stage === 'idle', confirming: st.stage === 'confirm', deleted: st.stage === 'done',
+      startDelete: () => this.setState({ stage: 'confirm', typed: '' }),
+      cancelDelete: () => this.setState({ stage: 'idle', typed: '' }),
+      typed: st.typed, setTyped: (e) => this.setState({ typed: e.target.value }),
+      deleteDisabled: ok ? 'false' : 'true', deleteAlpha: ok ? 1 : 0.45,
+      doDelete: () => { if (ok) this.setState({ stage: 'done' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
