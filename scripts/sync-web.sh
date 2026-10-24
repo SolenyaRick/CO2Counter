@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 rm -rf www
 mkdir -p www
 cp index.html app.js data.js airports.js places.js style.css manifest.json www/
+cp -r about greener-switches how-we-calculate example privacy terms www/
 cp -r vendor www/vendor
 cp -r icons www/icons
 echo "Synced web assets into www/"

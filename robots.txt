@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://co2counter.co.uk/sitemap.xml

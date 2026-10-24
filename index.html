@@ -7,7 +7,7 @@
 if (location.protocol === "http:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") location.replace("https://" + location.host + location.pathname + location.search + location.hash);
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>CO2 Counter</title>
+<title>CO2 Counter · free UK carbon footprint calculator</title>
 <meta name="description" content="Work out your yearly carbon footprint, see where it comes from, and find your biggest opportunities to cut it." />
 <meta name="theme-color" content="#efe9dc" />
 <!-- Impact (affiliate network) site ownership check -->
@@ -17,6 +17,7 @@ if (location.protocol === "http:" && location.hostname !== "localhost" && locati
 <meta property="og:title" content="CO2 Counter" />
 <meta property="og:description" content="Work out your yearly carbon footprint, see where it comes from, and find your biggest opportunities to cut it." />
 <meta property="og:url" content="https://co2counter.co.uk/" />
+<link rel="canonical" href="https://co2counter.co.uk/" />
 <meta property="og:image" content="https://co2counter.co.uk/icons/icon-512.png?v=3" />
 <meta name="twitter:card" content="summary" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -33,10 +34,10 @@ if (location.protocol === "http:" && location.hostname !== "localhost" && locati
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Karla:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="style.css?v=78" />
-<script src="vendor/supabase.js?v=78"></script>
-<script src="data.js?v=78"></script>
-<script src="airports.js?v=78"></script>
+<link rel="stylesheet" href="style.css?v=79" />
+<script src="vendor/supabase.js?v=79"></script>
+<script src="data.js?v=79"></script>
+<script src="airports.js?v=79"></script>
 </head>
 <body>
   <header class="topbar">
@@ -57,18 +58,18 @@ if (location.protocol === "http:" && location.hostname !== "localhost" && locati
 
   <main id="app"></main>
   <footer class="site-footer">
-    <a class="link-btn muted-link" href="#/about">About</a>
+    <a class="link-btn muted-link" href="/about/">About</a>
     <span class="footer-sep">·</span>
-    <a class="link-btn muted-link" href="#/switches">Greener switches</a>
+    <a class="link-btn muted-link" href="/greener-switches/">Greener switches</a>
     <span class="footer-sep">·</span>
-    <a class="link-btn muted-link" href="#/how-we-calculate">How we calculate</a>
+    <a class="link-btn muted-link" href="/how-we-calculate/">How we calculate</a>
     <span class="footer-sep">·</span>
-    <a class="link-btn muted-link" href="#/privacy">Privacy</a>
+    <a class="link-btn muted-link" href="/privacy/">Privacy</a>
     <span class="footer-sep">·</span>
-    <a class="link-btn muted-link" href="#/terms">Terms</a>
+    <a class="link-btn muted-link" href="/terms/">Terms</a>
   </footer>
   <div id="modal-root"></div>
 
-  <script src="app.js?v=78"></script>
+  <script src="app.js?v=79"></script>
 </body>
 </html>

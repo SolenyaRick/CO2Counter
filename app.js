@@ -1517,7 +1517,7 @@
     const faq = [
       ["Do I need an account?", "You can take the whole survey as a guest. To see your full results, create a free account: it also keeps your answers safe across your devices."],
       ["How accurate is it?", "It's an estimate using typical lifecycle emission factors. It's built to show your biggest levers clearly, not to be a precise audit."],
-      ["How is it free?", 'Supporters chip in £2 a year, and some partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="#/about">About us</a> · <a href="#/switches">Greener switches</a>'],
+      ["How is it free?", 'Supporters chip in £2 a year, and some partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="/about/">About us</a> · <a href="/greener-switches/">Greener switches</a>'],
       ["What do I need to have to hand?", "Nothing essential. An energy bill helps with the home step, and a rough idea of your savings and pension helps with money, but ballpark answers are fine."],
     ];
     return (
@@ -1527,7 +1527,7 @@
       '<h1 class="display intro-title rise" style="animation-delay:.08s">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
       '<p class="intro-lead rise" style="animation-delay:.16s">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
       '<div class="chip-row rise" style="animation-delay:.24s">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") +
-      '<a class="btn btn-outline" href="#/example">See an example result</a></div>' +
+      '<a class="btn btn-outline" href="/example/">See an example result</a></div>' +
       '<div class="intro-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((t) => "<span>" + icon("check") + t + "</span>").join("") + "</div></div>" +
       '<div class="intro-floaty" aria-hidden="true"><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect class="ib1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect class="ib2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect class="ib3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg>' +
       '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">{{budget_t}} t <small>a person, a year</small></span></div></div></header>' +
@@ -1546,7 +1546,7 @@
       "<p>is roughly each person's yearly share of CO₂e if we're to keep warming to 1.5°C. Most of us in the UK are well above it, and small, repeated changes are how we close the gap.</p></div></section>" +
       '<section class="intro-cards">' +
       [
-        ["chart", "Built on official figures", 'We use UK government emission factors and published data from sources like DESNZ, Defra, Ofgem and the ONS. <a href="#/how-we-calculate">How we calculate</a>'],
+        ["chart", "Built on official figures", 'We use UK government emission factors and published data from sources like DESNZ, Defra, Ofgem and the ONS. <a href="/how-we-calculate/">How we calculate</a>'],
         ["shield", "Your data stays yours", "No ads, and we never sell your data. Answers stay on your device until you choose to create an account."],
         ["heart", "Free, kept going by supporters", "Everything is free. If it helps you, you can chip in £2 a year to cover running costs."],
       ].map(([ic, t, b]) => '<div class="glass intro-card"><span class="cat-badge">' + icon(ic) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
@@ -2256,7 +2256,7 @@
       '<h3 class="card-title mb-1">Free for everyone, kept going by supporters</h3>' +
       '<p class="sm muted mb-4 max-2xl">CO2 Counter has no ads and never sells your data. If it\'s helped you, you can chip in £2 a year to cover running costs and new features. Cancel any time.</p>' +
       '<div class="chip-row"><a class="btn btn-green" href="' + esc(supportUrl()) + '">Support for £2 a year</a></div>' +
-      '<p class="xs muted mt-3">Secure payment by Stripe. Optional: everything stays free either way. <a class="link-btn" href="#/terms">Terms</a></p></div>'
+      '<p class="xs muted mt-3">Secure payment by Stripe. Optional: everything stays free either way. <a class="link-btn" href="/terms/">Terms</a></p></div>'
     );
   }
 
@@ -2516,7 +2516,7 @@
       '<a class="btn btn-green" href="' + catHref(lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
       saveCard() + supportCard() +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. Figures last updated ' +
-      esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>';
+      esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>';
     return html;
   }
 
@@ -3707,7 +3707,7 @@
         return (
           '<div class="sw-stem" style="left:' + a.ex + "%;height:" + ((a.save / maxSave) * 100).toFixed(2) + "%;border-color:" + a.panel + '"></div>' +
           '<div class="sw-pin" style="left:' + a.ex + "%;bottom:" + ((a.save / maxSave) * 100).toFixed(2) + '%">' +
-          '<a class="sw-bub" href="#/switches" data-action="jump-switch" data-cat="' + a.key + '" aria-label="' + a.short + ": saves " + kgFmt(a.save) + " kg a year, " + a.effort +
+          '<a class="sw-bub" href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '" aria-label="' + a.short + ": saves " + kgFmt(a.save) + " kg a year, " + a.effort +
           '" style="width:' + size + "px;height:" + size + "px;left:-" + size / 2 + "px;top:-" + size / 2 + "px;background:" + a.panel + ";color:" + a.panelInk + ";animation-delay:" + (0.2 + i * 0.12).toFixed(2) + 's">' +
           svgPath(SW_ICONS[a.key], Math.round(size * 0.36)) + "</a>" +
           '<span class="sw-blab" style="bottom:' + (size / 2 + 8) + 'px"><span class="display">' + a.short + '</span><span class="display tnum sw-blab-kg">−' + kgFmt(a.save) + " kg</span><span>" + a.effort.split(" · ")[1] + "</span></span></div>"
@@ -3722,7 +3722,7 @@
       '<span class="sw-q" style="left:12px;top:12px;color:#2B4128">★ Quick wins</span><span class="sw-q" style="right:4px;top:calc(50% - 26px)">Big, but a habit</span>' +
       '<span class="sw-q" style="left:12px;top:calc(50% + 10px)">Easy extras</span><span class="sw-q" style="right:4px;top:calc(50% + 10px)">Slow burners</span>' +
       bubbles + '</div><div class="sw-xaxis"><span>Once, in minutes</span><i></i><b>MORE EFFORT →</b><i></i><span>Every day, a habit</span></div></div>' +
-      '<ul class="sw-legend">' + areas.map((a) => '<li><a href="#/switches" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="tnum sw-leg-kg">−' + kgFmt(a.save) + ' kg</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") + "</ul></section>";
+      '<ul class="sw-legend">' + areas.map((a) => '<li><a href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="tnum sw-leg-kg">−' + kgFmt(a.save) + ' kg</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") + "</ul></section>";
     const feats = areas
       .map((a, i) => {
         const drop = a.before > 0 ? Math.round((1 - a.after / a.before) * 100) : 0;
@@ -3761,10 +3761,10 @@
       '<h1 class="display rise d1">Five switches.<br><span>Up to ' + kgFmt(total) + " kg</span> a year.</h1>" +
       '<p class="rise d2">The biggest, easiest changes ' + (base.mine ? "for your footprint" : "for a typical UK footprint") + ", with options we'd recommend anyway. Flip a switch to see what it saves.</p></div>" + board + "</header>" +
       plot + feats +
-      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, including options that pay us nothing. Partners never change anyone\'s figures, and bank and pension picks are never affiliate links. <a href="#/about">How we choose</a></p></div>' +
+      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, including options that pay us nothing. Partners never change anyone\'s figures, and bank and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
       '<a class="sw-band-cta" href="#/">' + (base.mine ? "Update your survey" : "Find your biggest switch") + icon("arrowRight") + "</a></section>" +
       '<p class="xs muted sw-note-foot">' + (base.mine ? "Savings are worked out from your latest survey." : "Savings are for a typical UK resident with £" + kgFmt(A.EXAMPLE_SAVINGS) + " in a high-street bank. Take the survey to see yours.") +
-      ' <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
+      ' <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>'
     );
   }
 
@@ -3920,7 +3920,7 @@
       '<div class="ab-stats">' + stats.map(([big, t, bg, ink]) => '<div class="ab-stat" style="background:' + bg + ";color:" + ink + '"><span class="display tnum">' + big + "</span><span>" + t + "</span></div>").join("") + "</div></section>" +
       '<section class="ab-sec" aria-labelledby="ab-principles"><div class="ab-kicker">How we choose partners</div><h2 id="ab-principles" class="display ab-h2">The climate comes first. <span>Every time.</span></h2><div class="ab-principles">' +
       principles.map(([t, b, bg, ink, d]) => '<div class="ab-pcard"><span class="ab-pic" style="background:' + bg + ";color:" + ink + '">' + svgPath(d, 26) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
-      '</div><p class="ab-see"><a class="link-btn" href="#/switches">See all our greener switches</a></p></section>' +
+      '</div><p class="ab-see"><a class="link-btn" href="/greener-switches/">See all our greener switches</a></p></section>' +
       '<section class="ab-sec ab-aff" aria-labelledby="ab-aff"><div class="ab-aff-text"><div class="ab-kicker">Affiliate links</div><h2 id="ab-aff" class="display">If we ever earn from a link, you\'ll see this tag.</h2>' +
       "<p>Some links may earn us a small fee, at no extra cost to you. Those links always carry the tag. " +
       (paidCount ? "Right now <strong>" + paidCount + " of our links " + (paidCount === 1 ? "is an affiliate link" : "are affiliate links") + "</strong>" : "Right now <strong>none of our links are affiliate links</strong>") +
@@ -3928,7 +3928,7 @@
       '<div class="ab-aff-demo"><div class="ab-example">Example only</div><div class="ab-aff-tile"><span class="display ab-aff-mono" aria-hidden="true">GE</span><div class="min0"><div class="ab-aff-name"><span class="display">Green energy supplier</span><span class="tag affiliate-tag">Affiliate</span></div><div class="muted">100% renewable tariff · example.co.uk</div></div></div>' +
       '<div class="ab-aff-hint">' + svgPath("M12 19V5M6 11l6-6 6 6", 22) + "This honey-coloured tag means we'd earn a fee.</div></div></section>" +
       '<section class="ab-band"><div><h2 class="display">Six steps. A few minutes.</h2><p>See your footprint, how it compares to the UK average, and where to start.</p></div>' +
-      '<div class="chip-row"><a href="#/" class="ab-cta">Take the survey<span aria-hidden="true">→</span></a><a href="#/switches" class="ab-cta2">See greener switches</a></div></section></div>'
+      '<div class="chip-row"><a href="#/" class="ab-cta">Take the survey<span aria-hidden="true">→</span></a><a href="/greener-switches/" class="ab-cta2">See greener switches</a></div></section></div>'
     );
   }
 
@@ -4802,7 +4802,7 @@
       authNotes() +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
       (signup
-        ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>'
+        ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="/terms/">Terms</a> and <a class="link-btn" href="/privacy/">Privacy policy</a>.</p>'
         : "") +
       '<div class="chip-row auth-links">' +
       (signup
@@ -4844,7 +4844,7 @@
   const PRODUCTION_URL = "https://co2counter.co.uk/";
   function authRedirectUrl() {
     const native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    return native ? PRODUCTION_URL : location.origin + location.pathname;
+    return native ? PRODUCTION_URL : location.origin + "/";
   }
 
   async function submitAuth() {
@@ -5111,7 +5111,7 @@
       action =
         '<a class="btn btn-green btn-block" href="' + esc(paymentUrl()) + '">Join for £2 a year</a>' +
         '<p class="xs muted mt-2 center">Secure payment by Stripe. Renews yearly; cancel any time. By joining you agree to our ' +
-        '<a class="link-btn" href="#/terms">Terms</a> and <a class="link-btn" href="#/privacy">Privacy policy</a>.</p>' +
+        '<a class="link-btn" href="/terms/">Terms</a> and <a class="link-btn" href="/privacy/">Privacy policy</a>.</p>' +
         '<button type="button" class="link-btn mt-3" data-action="recheck-membership">Already paid? Check again</button>';
     }
     if (ui.paymentTimedOut && !ui.confirmingPayment) {
@@ -5156,7 +5156,7 @@
         : '<div class="price mb-0"><span class="price-num">£2</span><span class="muted"> / year</span></div>' + perksList() +
           '<div class="max-sm">' + joinAction() + "</div></div>") +
       '<div class="btn-row"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
-      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
+      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>'
     );
   }
 
@@ -5184,8 +5184,12 @@
 
   // ==================== routing & rendering ====================
 
+  // Public pages also have real addresses (co2counter.co.uk/about/ and so
+  // on, built by scripts/build-pages.mjs) so search engines can find them.
+  const PAGE_PATHS = { "/about/": "/about", "/greener-switches/": "/switches", "/how-we-calculate/": "/how-we-calculate", "/example/": "/example", "/privacy/": "/privacy", "/terms/": "/terms" };
   function currentPath() {
-    const hash = location.hash.replace(/^#/, "") || "/";
+    const hash = location.hash.replace(/^#/, "");
+    if (!hash) return PAGE_PATHS[location.pathname.replace(/\/?$/, "/")] || "/";
     return hash.split("?")[0];
   }
 
@@ -5246,6 +5250,9 @@
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
 
   function onRouteChange() {
+    // Moving on from a real page address (/about/ ...) inside the app: show
+    // the usual /#/… address rather than /about/#/….
+    if (location.pathname !== "/" && location.hash && !/^\/(?:index\.html)?$/.test(location.pathname)) history.replaceState(null, "", "/" + location.hash);
     closeModal();
     ui.shownStep = null;
     ui.flash = "";
@@ -5404,7 +5411,11 @@
     go: () => {},
     "start-survey": () => {
       lsSet(KEY_SEEN_INTRO, true);
-      if (location.hash === "#/" || location.hash === "") render();
+      if (location.pathname !== "/" && !/^\/index\.html$/.test(location.pathname)) {
+        // From a real page address (/example/ ...): over to the survey.
+        history.replaceState(null, "", "/#/");
+        onRouteChange();
+      } else if (location.hash === "#/" || location.hash === "") render();
       else location.hash = "#/";
       window.scrollTo(0, 0);
     },

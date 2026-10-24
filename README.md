@@ -168,6 +168,20 @@ visitor the next time they load the site, with no deploy.
 Data comes from `owner_analytics()` in `supabase/schema.sql` ("Owner
 analytics" section, run once). People appear only as a scrambled id.
 
+## Real page addresses (SEO)
+
+The app's own routes use `#/…`, which search engines treat as one page.
+The public pages also live at real addresses so they can be found:
+`/about/`, `/greener-switches/`, `/how-we-calculate/`, `/example/`,
+`/privacy/` and `/terms/`. Each is a generated copy of `index.html` with
+its own title, description, canonical URL and a pre-rendered snapshot of
+the page; the app then starts on that page (`PAGE_PATHS` in `app.js`).
+`sitemap.xml` lists them and `robots.txt` points to it.
+
+Rebuild them after changing `index.html` (including the `?v=` asset
+version) or a public page: `node scripts/build-pages.cjs` (needs
+Playwright: `npm i --no-save playwright && npx playwright install chromium`).
+
 ## Bank figures
 
 The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held
