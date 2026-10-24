@@ -1,0 +1,77 @@
+<!-- Built by scripts/build-pages.cjs from index.html. Don't edit by hand. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<base href="/" />
+<script>
+// Backup for GitHub Pages "Enforce HTTPS": never stay on the insecure address.
+if (location.protocol === "http:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") location.replace("https://" + location.host + location.pathname + location.search + location.hash);
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Example carbon footprint result for a typical UK resident | CO2 Counter</title>
+<meta name="description" content="See the results a typical UK resident gets: where their carbon footprint comes from and the realistic changes that cut it most." />
+<meta name="theme-color" content="#efe9dc" />
+<!-- Impact (affiliate network) site ownership check -->
+<meta name='impact-site-verification' value='baabe86d-50d9-43d0-abc4-38ffd5cf28cf'>
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="CO2 Counter" />
+<meta property="og:title" content="Example carbon footprint result for a typical UK resident | CO2 Counter" />
+<meta property="og:description" content="See the results a typical UK resident gets: where their carbon footprint comes from and the realistic changes that cut it most." />
+<meta property="og:url" content="https://co2counter.co.uk/example/" />
+<link rel="canonical" href="https://co2counter.co.uk/example/" />
+<meta property="og:image" content="https://co2counter.co.uk/icons/icon-512.png?v=3" />
+<meta name="twitter:card" content="summary" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="CO2 Counter" />
+<link rel="manifest" href="manifest.json" />
+<link rel="shortcut icon" href="favicon.ico?v=4" />
+<link rel="icon" type="image/svg+xml" href="icons/leaf-ledger.svg?v=4" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/leaf-ledger-32.png?v=4" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/leaf-ledger-16.png?v=4" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3" />
+<!-- Bump ?v= whenever these files change, so browsers that cached the
+     previous version (GitHub Pages sends max-age=600) fetch the new one. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Karla:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="style.css?v=79" />
+<script src="vendor/supabase.js?v=79"></script>
+<script src="data.js?v=79"></script>
+<script src="airports.js?v=79"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="#/welcome" class="brand">
+        <span class="brand-mark"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg></span>
+        <span class="brand-name">CO2 Counter</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Main">
+        <a href="#/" data-route="/">Survey</a>
+        <a href="#/results" data-route="/results">Results</a>
+        <a href="#/friends" data-route="/friends">Friends</a>
+        <a href="#/habits" data-route="/habits">Habits <span class="nav-soon">Soon</span></a>
+      </nav>
+      <a href="#/account" class="nav-avatar" id="nav-avatar" data-route="/account" aria-label="Account"></a>
+    </div>
+  </header>
+
+  <main id="app"><div class="container results-v2"><div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident's footprint, worked out the same way as yours will be.</p></div><button type="button" class="btn btn-green" data-action="start-survey">Start your own <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div><section class="glass res-hero rise"><div class="res-hero-main"><p class="fw-600 muted">Your footprint this year</p><div class="res-total"><span class="display tnum" data-countup="3920">3,920</span><span class="muted">kg CO₂e</span></div><p class="res-lead">That's about the same as the UK average on the things we can compare, and 1.6 times the 1.5°C budget.</p><details class="res-more"><summary>What about shopping and public services?</summary><div class="shared-line mt-4"><p class="sm"><strong>+ 1.0 t shopping (assumed)</strong> · a typical UK figure for clothes, household goods, electronics and hobbies. Shopping isn't in the survey yet.</p><p class="sm mt-2"><strong>+ 2.4 t shared footprint</strong> · your share of the UK's public services (1.2 t) and infrastructure (1.2 t). It's the same for everyone in the UK.</p><p class="sm mt-2">Including both, your total is about <strong>7.3 t a year</strong>.</p></div></details></div><div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span><span class="res-chip">−1,012 kg · 26% less</span></div><div class="res-after"><span class="display tnum">2,909</span><span class="muted">kg a year</span></div><div class="path animate"><span class="path-mark budget" style="left:55.45%"><i>1.5°C · 2.5 t</i></span><span class="path-mark uk edge-r" style="left:86.96%"><i>UK avg · 3.9 t*</i></span><span class="path-now" style="width:86.96%"></span><span class="path-real" style="width:64.52%"></span><span class="path-all" style="width:17.52%"></span></div><div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">790</b></span><span><i class="lg-real"></i>Realistic <b class="tnum">2,909</b></span><span><i class="lg-now"></i>Now <b class="tnum">3,920</b></span></div><p class="sm muted mt-2">Realistic changes take you below the UK average. Going all the way puts you inside the 1.5°C budget.</p><p class="xs muted mt-1">*The UK average leaves out banking and pensions, as there's no UK figure for them. On the same basis you're at 3.9 t.</p></div></section><div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap"><div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap a category to see how to improve it</p></div><div class="chip-row" style="align-items:center"><button type="button" class="uk-toggle" data-action="toggle-uk" aria-pressed="false"><span class="uk-toggle-track"><span class="uk-toggle-knob"></span></span>UK average</button><div class="seg" role="group" aria-label="Chart type"><button type="button" data-action="chart-mode" data-mode="donut" aria-pressed="true" class="on">Donut</button><button type="button" data-action="chart-mode" data-mode="bars" aria-pressed="false">Bars</button></div></div></div><div class="res-chart-body"><div class="donut-wrap"><div class="donut"><svg viewBox="0 0 42 42" role="img" aria-label="Share of your footprint by category"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#3F5B3A" stroke-width="7" pathLength="100" stroke-dasharray="47.40 52.60" stroke-dashoffset="0.00" transform="rotate(-90 21 21)"><title>Meals &amp; Diet</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#A3B58F" stroke-width="7" pathLength="100" stroke-dasharray="26.95 73.05" stroke-dashoffset="-48.00" transform="rotate(-90 21 21)"><title>Home Energy</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#B8653D" stroke-width="7" pathLength="100" stroke-dasharray="10.34 89.66" stroke-dashoffset="-75.55" transform="rotate(-90 21 21)"><title>Flights</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#8C6A4F" stroke-width="7" pathLength="100" stroke-dasharray="6.55 93.45" stroke-dashoffset="-86.49" transform="rotate(-90 21 21)"><title>Commute &amp; Travel</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#D9A441" stroke-width="7" pathLength="100" stroke-dasharray="5.29 94.71" stroke-dashoffset="-93.64" transform="rotate(-90 21 21)"><title>Pets</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#7FA3AE" stroke-width="7" pathLength="100" stroke-dasharray="0.15 99.85" stroke-dashoffset="-99.53" transform="rotate(-90 21 21)"><title>Water</title></circle><circle cx="21" cy="21" r="15.9" fill="none" stroke="#6E8B5E" stroke-width="7" pathLength="100" stroke-dasharray="0.15 99.85" stroke-dashoffset="-100.00" transform="rotate(-90 21 21)"><title>Banking &amp; Pension</title></circle></svg><div class="donut-mid"><span class="display tnum">3,920</span><span class="xs muted">kg a year</span></div></div><ul class="donut-legend"><li><a href="#/" aria-label="Meals &amp; Diet, 1,882 kg, 48% of your footprint. Open how to improve"><span class="sw" style="background:#3F5B3A"></span><span class="nm"><span class="nm-long">Meals &amp; Diet</span><span class="nm-short">Meals</span></span><span class="muted tnum">48%</span></a></li><li><a href="#/" aria-label="Home Energy, 1,080 kg, 28% of your footprint. Open how to improve"><span class="sw" style="background:#A3B58F"></span><span class="nm"><span class="nm-long">Home Energy</span><span class="nm-short">Home</span></span><span class="muted tnum">28%</span></a></li><li><a href="#/" aria-label="Flights, 429 kg, 11% of your footprint. Open how to improve"><span class="sw" style="background:#B8653D"></span><span class="nm"><span class="nm-long">Flights</span><span class="nm-short">Flights</span></span><span class="muted tnum">11%</span></a></li><li><a href="#/" aria-label="Commute &amp; Travel, 280 kg, 7% of your footprint. Open how to improve"><span class="sw" style="background:#8C6A4F"></span><span class="nm"><span class="nm-long">Commute &amp; Travel</span><span class="nm-short">Commute</span></span><span class="muted tnum">7%</span></a></li><li><a href="#/" aria-label="Pets, 231 kg, 6% of your footprint. Open how to improve"><span class="sw" style="background:#D9A441"></span><span class="nm"><span class="nm-long">Pets</span><span class="nm-short">Pets</span></span><span class="muted tnum">6%</span></a></li><li><a href="#/" aria-label="Water, 18 kg, 1% of your footprint. Open how to improve"><span class="sw" style="background:#7FA3AE"></span><span class="nm"><span class="nm-long">Water</span><span class="nm-short">Water</span></span><span class="muted tnum">1%</span></a></li><li><a href="#/" aria-label="Banking &amp; Pension, 0 kg, 1% of your footprint. Open how to improve"><span class="sw" style="background:#6E8B5E"></span><span class="nm"><span class="nm-long">Banking &amp; Pension</span><span class="nm-short">Money</span></span><span class="muted tnum">1%</span></a></li></ul></div></div></section><aside class="res-aside"><section class="res-opp"><span class="eyebrow">Your biggest opportunity</span><h3 class="display">Trim your red-meat days (1–2×/week)</h3><p class="res-opp-kg display tnum">−427 <small>kg a year</small></p><a class="btn btn-honey btn-block" href="#/">See how <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></section><section class="glass res-three"><h3 class="display">Biggest three</h3><p class="sm">Meals &amp; Diet, Home Energy and Flights make up <b>86%</b> of your footprint. Start there for the biggest difference.</p></section></aside></div><div class="center mt-6"><button type="button" class="btn btn-green" data-action="start-survey">Start your own survey <svg class="icon " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div></div></main>
+  <footer class="site-footer">
+    <a class="link-btn muted-link" href="/about/">About</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="/greener-switches/">Greener switches</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="/how-we-calculate/">How we calculate</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="/privacy/">Privacy</a>
+    <span class="footer-sep">·</span>
+    <a class="link-btn muted-link" href="/terms/">Terms</a>
+  </footer>
+  <div id="modal-root"></div>
+
+  <script src="app.js?v=79"></script>
+</body>
+</html>
