@@ -1162,7 +1162,7 @@
       },
       {
         "heading": "Take the train where you can",
-        "body": "For routes under ~700km, high-speed rail can be faster door-to-door once you factor in airport time, and emits a fraction as much. Many city pairs in Europe are well-served by rail.",
+        "body": "For routes under ~{{swap_km}} km, high-speed rail can be faster door-to-door once you factor in airport time, and emits a fraction as much. Many city pairs in Europe are well-served by rail.",
         "dynamicKey": "trainComparison"
       },
       {
@@ -1183,7 +1183,7 @@
       },
       {
         "id": "train_short",
-        "label": "Train under 700km",
+        "label": "Train under {{swap_km}} km",
         "tip": "Default to rail for shorter routes."
       },
       {
@@ -1435,13 +1435,13 @@
     "tier": 3,
     "label": "Tier 3",
     "criteria": "3–4 short-haul or 1–2 medium-haul flights / year",
-    "description": "Moderate flying. Medium-haul = {{short_km}}–{{swap_km}} km."
+    "description": "Moderate flying. Medium-haul = {{short_km}}–{{medium_km}} km."
   },
   {
     "tier": 4,
     "label": "Tier 4",
     "criteria": "≥5 short-haul, ≥3 medium-haul, or >1 long-haul flights / year",
-    "description": "Heavy flying. Long-haul = over {{swap_km}} km. A single long-haul return can exceed your entire 1.5°C annual budget."
+    "description": "Heavy flying. Long-haul = over {{medium_km}} km. A single long-haul return can exceed your entire 1.5°C annual budget."
   }
 ];
   // Diet-specific replacements for the Meals explainer's sections + habits.
@@ -1770,7 +1770,8 @@
     PHONE_KG: 61, // making a smartphone and charging it for a year
     ACTIVE_TRAVEL_MAX_KM: 10, // one way; beyond this, train or bus is the realistic swap
     SHORT_HAUL_KM: 1500, // flight tiers: short-haul is under this
-    TRAIN_SWAP_MAX_KM: 4000, // flights up to this can realistically go by train
+    TRAIN_SWAP_MAX_KM: 700, // flights up to this can realistically go by train
+    MEDIUM_HAUL_MAX_KM: 4000, // flight tiers: medium-haul is up to this, long-haul beyond
     WATER_CUT: 0.2, // realistic share of water saved
     WATER_CUT_MAX: 0.4,
     PET_FOOD_CUT: 0.25, // realistic cut from lower-impact pet food
@@ -1848,7 +1849,8 @@
     { group: "Shared and assumed", key: "shared_infra", label: "Shared: infrastructure and investment", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.infrastructureKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
     { group: "Benchmark", key: "uk_total", label: "Full UK footprint per person", unit: "kg CO₂e a year", path: "ASSUMPTIONS.UK_TOTAL_KG", source: DEFRA_FOOTPRINT + ": total 699,201.9 kt", asOf: "2026-06", every: 12 },
     { group: "Savings assumptions", key: "active_max_km", label: "Walk or cycle commutes up to", unit: "km one way", path: "ASSUMPTIONS.ACTIVE_TRAVEL_MAX_KM", source: "App assumption: beyond this, the train or bus is the realistic swap" },
-    { group: "Savings assumptions", key: "train_swap_km", label: "Train can replace flights up to", unit: "km", path: "ASSUMPTIONS.TRAIN_SWAP_MAX_KM", source: "App assumption for the realistic flights saving and the train comparison" },
+    { group: "Savings assumptions", key: "train_swap_km", label: "Train can replace flights up to", unit: "km", path: "ASSUMPTIONS.TRAIN_SWAP_MAX_KM", source: "App assumption: up to about 700 km the train is often as quick door to door. Used for the realistic flights saving and the train comparison." },
+    { group: "Savings assumptions", key: "medium_haul_km", label: "Medium-haul flights go up to", unit: "km", path: "ASSUMPTIONS.MEDIUM_HAUL_MAX_KM", source: "App assumption for the flight tiers and the realistic flights saving (beyond this counts as long-haul)" },
     { group: "Savings assumptions", key: "short_haul_km", label: "Short-haul flights are under", unit: "km", path: "ASSUMPTIONS.SHORT_HAUL_KM", source: "App assumption for the flight tiers" },
     { group: "Savings assumptions", key: "water_cut", label: "Water: realistic cut", unit: "share (0–1)", path: "ASSUMPTIONS.WATER_CUT", source: "App assumption: shorter showers and fixing leaks" },
     { group: "Savings assumptions", key: "water_cut_max", label: "Water: going all the way", unit: "share (0–1)", path: "ASSUMPTIONS.WATER_CUT_MAX", source: "App assumption: efficient fittings and short showers" },
