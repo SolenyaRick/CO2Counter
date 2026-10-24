@@ -429,6 +429,7 @@
       ny_share: share(nyKg / D.BUDGET_YEARLY),
       short_km: kgFmt(A.SHORT_HAUL_KM),
       swap_km: kgFmt(A.TRAIN_SWAP_MAX_KM),
+      medium_km: kgFmt(A.MEDIUM_HAUL_MAX_KM),
       active_km: String(A.ACTIVE_TRAVEL_MAX_KM),
       budget_t: (D.BUDGET_YEARLY / 1000).toFixed(1).replace(/\.0$/, ""),
       uk_total_t: String(Math.round(A.UK_TOTAL_KG / 1000)),
@@ -672,7 +673,7 @@
     flights.forEach((f) => {
       const km = flightKm(f.from, f.to);
       if (km < A.SHORT_HAUL_KM) shortHaul += legs(f);
-      else if (km < A.TRAIN_SWAP_MAX_KM) mediumHaul += legs(f);
+      else if (km < A.MEDIUM_HAUL_MAX_KM) mediumHaul += legs(f);
       else longHaul += legs(f);
     });
     let tier;
@@ -953,13 +954,19 @@
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
         const economyKg = (f) => flightKm(f.from, f.to) * flightFactor(f.from, f.to, "economy") * legs(f);
         const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
-        const long = flights.filter((f) => flightKm(f.from, f.to) > A.TRAIN_SWAP_MAX_KM);
+        // Long-haul: beyond medium-haul. Medium: too far for the train, so kept
+        // in economy. Short: close enough to go by train.
+        const long = flights.filter((f) => flightKm(f.from, f.to) > A.MEDIUM_HAUL_MAX_KM);
+        const medium = flights.filter((f) => {
+          const km = flightKm(f.from, f.to);
+          return km > A.TRAIN_SWAP_MAX_KM && km <= A.MEDIUM_HAUL_MAX_KM;
+        });
         const short = flights.filter((f) => {
           const km = flightKm(f.from, f.to);
           return km > 0 && km <= A.TRAIN_SWAP_MAX_KM;
         });
         const typicalShortKg =
-          short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * flightFactor("LHR", "BCN", "economy") * (long.length === 1 ? legs(long[0]) : 1);
+          medium.length || short.length ? avg(medium.concat(short), economyKg) : flightKm("LHR", "BCN") * flightFactor("LHR", "BCN", "economy") * (long.length === 1 ? legs(long[0]) : 1);
         let remaining = 0;
         const parts = [];
         if (long.length > 1) {
@@ -968,6 +975,10 @@
         } else if (long.length === 1) {
           remaining += typicalShortKg;
           parts.push("a short-haul trip in economy instead of long-haul");
+        }
+        if (medium.length) {
+          remaining += medium.reduce((t, f) => t + economyKg(f), 0);
+          parts.push("medium-haul trips in economy");
         }
         if (short.length >= 3) {
           remaining += avg(short, economyKg) + (short.length - 1) * avg(short, economyKg) * trainToFlightRatio();
@@ -2097,7 +2108,7 @@
         "Add each trip airport to airport, with when you flew. Tick <strong>Return trip</strong> for there and back. Trips stay saved, so you only add each one once.",
         html
       ),
-      goodToKnow("Economy spreads a plane's emissions over more people, so business and first class can double or triple your share. For trips under about 700 km, the train is often as fast door to door."),
+      goodToKnow("Economy spreads a plane's emissions over more people, so business and first class can double or triple your share. For trips under about {{swap_km}} km, the train is often as fast door to door."),
     ]);
   }
 
@@ -2693,14 +2704,14 @@
     }
     if (cat === "flights") {
       return {
-        title: "Take the train for trips under 700 km",
+        title: "Take the train for trips under {{swap_km}} km",
         lede: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
         save: tip.saving, saveLabel: "Realistic saving for you", eqFlights: true,
         vsTitle: "London → Paris and back, per person", headline: Math.round((1 - trainToFlightRatio()) * 100) + "% less by train", unit: "kg",
         rows: [["Plane", A.PARIS_FLIGHT_KG, "✈️"], ["Train", A.PARIS_FLIGHT_KG * trainToFlightRatio(), "🚆"]],
         source: "Eurostar's independently commissioned figures, as used in CO2 Counter.",
         steps: [
-          ["Check the train first", "For trips under about 700 km, compare door-to-door times, not just the journey itself."],
+          ["Check the train first", "For trips under about {{swap_km}} km, compare door-to-door times, not just the journey itself."],
           ["Book ahead", "Advance rail fares are usually the cheapest."],
           ["Make the journey part of the trip", "No security queues or liquids rules, and you can work, read or watch something the whole way."],
           ["If you do fly, fly economy and direct", "Economy spreads the plane's emissions over more people, and direct routes avoid extra take-offs."],
@@ -3390,7 +3401,7 @@
         "<p>For each area we show two figures: what a <strong>realistic</strong> change would save, and the most you could save <strong>going all the way</strong>.</p>" +
           "<p>Realistic changes:</p>" +
           list([
-            "Flights: if you take several long-haul flights, keeping one in economy; swapping a single long-haul trip for a short-haul one; and taking the train for short-haul trips, keeping one short-haul flight if you take three or more",
+            "Flights: if you take several long-haul flights, keeping one in economy; swapping a single long-haul trip for a shorter one; taking the train for trips up to {{swap_km}} km, keeping one of those flights if you take three or more; and flying other trips up to {{medium_km}} km in economy",
             "Commute and travel: walking or cycling on driving days for journeys up to 10 km, or train or bus for longer ones, and the train for long journeys you'd otherwise drive",
             "Food: swapping the highest-impact meals for lower-impact ones, tailored to your diet",
             "Home energy: switching to a renewable electricity tariff",
@@ -3804,17 +3815,38 @@
   }
 
   function renderAbout() {
-    const typ = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY));
+    // Signed in with a finished survey: their own answers and footprint (on
+    // the figures their survey uses). Otherwise a typical UK resident.
+    const mine = !!(currentUser && survey && survey.completedAt);
+    const typ = mine ? footprint(survey) : withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY));
     const p = D.UK_PROFILE;
     const meatDaysUk = Math.round((p.chickenG + p.porkG + p.beefG + p.lambG) / (D.PORTION * 1000));
-    const answers = [
-      ["meals", "Meals", "Meat on about " + meatDaysUk + " days a week"],
-      ["energy", "Home energy", kgFmt(p.electricityKwh) + " kWh power, gas heating"],
-      ["flights", "Flights", "About " + Math.round(p.flightsPerPerson) + " return flight a year"],
-      ["commute", "Commute", Math.round(p.commuteKm * 10) / 10 + " km, mostly by car"],
-      ["pets", "Pets", "A share of a pet"],
-      ["water", "Water", kgFmt(p.waterLitres) + " litres a day"],
-    ].map(([k, label, value], i) => ({ k, label, value, top: 90 + i * 62, y: 115 + i * 62 }));
+    const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+    const ownAnswers = () => {
+      const s = survey;
+      const c = mealCounts(s);
+      const meat = Math.round(["chicken", "pork", "beef", "lamb"].reduce((t, k) => t + (c[k] || 0), 0));
+      const diet = byKey(D.DIETS, s.meals.diet);
+      const meals = s.meals.diet && s.meals.diet !== "meat_eater" && diet ? diet.label : meat ? "Meat on " + plural(meat, "day") + " a week" : "No meat days";
+      const kwh = Math.round((s.energy.electricityKwh || 0) * 12);
+      const energy = kgFmt(kwh) + " kWh power" + (s.energy.gasKwh > 0 ? ", gas heating" : "") + (s.energy.greenTariff ? ", green tariff" : "");
+      const n = (s.flights || []).length;
+      const flights = n ? plural(n, "flight") + " this year" : "No flights";
+      const modes = DAYS.slice(0, 5).map((d) => s.commute[d]).filter(Boolean);
+      const top = modes.sort((a, b) => modes.filter((m) => m === b).length - modes.filter((m) => m === a).length)[0];
+      const mode = byKey(D.COMMUTE_MODES, top);
+      const commute = !mode || top === "wfh" ? "Mostly from home" : (s.commute.distance || 0) + " km, mostly " + mode.label.toLowerCase().replace(/ \(.*\)/, "");
+      const pets = [s.pets.dogs ? plural(Math.round(s.pets.dogs), "dog") : "", s.pets.cats ? plural(Math.round(s.pets.cats), "cat") : ""].filter(Boolean).join(", ") || "No pets";
+      const water = kgFmt((s.water.liters || 0) / 30.4 / householdOf(s)) + " litres a day";
+      return [meals, energy, flights, commute, pets, water];
+    };
+    const values = mine
+      ? ownAnswers()
+      : ["Meat on about " + meatDaysUk + " days a week", kgFmt(p.electricityKwh) + " kWh power, gas heating", "About " + Math.round(p.flightsPerPerson) + " return flight a year",
+         Math.round(p.commuteKm * 10) / 10 + " km, mostly by car", "A share of a pet", kgFmt(p.waterLitres) + " litres a day"];
+    const answers = [["meals", "Meals"], ["energy", "Home energy"], ["flights", "Flights"], ["commute", "Commute"], ["pets", "Pets"], ["water", "Water"]]
+      .map(([k, label], i) => ({ k, label, value: values[i], top: 90 + i * 62, y: 115 + i * 62 }));
+    const resultHref = mine ? "#/results" : "#/example";
     const factors = [
       ["DESNZ", "UK greenhouse gas conversion factors", "#3F5B3A", "#F6F1E6"], ["Defra", "UK carbon footprint and food data", "#8FA58A", "#1F2D1C"],
       ["ONS", "UK household statistics", "#7FA3AE", "#14262B"], ["Ofgem", "Typical home energy use", "#D9A441", "#2E2A22"],
@@ -3871,15 +3903,15 @@
       '<div class="ab-core" style="left:425px;top:225px;width:150px;height:150px;border-radius:44px">' + leafMark(86) + "</div>" +
       '<div class="ab-calc"><div class="display">The calculator</div><div>answers × factors</div></div>' +
       '<div class="ab-lab" style="left:740px;top:52px;width:260px">3 · Your footprint</div>' +
-      '<a href="#/example" class="ab-result"><div class="row-between"><span class="ab-res-l">Typical UK footprint</span><span class="ab-est">Estimate</span></div>' +
+      '<a href="' + resultHref + '" class="ab-result"><div class="row-between"><span class="ab-res-l">' + (mine ? "Your footprint" : "Typical UK footprint") + '</span><span class="ab-est">Estimate</span></div>' +
       '<div class="display tnum ab-res-n">' + totalT + "<span> t</span></div><div class=\"ab-res-u\">CO₂e a year</div>" +
-      '<div class="ab-mix" aria-hidden="true">' + mix + '</div><div class="ab-res-cta">See an example result<span aria-hidden="true">→</span></div></a></div>' +
+      '<div class="ab-mix" aria-hidden="true">' + mix + '</div><div class="ab-res-cta">' + (mine ? "See your results" : "See an example result") + '<span aria-hidden="true">→</span></div></a></div>' +
       '<div class="ab-dia-phone"><div class="ab-lab-ph">1 · Your answers</div><div class="ab-q-grid">' + answers.map((q) => answerTile(q, true)).join("") + "</div>" +
       '<div class="ab-vline" aria-hidden="true"><span></span><span style="animation-delay:-.6s"></span></div>' +
       '<div class="ab-ph-mid"><div class="ab-fac-row">' + factors.map((f) => factorChip(f, true)).join("") + '</div><div class="ab-lab-ph honey">2 · × official UK factors</div>' +
       '<div class="ab-core ph">' + leafMark(64) + "</div></div>" +
       '<div class="ab-vline" aria-hidden="true"><span class="honey"></span><span style="animation-delay:-.6s"></span></div>' +
-      '<a href="#/example" class="ab-result ph"><div class="row-between"><span class="ab-lab-ph light">3 · Typical footprint</span><span class="ab-est">Estimate</span></div>' +
+      '<a href="' + resultHref + '" class="ab-result ph"><div class="row-between"><span class="ab-lab-ph light">3 · ' + (mine ? "Your" : "Typical") + ' footprint</span><span class="ab-est">Estimate</span></div>' +
       '<div class="display tnum ab-res-n">' + totalT + '<span> t</span> <small>CO₂e a year</small></div></a></div></div></section>' +
       '<section class="ab-sec ab-who" aria-labelledby="ab-who"><div class="ab-founder"><div class="ab-kicker">Who runs it</div><h2 id="ab-who" class="display">One independent project, answerable only to the people using it.</h2>' +
       '<div class="ab-person"><span class="display ab-initials" aria-hidden="true">' + esc(initials(OPERATOR_NAME)) + '</span><div><div class="display ab-name">' + esc(OPERATOR_NAME) + '</div><div class="muted">Runs CO2 Counter, UK</div></div></div>' +
