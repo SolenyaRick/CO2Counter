@@ -72,20 +72,42 @@
   //    portion that's the main-meal days below, with the rest of the week
   //    vegetarian. Eating out once a week and "some" food waste are
   //    assumptions.
-  const UK_TYPICAL_SURVEY = {
-    meals: {
-      diet: "meat_eater",
-      eatOut: 1,
-      foodWaste: "some",
-      weekMix: { chicken: 230 / 150, pork: 137 / 150, fish: 120 / 150, beef: 84 / 150, lamb: 23 / 150, veggie: 7 - 594 / 150 },
-    },
-    commute: { distance: 3.1, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
-    flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true, trips: 80.9 / 69.3 }],
-    energy: { electricityKwh: 2500 / 12, gasKwh: 9500 / 12, greenTariff: false, household: 2.4 },
-    water: { liters: 140 * 30.4 * 2.4 },
-    pets: { dogs: (15.5 / 69.3) * 2.4, cats: (13.1 / 69.3) * 2.4 },
-    banking: { amount: 0, bank: "", pensionPot: 0, pensionProvider: "" },
+  const UK_PROFILE = {
+    electricityKwh: 2500, // Ofgem typical household, a year
+    gasKwh: 9500,
+    household: 2.4, // people per household (ONS)
+    waterLitres: 140, // per person per day (CCW)
+    flightsPerPerson: 80.9 / 69.3, // return flights a year (ONS)
+    dogsPerPerson: 15.5 / 69.3, // UK Pet Food
+    catsPerPerson: 13.1 / 69.3,
+    commuteKm: 3.1, // one way, per weekday (DfT NTS)
+    chickenG: 230, // Defra Family Food, g per person per week
+    porkG: 137,
+    fishG: 120,
+    beefG: 84,
+    lambG: 23,
   };
+  const UK_TYPICAL_SURVEY = {};
+  // Rebuilt whenever the profile or the meat portion changes (Inputs page).
+  function buildUkTypical(portionKg) {
+    const p = UK_PROFILE;
+    const g = portionKg * 1000;
+    const meatG = p.chickenG + p.porkG + p.fishG + p.beefG + p.lambG;
+    Object.assign(UK_TYPICAL_SURVEY, {
+      meals: {
+        diet: "meat_eater",
+        eatOut: 1,
+        foodWaste: "some",
+        weekMix: { chicken: p.chickenG / g, pork: p.porkG / g, fish: p.fishG / g, beef: p.beefG / g, lamb: p.lambG / g, veggie: 7 - meatG / g },
+      },
+      commute: { distance: p.commuteKm, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
+      flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true, trips: p.flightsPerPerson }],
+      energy: { electricityKwh: p.electricityKwh / 12, gasKwh: p.gasKwh / 12, greenTariff: false, household: p.household },
+      water: { liters: p.waterLitres * 30.4 * p.household },
+      pets: { dogs: p.dogsPerPerson * p.household, cats: p.catsPerPerson * p.household },
+      banking: { amount: 0, bank: "", pensionPot: 0, pensionProvider: "" },
+    });
+  }
   // Shopping isn't in the survey yet, so results add a typical UK figure as
   // an assumption: household spending on clothing and footwear, household
   // goods (furniture, textiles, appliances, tableware, tools, upkeep),
@@ -124,6 +146,7 @@
   const CAT_YEARLY = 310;
   const EAT_OUT_MULTIPLIER = 1.78;
   const PORTION = 0.15; // kg of meat in a main meal
+  buildUkTypical(PORTION);
   // Meat, kg CO2e per kg of product: Poore & Nemecek (2018), Science
   // 360:987, global means (via Our World in Data): beef herd, lamb & mutton,
   // pig meat, poultry meat. The same dataset underlies Scarborough et al.
@@ -1054,7 +1077,7 @@
       {
         "id": "oat_milk",
         "label": "Switch to plant milk",
-        "tip": "Oat milk has ~80% less impact than dairy."
+        "tip": "Oat milk has {{oat_cut}} less impact than dairy."
       },
       {
         "id": "meal_plan",
@@ -1128,13 +1151,13 @@
   },
   "flights": {
     "title": "Flights",
-    "fact": "A London–New York return in economy is about 1.7 t CO₂e, roughly two-thirds of a yearly 1.5°C budget.",
+    "fact": "A London–New York return in economy is about {{ny_t}} t CO₂e, roughly {{ny_share}} of a yearly 1.5°C budget.",
     "icon": "✈️",
     "why": "Flying is often the largest single chunk of a personal footprint. One long-haul return flight can emit more than an entire year of driving. Because flights are occasional but huge, they can quietly dominate your annual total.",
     "sections": [
       {
         "heading": "Fly less, and shorter",
-        "body": "Every flight has a major impact. A London–New York return in economy is about 1.7 tonnes CO₂e — roughly two-thirds of one person's yearly 1.5°C budget. London–Paris and back by plane is about {{paris_plane}} kg; by Eurostar, about {{paris_train}} kg.",
+        "body": "Every flight has a major impact. A London–New York return in economy is about {{ny_t}} tonnes CO₂e — roughly {{ny_share}} of one person's yearly 1.5°C budget. London–Paris and back by plane is about {{paris_plane}} kg; by Eurostar, about {{paris_train}} kg.",
         "dynamicKey": "flightTiers"
       },
       {
@@ -1187,13 +1210,13 @@
   },
   "energy": {
     "title": "Home Energy",
-    "fact": "A renewable tariff can cut electricity emissions by over 80%, with no new equipment.",
+    "fact": "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment.",
     "icon": "⚡",
     "why": "Heating and powering your home is a major, recurring emission source. Because it runs every day, efficiency gains compound — and many changes are one-time decisions that keep paying off for years.",
     "sections": [
       {
         "heading": "Switch to a green tariff",
-        "body": "This is the single easiest high-impact change. Moving to a renewable electricity tariff can cut your electricity emissions by over 80% with a few clicks — no behaviour change required. Many green tariffs are price-competitive."
+        "body": "This is the single easiest high-impact change. Moving to a renewable electricity tariff can cut your electricity emissions by {{green_cut}} with a few clicks — no behaviour change required. Many green tariffs are price-competitive."
       },
       {
         "heading": "Use less, smartly",
@@ -1406,19 +1429,19 @@
     "tier": 2,
     "label": "Tier 2",
     "criteria": "1–2 short-haul flights / year",
-    "description": "Light flying. Short-haul = under ~1,500 km per leg."
+    "description": "Light flying. Short-haul = under ~{{short_km}} km per leg."
   },
   {
     "tier": 3,
     "label": "Tier 3",
     "criteria": "3–4 short-haul or 1–2 medium-haul flights / year",
-    "description": "Moderate flying. Medium-haul = 1,500–4,000 km."
+    "description": "Moderate flying. Medium-haul = {{short_km}}–{{swap_km}} km."
   },
   {
     "tier": 4,
     "label": "Tier 4",
     "criteria": "≥5 short-haul, ≥3 medium-haul, or >1 long-haul flights / year",
-    "description": "Heavy flying. Long-haul = over 4,000 km. A single long-haul return can exceed your entire 1.5°C annual budget."
+    "description": "Heavy flying. Long-haul = over {{swap_km}} km. A single long-haul return can exceed your entire 1.5°C annual budget."
   }
 ];
   // Diet-specific replacements for the Meals explainer's sections + habits.
@@ -1565,7 +1588,7 @@
       {
         "id": "oat_milk",
         "label": "Switch to plant milk",
-        "tip": "Oat milk has ~80% less impact than dairy."
+        "tip": "Oat milk has {{oat_cut}} less impact than dairy."
       },
       {
         "id": "meal_plan",
@@ -1617,7 +1640,7 @@
       {
         "id": "oat_milk",
         "label": "Switch to plant milk",
-        "tip": "~80% less impact than dairy."
+        "tip": "{{oat_cut}} less impact than dairy."
       },
       {
         "id": "meal_plan",
@@ -1639,7 +1662,7 @@
       },
       {
         "heading": "Swap dairy for plant milks",
-        "body": "Oat and soy milk have roughly 80% less impact than cow's milk. An easy, high-frequency swap."
+        "body": "Oat and soy milk have {{oat_cut}} less impact than cow's milk. An easy, high-frequency swap."
       },
       {
         "heading": "Use nutritional yeast for cheesy flavour",
@@ -1654,7 +1677,7 @@
       {
         "id": "oat_milk",
         "label": "Switch to plant milk",
-        "tip": "Oat/soy ~80% less impact than dairy."
+        "tip": "Oat/soy {{oat_cut}} less impact than dairy."
       },
       {
         "id": "less_cheese",
@@ -1745,6 +1768,17 @@
     PARIS_TRAIN_KG: 4, // London–Paris return by Eurostar, per person (Eurostar)
     TREE_KG: 20, // CO2 a mature tree absorbs in a year
     PHONE_KG: 61, // making a smartphone and charging it for a year
+    ACTIVE_TRAVEL_MAX_KM: 10, // one way; beyond this, train or bus is the realistic swap
+    SHORT_HAUL_KM: 1500, // flight tiers: short-haul is under this
+    TRAIN_SWAP_MAX_KM: 4000, // flights up to this can realistically go by train
+    WATER_CUT: 0.2, // realistic share of water saved
+    WATER_CUT_MAX: 0.4,
+    PET_FOOD_CUT: 0.25, // realistic cut from lower-impact pet food
+    PET_FOOD_CUT_MAX: 0.5,
+    DAIRY_MILK_KG: 3.15, // per litre (Poore & Nemecek 2018)
+    OAT_MILK_KG: 0.9,
+    UK_TOTAL_KG: (699201.9 / 68265) * 1000, // full UK footprint per person (Defra 2023)
+    EXAMPLE_SAVINGS: 5000, // £ in a bank, for the Greener switches example
   };
 
   // Every figure the admin can change on the Inputs page (#/inputs). "path"
@@ -1812,6 +1846,30 @@
     { group: "Shared and assumed", key: "shop_hobbies", label: "Assumed shopping: hobbies and leisure", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.hobbiesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
     { group: "Shared and assumed", key: "shared_services", label: "Shared: public services", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.publicServicesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
     { group: "Shared and assumed", key: "shared_infra", label: "Shared: infrastructure and investment", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.infrastructureKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
+    { group: "Benchmark", key: "uk_total", label: "Full UK footprint per person", unit: "kg CO₂e a year", path: "ASSUMPTIONS.UK_TOTAL_KG", source: DEFRA_FOOTPRINT + ": total 699,201.9 kt", asOf: "2026-06", every: 12 },
+    { group: "Savings assumptions", key: "active_max_km", label: "Walk or cycle commutes up to", unit: "km one way", path: "ASSUMPTIONS.ACTIVE_TRAVEL_MAX_KM", source: "App assumption: beyond this, the train or bus is the realistic swap" },
+    { group: "Savings assumptions", key: "train_swap_km", label: "Train can replace flights up to", unit: "km", path: "ASSUMPTIONS.TRAIN_SWAP_MAX_KM", source: "App assumption for the realistic flights saving and the train comparison" },
+    { group: "Savings assumptions", key: "short_haul_km", label: "Short-haul flights are under", unit: "km", path: "ASSUMPTIONS.SHORT_HAUL_KM", source: "App assumption for the flight tiers" },
+    { group: "Savings assumptions", key: "water_cut", label: "Water: realistic cut", unit: "share (0–1)", path: "ASSUMPTIONS.WATER_CUT", source: "App assumption: shorter showers and fixing leaks" },
+    { group: "Savings assumptions", key: "water_cut_max", label: "Water: going all the way", unit: "share (0–1)", path: "ASSUMPTIONS.WATER_CUT_MAX", source: "App assumption: efficient fittings and short showers" },
+    { group: "Savings assumptions", key: "pet_cut", label: "Pets: realistic cut from lower-impact food", unit: "share (0–1)", path: "ASSUMPTIONS.PET_FOOD_CUT", source: "App assumption" },
+    { group: "Savings assumptions", key: "pet_cut_max", label: "Pets: going all the way", unit: "share (0–1)", path: "ASSUMPTIONS.PET_FOOD_CUT_MAX", source: "App assumption: by-product or alternative-protein pet food" },
+    { group: "UK average (for the comparison)", key: "uk_elec", label: "Household electricity", unit: "kWh a year", path: "UK_PROFILE.electricityKwh", source: "Ofgem typical domestic consumption values (2026 revision)", asOf: "2026-04", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_gas", label: "Household gas", unit: "kWh a year", path: "UK_PROFILE.gasKwh", source: "Ofgem typical domestic consumption values (2026 revision)", asOf: "2026-04", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_household", label: "People per household", unit: "people", path: "UK_PROFILE.household", source: "ONS mid-2024: 69.3m people, 28.6m households", asOf: "2025-06", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_water", label: "Water use", unit: "litres per person a day", path: "UK_PROFILE.waterLitres", source: "Consumer Council for Water (2023)", asOf: "2023-06", every: 24 },
+    { group: "UK average (for the comparison)", key: "uk_flights", label: "Return flights", unit: "per person a year", path: "UK_PROFILE.flightsPerPerson", source: "ONS Travel trends 2024: 80.9m visits abroad by air ÷ 69.3m people", asOf: "2025-05", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_dogs", label: "Dogs", unit: "per person", path: "UK_PROFILE.dogsPerPerson", source: "UK Pet Food 2026: 15.5m dogs ÷ 69.3m people", asOf: "2026-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_cats", label: "Cats", unit: "per person", path: "UK_PROFILE.catsPerPerson", source: "UK Pet Food 2026: 13.1m cats ÷ 69.3m people", asOf: "2026-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_commute", label: "Commute distance", unit: "km one way, per weekday", path: "UK_PROFILE.commuteKm", source: "DfT National Travel Survey 2024: 1,007 commuting miles a person, about 3/4 by car", asOf: "2025-08", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_chicken", label: "Chicken bought", unit: "g per person a week", path: "UK_PROFILE.chickenG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_pork", label: "Pork, bacon, ham and sausages bought", unit: "g per person a week", path: "UK_PROFILE.porkG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_fish", label: "Fish bought", unit: "g per person a week", path: "UK_PROFILE.fishG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_beef", label: "Beef bought", unit: "g per person a week", path: "UK_PROFILE.beefG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_lamb", label: "Lamb bought", unit: "g per person a week", path: "UK_PROFILE.lambG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
+    { group: "Comparisons", key: "dairy_milk", label: "Dairy milk", unit: "kg CO₂e per litre", path: "ASSUMPTIONS.DAIRY_MILK_KG", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Comparisons", key: "oat_milk", label: "Oat milk", unit: "kg CO₂e per litre", path: "ASSUMPTIONS.OAT_MILK_KG", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Comparisons", key: "example_savings", label: "Example savings in a bank (Greener switches page)", unit: "£", path: "ASSUMPTIONS.EXAMPLE_SAVINGS", source: "Illustration only: the bank comparison on Greener switches uses this amount" },
     { group: "Comparisons", key: "tree", label: "A mature tree absorbs", unit: "kg CO₂ a year", path: "ASSUMPTIONS.TREE_KG", source: "No source recorded yet" },
     { group: "Comparisons", key: "phone", label: "Making and charging a smartphone", unit: "kg CO₂e", path: "ASSUMPTIONS.PHONE_KG", source: "No source recorded yet" }
   );
@@ -1846,6 +1904,6 @@
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
-    DIET_EXPLAINERS, GOAL_HABIT_IDS, ASSUMPTIONS, INPUT_DEFS, FIGURES_BUILT_IN,
+    DIET_EXPLAINERS, GOAL_HABIT_IDS, ASSUMPTIONS, INPUT_DEFS, FIGURES_BUILT_IN, UK_PROFILE, buildUkTypical,
   };
 })();
