@@ -59,13 +59,10 @@
   const KEY_GOALS = "ecoimpact_goals";
   const KEY_STREAKS = "ecoimpact_goal_streaks";
 
-  const SHORT_HAUL_KM = 1500;
   // Savings assumptions (see tipFor).
-  const ACTIVE_TRAVEL_MAX_KM = 10; // one-way; beyond this, train/bus is the realistic swap
   const MOTOR_MODES = ["car_petrol", "car_diesel", "ev", "motorcycle"];
   const A = D.ASSUMPTIONS; // editable on the Inputs page, so read at use
   const trainToFlightRatio = () => A.PARIS_TRAIN_KG / A.PARIS_FLIGHT_KG; // Eurostar vs flight, London–Paris
-  const MEDIUM_HAUL_KM = 4000;
   const STAGE_DAYS = 7;
   const DAY_MS = 864e5;
 
@@ -144,6 +141,7 @@
     tree: '<path d="m17 14 3 3.3a1 1 0 0 1-.7 1.7H4.7a1 1 0 0 1-.7-1.7L7 14h-.3a1 1 0 0 1-.7-1.7L9 9h-.2A1 1 0 0 1 8 7.3L12 3l4 4.3a1 1 0 0 1-.8 1.7H15l3 3.3a1 1 0 0 1-.7 1.7z"/><path d="M12 22v-3"/>',
     phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
@@ -368,6 +366,7 @@
     shop.totalKg = shop.clothesKg + shop.householdKg + shop.electronicsKg + shop.hobbiesKg;
     const shared = D.SHARED_FOOTPRINT;
     shared.totalKg = shared.publicServicesKg + shared.infrastructureKg;
+    D.buildUkTypical(D.PORTION);
   }
 
   // The figures a survey is worked out with: its own once finished (built-in
@@ -405,8 +404,17 @@
     const share = (f) => {
       const words = { 2: "half", 3: "a third", 4: "a quarter", 5: "a fifth", 6: "a sixth", 7: "a seventh", 8: "an eighth", 9: "a ninth", 10: "a tenth" };
       const n = Math.round(1 / f);
-      return f > 0.6 ? "about " + Math.round(f * 100) + "%" : words[n] ? "about " + words[n] : "under a tenth";
+      if (f > 0.6 && f < 0.7) return "two-thirds";
+      if (f >= 0.7 && f < 0.8) return "three-quarters";
+      return f >= 0.8 ? "about " + Math.round(f * 100) + "%" : words[n] ? "about " + words[n] : "under a tenth";
     };
+    // "over 80%" style, rounded down to a tidy step.
+    const over = (f) => {
+      const pct = f * 100;
+      const step = Math.floor(pct / 10) * 10;
+      return pct - step < 1 ? "about " + Math.round(pct) + "%" : "over " + step + "%";
+    };
+    const nyKg = flightKg({ from: "LHR", to: "JFK", cabin: "economy", returnTrip: true });
     const t = {
       paris_plane: kgFmt(A.PARIS_FLIGHT_KG),
       paris_train: kgFmt(A.PARIS_TRAIN_KG),
@@ -414,6 +422,17 @@
       beef_vs_chicken: times(day("beef") / day("chicken")),
       beef_vs_vegan: times(day("beef") / day("vegan")),
       ev_share: share(byKey(D.COMMUTE_MODES, "ev").factor / petrolKm()),
+      grid_kwh: (Math.round(D.ELECTRICITY_FACTOR * 100) / 100).toString(),
+      green_cut: over(1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR),
+      oat_cut: "about " + Math.round((1 - A.OAT_MILK_KG / A.DAIRY_MILK_KG) * 100) + "%",
+      ny_t: (nyKg / 1000).toFixed(1),
+      ny_share: share(nyKg / D.BUDGET_YEARLY),
+      short_km: kgFmt(A.SHORT_HAUL_KM),
+      swap_km: kgFmt(A.TRAIN_SWAP_MAX_KM),
+      active_km: String(A.ACTIVE_TRAVEL_MAX_KM),
+      budget_t: (D.BUDGET_YEARLY / 1000).toFixed(1).replace(/\.0$/, ""),
+      uk_total_t: String(Math.round(A.UK_TOTAL_KG / 1000)),
+      bank_cut: Math.round((1 - Math.min(...D.BANKS.map((x) => x.factor)) / Math.max(...D.BANKS.map((x) => x.factor))) * 100) + "%",
     };
     return html.replace(/\{\{(\w+)\}\}/g, (m, k) => (t[k] != null ? t[k] : m));
   }
@@ -652,8 +671,8 @@
     let longHaul = 0;
     flights.forEach((f) => {
       const km = flightKm(f.from, f.to);
-      if (km < SHORT_HAUL_KM) shortHaul += legs(f);
-      else if (km < MEDIUM_HAUL_KM) mediumHaul += legs(f);
+      if (km < A.SHORT_HAUL_KM) shortHaul += legs(f);
+      else if (km < A.TRAIN_SWAP_MAX_KM) mediumHaul += legs(f);
       else longHaul += legs(f);
     });
     let tier;
@@ -779,15 +798,26 @@
 
   // Classifies the week of meals so the Meals tip and explainer can be
   // tailored to the person's actual diet.
+  // Days a week of each main meal: from the day-by-day answers, or the
+  // fractional weekMix used for the typical UK resident.
+  function mealCounts(s) {
+    const m = s.meals || {};
+    const out = {};
+    if (m.weekMix) Object.keys(m.weekMix).forEach((k) => (out[k] = m.weekMix[k]));
+    else DAYS.forEach((d) => m[d] && (out[m[d]] = (out[m[d]] || 0) + 1));
+    return out;
+  }
+
   function dietType(s) {
-    const meals = DAYS.map((d) => s.meals && s.meals[d]).filter(Boolean);
-    if (meals.length === 0) return "other_meat";
-    const count = (keys) => meals.filter((m) => keys.includes(m)).length;
+    const c = mealCounts(s);
+    const days = Object.values(c).reduce((t, v) => t + v, 0);
+    if (days === 0) return "other_meat";
+    const count = (keys) => keys.reduce((t, k) => t + (c[k] || 0), 0);
     const red = count(["beef", "lamb", "pork"]);
     const chicken = count(["chicken"]);
     const fish = count(["fish"]);
     const veggie = count(["veggie"]);
-    if (count(["vegan"]) === meals.length) return "vegan";
+    if (count(["vegan"]) === days) return "vegan";
     if (red === 0 && fish === 0 && veggie > 0) return "veggie";
     if (red === 0 && chicken === 0 && fish > 0) return "pescatarian";
     if (red > 2) return "red_meat_high";
@@ -796,8 +826,8 @@
   }
 
   function mealsTip(s) {
-    const meals = DAYS.map((d) => s.meals && s.meals[d]).filter(Boolean);
-    const count = (keys) => meals.filter((m) => keys.includes(m)).length;
+    const c = mealCounts(s);
+    const count = (keys) => keys.reduce((t, k) => t + (c[k] || 0), 0);
     const chicken = count(["chicken"]);
     const fish = count(["fish"]);
     const veggie = count(["veggie"]);
@@ -811,7 +841,7 @@
         return {
           title: "Cut back on red meat (>2×/week)",
           body:
-            "Beef and lamb are the most carbon-intensive foods by far: a beef day emits over 4× a chicken day and about 13× a vegan day. With red meat on more than two days a week, this is your biggest food lever. Swapping your red-meat days for chicken would save about " +
+            "Beef and lamb are the most carbon-intensive foods by far: a beef day emits {{beef_vs_chicken}} a chicken day and {{beef_vs_vegan}} a vegan day. With red meat on more than two days a week, this is your biggest food lever. Swapping your red-meat days for chicken would save about " +
             kgFmt(redMeatSaving(s)) + " kg CO₂e a year.",
           saving: redMeatSaving(s),
         };
@@ -873,14 +903,8 @@
     const beef = factorOf(D.MEAL_OPTIONS, "beef");
     const lamb = factorOf(D.MEAL_OPTIONS, "lamb");
     const chicken = factorOf(D.MEAL_OPTIONS, "chicken");
-    return (
-      DAYS.reduce((sum, d) => {
-        const m = s.meals && s.meals[d];
-        if (m === "beef") return sum + (beef - chicken);
-        if (m === "lamb") return sum + (lamb - chicken);
-        return sum;
-      }, 0) * D.WEEKS_PER_YEAR
-    );
+    const c = mealCounts(s);
+    return ((c.beef || 0) * (beef - chicken) + (c.lamb || 0) * (lamb - chicken)) * D.WEEKS_PER_YEAR;
   }
 
   function householdOf(s) {
@@ -896,7 +920,7 @@
       commute: () => {
         const c = s.commute || {};
         const distance = c.distance || 0;
-        const long = distance > ACTIVE_TRAVEL_MAX_KM;
+        const long = distance > A.ACTIVE_TRAVEL_MAX_KM;
         const replacement = long ? publicTransportFactor() : 0;
         const perDay = (mode) => Math.max(0, factorOf(D.COMMUTE_MODES, mode) - replacement) * distance * 2;
         // Long journeys by car: the realistic swap is the train.
@@ -908,8 +932,8 @@
         return {
           title: "Rethink your daily commute",
           body: long
-            ? "Driving is one of the largest personal emission sources. For a commute of more than 10 km, taking the train or bus instead of the car on your driving days cuts most of it — and working from home or cycling some days takes it to zero."
-            : "Driving is one of the largest personal emission sources. For a commute of 10 km or less, walking or cycling instead of driving removes those emissions completely — an e-bike makes longer or hillier trips easy.",
+            ? "Driving is one of the largest personal emission sources. For a commute of more than {{active_km}} km, taking the train or bus instead of the car on your driving days cuts most of it — and working from home or cycling some days takes it to zero."
+            : "Driving is one of the largest personal emission sources. For a commute of {{active_km}} km or less, walking or cycling instead of driving removes those emissions completely — an e-bike makes longer or hillier trips easy.",
           saving,
           maxSaving: categoryYearly("commute", s),
           realisticLabel: (long ? "train or bus on driving days" : "walking or cycling on driving days") + (tripSaving > 0 ? ", and the train for long journeys you drive" : ""),
@@ -929,10 +953,10 @@
         const total = flights.reduce((sum, f) => sum + flightKg(f), 0);
         const economyKg = (f) => flightKm(f.from, f.to) * flightFactor(f.from, f.to, "economy") * legs(f);
         const avg = (list, fn) => (list.length ? list.reduce((t, f) => t + fn(f), 0) / list.length : 0);
-        const long = flights.filter((f) => flightKm(f.from, f.to) > MEDIUM_HAUL_KM);
+        const long = flights.filter((f) => flightKm(f.from, f.to) > A.TRAIN_SWAP_MAX_KM);
         const short = flights.filter((f) => {
           const km = flightKm(f.from, f.to);
-          return km > 0 && km <= MEDIUM_HAUL_KM;
+          return km > 0 && km <= A.TRAIN_SWAP_MAX_KM;
         });
         const typicalShortKg =
           short.length ? avg(short, economyKg) : flightKm("LHR", "BCN") * flightFactor("LHR", "BCN", "economy") * (long.length === 1 ? legs(long[0]) : 1);
@@ -972,7 +996,7 @@
           return Math.max(0, categoryYearly("energy", s) - after);
         })(),
         title: "Switch to a green energy tariff",
-        body: "Grid electricity emits ~0.23 kg CO₂e per kWh. A green/renewable tariff can cut that by over 80%, instantly lowering one of your biggest contributors.",
+        body: "Grid electricity emits about {{grid_kwh}} kg CO₂e per kWh. A green/renewable tariff can cut that by {{green_cut}}, instantly lowering one of your biggest contributors.",
         saving:
           s.energy && s.energy.greenTariff
             ? 0
@@ -982,10 +1006,10 @@
       water: () => ({
         title: "Reduce your water usage",
         body: "Heating and treating water uses energy. Shorter showers, fixing leaks, and water-efficient fixtures can cut your water footprint meaningfully over a year.",
-        saving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.2) / householdOf(s),
-        maxSaving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * 0.4) / householdOf(s),
-        realisticLabel: "using a fifth less water",
-        maxLabel: "using 40% less, with efficient fittings and short showers",
+        saving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * A.WATER_CUT) / householdOf(s),
+        maxSaving: (12 * (((s.water && s.water.liters) || 0) / 1000) * D.WATER_FACTOR * A.WATER_CUT_MAX) / householdOf(s),
+        realisticLabel: "using " + ({ 0.5: "half", 0.25: "a quarter", 0.2: "a fifth", 0.1: "a tenth" }[A.WATER_CUT] || Math.round(A.WATER_CUT * 100) + "%") + " less water",
+        maxLabel: "using " + Math.round(A.WATER_CUT_MAX * 100) + "% less, with efficient fittings and short showers",
       }),
       pets: () => {
         const p = s.pets || {};
@@ -993,9 +1017,9 @@
           title: "Consider your pets' diet",
           body: "A medium dog's food can emit as much as a small car over a year. Choosing lower-meat or sustainable pet food brands can reduce their footprint without compromising nutrition.",
           saving:
-            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * 0.25) / householdOf(s),
+            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * A.PET_FOOD_CUT) / householdOf(s),
           maxSaving:
-            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * 0.5) / householdOf(s),
+            (((p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY) * A.PET_FOOD_CUT_MAX) / householdOf(s),
           realisticLabel: "lower-impact pet food",
           maxLabel: "by-product or alternative-protein pet food",
         };
@@ -1003,12 +1027,12 @@
       banking: () => {
         const b = s.banking || {};
         const bank = byKey(D.BANKS, b.bank);
-        const greenest = D.BANKS[0].factor;
+        const greenest = Math.min(...D.BANKS.map((x) => x.factor));
         const bankSaving = !bank || bank.factor <= greenest ? 0 : (b.amount || 0) * (bank.factor - greenest);
         const pension = pensionProvider(b);
         const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
         const bankBody =
-          "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to 85%.";
+          "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to {{bank_cut}}.";
         if (pensionSaving > bankSaving) {
           return {
             title: "Switch your pension to a climate-focused fund",
@@ -1495,7 +1519,7 @@
       '<a class="btn btn-outline" href="#/example">See an example result</a></div>' +
       '<div class="intro-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((t) => "<span>" + icon("check") + t + "</span>").join("") + "</div></div>" +
       '<div class="intro-floaty" aria-hidden="true"><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect class="ib1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect class="ib2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect class="ib3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg>' +
-      '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">2.5 t <small>a person, a year</small></span></div></div></header>' +
+      '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">{{budget_t}} t <small>a person, a year</small></span></div></div></header>' +
       '<section class="intro-mission"><div class="intro-sec-head"><div><span class="eyebrow">Our mission</span><h2 class="display">From "what\'s my footprint?" to habits that stick</h2></div>' +
       "<p>Most people don't know where their emissions really come from. We make it clear, then make it doable.</p></div>" +
       '<ol class="mission">' +
@@ -1507,7 +1531,7 @@
       "</ol></section>" +
       '<section class="intro-split"><div><h2 class="display">What we look at</h2><p>Six parts of everyday life, including one most calculators miss: where your money sits.</p><ul class="intro-chips">' +
       STEPS.map((st) => "<li>" + st.icon + esc(st.title) + "</li>").join("") +
-      '</ul></div><div class="intro-why"><span class="eyebrow">Why it matters</span><span class="display intro-why-num">2.5 t</span>' +
+      '</ul></div><div class="intro-why"><span class="eyebrow">Why it matters</span><span class="display intro-why-num">{{budget_t}} t</span>' +
       "<p>is roughly each person's yearly share of CO₂e if we're to keep warming to 1.5°C. Most of us in the UK are well above it, and small, repeated changes are how we close the gap.</p></div></section>" +
       '<section class="intro-cards">' +
       [
@@ -1854,7 +1878,7 @@
       cur && MOTOR_MODES.includes(cur.key) && distance > 0
         ? '<p class="q-tip">Taking the train on ' + DAY_NAMES[day] + "s instead would save about " +
           kgFmt((perDay(cur) - perDay(train)) * D.WEEKS_PER_YEAR) + " kg a year" +
-          (distance <= ACTIVE_TRAVEL_MAX_KM ? ", and walking or cycling about " + kgFmt(perDay(cur) * D.WEEKS_PER_YEAR) + " kg." : ".") + "</p>"
+          (distance <= A.ACTIVE_TRAVEL_MAX_KM ? ", and walking or cycling about " + kgFmt(perDay(cur) * D.WEEKS_PER_YEAR) + " kg." : ".") + "</p>"
         : "";
     return qList([
       qCard(1, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km")),
@@ -2095,7 +2119,7 @@
       qCard(
         3,
         "Are you on a green electricity tariff?",
-        "A 100% renewable tariff cuts electricity emissions by up to 80%.",
+        "A 100% renewable tariff cuts electricity emissions by {{green_cut}}.",
         '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>"
       ),
       qCard(4, "How many people live in your home?", "We share the home's energy, water and pets between everyone who lives there.", stepper("energy.household", hh, 1, 1, hh === 1 ? "person" : "people", "People in your home")),
@@ -2701,7 +2725,7 @@
         source: "DESNZ 2026 factors used in CO2 Counter.",
         steps: [
           ["Pick one day", "Choose the day that's easiest to change, like one with fewer bags or appointments."],
-          [d <= ACTIVE_TRAVEL_MAX_KM ? "Try the bike" : "Try the train or bus", d <= ACTIVE_TRAVEL_MAX_KM ? "At " + d + " km, cycling takes most people about " + Math.max(5, Math.round((d / 15) * 60)) + " minutes, with zero emissions." : "At " + d + " km, the train or bus is the realistic swap, and you can read or rest on the way."],
+          [d <= A.ACTIVE_TRAVEL_MAX_KM ? "Try the bike" : "Try the train or bus", d <= A.ACTIVE_TRAVEL_MAX_KM ? "At " + d + " km, cycling takes most people about " + Math.max(5, Math.round((d / 15) * 60)) + " minutes, with zero emissions." : "At " + d + " km, the train or bus is the realistic swap, and you can read or rest on the way."],
           ["Or work from home", "One work-from-home day removes that day's commute entirely."],
           ["Plan for an EV later", "When it's time to replace the car, an electric one emits {{ev_share}} as much per km on today's grid."],
         ],
@@ -2773,7 +2797,7 @@
           (g.eqFlights ? "What your " + kgFmt(eqKg) + " kg of flying a year looks like" : "What −" + kgFmt(eqKg) + " kg a year looks like") + "</h2>" +
           '<div class="eq-grid">' +
           '<div class="eq"><div class="row-between"><span>Trees needed to soak it up</span><b class="display tnum">' + kgFmt(eq.trees) + '</b></div><div class="eq-icons green-dark">' + repeat(eq.trees, "tree", 18) + '</div><p class="xs muted">A mature tree absorbs about 20 kg of CO₂ a year.</p></div>' +
-          '<div class="eq"><div class="row-between"><span>Share of the 1.5°C budget</span><b class="display tnum">' + (budgetPct < 1 ? budgetPct.toFixed(1) : Math.round(budgetPct)) + '%</b></div><div class="eq-bar"><span style="width:' + Math.min(100, budgetPct).toFixed(1) + '%"></span></div><p class="xs muted">Of one person\'s yearly 2.5 t.</p></div>' +
+          '<div class="eq"><div class="row-between"><span>Share of the 1.5°C budget</span><b class="display tnum">' + (budgetPct < 1 ? budgetPct.toFixed(1) : Math.round(budgetPct)) + '%</b></div><div class="eq-bar"><span style="width:' + Math.min(100, budgetPct).toFixed(1) + '%"></span></div><p class="xs muted">Of one person\'s yearly {{budget_t}} t.</p></div>' +
           '<div class="eq"><div class="row-between"><span>The same as driving</span><b class="display tnum">' + kgFmt(eq.drivingKm) + ' km</b></div><p class="xs muted">In a petrol car. London to Edinburgh is about 650 km.</p></div>' +
           '<div class="eq"><div class="row-between"><span>New phones</span><b class="display tnum">' + kgFmt(eq.phones) + '</b></div><div class="eq-icons">' + repeat(eq.phones, "phone", 8) + '</div><p class="xs muted">Making and charging one phone for a year: about 61 kg.</p></div>' +
           "</div></section>"
@@ -2811,7 +2835,7 @@
     const flights = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
     if (cat === "flights") {
       if (s.dynamicKey === "flightTiers") return flights.length === 0;
-      if (s.dynamicKey === "trainComparison") return !flights.some((f) => flightKm(f.from, f.to) <= MEDIUM_HAUL_KM);
+      if (s.dynamicKey === "trainComparison") return !flights.some((f) => flightKm(f.from, f.to) <= A.TRAIN_SWAP_MAX_KM);
       if (s.dynamicKey === "cabinComparison") return flights.every((f) => (f.cabin || "economy") === "economy");
       return false;
     }
@@ -3063,7 +3087,7 @@
     const ratio = A.PARIS_TRAIN_KG / A.PARIS_FLIGHT_KG;
     const trips = (survey.flights || []).filter((f) => {
       const km = flightKm(f.from, f.to);
-      return km > 0 && km < MEDIUM_HAUL_KM;
+      return km > 0 && km < A.TRAIN_SWAP_MAX_KM;
     });
     const routes = [{ label: "London → Paris, return", plane: A.PARIS_FLIGHT_KG, train: A.PARIS_TRAIN_KG, note: "Eurostar's independently commissioned figures." }].concat(
       trips.map((f) => ({ label: "Your trip: " + routeLabel(f), plane: flightKg(f), train: flightKg(f) * ratio, note: "Train estimated at the same ratio as London–Paris." }))
@@ -3145,7 +3169,7 @@
       ["Bus", year("bus"), "var(--honey)"],
       ["Electric car", year("ev"), "#8fa58a"],
       ["Train", year("train"), "#6e8b5e"],
-      [km <= ACTIVE_TRAVEL_MAX_KM ? "Walk or bike" : "Walk or bike (far at " + km + " km)", 0, "var(--em-600)"],
+      [km <= A.ACTIVE_TRAVEL_MAX_KM ? "Walk or bike" : "Walk or bike (far at " + km + " km)", 0, "var(--em-600)"],
       ["Work from home", 0, "var(--em-600)"],
     ].filter((m) => m[0] !== "Electric car" || carKey !== "ev");
     const max = Math.max(...modes.map((m) => m[1]), 1);
@@ -3354,11 +3378,11 @@
         "<p>Some emissions belong to everyone in the UK together: the NHS, schools, councils and defence, and the roads, buildings and equipment the country invests in. " +
           "The government's official carbon footprint figures split these across the whole population, which comes to about " + (D.SHARED_FOOTPRINT.totalKg / 1000).toFixed(1) + " tonnes per person a year. " +
           "We show it as a fixed line under your total, because it's the same for everyone and your answers don't change it.</p>" +
-          "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about 10 tonnes per person. Some spending, like insurance, phone contracts and other services, isn't in the survey yet.</p>"
+          "<p>Together with what the survey measures, this brings your figure closer to the full UK average of about {{uk_total_t}} tonnes per person. Some spending, like insurance, phone contracts and other services, isn't in the survey yet.</p>"
       ) +
       section(
         "The 1.5°C budget",
-        "<p>To keep global warming to 1.5°C, average emissions need to fall to roughly 2.5 tonnes of CO₂-equivalent per person per year. " +
+        "<p>To keep global warming to 1.5°C, average emissions need to fall to roughly {{budget_t}} tonnes of CO₂-equivalent per person per year. " +
           "We show your footprint as a share of that, as a sense of scale.</p>"
       ) +
       section(
@@ -3575,61 +3599,304 @@
 
   // ==================== Greener switches & About (public) ====================
   // Open to everyone, signed in or not, so visitors and affiliate reviewers
-  // can see what we recommend and how partners are chosen.
+  // can see what we recommend and how partners are chosen. Every figure is
+  // worked out from the Inputs: the visitor's own survey once they've taken
+  // it, else a typical UK resident.
 
-  const SWITCH_ORDER = ["energy", "banking", "meals", "flights", "commute"];
+  const SW_ICONS = {
+    banking: "M3 9.5 12 4l9 5.5H3ZM5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18",
+    energy: "M13 2 4 14h7l-1 8 9-12h-7Z",
+    meals: "M3 12h18a9 9 0 0 1-18 0ZM9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5",
+    flights: "M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z",
+    commute: "M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1ZM3.5 12h17",
+    pets: "M12 13c-3 0-5.5 3-5.5 5.5 0 1.5 1.5 2 3 1.5s3.5-.5 5 0 3 0 3-1.5C17.5 16 15 13 12 13ZM5 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M16 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M8.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M12.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0",
+    water: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z",
+  };
+  const svgPath = (d, size, extra) =>
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (extra || "") + '><path d="' + d + '"></path></svg>';
+  const leafMark = (size) =>
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>';
+  const TONES = { leaf: ["#3F5B3A", "#F6F1E6"], amber: ["#E8C88A", "#2E2A22"], plum: ["#6F4E63", "#F6F1E6"], sky: ["#7FA3AE", "#14262B"] };
+  const domainOf = (u) => u.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+  const fmtKg = (n) => (n < 10 && n > 0 ? (Math.round(n * 100) / 100).toString() : kgFmt(n));
+
+  // The survey the page is worked out from, and who it belongs to.
+  function switchBase() {
+    if (survey && survey.completedAt) return { s: survey, mine: true };
+    const s = normaliseSurvey(JSON.parse(JSON.stringify(D.UK_TYPICAL_SURVEY)));
+    s.flights = D.UK_TYPICAL_SURVEY.flights;
+    const worst = D.BANKS.slice().sort((a, b) => b.factor - a.factor)[0];
+    s.banking = { ...s.banking, amount: A.EXAMPLE_SAVINGS, bank: worst.key };
+    return { s, mine: false };
+  }
+
+  // The five areas, with savings and a before/after for each.
+  function switchAreas(base) {
+    const s = base.s;
+    const swap = (fn) => { const keep = survey; survey = s; try { return fn(); } finally { survey = keep; } };
+    const saving = (cat) => swap(() => { const t = tipFor(cat, s); return Math.max(0, t.saving || 0); });
+    const banks = D.BANKS.slice().sort((a, b) => a.factor - b.factor);
+    const best = banks[0];
+    const own = byKey(D.BANKS, s.banking.bank);
+    const amount = base.mine && s.banking.amount > 0 && own ? s.banking.amount : A.EXAMPLE_SAVINGS;
+    const before = base.mine && own && s.banking.amount > 0 ? own : banks[banks.length - 1];
+    const elecKwh = (12 * (s.energy.electricityKwh || 0)) / householdOf(s) || (D.UK_PROFILE.electricityKwh / D.UK_PROFILE.household);
+    const dist = s.commute.distance || D.UK_PROFILE.commuteKm;
+    const day = (k) => byKey(D.MEAL_OPTIONS, k).factor;
+    const petrol = petrolKm();
+    const train = factorOf(D.COMMUTE_MODES, "train");
+    return [
+      { key: "banking", short: "Bank", effort: "One-off · about 7 working days", ex: 22, save: saving("banking"), verb: "Switch to", independent: true, panel: "#3F5B3A", panelInk: "#F6F1E6", dropInk: "#E8C88A",
+        fact: "Banks lend out the money you keep with them. The free Current Account Switch Service moves your account in 7 working days, guaranteed, direct debits and all.",
+        vsTitle: "£" + kgFmt(amount) + " for a year, kg CO₂e financed", beforeLabel: before.label.replace(/^The /, ""), before: amount * before.factor, afterLabel: best.label.replace(/^The /, ""), after: amount * best.factor },
+      { key: "energy", short: "Energy", effort: "One-off · a few minutes", ex: 8, save: saving("energy"), verb: "Switch to", panel: "#D9A441", panelInk: "#2E2A22", dropInk: "#2B4128",
+        fact: "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment, and your power never cuts out during the switch.",
+        vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
+      { key: "meals", short: "Food", effort: "Ongoing · a weekly habit", ex: 84, save: saving("meals"), verb: "Explore", panel: "#6E8B5E", panelInk: "#F6F1E6", dropInk: "#F6F1E6",
+        fact: "A beef day emits {{beef_vs_vegan}} a vegan day. A veg box or a recipe app makes the swap the easy option.",
+        vsTitle: "A day of food, kg CO₂e", beforeLabel: "Beef", before: day("beef"), afterLabel: "Vegan", after: day("vegan") },
+      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
+        fact: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
+        vsTitle: "London → Paris, return, kg CO₂e", beforeLabel: "Plane", before: A.PARIS_FLIGHT_KG, afterLabel: "Train", after: A.PARIS_TRAIN_KG },
+      { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Plan with", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
+        fact: "Your commute repeats over 200 times a year. Swapping car days for the train adds up fast.",
+        vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol, afterLabel: "Train", after: dist * 2 * train },
+    ].map((a) => ({ ...a, title: D.USEFUL_LINKS[a.key].title, eyebrow: D.USEFUL_LINKS[a.key].eyebrow, links: D.USEFUL_LINKS[a.key].items }));
+  }
 
   function renderSwitches() {
-    const cats = SWITCH_ORDER.filter((c) => D.USEFUL_LINKS[c]);
+    const base = switchBase();
+    const fp = footprint(base.s);
+    const areas = switchAreas(base);
+    const total = areas.reduce((t, a) => t + a.save, 0);
+    const who = base.mine ? "for you" : "for a typical person";
+    ui.switchModel = { foot: fp.totalYearly, saves: areas.map((a) => a.save) };
+    if (!ui.switchOn) ui.switchOn = areas.map(() => false);
+    // Five equal steps of a round size, just above the biggest saving.
+    const step = [10, 20, 50, 100, 200, 250, 500, 1000, 2000, 5000].find((x) => x * 5 >= Math.max(1, ...areas.map((a) => a.save)) * 1.1) || 5000;
+    const maxSave = step * 5;
+    const ticks = [0, 0.2, 0.4, 0.6, 0.8, 1];
+    const board =
+      '<div class="sw-board"><div class="sw-board-head"><span class="display">' + (base.mine ? "Your switchboard" : "Switchboard") + "</span>" +
+      '<button type="button" class="sw-all" data-action="switch-all">Turn all on</button></div><ul>' +
+      areas
+        .map(
+          (a, i) =>
+            '<li class="sw-row" data-sw="' + i + '"><span class="sw-tile">' + svgPath(SW_ICONS[a.key], 22) + "</span>" +
+            '<span class="min0"><span class="display sw-short">' + a.short + '</span><span class="sw-effort">' + a.effort + "</span></span>" +
+            '<span class="sw-save tnum">' + (a.save >= 0.5 ? "−" + kgFmt(a.save) : "0") + "</span>" +
+            '<button type="button" class="sw-tog" role="switch" aria-checked="false" aria-label="' + esc(a.title) + ", saves " + kgFmt(a.save) + ' kg a year" data-action="flip-switch" data-i="' + i + '"><span class="sw-knob"></span></button></li>'
+        )
+        .join("") +
+      '</ul><div class="sw-foot"><div class="sw-foot-row"><span>' + (base.mine ? "Your footprint" : "A typical footprint") + '</span><span><b class="display tnum" id="sw-foot">' + kgFmt(fp.totalYearly) + "</b> kg a year</span></div>" +
+      '<div class="sw-track"><div class="sw-bar" id="sw-bar" style="width:100%"></div></div><div class="display tnum sw-saved" id="sw-saved">Flip a switch to see the saving</div></div></div>';
+    const bubbles = areas
+      .map((a, i) => {
+        const size = Math.round(40 + Math.sqrt(a.save / Math.max(1, ...areas.map((x) => x.save))) * 48);
+        return (
+          '<div class="sw-stem" style="left:' + a.ex + "%;height:" + ((a.save / maxSave) * 100).toFixed(2) + "%;border-color:" + a.panel + '"></div>' +
+          '<div class="sw-pin" style="left:' + a.ex + "%;bottom:" + ((a.save / maxSave) * 100).toFixed(2) + '%">' +
+          '<a class="sw-bub" href="#/switches" data-action="jump-switch" data-cat="' + a.key + '" aria-label="' + a.short + ": saves " + kgFmt(a.save) + " kg a year, " + a.effort +
+          '" style="width:' + size + "px;height:" + size + "px;left:-" + size / 2 + "px;top:-" + size / 2 + "px;background:" + a.panel + ";color:" + a.panelInk + ";animation-delay:" + (0.2 + i * 0.12).toFixed(2) + 's">' +
+          svgPath(SW_ICONS[a.key], Math.round(size * 0.36)) + "</a>" +
+          '<span class="sw-blab" style="bottom:' + (size / 2 + 8) + 'px"><span class="display">' + a.short + '</span><span class="display tnum sw-blab-kg">−' + kgFmt(a.save) + " kg</span><span>" + a.effort.split(" · ")[1] + "</span></span></div>"
+        );
+      })
+      .join("");
+    const plot =
+      '<section class="sw-sec"><div class="sw-sec-head"><div><span class="sw-kicker">Where to start</span><h2 class="display">Impact against effort</h2></div>' +
+      "<p>Bigger bubbles save more. Start top left, where the saving is big and the effort is small. Tap a bubble to jump to it.</p></div>" +
+      '<div class="sw-plot"><span class="sw-ytitle">KG SAVED A YEAR ↑</span><div class="sw-area"><div class="sw-quick"></div><div class="sw-vmid"></div><div class="sw-hmid"></div>' +
+      ticks.map((f) => '<div class="sw-tick' + (f ? "" : " zero") + '" style="bottom:' + f * 100 + '%"><span class="tnum">' + kgFmt(maxSave * f) + "</span></div>").join("") +
+      '<span class="sw-q" style="left:12px;top:12px;color:#2B4128">★ Quick wins</span><span class="sw-q" style="right:4px;top:calc(50% - 26px)">Big, but a habit</span>' +
+      '<span class="sw-q" style="left:12px;top:calc(50% + 10px)">Easy extras</span><span class="sw-q" style="right:4px;top:calc(50% + 10px)">Slow burners</span>' +
+      bubbles + '</div><div class="sw-xaxis"><span>Once, in minutes</span><i></i><b>MORE EFFORT →</b><i></i><span>Every day, a habit</span></div></div>' +
+      '<ul class="sw-legend">' + areas.map((a) => '<li><a href="#/switches" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="tnum sw-leg-kg">−' + kgFmt(a.save) + ' kg</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") + "</ul></section>";
+    const feats = areas
+      .map((a, i) => {
+        const drop = a.before > 0 ? Math.round((1 - a.after / a.before) * 100) : 0;
+        const paid = a.links.some((l) => l.ref);
+        return (
+          '<section class="sw-feat' + (i % 2 ? " flip" : "") + '" id="switch-' + a.key + '"><div class="sw-feat-in">' +
+          '<div class="sw-panel" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 260, ' class="sw-panel-bg"') +
+          '<div class="sw-panel-top"><span class="display tnum sw-no">0' + (i + 1) + '</span><span class="sw-drop"><b class="display tnum" style="color:' + a.dropInk + '">−' + drop + "%</b><span>less CO₂e</span></span></div>" +
+          '<div><div class="sw-vs-title">' + esc(a.vsTitle) + '</div><div class="sw-vs"><span>' + esc(a.beforeLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-before"></span></span><b class="display tnum">' + fmtKg(a.before) + "</b>" +
+          "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
+          '<div class="sw-body"><div class="chip-row"><span class="sw-chip honey">' + esc(a.eyebrow) + '</span><span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
+          (a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") + "</div>" +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + '</p><div class="sw-offers">' +
+          a.links
+            .map((l) => {
+              const tone = TONES[l.tone] || TONES.leaf;
+              const name = l.label === "The Man in Seat 61" ? "Seat 61" : l.label.replace(/^The /, "");
+              return (
+                '<a class="sw-offer" ' + linkAttrs(a.key, l, "switches") + '><span class="sw-offer-head"><span class="display sw-mono" style="background:' + tone[0] + ";color:" + tone[1] + '">' + esc(monogramText(l.label)) + "</span>" +
+                '<span class="min0"><span class="display sw-offer-name">' + esc(l.label) + "</span><span class=\"sw-domain\">" + esc(domainOf(l.url)) + "</span></span>" +
+                (l.ref ? '<span class="tag affiliate-tag ml-auto">Affiliate</span>' : "") + "</span>" +
+                '<span class="sw-tags">' + (l.tags || []).map((t) => "<span>" + esc(t) + "</span>").join("") + "</span>" +
+                '<span class="sw-note">' + esc(l.note) + '</span><span class="sw-go">' + esc(a.verb + " " + name) + icon("arrowRight") + "</span></a>"
+              );
+            })
+            .join("") +
+          '</div><p class="sw-disc">' +
+          (a.independent ? "Chosen using the bank league table. These are never affiliate links." : paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : "Independent suggestions. We don't get paid for these links.") +
+          "</p></div></div></section>"
+        );
+      })
+      .join("");
     return (
-      '<div class="container switches-page">' + pageHeader("Greener switches", "Hand-picked options for the changes that cut emissions most", "leaf") +
-      '<section class="glass switches-intro"><p class="lh">These are the switches we suggest in your results, all in one place: renewable energy, banks that don\'t fund fossil fuels, ' +
-      "plant-forward food and getting there by train. Each one tackles one of the biggest parts of a typical UK footprint.</p>" +
-      '<nav class="chip-row mt-3" aria-label="Jump to an area">' +
-      cats.map((c) => '<a class="btn btn-outline btn-sm" href="#/switches" data-action="jump-switch" data-cat="' + c + '">' + (D.EXPLAINERS[c] || {}).icon + " " + esc(CAT_SHORT[c] || c) + "</a>").join("") +
-      "</nav>" +
-      '<p class="xs muted mt-3">Want to know which matters most for you? <a class="link-btn" href="#/">Take the free survey</a>. How we choose partners, and how affiliate links work, is on our <a class="link-btn" href="#/about">About page</a>.</p></section>' +
-      cats.map((c) => offerCard(c, D.USEFUL_LINKS[c], "switches", esc((D.EXPLAINERS[c] || {}).fact || ""))).join("") +
-      '<div class="center mt-6"><a class="btn btn-green" href="#/">Find your biggest switch ' + icon("arrowRight") + "</a></div></div>"
+      '<div class="container sw-page">' +
+      '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches</span>' +
+      '<h1 class="display rise d1">Five switches.<br><span>Up to ' + kgFmt(total) + " kg</span> a year.</h1>" +
+      '<p class="rise d2">The biggest, easiest changes ' + (base.mine ? "for your footprint" : "for a typical UK footprint") + ", with options we'd recommend anyway. Flip a switch to see what it saves.</p></div>" + board + "</header>" +
+      plot + feats +
+      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, including options that pay us nothing. Partners never change anyone\'s figures, and bank and pension picks are never affiliate links. <a href="#/about">How we choose</a></p></div>' +
+      '<a class="sw-band-cta" href="#/">' + (base.mine ? "Update your survey" : "Find your biggest switch") + icon("arrowRight") + "</a></section>" +
+      '<p class="xs muted sw-note-foot">' + (base.mine ? "Savings are worked out from your latest survey." : "Savings are for a typical UK resident with £" + kgFmt(A.EXAMPLE_SAVINGS) + " in a high-street bank. Take the survey to see yours.") +
+      ' <a class="link-btn" href="#/how-we-calculate">How we calculate</a></p></div>'
+    );
+  }
+
+  const monogramText = (label) => label.replace(/^The /, "").split(/\s+/).filter((w) => /^[A-Za-z]/.test(w)).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
+  // Switchboard: updates in place, so the page doesn't jump while you play.
+  function updateSwitchboard() {
+    const m = ui.switchModel;
+    if (!m || !document.getElementById("sw-foot")) return;
+    const saved = m.saves.reduce((t, v, i) => t + (ui.switchOn[i] ? v : 0), 0);
+    app.querySelectorAll(".sw-row").forEach((row) => {
+      const on = !!ui.switchOn[Number(row.dataset.sw)];
+      row.classList.toggle("on", on);
+      row.querySelector(".sw-tog").setAttribute("aria-checked", on ? "true" : "false");
+    });
+    const all = ui.switchOn.every(Boolean);
+    app.querySelector(".sw-all").textContent = all ? "Turn all off" : "Turn all on";
+    const target = Math.max(0, m.foot - saved);
+    const el = document.getElementById("sw-foot");
+    const from = Number(el.dataset.v || m.foot);
+    el.dataset.v = target;
+    const t0 = performance.now();
+    cancelAnimationFrame(ui.switchRaf);
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / 700);
+      const v = from + (target - from) * (1 - Math.pow(1 - k, 3));
+      el.textContent = kgFmt(v);
+      if (k < 1) ui.switchRaf = requestAnimationFrame(tick);
+    };
+    ui.switchRaf = requestAnimationFrame(tick);
+    document.getElementById("sw-bar").style.width = ((target / (m.foot || 1)) * 100).toFixed(1) + "%";
+    document.getElementById("sw-saved").textContent = saved > 0.5 ? "−" + kgFmt(saved) + " kg a year (" + Math.round((saved / m.foot) * 100) + "% less)" : "Flip a switch to see the saving";
+  }
+
+  // On first view the switches turn on one by one, until someone touches one.
+  function startSwitchDemo() {
+    (ui.switchTimers || []).forEach(clearTimeout);
+    if (ui.switchTouched) return updateSwitchboard();
+    ui.switchOn = ui.switchModel.saves.map(() => false);
+    updateSwitchboard();
+    ui.switchTimers = ui.switchModel.saves.map((_, i) =>
+      setTimeout(() => {
+        if (ui.switchTouched || currentPath() !== "/switches") return;
+        ui.switchOn[i] = true;
+        updateSwitchboard();
+      }, 700 + i * 450)
     );
   }
 
   function renderAbout() {
-    const section = (title, body) => '<section class="glass about-card fade-up"><h2 class="display">' + esc(title) + '</h2><div class="lh about-body">' + body + "</div></section>";
-    const paidNow = Object.values(D.USEFUL_LINKS).some((c) => c.items.some((l) => l.ref));
+    const typ = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY));
+    const p = D.UK_PROFILE;
+    const meatDaysUk = Math.round((p.chickenG + p.porkG + p.beefG + p.lambG) / (D.PORTION * 1000));
+    const answers = [
+      ["meals", "Meals", "Meat on about " + meatDaysUk + " days a week"],
+      ["energy", "Home energy", kgFmt(p.electricityKwh) + " kWh power, gas heating"],
+      ["flights", "Flights", "About " + Math.round(p.flightsPerPerson) + " return flight a year"],
+      ["commute", "Commute", Math.round(p.commuteKm * 10) / 10 + " km, mostly by car"],
+      ["pets", "Pets", "A share of a pet"],
+      ["water", "Water", kgFmt(p.waterLitres) + " litres a day"],
+    ].map(([k, label, value], i) => ({ k, label, value, top: 90 + i * 62, y: 115 + i * 62 }));
+    const factors = [
+      ["DESNZ", "UK greenhouse gas conversion factors", "#3F5B3A", "#F6F1E6"], ["Defra", "UK carbon footprint and food data", "#8FA58A", "#1F2D1C"],
+      ["ONS", "UK household statistics", "#7FA3AE", "#14262B"], ["Ofgem", "Typical home energy use", "#D9A441", "#2E2A22"],
+      ["DfT", "Travel statistics", "#B8653D", "#FFF7EE"], ["Food", "Peer-reviewed food research", "#6F4E63", "#F6F1E6"],
+    ].map(([tag, what, bg, ink], i) => ({ tag, what, bg, ink, left: 317 + i * 62, x: 345 + i * 62 }));
+    const dots = [
+      ...answers.flatMap((a, i) => [0, 1].map((j) => ({ path: "M260 " + a.y + "C350 " + a.y + " 340 300 425 300", s: 9, c: "#3F5B3A", dur: 2.6, delay: -(i * 0.43 + j * 1.3) }))),
+      ...factors.map((f, i) => ({ path: "M" + f.x + " 70C" + f.x + " 150 500 130 500 225", s: 8, c: "#D9A441", dur: 2.2, delay: -(i * 0.37) })),
+      ...[0, 1, 2, 3, 4].map((i) => ({ path: "M575 300H740", s: 11, c: i % 2 ? "#D9A441" : "#3F5B3A", dur: 1.6, delay: -(i * 0.32) })),
+    ];
+    const totalT = (typ.totalYearly / 1000).toFixed(1);
+    const mix = typ.breakdown.filter((b) => b.yearly > 0).map((b) => '<span style="width:' + ((b.yearly / typ.totalYearly) * 100).toFixed(1) + "%;background:" + CAT_COLOR[b.key] + '"></span>').join("");
+    const paidCount = Object.values(D.USEFUL_LINKS).reduce((t, c) => t + c.items.filter((l) => l.ref).length, 0);
+    const answerTile = (q, phone) =>
+      phone
+        ? '<div class="ab-q-ph"><span class="ab-q-ic">' + svgPath(SW_ICONS[q.k], 16) + '</span><span class="display">' + q.label + "</span></div>"
+        : '<div class="ab-src" style="top:' + q.top + 'px"><span class="ab-q-ic">' + svgPath(SW_ICONS[q.k], 18) + '</span><span class="min0"><span class="display ab-src-l">' + q.label + "</span><span class=\"ab-src-v\">" + esc(q.value) + "</span></span></div>";
+    const factorChip = (f, phone) =>
+      '<span class="display ab-fac' + (phone ? " ph" : "") + '" title="' + f.what + '" style="' + (phone ? "" : "left:" + f.left + "px;") + "background:" + f.bg + ";color:" + f.ink + '">' + f.tag + "</span>";
+    const beliefs = [
+      ["01", "Count it honestly.", "Real UK factors, shown openly. No guilt, and no inflated numbers to scare you into acting."],
+      ["02", "Make the next step obvious.", "A number alone changes nothing. We point to the few changes that matter most for you."],
+      ["03", "Stay on your side.", "Nobody pays to be ranked higher. Suggestions are picked for the climate, not for a fee."],
+    ];
+    const principles = [
+      ["Climate first", "We recommend what cuts the most carbon, even when there's nothing in it for us.", "rgba(63,91,58,.14)", "#3F5B3A", "M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7"],
+      ["Free options too", "Free guides like The Man in Seat 61 and Fork Ranger sit alongside paid services.", "rgba(127,163,174,.22)", "#3E6672", "M4 6h16M4 12h16M4 18h10"],
+      ["Figures stay ours", "No partner can change or sponsor the numbers in your results.", "rgba(217,164,65,.22)", "#8A5F12", "M7 11V8a5 5 0 0 1 10 0v3M5 11h14v9H5z"],
+      ["Money stays clean", "Bank and pension suggestions come from the league table and are never affiliate links.", "rgba(184,101,61,.18)", "#8C4A2A", "M3 10l9-6 9 6M5 10v8M19 10v8M9.5 10v8M14.5 10v8M3 20h18"],
+    ];
+    const stats = [
+      ["£0", "To use, for everyone. No paywall, no premium tier.", "#3F5B3A", "#F6F1E6"],
+      ["£2", "A year, if you'd like to support it. Entirely optional.", "#E8C88A", "#2E2A22"],
+      [String(paidCount), (paidCount === 1 ? "Affiliate link" : "Affiliate links") + " on the site today.", "rgba(255,252,245,.75)", "#2E2A22"],
+    ];
+    const tick = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EFE9DC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ab-tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
     return (
-      '<div class="container narrow about-page">' + pageHeader("About CO2 Counter", "Free, independent, built on official figures", "leaf") +
-      section(
-        "What it is",
-        "<p>CO2 Counter is a free carbon footprint calculator for people in the UK. Answer six short steps about your food, travel, flights, home, pets and money, " +
-          "and it shows your yearly footprint, where it really comes from, and the changes that would cut it most.</p>" +
-          "<p>It's free for everyone, with no adverts, and we never sell your data. People who find it useful can support it for £2 a year.</p>"
-      ) +
-      section(
-        "Who runs it",
-        "<p>CO2 Counter is an independent UK project run by " + esc(OPERATOR_NAME) + ". It isn't owned by, or funded by, any energy company, bank or other business.</p>" +
-          '<p>Get in touch: <a class="link-btn" href="mailto:' + esc(CONTACT_EMAIL) + '">' + esc(CONTACT_EMAIL) + "</a></p>"
-      ) +
-      section(
-        "Where the figures come from",
-        "<p>We use UK government emission factors (DESNZ and Defra), official statistics (ONS, Ofgem, the Department for Transport) and peer-reviewed research for food. " +
-          "We update the figures as new data is published. Figures last updated: <strong>" + esc(shortDate(figuresUpdated())) + "</strong>.</p>" +
-          '<p><a class="link-btn" href="#/how-we-calculate">How we calculate</a></p>'
-      ) +
-      section(
-        "How we choose partners",
-        "<p>The companies we suggest are picked for what they do for the climate first: renewable electricity, banks that don't finance fossil fuels, food that cuts waste and meat, and rail instead of flying. " +
-          "We include options that pay us nothing, such as The Man in Seat 61 and Fork Ranger, alongside those that might.</p>" +
-          "<p>Being a partner never changes anyone's footprint figures, savings or rankings. Our bank and pension suggestions aren't affiliate links, so the bank league tables stay independent.</p>" +
-          '<p><a class="link-btn" href="#/switches">See all our greener switches</a></p>'
-      ) +
-      section(
-        "Affiliate disclosure",
-        "<p>Some links to partner sites are affiliate (referral) links. If you use one to buy something or switch, CO2 Counter may earn a commission. It costs you nothing extra and helps keep the site free.</p>" +
-          "<p>Affiliate links are marked with an <span class=\"tag affiliate-tag\">Affiliate</span> tag wherever they appear." +
-          (paidNow ? "" : " At the moment none of our links are affiliate links.") + "</p>"
-      ) +
-      '<div class="chip-row center-row mt-6"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/switches">Greener switches</a></div></div>'
+      '<div class="container ab-page">' +
+      '<header class="ab-hero"><span class="ab-pill rise">About CO2 Counter</span>' +
+      '<h1 class="display rise d1">Your footprint, counted honestly. <span>Then made smaller.</span></h1>' +
+      '<p class="rise d2">CO2 Counter is a free, six-step survey that works out your yearly carbon footprint from official UK data, then shows you the changes that cut it the most.</p>' +
+      '<ul class="ab-promises rise d3" aria-label="Our promises">' + ["Free for everyone", "Independent", "Official UK data", "Kept going by supporters"].map((t) => "<li><span>" + tick + "</span>" + t + "</li>").join("") + "</ul></header>" +
+      '<section class="ab-sec" aria-labelledby="ab-beliefs"><h2 id="ab-beliefs" class="ab-kicker">What we believe</h2><ol class="ab-beliefs">' +
+      beliefs.map(([n, t, b]) => '<li class="ab-belief"><span class="display tnum ab-bno">' + n + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></li>").join("") + "</ol></section>" +
+      '<section class="ab-sec" aria-labelledby="ab-sources"><div class="ab-src-head"><div><div class="ab-kicker">Where the numbers come from</div><h2 id="ab-sources" class="display ab-h2">Official data in. <span>Your estimate out.</span></h2></div>' +
+      '<div class="ab-note">' + svgPath("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 11v6M12 7.5v.01", 22) + "<p><strong>It's an estimate, not a meter reading.</strong> The factors are UK averages, so your real footprint will differ a little. It's accurate enough to show where your biggest savings are.</p></div></div>" +
+      '<div class="ab-diagram"><div class="ab-dia-desk"><svg width="1000" height="470" viewBox="0 0 1000 470" aria-hidden="true" class="ab-lines">' +
+      '<g fill="none" stroke="#B7C4A4" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round">' + answers.map((a) => '<path d="M260 ' + a.y + "C350 " + a.y + ' 340 300 425 300"></path>').join("") + "</g>" +
+      '<g fill="none" stroke="#E8C88A" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round">' + factors.map((f) => '<path d="M' + f.x + " 70C" + f.x + ' 150 500 130 500 225"></path>').join("") + "</g>" +
+      '<path d="M575 300H740" fill="none" stroke="#A3B58F" stroke-width="3" stroke-dasharray="2 8" stroke-linecap="round"></path></svg>' +
+      '<div class="ab-lab" style="left:0;top:52px;width:260px">1 · Your answers</div>' + answers.map((q) => answerTile(q)).join("") +
+      '<div class="ab-lab honey" style="left:300px;width:400px;top:0;text-align:center">2 · Official UK factors</div>' + factors.map((f) => factorChip(f)).join("") +
+      '<div aria-hidden="true">' + dots.map((d) => '<span class="ab-dot" style="width:' + d.s + "px;height:" + d.s + "px;background:" + d.c + ";offset-path:path('" + d.path + "');animation-duration:" + d.dur + "s;animation-delay:" + d.delay.toFixed(2) + 's"></span>').join("") + "</div>" +
+      '<div class="ab-core" style="left:425px;top:225px;width:150px;height:150px;border-radius:44px">' + leafMark(86) + "</div>" +
+      '<div class="ab-calc"><div class="display">The calculator</div><div>answers × factors</div></div>' +
+      '<div class="ab-lab" style="left:740px;top:52px;width:260px">3 · Your footprint</div>' +
+      '<a href="#/example" class="ab-result"><div class="row-between"><span class="ab-res-l">Typical UK footprint</span><span class="ab-est">Estimate</span></div>' +
+      '<div class="display tnum ab-res-n">' + totalT + "<span> t</span></div><div class=\"ab-res-u\">CO₂e a year</div>" +
+      '<div class="ab-mix" aria-hidden="true">' + mix + '</div><div class="ab-res-cta">See an example result<span aria-hidden="true">→</span></div></a></div>' +
+      '<div class="ab-dia-phone"><div class="ab-lab-ph">1 · Your answers</div><div class="ab-q-grid">' + answers.map((q) => answerTile(q, true)).join("") + "</div>" +
+      '<div class="ab-vline" aria-hidden="true"><span></span><span style="animation-delay:-.6s"></span></div>' +
+      '<div class="ab-ph-mid"><div class="ab-fac-row">' + factors.map((f) => factorChip(f, true)).join("") + '</div><div class="ab-lab-ph honey">2 · × official UK factors</div>' +
+      '<div class="ab-core ph">' + leafMark(64) + "</div></div>" +
+      '<div class="ab-vline" aria-hidden="true"><span class="honey"></span><span style="animation-delay:-.6s"></span></div>' +
+      '<a href="#/example" class="ab-result ph"><div class="row-between"><span class="ab-lab-ph light">3 · Typical footprint</span><span class="ab-est">Estimate</span></div>' +
+      '<div class="display tnum ab-res-n">' + totalT + '<span> t</span> <small>CO₂e a year</small></div></a></div></div></section>' +
+      '<section class="ab-sec ab-who" aria-labelledby="ab-who"><div class="ab-founder"><div class="ab-kicker">Who runs it</div><h2 id="ab-who" class="display">One independent project, answerable only to the people using it.</h2>' +
+      '<div class="ab-person"><span class="display ab-initials" aria-hidden="true">' + esc(initials(OPERATOR_NAME)) + '</span><div><div class="display ab-name">' + esc(OPERATOR_NAME) + '</div><div class="muted">Runs CO2 Counter, UK</div></div></div>' +
+      "<p>CO2 Counter isn't owned or funded by any energy company, bank or other business. It's free for everyone, and people who find it useful can support it for £2 a year.</p>" +
+      '<a href="mailto:' + esc(CONTACT_EMAIL) + '" class="ab-mail">' + svgPath("M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM3 7l9 6 9-6", 18) + esc(CONTACT_EMAIL) + "</a></div>" +
+      '<div class="ab-stats">' + stats.map(([big, t, bg, ink]) => '<div class="ab-stat" style="background:' + bg + ";color:" + ink + '"><span class="display tnum">' + big + "</span><span>" + t + "</span></div>").join("") + "</div></section>" +
+      '<section class="ab-sec" aria-labelledby="ab-principles"><div class="ab-kicker">How we choose partners</div><h2 id="ab-principles" class="display ab-h2">The climate comes first. <span>Every time.</span></h2><div class="ab-principles">' +
+      principles.map(([t, b, bg, ink, d]) => '<div class="ab-pcard"><span class="ab-pic" style="background:' + bg + ";color:" + ink + '">' + svgPath(d, 26) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
+      '</div><p class="ab-see"><a class="link-btn" href="#/switches">See all our greener switches</a></p></section>' +
+      '<section class="ab-sec ab-aff" aria-labelledby="ab-aff"><div class="ab-aff-text"><div class="ab-kicker">Affiliate links</div><h2 id="ab-aff" class="display">If we ever earn from a link, you\'ll see this tag.</h2>' +
+      "<p>Some links may earn us a small fee, at no extra cost to you. Those links always carry the tag. " +
+      (paidCount ? "Right now <strong>" + paidCount + " of our links " + (paidCount === 1 ? "is an affiliate link" : "are affiliate links") + "</strong>" : "Right now <strong>none of our links are affiliate links</strong>") +
+      ", and bank or pension suggestions never will be.</p></div>" +
+      '<div class="ab-aff-demo"><div class="ab-example">Example only</div><div class="ab-aff-tile"><span class="display ab-aff-mono" aria-hidden="true">GE</span><div class="min0"><div class="ab-aff-name"><span class="display">Green energy supplier</span><span class="tag affiliate-tag">Affiliate</span></div><div class="muted">100% renewable tariff · example.co.uk</div></div></div>' +
+      '<div class="ab-aff-hint">' + svgPath("M12 19V5M6 11l6-6 6 6", 22) + "This honey-coloured tag means we'd earn a fee.</div></div></section>" +
+      '<section class="ab-band"><div><h2 class="display">Six steps. A few minutes.</h2><p>See your footprint, how it compares to the UK average, and where to start.</p></div>' +
+      '<div class="chip-row"><a href="#/" class="ab-cta">Take the survey<span aria-hidden="true">→</span></a><a href="#/switches" class="ab-cta2">See greener switches</a></div></section></div>'
     );
   }
 
@@ -4936,6 +5203,7 @@
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
+    if (path === "/switches" && app.querySelector(".sw-board")) startSwitchDemo();
     kept.forEach(([id, el]) => {
       const now = document.getElementById(id);
       if (now) now.value = el.value;
@@ -4950,6 +5218,8 @@
     ui.shownStep = null;
     ui.flash = "";
     ui.inputMsg = null;
+    ui.switchTouched = false;
+    ui.switchOn = null;
     if (currentPath() === "/friends") {
       friends.loaded = false;
       friends.msg = "";
@@ -5244,6 +5514,18 @@
       saveInput(r.key, r.old_value, before ? before.source : inputDef(r.key).source, "Undone");
     },
     "export-inputs": () => exportInputs(),
+    "flip-switch": (el) => {
+      ui.switchTouched = true;
+      const i = Number(el.dataset.i);
+      ui.switchOn[i] = !ui.switchOn[i];
+      updateSwitchboard();
+    },
+    "switch-all": () => {
+      ui.switchTouched = true;
+      const v = !ui.switchOn.every(Boolean);
+      ui.switchOn = ui.switchOn.map(() => v);
+      updateSwitchboard();
+    },
     "jump-switch": (el, e) => {
       e.preventDefault();
       const card = document.getElementById("switch-" + el.dataset.cat);

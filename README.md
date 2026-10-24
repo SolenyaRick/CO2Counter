@@ -128,9 +128,10 @@ them checked if you can.
 
 ## Inputs (changing the figures live)
 
-Every figure the footprint is worked out with (83 of them: food, travel,
-flights, energy, pets, each bank and pension provider, and the shared and
-assumed lines) is listed in `INPUT_DEFS` in `data.js`, with its source.
+Every figure the footprint is worked out with (107 of them: food, travel,
+flights, energy, pets, each bank and pension provider, the shared and
+assumed lines, the savings assumptions and the UK-average profile used for
+the comparison) is listed in `INPUT_DEFS` in `data.js`, with its source.
 Admins can change any of them on the Inputs page (`#/inputs`, linked from
 the Account page): new figure, new source, Save. The change reaches every
 visitor the next time they load the site, with no deploy.
