@@ -448,6 +448,8 @@
       ...s,
       meals: { ...d.meals, ...(s.meals || {}) },
       commute: { ...d.commute, ...(s.commute || {}) },
+      car: { ...d.car, ...(s.car || {}) },
+      cars: Array.isArray(s.cars) ? s.cars : [],
       energy: { ...d.energy, ...(s.energy || {}) },
       water: { ...d.water, ...(s.water || {}) },
       pets: { ...d.pets, ...(s.pets || {}) },
@@ -732,13 +734,15 @@
       (sum, day) => sum + factorOf(D.COMMUTE_MODES, commute[day]) * (commute.distance || 0) * 2,
       0
     );
-    const otherYearly = extraTravelYearly(s) + longTripsYearly(s);
+    const car = carYearly(s);
+    const otherYearly = extraTravelYearly(s) + longTripsYearly(s) + car.other;
     items.push({
       key: "commute",
       label: "Commute & Travel",
       icon: "🚗",
-      yearly: commuteWeekly * D.WEEKS_PER_YEAR + otherYearly,
-      detail: "~" + commuteWeekly.toFixed(1) + " kg CO₂e per week commuting" + (otherYearly > 0 ? " · " + Math.round(otherYearly) + " kg other travel" : ""),
+      yearly: commuteWeekly * D.WEEKS_PER_YEAR + otherYearly + car.make,
+      detail: "~" + commuteWeekly.toFixed(1) + " kg CO₂e per week commuting" + (otherYearly > 0 ? " · " + Math.round(otherYearly) + " kg other travel" : "") +
+        (car.make > 0 ? " · " + Math.round(car.make) + " kg making your car" : ""),
     });
 
     const flights = s.flights || [];
@@ -938,7 +942,7 @@
           saving,
           maxSaving: categoryYearly("commute", s),
           realisticLabel: (long ? "train or bus on driving days" : "walking or cycling on driving days") + (tripSaving > 0 ? ", and the train for long journeys you drive" : ""),
-          maxLabel: "no travel emissions, by working from home, walking and cycling, and holidaying closer to home",
+          maxLabel: "no travel emissions, by working from home, walking and cycling, and holidaying closer to home" + (ownedCars(s).length ? ", without a car" : ""),
         };
       },
       // Flying is optional, so the potential saving is all of it: what you'd
@@ -1093,6 +1097,34 @@
   const extraTravelYearly = (s) => (s.extraTravel || []).reduce((t, x) => t + travelFactor(x.mode) * (Number(x.km) || 0), 0) * D.WEEKS_PER_YEAR;
   const longTripKg = (x) => travelFactor(x.mode) * (Number(x.km) || 0) * (x.returnTrip ? 2 : 1);
   const longTripsYearly = (s) => (s.longTrips || []).reduce((t, x) => t + longTripKg(x), 0);
+
+  // Cars someone owns: making the car is spread over its life and split
+  // between the people who share it. Mileage, when given, tops up driving
+  // the commute and trips don't already cover, so nothing counts twice.
+  const CAR_MODES = ["car_petrol", "car_diesel", "ev"];
+  const ownedCars = (s) => (s.car && s.car.owns === "yes" ? s.cars || [] : []);
+  const carType = (c) => byKey(D.CAR_TYPES, c.fuel) || D.CAR_TYPES[0];
+  const carSize = (c) => (["small", "medium", "large"].includes(c.size) ? c.size : "medium");
+  const carMakeYearly = (c) => carType(c)["make_" + carSize(c)] / Math.max(1, A.CAR_LIFE_YEARS) / Math.max(1, Number(c.share) || 1);
+  const carDriveFactor = (c) => carType(c)["drive_" + carSize(c)];
+  const carMilesKm = (c) => Math.max(0, Number(c.miles) || 0) * D.KM_PER_MILE;
+  function tripCarKm(s) {
+    const c = s.commute || {};
+    const commute = DAYS.filter((d) => CAR_MODES.includes(c[d])).length * (c.distance || 0) * 2 * D.WEEKS_PER_YEAR;
+    const extra = (s.extraTravel || []).filter((x) => CAR_MODES.includes(x.mode)).reduce((t, x) => t + (Number(x.km) || 0), 0) * D.WEEKS_PER_YEAR;
+    const long = (s.longTrips || []).filter((x) => CAR_MODES.includes(x.mode)).reduce((t, x) => t + (Number(x.km) || 0) * (x.returnTrip ? 2 : 1), 0);
+    return commute + extra + long;
+  }
+  function carYearly(s) {
+    const cars = ownedCars(s);
+    const make = cars.reduce((t, c) => t + carMakeYearly(c), 0);
+    const mileKm = cars.reduce((t, c) => t + carMilesKm(c), 0);
+    const tripKm = tripCarKm(s);
+    const otherKm = Math.max(0, mileKm - tripKm);
+    // The extra driving uses each car's own factor, in proportion to its miles.
+    const other = mileKm > 0 ? (cars.reduce((t, c) => t + carMilesKm(c) * carDriveFactor(c), 0) * otherKm) / mileKm : 0;
+    return { make, other, mileKm, tripKm, otherKm };
+  }
 
   function categoryYearly(key, s) {
     const item = footprint(s).breakdown.find((b) => b.key === key);
@@ -1576,7 +1608,7 @@
 
   // ---------- "Anything changed?" review ----------
 
-  const STEP_FIELDS = { meals: ["meals"], commute: ["commute", "extraTravel", "longTrips"], flights: ["flights"], energy: ["energy", "water"], pets: ["pets"], banking: ["banking"] };
+  const STEP_FIELDS = { meals: ["meals"], commute: ["car", "cars", "commute", "extraTravel", "longTrips"], flights: ["flights"], energy: ["energy", "water"], pets: ["pets"], banking: ["banking"] };
   const STEP_BREAKDOWN = { energy: ["energy", "water"] };
   const stepChanged = (key) => STEP_FIELDS[key].some((f) => JSON.stringify(ui.draft[f] || null) !== JSON.stringify(ui.prevSurvey[f] || null));
   const stepKg = (key, s) => footprint(s).breakdown.filter((b) => (STEP_BREAKDOWN[key] || [key]).includes(b.key)).reduce((sum, b) => sum + b.yearly, 0);
@@ -1609,10 +1641,12 @@
       const c = s.commute || {};
       const extra = (s.extraTravel || []).length;
       const long = (s.longTrips || []).length;
-      return [
+      const cars = ownedCars(s);
+      const carLine = !s.car || !s.car.owns ? [] : !cars.length ? ["No car"] : [cars.map((x) => carLabel(x) + (Number(x.miles) > 0 ? ", " + kgFmt(Number(x.miles)) + " miles a year" : "")).join(" · ")];
+      return carLine.concat([
         (countLabels(D.COMMUTE_MODES, DAYS.map((d) => c[d])) || "No commute days") + " · " + (c.distance || 0) + " km each way",
         extra || long ? [extra ? plural(extra, "weekly trip") : "", long ? plural(long, "long journey") : ""].filter(Boolean).join(" · ") : "No extra trips or long journeys",
-      ];
+      ]);
     }
     if (key === "flights") {
       const f = (s.flights || []).filter((x) => flightKm(x.from, x.to) > 0);
@@ -1892,9 +1926,10 @@
           (distance <= A.ACTIVE_TRAVEL_MAX_KM ? ", and walking or cycling about " + kgFmt(perDay(cur) * D.WEEKS_PER_YEAR) + " kg." : ".") + "</p>"
         : "";
     return qList([
-      qCard(1, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km")),
+      qCard(1, "Do you own or lease a car?", "Count a company car too. Making a car has a big footprint of its own, so we spread it over the years a car lasts.", renderCars()),
+      qCard(2, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km")),
       qCard(
-        2,
+        3,
         "How did you get there each day?",
         "Pick a day, then how you travelled. Leave a day as it is if you didn't commute.",
         days +
@@ -1903,9 +1938,61 @@
           "</div>" + tip + "</div>"
       ),
       qCard(0, "Work shifts?", nightNote, "", { note: true }),
-      qCard(3, "Any other regular travel each week?", "Trips outside your commute, like the school run, the weekly shop or visiting family. A rough weekly total is fine.", renderExtraTravel(), { optional: true }),
-      qCard(4, "Long journeys by land this year?", "Trains or drives like London to Cornwall or Scotland. Type where you go from and to, and we'll work out the distance. Flights come in the next step.", renderLongTrips(), { optional: true }),
+      qCard(4, "Any other regular travel each week?", "Trips outside your commute, like the school run, the weekly shop or visiting family. A rough weekly total is fine.", renderExtraTravel(), { optional: true }),
+      qCard(5, "Long journeys by land this year?", "Trains or drives like London to Cornwall or Scotland. Type where you go from and to, and we'll work out the distance. Flights come in the next step.", renderLongTrips(), { optional: true }),
     ]);
+  }
+
+  const carLabel = (c) => (byKey(D.CAR_SIZES, carSize(c)) || {}).label + " " + carType(c).label.toLowerCase() + " car";
+
+  function renderCars() {
+    const owns = survey.car && survey.car.owns;
+    const yesNo =
+      '<div class="chip-wrap">' +
+      chip(owns === "yes", 'data-action="set-car-owns" data-value="yes"', "Yes") +
+      chip(owns === "no", 'data-action="set-car-owns" data-value="no"', "No") +
+      "</div>";
+    if (owns !== "yes") return yesNo;
+    const sum = carYearly(survey);
+    const rows = survey.cars
+      .map((c, i) => {
+        const make = carMakeYearly(c);
+        const share = Math.max(1, Number(c.share) || 1);
+        const total = carType(c)["make_" + carSize(c)];
+        const chips = (list, field, value, sub) =>
+          '<div class="chip-wrap mt-1">' +
+          list.map((o) => chip(value === o.key, 'data-action="set-car" data-index="' + i + '" data-key="' + field + '" data-value="' + o.key + '"', esc(o.label), sub ? sub(o) : "")).join("") +
+          "</div>";
+        return (
+          '<div class="panel p-4 car-card"><p class="q-sub-title display">' + (survey.cars.length > 1 ? "Car " + (i + 1) : "Your car") + "</p>" +
+          '<label class="xs">Fuel</label>' + chips(D.CAR_TYPES, "fuel", carType(c).key) +
+          '<label class="xs mt-3 block">Size</label>' + chips(D.CAR_SIZES, "size", carSize(c), (o) => o.hint) +
+          '<div class="travel-row mt-3"><div class="w-150"><label class="xs">People who share it</label><input class="input mt-1" type="number" min="1" inputmode="numeric" value="' + esc(share) +
+          '" data-car="' + i + '" data-key="share" aria-label="People who share this car" /></div>' +
+          '<div class="grow minw-160"><label class="xs">Miles you drive it a year <span class="muted">(optional)</span></label><input class="input mt-1" type="number" min="0" inputmode="numeric" placeholder="e.g. 7,000" value="' +
+          esc(Number(c.miles) > 0 ? c.miles : "") + '" data-car="' + i + '" data-key="miles" aria-label="Miles you drive this car a year" /></div></div>' +
+          '<p class="xs muted mt-2">Making it: about ' + kgFmt(total) + " kg CO₂e, spread over " + A.CAR_LIFE_YEARS + " years" + (share > 1 ? " and split " + share + " ways" : "") +
+          ' = <strong class="tnum">' + kgFmt(make) + " kg a year</strong>. That's the same whether you bought it new or used: each year of its life carries a share.</p>" +
+          '<div class="row-between journey-foot mt-3"><span></span><span class="label-row">' +
+          '<button type="button" class="dup-btn" data-action="dup-car" data-index="' + i + '" aria-label="Duplicate this car">' + icon("copy") + "Duplicate</button>" +
+          '<button type="button" class="icon-btn danger-hover" data-action="remove-car" data-index="' + i + '" aria-label="Remove car">' + icon("trash") + "</button></span></div></div>"
+        );
+      })
+      .join("");
+    const mi = (km) => kgFmt(km / D.KM_PER_MILE);
+    const mileNote =
+      sum.mileKm <= 0
+        ? '<p class="xs muted mt-3">Not sure of your mileage? Your MOT history shows the reading each year: <a href="https://www.gov.uk/check-mot-history" target="_blank" rel="noopener">check it on GOV.UK</a>. Without it, we count the driving in your commute and trips below.</p>'
+        : sum.otherKm > 0
+          ? '<p class="xs muted mt-3">Your commute and trips below cover about ' + mi(sum.tripKm) + " of your " + mi(sum.mileKm) + " miles. We count the other " + mi(sum.otherKm) +
+            ' miles as other driving: <strong class="tnum">' + kgFmt(sum.other) + " kg a year</strong>.</p>"
+          : '<p class="xs muted mt-3">Your commute and trips below already add up to ' + mi(sum.tripKm) + " miles or more, so we count those and nothing extra.</p>";
+    return (
+      yesNo +
+      (rows ? '<div class="stack-3 mt-3">' + rows + "</div>" : "") +
+      '<button type="button" class="q-add mt-3" data-action="add-car">' + icon("plus") + " Add another car</button>" +
+      mileNote
+    );
   }
 
   function travelModeSelect(kind, i, value) {
@@ -2025,7 +2112,10 @@
 
   // Briefly highlight a freshly duplicated row so it's clear what happened.
   function flashCopy(index, kind) {
-    const sel = kind ? '[data-action="dup-travel"][data-kind="' + kind + '"][data-index="' + index + '"]' : '[data-action="dup-flight"][data-index="' + index + '"]';
+    const sel =
+      kind === "car" ? '[data-action="dup-car"][data-index="' + index + '"]'
+      : kind ? '[data-action="dup-travel"][data-kind="' + kind + '"][data-index="' + index + '"]'
+      : '[data-action="dup-flight"][data-index="' + index + '"]';
     const btn = document.querySelector(sel);
     const row = btn && btn.closest(".panel");
     if (!row) return;
@@ -3385,7 +3475,7 @@
         "<p>Seven areas of everyday life:</p>" +
           list([
             "<strong>Food</strong>: your main meal each day, how often you eat out, and how much food is wasted",
-            "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land. For long journeys we work out the distance from the two towns: the straight line between them plus 25% for the way roads and railways wind (town locations from GeoNames, geonames.org)",
+            "<strong>Commute and travel</strong>: how you travel to work each day and how far, counting the journey there and back, plus other regular weekly travel and long journeys by land. For long journeys we work out the distance from the two towns: the straight line between them plus 25% for the way roads and railways wind (town locations from GeoNames, geonames.org). If you own a car, we add a share of making it: the emissions of building a car of that size and fuel (ICCT, 2021) spread over " + A.CAR_LIFE_YEARS + " years, a typical UK car's life, and split between the people who share it. If you give your yearly mileage, any miles your commute and trips don't already cover count as other driving, using UK government factors for your car's size and fuel",
             "<strong>Flights</strong>: each flight's distance between airports and the cabin class",
             "<strong>Home energy</strong>: electricity and gas use, whether you're on a green tariff, shared across your household",
             "<strong>Water</strong>: household water use, shared across your household",
@@ -5593,6 +5683,39 @@
       surveyChanged();
       render();
     },
+    "set-car-owns": (el) => {
+      const owns = el.dataset.value;
+      survey.car = { ...(survey.car || {}), owns };
+      if (owns === "yes" && !survey.cars.length) survey.cars = [{ fuel: "petrol", size: "medium", share: 1, miles: 0 }];
+      if (owns === "no") survey.cars = [];
+      surveyChanged();
+      render();
+    },
+    "set-car": (el) => {
+      const i = Number(el.dataset.index);
+      survey.cars = survey.cars.map((c, idx) => (idx === i ? { ...c, [el.dataset.key]: el.dataset.value } : c));
+      surveyChanged();
+      render();
+    },
+    "add-car": () => {
+      survey.cars = survey.cars.concat({ fuel: "petrol", size: "medium", share: 1, miles: 0 });
+      surveyChanged();
+      render();
+    },
+    "dup-car": (el) => {
+      const i = Number(el.dataset.index);
+      survey.cars = survey.cars.slice(0, i + 1).concat({ ...survey.cars[i] }, survey.cars.slice(i + 1));
+      surveyChanged();
+      render();
+      flashCopy(i + 1, "car");
+    },
+    "remove-car": (el) => {
+      const i = Number(el.dataset.index);
+      survey.cars = survey.cars.filter((_, idx) => idx !== i);
+      if (!survey.cars.length) survey.car = { ...(survey.car || {}), owns: "no" };
+      surveyChanged();
+      render();
+    },
     "add-flight": () => {
       survey.flights = survey.flights.concat({ from: "", to: "", cabin: "economy", returnTrip: true, date: new Date().toISOString().slice(0, 10) });
       surveyChanged();
@@ -6105,6 +6228,13 @@
       const i = Number(t.dataset.flight);
       const value = t.type === "checkbox" ? t.checked : t.value;
       survey.flights = survey.flights.map((f, idx) => (idx === i ? { ...f, [t.dataset.flightField]: value } : f));
+      surveyChanged();
+      render();
+    } else if (t.dataset.car) {
+      const i = Number(t.dataset.car);
+      const f = t.dataset.key;
+      const value = f === "share" ? Math.max(1, Math.round(Number(t.value) || 1)) : Math.max(0, Number(t.value) || 0);
+      survey.cars = survey.cars.map((c, idx) => (idx === i ? { ...c, [f]: value } : c));
       surveyChanged();
       render();
     } else if (t.dataset.travel) {
