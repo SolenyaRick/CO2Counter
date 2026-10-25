@@ -14,6 +14,10 @@
   "commute": {
     "distance": 10
   },
+  "car": {
+    "owns": ""
+  },
+  "cars": [],
   "extraTravel": [],
   "longTrips": [],
   "flights": [],
@@ -81,6 +85,7 @@
     dogsPerPerson: 15.5 / 69.3, // UK Pet Food
     catsPerPerson: 13.1 / 69.3,
     commuteKm: 3.1, // one way, per weekday (DfT NTS)
+    carsPerPerson: 34.353 / 69.3, // licensed cars (DfT, June 2025) per person
     chickenG: 230, // Defra Family Food, g per person per week
     porkG: 137,
     fishG: 120,
@@ -101,6 +106,9 @@
         weekMix: { chicken: p.chickenG / g, pork: p.porkG / g, fish: p.fishG / g, beef: p.beefG / g, lamb: p.lambG / g, veggie: 7 - meatG / g },
       },
       commute: { distance: p.commuteKm, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
+      // A medium petrol car's making, shared out by the number of cars per person.
+      car: { owns: "yes" },
+      cars: [{ fuel: "petrol", size: "medium", share: 1 / p.carsPerPerson, miles: 0 }],
       flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true, trips: p.flightsPerPerson }],
       energy: { electricityKwh: p.electricityKwh / 12, gasKwh: p.gasKwh / 12, greenTariff: false, household: p.household },
       water: { liters: p.waterLitres * 30.4 * p.household },
@@ -356,6 +364,28 @@
     "factor": 0.118
   }
 ];
+  // Cars someone owns or leases. "drive" is kg CO2e per km by size: DESNZ
+  // 2026 cars by size, tailpipe (or UK electricity for EVs, incl. T&D) plus
+  // well-to-tank. "make" is kg CO2e to make the car by size, from ICCT
+  // (Bieker 2021, EU and UK cars): glider and powertrain at 5.2 t per tonne
+  // of car for petrol and diesel, 5.7 t for plug-in hybrids and 4.7 t for
+  // electric, times the average weight of small (1,155 kg), lower-medium
+  // (1,382 kg) and SUV (1,537 kg) cars, plus the battery at 60 kg per kWh.
+  // A full hybrid's 1.5 kWh battery adds about 0.1 t to the petrol figure.
+  const CAR_TYPES = [
+    { key: "petrol", label: "Petrol", drive_small: 0.14257 + 0.04015, drive_medium: 0.17411 + 0.04957, drive_large: 0.26606 + 0.07528, make_small: 6000, make_medium: 7200, make_large: 8000 },
+    { key: "diesel", label: "Diesel", drive_small: 0.14327 + 0.03409, drive_medium: 0.17209 + 0.04103, drive_large: 0.20905 + 0.0507, make_small: 6000, make_medium: 7200, make_large: 8000 },
+    { key: "hybrid", label: "Hybrid", drive_small: 0.1138 + 0.03026, drive_medium: 0.11678 + 0.02998, drive_large: 0.15846 + 0.03961, make_small: 6100, make_medium: 7300, make_large: 8100 },
+    { key: "phev", label: "Plug-in hybrid", drive_small: 0.03002 + 0.01791 + 0.00178 + 0.0152, drive_medium: 0.07349 + 0.00691 + 0.00069 + 0.02524, drive_large: 0.09842 + 0.00944 + 0.00093 + 0.03221, make_small: 7200, make_medium: 8500, make_large: 9600 },
+    { key: "ev", label: "Electric", drive_small: 0.02469 + 0.00244 + 0.00948, drive_medium: 0.02563 + 0.00254 + 0.01022, drive_large: 0.0279 + 0.00276 + 0.01088, make_small: 8100, make_medium: 9200, make_large: 11400 },
+  ];
+  const CAR_SIZES = [
+    { key: "small", label: "Small", hint: "like a Corsa or Fiesta" },
+    { key: "medium", label: "Medium", hint: "like a Golf or Focus" },
+    { key: "large", label: "Large or SUV", hint: "like a Qashqai or 5 Series" },
+  ];
+  const KM_PER_MILE = 1.609344;
+
   // Modes for travel outside the daily commute (extra weekly travel and
   // long journeys): the motorised commute modes plus coach and
   // international rail. DESNZ 2026, kg CO2e per passenger km, including
@@ -1789,6 +1819,7 @@
     OAT_MILK_KG: 0.9,
     UK_TOTAL_KG: (699201.9 / 68265) * 1000, // full UK footprint per person (Defra 2023)
     EXAMPLE_SAVINGS: 5000, // £ in a bank, for the Greener switches example
+    CAR_LIFE_YEARS: 14, // a car's making is spread over this many years (UK scrappage age)
   };
 
   // Every figure the admin can change on the Inputs page (#/inputs). "path"
@@ -1821,6 +1852,7 @@
     { group: "Travel", key: "ev", label: "Electric car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[ev].factor", source: DESNZ_2026 + " (battery electric, average car)", asOf: "2026-06", every: 12 },
     { group: "Travel", key: "car_petrol", label: "Petrol car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[car_petrol].factor", source: DESNZ_2026 + " (average car). Also used for every “the same as driving” figure.", asOf: "2026-06", every: 12 },
     { group: "Travel", key: "car_diesel", label: "Diesel car", unit: "kg CO₂e per km", path: "COMMUTE_MODES[car_diesel].factor", source: DESNZ_2026 + " (average car)", asOf: "2026-06", every: 12 },
+    { group: "Cars", key: "car_life", label: "A car's making is spread over", unit: "years", path: "ASSUMPTIONS.CAR_LIFE_YEARS", source: "SMMT: average age of a car when scrapped in the UK, 13.9 years (2015). Scrap-car firms report about 16–17 years in 2024–25; ICCT uses 18 years for Europe, counting cars exported abroad.", asOf: "2015-06" },
     { group: "Travel", key: "motorcycle", label: "Motorcycle", unit: "kg CO₂e per km", path: "COMMUTE_MODES[motorcycle].factor", source: "No source recorded yet" },
     { group: "Travel", key: "coach", label: "Coach", unit: "kg CO₂e per km", path: "TRAVEL_MODES[coach].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
     { group: "Travel", key: "intl_rail", label: "International train", unit: "kg CO₂e per km", path: "TRAVEL_MODES[intl_rail].factor", source: DESNZ_2026 + " (international rail, e.g. Eurostar)", asOf: "2026-06", every: 12 },
@@ -1846,6 +1878,10 @@
     { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "No source recorded yet" },
     { group: "Pets", key: "cat", label: "Cat", unit: "kg CO₂e a year", path: "CAT_YEARLY", source: "No source recorded yet" },
   ];
+  const SIZE_WORD = { small: "small", medium: "medium", large: "large or SUV" };
+  const ICCT_CARS = "ICCT, A global comparison of the life-cycle GHG emissions of combustion engine and electric passenger cars (Bieker, 2021): production and recycling per tonne of car times the average EU and UK car weight for the size, plus the battery at 60 kg CO₂e per kWh";
+  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_make_" + t.key + "_" + z, label: "Making a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e", path: "CAR_TYPES[" + t.key + "].make_" + z, source: ICCT_CARS + (t.key === "hybrid" ? ". Full hybrids aren't in the study: the petrol figure plus a 1.5 kWh battery." : t.key === "phev" && z === "small" ? ". There's no small plug-in hybrid in the study, so this uses the lower-medium battery." : ""), asOf: "2021-07" })));
+  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_drive_" + t.key + "_" + z, label: "Driving a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e per km", path: "CAR_TYPES[" + t.key + "].drive_" + z, source: DESNZ_2026 + " (cars by size" + (t.key === "ev" || t.key === "phev" ? ", incl. UK electricity for EVs and T&D" : "") + ")", asOf: "2026-06", every: 12 })));
   BANKS.forEach((b) => INPUT_DEFS.push({ group: "Banks", key: "bank_" + b.key, label: b.label, unit: "kg CO₂e per £ a year", path: "BANKS[" + b.key + "].factor", source: "MotherTree bank carbon emissions league table (2021)", asOf: "2021-06", every: 12 }));
   PENSION_PROVIDERS.filter((p) => !p.unfunded).forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
   INPUT_DEFS.push(
@@ -1872,6 +1908,7 @@
     { group: "UK average (for the comparison)", key: "uk_flights", label: "Return flights", unit: "per person a year", path: "UK_PROFILE.flightsPerPerson", source: "ONS Travel trends 2024: 80.9m visits abroad by air ÷ 69.3m people", asOf: "2025-05", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_dogs", label: "Dogs", unit: "per person", path: "UK_PROFILE.dogsPerPerson", source: "UK Pet Food 2026: 15.5m dogs ÷ 69.3m people", asOf: "2026-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_cats", label: "Cats", unit: "per person", path: "UK_PROFILE.catsPerPerson", source: "UK Pet Food 2026: 13.1m cats ÷ 69.3m people", asOf: "2026-03", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_cars", label: "Cars", unit: "per person", path: "UK_PROFILE.carsPerPerson", source: "DfT Vehicle licensing statistics: 34.35m licensed cars (June 2025) ÷ 69.3m people. The comparison counts a share of making a medium petrol car.", asOf: "2025-09", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_commute", label: "Commute distance", unit: "km one way, per weekday", path: "UK_PROFILE.commuteKm", source: "DfT National Travel Survey 2024: 1,007 commuting miles a person, about 3/4 by car", asOf: "2025-08", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_chicken", label: "Chicken bought", unit: "g per person a week", path: "UK_PROFILE.chickenG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_pork", label: "Pork, bacon, ham and sausages bought", unit: "g per person a week", path: "UK_PROFILE.porkG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
@@ -1909,6 +1946,7 @@
 ];
 
   window.ECO_DATA = {
+    CAR_TYPES, CAR_SIZES, KM_PER_MILE,
     DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT, ASSUMED_SHOPPING,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
     WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
