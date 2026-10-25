@@ -1619,3 +1619,189 @@ end;
 $$;
 revoke all on function public.owner_analytics() from public;
 grant execute on function public.owner_analytics() to authenticated;
+
+-- ---------- Groups, role and research consent ----------
+-- Needs the "Inputs" and "Owner analytics" sections above.
+
+-- Groups: anyone can create one and share its 6-character code; members
+-- see each other's display names and yearly totals (never answers). The
+-- tables are only reachable through the functions below.
+create table if not exists public.groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 2 and 60),
+  code text not null unique check (code ~ '^[A-Z0-9]{6}$'),
+  created_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.group_members (
+  group_id uuid not null references public.groups (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+create index if not exists group_members_user on public.group_members (user_id);
+alter table public.groups enable row level security;
+alter table public.group_members enable row level security;
+revoke all on public.groups, public.group_members from anon, authenticated;
+
+create or replace function public.create_group(p_name text)
+returns table (id uuid, code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_id uuid;
+  new_code text;
+  clean text := btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g'));
+begin
+  if auth.uid() is null then raise exception 'Sign in to create a group'; end if;
+  if char_length(clean) < 2 or char_length(clean) > 60 then raise exception 'Group names are 2 to 60 characters'; end if;
+  if (select count(*) from public.groups g where g.created_by = auth.uid()) >= 10 then raise exception 'You can create up to 10 groups'; end if;
+  loop
+    -- No 0/O or 1/I, so codes are easy to read out.
+    new_code := (select string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', 1 + floor(random() * 32)::int, 1), '') from generate_series(1, 6));
+    exit when not exists (select 1 from public.groups g where g.code = new_code);
+  end loop;
+  insert into public.groups (name, code, created_by) values (clean, new_code, auth.uid()) returning groups.id into new_id;
+  insert into public.group_members (group_id, user_id) values (new_id, auth.uid());
+  return query select new_id, new_code;
+end;
+$$;
+
+create or replace function public.join_group(p_code text)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  gid uuid;
+begin
+  if auth.uid() is null then raise exception 'Sign in to join a group'; end if;
+  select g.id into gid from public.groups g where g.code = upper(btrim(coalesce(p_code, '')));
+  if gid is null then raise exception 'No group has that code'; end if;
+  if not exists (select 1 from public.group_members m where m.group_id = gid and m.user_id = auth.uid())
+     and (select count(*) from public.group_members m where m.user_id = auth.uid()) >= 20 then
+    raise exception 'You can be in up to 20 groups';
+  end if;
+  insert into public.group_members (group_id, user_id) values (gid, auth.uid()) on conflict do nothing;
+  return gid;
+end;
+$$;
+
+-- Leaving the last member out deletes the group.
+create or replace function public.leave_group(p_group uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.group_members where group_id = p_group and user_id = auth.uid();
+  delete from public.groups g where g.id = p_group and not exists (select 1 from public.group_members m where m.group_id = p_group);
+end;
+$$;
+
+-- The creator can delete a group for everyone.
+create or replace function public.delete_group(p_group uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.groups where id = p_group and created_by = auth.uid();
+$$;
+
+create or replace function public.my_groups()
+returns table (id uuid, name text, code text, members integer, is_owner boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select g.id, g.name, g.code,
+    (select count(*)::integer from public.group_members x where x.group_id = g.id),
+    g.created_by = auth.uid()
+  from public.groups g
+  join public.group_members m on m.group_id = g.id and m.user_id = auth.uid()
+  order by g.created_at;
+$$;
+
+-- Members of one group (only for its members): name, latest total, and
+-- first and latest totals from their survey history.
+create or replace function public.group_board(p_group uuid)
+returns table (display_name text, total_yearly numeric, first_total numeric, latest_total numeric, surveys integer, is_self boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with members as (
+    select m.user_id from public.group_members m
+    where m.group_id = p_group
+      and exists (select 1 from public.group_members me where me.group_id = p_group and me.user_id = auth.uid())
+  ),
+  h as (
+    select sh.user_id, sh.total_yearly,
+      row_number() over (partition by sh.user_id order by sh.completed_at asc) as first_n,
+      row_number() over (partition by sh.user_id order by sh.completed_at desc) as last_n,
+      count(*) over (partition by sh.user_id) as n
+    from public.survey_history sh join members mb on mb.user_id = sh.user_id
+    where sh.total_yearly is not null
+  )
+  select
+    coalesce(nullif(p.display_name, ''), nullif(p.username, ''), 'Member'),
+    s.total_yearly,
+    (select h1.total_yearly from h h1 where h1.user_id = mb.user_id and h1.first_n = 1),
+    (select h2.total_yearly from h h2 where h2.user_id = mb.user_id and h2.last_n = 1),
+    coalesce((select h3.n::integer from h h3 where h3.user_id = mb.user_id and h3.first_n = 1), 0),
+    mb.user_id = auth.uid()
+  from members mb
+  left join public.survey_responses s on s.user_id = mb.user_id
+  left join public.profiles p on p.id = mb.user_id;
+$$;
+
+revoke all on function public.create_group(text), public.join_group(text), public.leave_group(uuid), public.delete_group(uuid), public.my_groups(), public.group_board(uuid) from public;
+grant execute on function public.create_group(text), public.join_group(text), public.leave_group(uuid), public.delete_group(uuid), public.my_groups(), public.group_board(uuid) to authenticated;
+
+-- What people do (optional, set on the Account page), for anonymous
+-- totals by role on the owner's Analytics page.
+alter table public.profiles add column if not exists role text;
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check (role is null or role in
+  ('doctor', 'nurse_midwife', 'ahp', 'paramedic', 'other_health', 'education', 'student', 'other'));
+-- research_opt_in (added earlier, off by default) is the research consent
+-- switch on the Account page.
+alter table public.profiles add column if not exists research_opted_at timestamptz;
+
+-- Owner analytics, now with each person's role and groups, and research
+-- data for opted-in people only. Admins only; people are a scrambled id.
+create or replace function public.owner_analytics()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Admins only';
+  end if;
+  return jsonb_build_object(
+    'latest', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || r.user_id::text), 12), 'data', r.survey_data))
+      from public.survey_responses r where r.survey_data ? 'completedAt'), '[]'::jsonb),
+    'history', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || h.user_id::text), 12), 'at', h.completed_at, 'data', h.survey_data) order by h.completed_at)
+      from public.survey_history h), '[]'::jsonb),
+    'clicks', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || c.user_id::text), 12), 'link', c.link_key, 'place', c.place, 'aff', c.via_affiliate, 'at', c.first_clicked_at))
+      from public.link_clicks c), '[]'::jsonb),
+    'people', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || p.id::text), 12), 'role', p.role, 'research', p.research_opt_in))
+      from public.profiles p), '[]'::jsonb),
+    'groups', coalesce((select jsonb_agg(jsonb_build_object('name', g.name, 'members', (select jsonb_agg(left(md5('co2:' || m.user_id::text), 12)) from public.group_members m where m.group_id = g.id)))
+      from public.groups g), '[]'::jsonb),
+    'accounts', (select count(*) from auth.users)
+  );
+end;
+$$;
+revoke all on function public.owner_analytics() from public;
+grant execute on function public.owner_analytics() to authenticated;
