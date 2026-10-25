@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "23 October 2026";
+  const LEGAL_UPDATED = "25 October 2026";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -1636,7 +1636,7 @@
       const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
       return [
         (bank ? bank.label : "Bank not chosen") + " · £" + (b.amount || 0).toLocaleString(),
-        b.pensionPot ? "Pension: " + (pension ? pension.label : "provider not chosen") + " · £" + b.pensionPot.toLocaleString() : "No pension added",
+        pension && pension.unfunded ? "Pension: " + pension.label : b.pensionPot ? "Pension: " + (pension ? pension.label : "provider not chosen") + " · £" + b.pensionPot.toLocaleString() : "No pension added",
       ];
     }
     return [];
@@ -1902,6 +1902,7 @@
           D.COMMUTE_MODES.map((o) => chip(c[day] === o.key, 'data-action="set-commute" data-day="' + day + '" data-key="' + o.key + '"', esc(o.label), distance > 0 ? perDay(o).toFixed(2) + " kg" : "")).join("") +
           "</div>" + tip + "</div>"
       ),
+      qCard(0, "Work shifts?", nightNote, "", { note: true }),
       qCard(3, "Any other regular travel each week?", "Trips outside your commute, like the school run, the weekly shop or visiting family. A rough weekly total is fine.", renderExtraTravel(), { optional: true }),
       qCard(4, "Long journeys by land this year?", "Trains or drives like London to Cornwall or Scotland. Type where you go from and to, and we'll work out the distance. Flights come in the next step.", renderLongTrips(), { optional: true }),
     ]);
@@ -2169,9 +2170,13 @@
           '<option value=""' + (b.pensionProvider ? "" : " selected") + " disabled>Select your provider</option>" +
           D.PENSION_PROVIDERS.map((x) => '<option value="' + x.key + '"' + (x.key === b.pensionProvider ? " selected" : "") + ">" + esc(x.label) + "</option>").join("") +
           "</select>" +
-          (pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "")
+          (pension && pension.unfunded
+            ? '<p class="sm mt-2 q-tip green-tip">' + esc(pension.label) + " pays pensions from government funds rather than investing in companies, so it doesn't add to your footprint and there's nothing to switch. If you also have a personal pension, choose that provider instead.</p>"
+            : pension ? '<p class="xs muted mt-2">' + pension.tPerMillion + " t CO₂e per £1m invested · " + esc(pension.source) + "</p>" : "")
       ),
-      qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
+      pension && pension.unfunded
+        ? ""
+        : qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
     ]);
   }
 
@@ -2658,7 +2663,9 @@
           ["Check how your bank ranks", "Independent league tables rank UK banks by the emissions your money helps finance."],
           ["Pick a greener bank", "Banks like Triodos, the Co-operative Bank and Nationwide avoid or limit fossil-fuel lending."],
           ["Use the switch service", "The free Current Account Switch Service moves your balance, direct debits and standing orders in 7 working days, with a guarantee."],
-          ["Ask about your pension", (pension && pension.key !== "other" ? "Ask " + pension.label : "Ask your provider") + " which climate-focused funds it offers. Pensions can matter even more than bank accounts."],
+          pension && pension.unfunded
+            ? ["Your pension", pension.label + " isn't invested in companies, so there's nothing to switch. If you have a personal pension too, ask that provider about climate-focused funds."]
+            : ["Ask about your pension", (pension && pension.key !== "other" ? "Ask " + pension.label : "Ask your provider") + " which climate-focused funds it offers. Pensions can matter even more than bank accounts."],
         ],
       };
     }
@@ -2864,7 +2871,11 @@
 
   // The banks in the switching card, and when a guide card doesn't apply.
   const GREEN_BANKS = ["triodos", "co_op", "nationwide"];
-  const sectionNA = (cat, s) => cat === "banking" && s.dynamicKey === "savingsPensions" && !(survey.banking || {}).pensionPot;
+  const sectionNA = (cat, s) => {
+    if (cat !== "banking" || s.dynamicKey !== "savingsPensions") return false;
+    const b = survey.banking || {};
+    return !b.pensionPot || !!(byKey(D.PENSION_PROVIDERS, b.pensionProvider) || {}).unfunded;
+  };
 
   // Driving cards only make sense for people who drive to work.
   const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
@@ -3014,6 +3025,7 @@
     else if (s.dynamicKey === "trainComparison") body = trainSheet();
     else if (s.dynamicKey === "cabinComparison") body = cabinSheet();
     else if (s.dynamicKey === "commuteSwap") body = commuteSheet();
+    else if (s.dynamicKey === "ifDriving") body = vehicleSheet();
     else if (s.dynamicKey === "bankLeague") body = bankSheet();
     else if (s.dynamicKey === "switchAccount") body = switchSheet();
     else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
@@ -3200,9 +3212,47 @@
             .map((k) => '<div style="--a:' + (0.12 + (k / n) * 0.8).toFixed(2) + '" class="' + (k / n > 0.55 ? "dark" : "") + '"><span>' + k + (k === 1 ? " day" : " days") + ' a week</span><b class="display tnum">−' + kgFmt(swap(k)) + " kg</b><small>a year</small></div>")
             .join("") +
           "</div>"
-      )
+      ) +
+      '<p class="xs muted mt-3">' + nightNote + "</p>"
     );
   }
+
+  // "If you must drive": what changing the vehicle saves, and the
+  // salary-sacrifice schemes that make a bike or an electric car cheaper.
+  function vehicleSheet() {
+    const c = survey.commute || {};
+    const km = Number(c.distance) || 0;
+    const days = carDaysOf(survey);
+    const n = days.length;
+    const links = D.USEFUL_LINKS.commute.items.filter((l) => l.topic === "vehicle");
+    let html = "";
+    if (n && km) {
+      const W = D.WEEKS_PER_YEAR;
+      const yearOf = (mode) => factorOf(D.COMMUTE_MODES, mode) * km * 2 * n * W;
+      const carKey = c[days[0]];
+      const car = byKey(D.COMMUTE_MODES, carKey);
+      const rows = [[car.label + " (yours)", yearOf(carKey), "var(--clay)"]]
+        .concat(carKey === "ev" ? [] : [["Electric car", yearOf("ev"), "#8fa58a"]])
+        .concat([["Bike or e-bike", 0, "var(--em-600)"]]);
+      const max = Math.max(1, ...rows.map((r) => r[1]));
+      html += panel(
+        "Your " + n + " driving " + (n === 1 ? "day" : "days") + " a week, for a year",
+        '<ul class="sbars">' + rows.map(([l, v, col]) => sheetBar(esc(l), v, max, col, { text: kgFmt(v) + " kg" })).join("") + "</ul>" +
+          '<p class="xs muted mt-2">' + km + " km each way, there and back. An e-bike's charging is close to zero by comparison.</p>",
+        carKey === "ev" ? "" : chipBig("Electric saves " + kgFmt(yearOf(carKey) - yearOf("ev")) + " kg")
+      );
+    }
+    html +=
+      '<div class="sheet-two">' +
+      '<section class="sheet-panel"><span class="eyebrow">Cycle to Work</span><p class="sm mt-2">Most employers, including the NHS, offer a Cycle to Work scheme: a bike or e-bike and safety kit, paid from your salary before tax and National Insurance, so it costs noticeably less. Ask HR or check your staff benefits site.</p></section>' +
+      '<section class="sheet-panel"><span class="eyebrow">Salary-sacrifice electric car</span><p class="sm mt-2">Many employers, including NHS trusts, let you lease an electric car from your salary before tax. Electric cars have a low benefit-in-kind tax, so it\'s often cheaper than leasing one yourself. Check what your employer offers.</p></section></div>' +
+      panel("Schemes to look at", '<div class="chip-links">' + links.map((l) => '<a class="chip-link" ' + linkAttrs("commute", l, "popup") + ">" + monogram(l) + esc(l.label) + (l.ref ? '<span class="affiliate-dot">Affiliate</span>' : "") + "</a>").join("") + "</div>" +
+        '<p class="xs muted mt-2">Your employer has to offer the scheme, and some use a particular provider. Independent suggestions; we don\'t get paid for these links.</p>') +
+      '<p class="xs muted mt-3">' + nightNote + "</p>";
+    return html;
+  }
+
+  const nightNote = "Work nights or early shifts? Buses and trains may not be running, and walking or cycling in the dark isn't always safe or practical. Only count the swaps that work for your shifts.";
 
   function bankSheet() {
     const b = survey.banking || {};
@@ -3281,6 +3331,8 @@
     const max = Math.max(...D.PENSION_CLIMATE_RANKING.map((x) => x.score));
     const note = mine
       ? ""
+      : chosen && chosen.unfunded
+      ? '<p class="sm mt-2">' + esc(chosen.label) + " isn't invested in companies: pensions are paid from government funds, so it doesn't add to your footprint and there's nothing to switch. The ranking covers invested workplace schemes, for any other pension you have.</p>"
       : chosen && chosen.key !== "other"
       ? '<p class="sm mt-2">' + esc(chosen.label) + " isn't in this ranking, which covers the 12 largest workplace pension providers.</p>"
       : '<p class="sm mt-2">Choose your pension provider in the survey\'s Money step to see where it ranks.</p>';
@@ -3669,8 +3721,8 @@
       { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
         fact: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
         vsTitle: "London → Paris, return, kg CO₂e", beforeLabel: "Plane", before: A.PARIS_FLIGHT_KG, afterLabel: "Train", after: A.PARIS_TRAIN_KG },
-      { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Plan with", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
-        fact: "Your commute repeats over 200 times a year. Swapping car days for the train adds up fast.",
+      { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Visit", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
+        fact: "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
         vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol, afterLabel: "Train", after: dist * 2 * train },
     ].map((a) => ({ ...a, title: D.USEFUL_LINKS[a.key].title, eyebrow: D.USEFUL_LINKS[a.key].eyebrow, links: D.USEFUL_LINKS[a.key].items }));
   }
@@ -4024,7 +4076,51 @@
     const old = {};
     clicks.filter((c) => !known.has(c.link)).forEach((c) => (old[c.link] ||= []).push(c));
     Object.entries(old).forEach(([key, list]) => rows.push({ cat: key.split(":")[0], label: key.split(":")[1] + " (removed)", key, clicks: list.length, aff: list.filter((c) => c.aff).length, after: null, all: null, rule: "" }));
-    return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size };
+    // Anonymous breakdowns: latest footprint and change since each
+    // person's first survey, for every role and group with 3+ people.
+    const latestBy = {};
+    (d.latest || []).forEach((r, i) => (latestBy[r.u] = fps[i].totalYearly));
+    const changeOf = (us) => {
+      const list = us.map((u) => (byUser[u] || [])).filter((l) => l.length > 1);
+      if (!list.length) return null;
+      const first = list.reduce((t, l) => t + savedFootprint(l[0].s).totalYearly, 0);
+      const last = list.reduce((t, l) => t + savedFootprint(l[l.length - 1].s).totalYearly, 0);
+      return first ? (last - first) / first : null;
+    };
+    const breakdown = (label, us) => {
+      const vals = us.map((u) => latestBy[u]).filter((v) => v != null);
+      return { label, members: us.length, ...stats(vals), change: changeOf(us) };
+    };
+    const people = d.people || [];
+    const roles = ROLES.map(([k, l]) => breakdown(l, people.filter((p) => p.role === k).map((p) => p.u))).concat([breakdown("Not given", people.filter((p) => !p.role).map((p) => p.u))]);
+    const groups = (d.groups || []).map((g) => breakdown(g.name, g.members || []));
+    const research = people.filter((p) => p.research).map((p) => p.u);
+    return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size, roles, groups, research, fps, latestUsers: (d.latest || []).map((r) => r.u), roleOf: Object.fromEntries(people.map((p) => [p.u, p.role])) };
+  }
+
+  // Opted-in people only: answers and footprint, no name, email or account id.
+  function exportResearch() {
+    const m = analyticsModel();
+    const d = analytics.data || {};
+    const ok = new Set(m.research);
+    const cell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+    const head = ["id", "role", "completed", "total_kg"].concat(CATEGORIES.map((c) => c + "_kg"), ["answers_json"]);
+    const lines = [head.map(cell).join(",")];
+    (d.latest || []).forEach((r, i) => {
+      if (!ok.has(r.u)) return;
+      const fp = m.fps[i];
+      const s = { ...r.data };
+      delete s.factors;
+      lines.push([r.u, m.roleOf[r.u] || "", r.data.completedAt || "", Math.round(fp.totalYearly)].concat(CATEGORIES.map((c) => Math.round((fp.breakdown.find((b) => b.key === c) || {}).yearly || 0)), [JSON.stringify(s)]).map(cell).join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "co2counter-research-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   // Mean bars with a ±1 SD whisker, laid out like the Results chart.
@@ -4071,6 +4167,29 @@
       '<section class="glass an-card"><h2 class="card-title">Average by area</h2><p class="sm muted">Bars show the average; the line shows ± one standard deviation.</p>' +
       (t.n ? '<div class="mt-4">' + sdChart(m.cats) + "</div>" : '<p class="muted mt-3">No finished surveys yet.</p>') +
       "</section>";
+    const MIN = 3;
+    const table = (title, sub, list) => {
+      const shown = list.filter((x) => x.members > 0);
+      return (
+        '<section class="glass an-card"><h2 class="card-title">' + title + '</h2><p class="sm muted">' + sub + " Rows with fewer than " + MIN + " people with results are hidden so nobody can be picked out.</p>" +
+        (shown.length
+          ? '<div class="an-table" role="table"><div class="an-tr an-th" role="row"><span role="columnheader">' + (title.includes("role") ? "Role" : "Group") + '</span><span role="columnheader">People</span><span role="columnheader">Average ± SD</span><span role="columnheader">Change since first survey</span></div>' +
+            shown.map((x) =>
+              '<div class="an-tr" role="row"><span role="cell" class="fw-700">' + esc(x.label) + '</span><span role="cell" class="tnum" data-label="People">' + x.members + "</span>" +
+              (x.n >= MIN
+                ? '<span role="cell" class="tnum" data-label="Average ± SD">' + kgFmt(x.mean) + " ± " + kgFmt(x.sd) + ' kg</span><span role="cell" class="tnum" data-label="Change since first survey">' + (x.change == null ? "–" : (x.change < 0 ? "▼ " : "▲ ") + Math.abs(Math.round(x.change * 100)) + "%") + "</span>"
+                : '<span role="cell" class="muted xs" data-label="Average ± SD">Fewer than ' + MIN + ' with results</span><span role="cell" data-label="Change since first survey"></span>') +
+              "</div>"
+            ).join("") + "</div>"
+          : '<p class="muted mt-3">Nobody yet.</p>') +
+        "</section>"
+      );
+    };
+    html += table("By role", "From the optional \"What best describes your work?\" on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
+    html +=
+      '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
+      " opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
+      '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="export-research"' + (m.research.length ? "" : " disabled") + ">Download research data (CSV)</button></section>";
     const groups = [...new Set(m.rows.map((r) => r.cat))];
     const totalClicks = m.rows.reduce((a, r) => a + r.clicks, 0);
     html +=
@@ -4116,6 +4235,7 @@
         sb.rpc("friends_progress").then((x) => x, () => ({ data: null })),
       ]);
       friends.progress = (prog && !prog.error && prog.data) || [];
+      await loadGroups();
       const list = rows || [];
       const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
       const names = {};
@@ -4135,6 +4255,96 @@
     friends.loaded = true;
     friends.loading = false;
     if (currentPath() === "/friends" || currentPath() === "/account") render();
+  }
+
+  // ---------- groups ----------
+  // Anyone can start a group and share its code; members see each other's
+  // names and yearly totals (group_board in Supabase), never answers.
+  async function loadGroups() {
+    try {
+      const { data, error } = await sb.rpc("my_groups");
+      if (error) throw error;
+      friends.groups = (Array.isArray(data) ? data : []).filter((g) => g && g.id && g.code);
+      friends.groupsReady = Array.isArray(data);
+    } catch (e) {
+      friends.groups = [];
+      friends.groupsReady = false; // the SQL hasn't been run yet
+    }
+    if (!friends.groups.some((g) => g.id === ui.groupSel)) ui.groupSel = friends.groups.length ? friends.groups[0].id : null;
+    if (ui.groupSel) await loadGroupBoard(ui.groupSel);
+  }
+
+  async function loadGroupBoard(id) {
+    try {
+      const { data } = await sb.rpc("group_board", { p_group: id });
+      friends.groupBoards = { ...(friends.groupBoards || {}), [id]: (data || []).slice().sort((a, b) => (a.total_yearly == null) - (b.total_yearly == null) || a.total_yearly - b.total_yearly) };
+    } catch (e) {}
+  }
+
+  async function groupAction(fn, okMsg) {
+    friends.groupMsg = "";
+    friends.groupOk = false;
+    try {
+      const r = await fn();
+      if (r && r.error) throw r.error;
+      friends.groupMsg = typeof okMsg === "function" ? okMsg(r) : okMsg;
+      friends.groupOk = true;
+      return r;
+    } catch (e) {
+      friends.groupMsg = (e && e.message) || "Something went wrong. Please try again.";
+    } finally {
+      await loadGroups();
+      render();
+    }
+  }
+
+  function groupsHtml() {
+    if (!friends.groupsReady) return "";
+    const groups = friends.groups || [];
+    const g = groups.find((x) => x.id === ui.groupSel);
+    let body;
+    if (!groups.length) body = '<p class="sm muted mt-3">Start a group for your team, ward, class or friends, then share its code. Members see each other\'s yearly totals, never answers.</p>';
+    else {
+      const rows = (friends.groupBoards || {})[g.id] || [];
+      const done = rows.filter((r) => r.total_yearly != null);
+      const maxT = Math.max(1, ...done.map((r) => Number(r.total_yearly)));
+      const avg = done.length ? done.reduce((t, r) => t + Number(r.total_yearly), 0) / done.length : 0;
+      const changes = rows.filter((r) => r.surveys > 1 && r.first_total > 0);
+      const change = changes.length ? changes.reduce((t, r) => t + (r.latest_total - r.first_total), 0) / changes.reduce((t, r) => t + Number(r.first_total), 0) : null;
+      const link = PRODUCTION_URL + "#/friends?join=" + g.code;
+      body =
+        (groups.length > 1
+          ? '<div class="chip-row group-tabs mt-3" role="tablist" aria-label="Your groups">' + groups.map((x) => '<button type="button" role="tab" aria-selected="' + (x.id === g.id) + '" class="btn btn-sm ' + (x.id === g.id ? "btn-green" : "btn-outline") + '" data-action="select-group" data-id="' + x.id + '">' + esc(x.name) + "</button>").join("") + "</div>"
+          : "") +
+        '<div class="group-head mt-4"><div class="min0"><h3 class="display group-name">' + esc(g.name) + '</h3><p class="xs muted">' + g.members + (g.members === 1 ? " member" : " members") + (g.is_owner ? " · you started it" : "") + "</p></div>" +
+        '<div class="group-code"><span class="xs muted">Code</span><b class="display tnum">' + esc(g.code) + '</b><button type="button" class="btn btn-sm btn-outline" data-action="copy-group" data-link="' + esc(link) + '" data-code="' + esc(g.code) + '">' + icon("copy") + " Copy invite</button></div></div>" +
+        '<div class="stat-tiles mt-4"><div class="stat-tile"><span class="eyebrow">Average</span><b class="display tnum">' + (done.length ? (avg / 1000).toFixed(1) + " t" : "–") + '</b><span class="xs muted">a year, ' + done.length + " with results</span></div>" +
+        '<div class="stat-tile"><span class="eyebrow">Change</span><b class="display tnum ' + (change != null && change < 0 ? "green" : change > 0 ? "clay" : "") + '">' + (change == null ? "–" : (change < 0 ? "▼ " : "▲ ") + Math.abs(Math.round(change * 100)) + "%") + '</b><span class="xs muted">since members\' first surveys</span></div></div>' +
+        (done.length
+          ? '<ol class="board mt-4">' +
+            done.map((r, i) => '<li class="' + (r.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(r.display_name) + (r.is_self ? " (you)" : "") + '</span><span class="board-bar"><span style="width:' + ((r.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span><span class="board-t"><b class="display tnum">' + (r.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>').join("") +
+            "</ol>"
+          : '<p class="sm muted mt-3">No one has finished the survey yet.</p>') +
+        (rows.length > done.length ? '<p class="xs muted mt-2">' + (rows.length - done.length) + " member" + (rows.length - done.length === 1 ? " hasn't" : "s haven't") + " finished the survey yet.</p>" : "") +
+        '<div class="chip-row mt-4"><button type="button" class="btn btn-sm btn-outline" data-action="leave-group" data-id="' + g.id + '">Leave group</button>' +
+        (g.is_owner ? '<button type="button" class="btn btn-sm btn-outline btn-danger" data-action="delete-group" data-id="' + g.id + '">Delete group</button>' : "") + "</div>";
+    }
+    return (
+      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Groups</h2><span class="muted">Teams, wards, classes, anyone</span></div>' +
+      (friends.groupMsg ? '<p class="xs mt-2 ' + (friends.groupOk ? "green-dark" : "red") + '" role="status">' + esc(friends.groupMsg) + "</p>" : "") + body + "</section>"
+    );
+  }
+
+  function groupFormsHtml() {
+    if (!friends.groupsReady) return "";
+    const invite = (location.hash.split("?")[1] || "").match(/(?:^|&)join=([A-Za-z0-9]{6})/);
+    return (
+      '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
+      '<form id="group-create-form" class="stack-2"><input class="input" id="group-name" maxlength="60" minlength="2" required placeholder="e.g. Ward 7, Year 10 science" aria-label="Group name" /><button type="submit" class="btn btn-green btn-block">Create group</button></form></section>' +
+      '<section class="glass cat-drop"><h2 class="display side-title">Join a group</h2>' + (invite ? '<p class="sm mb-3 green-dark fw-600">You\'ve been invited to a group. Press Join to accept.</p>' : '<p class="sm muted mb-3">Enter the 6-character code someone shared with you.</p>') +
+      '<form id="group-join-form" class="stack-2"><input class="input tnum" id="group-code" maxlength="6" required placeholder="e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-outline btn-block">Join</button></form>' +
+      '<p class="xs muted mt-2">Group members see your display name and yearly total.</p></section>'
+    );
   }
 
   const ordinal = (n) => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
@@ -4256,7 +4466,8 @@
         ? '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Most improved</h2><span class="muted">Since each person\'s first survey</span></div><div class="mt-4">' +
           mostImprovedHtml() + "</div></section>"
         : "") +
-      '</div><aside class="cat-aside">' +
+      groupsHtml() +
+      '</div><aside class="cat-aside">' + groupFormsHtml() +
       side(
         "Add a friend",
         '<p class="sm muted mb-3">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p><form id="friend-form" class="stack-2"><input class="input" type="text" id="friend-email" placeholder="Their username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green btn-block">Send request</button></form>' +
@@ -4340,6 +4551,8 @@
           ul([
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
+            "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
+            "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
@@ -4350,6 +4563,7 @@
           ul([
             "To work out and show your footprint, save your answers to your account, and record any support you've chosen to give. The legal basis is performing our contract with you.",
             "To keep the service secure and working. The legal basis is our legitimate interests.",
+            "If you opt in to research (Account page): to share your survey answers and footprint, without your name, email or username, with research and health partners studying how people can cut emissions. The legal basis is your consent, which you can withdraw at any time on the Account page.",
             "To produce overall statistics that help us improve CO2 Counter, such as average footprints and how many people open each partner link and later make that change. These only ever show totals and averages, never individuals. The legal basis is our legitimate interests.",
             "To keep payment records, as the law requires. The legal basis is legal obligation.",
           ]) +
@@ -4621,6 +4835,7 @@
         ? '<div class="mt-4"><a class="btn btn-green" href="' + esc(supportUrl()) + '">' + icon("heart") + ' Support for £2 a year</a><p class="xs muted mt-2">Secure payment by Stripe. Cancel any time. No ads, and we never sell your data.</p></div>'
         : "") +
       "</section>" +
+      aboutYouCard() +
       (ui.isAdmin
         ? '<section class="glass guide-card"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
           esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
@@ -4630,6 +4845,36 @@
       '<div class="chip-row mt-3"><button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">Clear habits</button>' +
       '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">Clear everything</button></div></section>' +
       deleteAccountCard() + "</aside></div></div>"
+    );
+  }
+
+  // Optional: what you do (for anonymous totals by role) and research consent.
+  const ROLES = [
+    ["doctor", "Doctor"], ["nurse_midwife", "Nurse or midwife"], ["ahp", "Allied health professional"], ["paramedic", "Paramedic"],
+    ["other_health", "Other healthcare role"], ["education", "Education"], ["student", "Student"], ["other", "Something else"],
+  ];
+  async function loadAboutYou() {
+    ui.aboutYou = { loading: true };
+    try {
+      const { data, error } = await sb.from("profiles").select("role, research_opt_in").eq("id", currentUser.id).maybeSingle();
+      ui.aboutYou = error ? { failed: true } : { role: (data && data.role) || "", research_opt_in: !!(data && data.research_opt_in) };
+    } catch (e) {
+      ui.aboutYou = { failed: true };
+    }
+    if (currentPath() === "/account") render();
+  }
+  function aboutYouCard() {
+    if (!ui.aboutYou) loadAboutYou();
+    const a = ui.aboutYou || {};
+    if (a.loading || a.failed) return "";
+    return (
+      '<section class="glass guide-card"><span class="eyebrow">About you · optional</span><h2 class="display mt-2">Help us understand who uses CO2 Counter</h2>' +
+      '<form id="about-you-form" class="stack-3 mt-3"><label class="xs fw-700" for="about-role">What best describes your work?</label>' +
+      '<select class="input q-select" id="about-role"><option value="">Prefer not to say</option>' + ROLES.map(([k, l]) => '<option value="' + k + '"' + (a.role === k ? " selected" : "") + ">" + l + "</option>").join("") + "</select>" +
+      '<p class="xs muted">Only used for anonymous totals, like the average footprint of nurses. Never shown to anyone with your name.</p>' +
+      '<label class="check-label research-consent"><input type="checkbox" id="about-research"' + (a.research_opt_in ? " checked" : "") + " /> <span><b>Share my answers for research.</b> Your survey answers and footprint, without your name, email or username, may be shared with research and health partners studying how people can cut emissions. You can turn this off at any time.</span></label>" +
+      '<div class="row-between gap-3" style="flex-wrap:wrap"><button type="submit" class="btn btn-green">Save</button>' +
+      (ui.aboutMsg ? '<span class="xs ' + (ui.aboutMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.aboutMsg.text) + "</span>" : "") + "</div></form></section>"
     );
   }
 
@@ -5557,6 +5802,32 @@
       saveInput(r.key, r.old_value, before ? before.source : inputDef(r.key).source, "Undone");
     },
     "export-inputs": () => exportInputs(),
+    "select-group": async (el) => {
+      ui.groupSel = el.dataset.id;
+      friends.groupMsg = "";
+      await loadGroupBoard(ui.groupSel);
+      render();
+    },
+    "copy-group": async (el) => {
+      const text = "Join my group on CO2 Counter: " + el.dataset.link + " (code " + el.dataset.code + ")";
+      try {
+        await navigator.clipboard.writeText(text);
+        friends.groupMsg = "Invite copied. Paste it into a message or email.";
+      } catch (e) {
+        friends.groupMsg = "Share this code: " + el.dataset.code;
+      }
+      friends.groupOk = true;
+      render();
+    },
+    "leave-group": (el) => {
+      if (!window.confirm("Leave this group? You can rejoin with its code.")) return;
+      groupAction(() => sb.rpc("leave_group", { p_group: el.dataset.id }), "You've left the group.");
+    },
+    "delete-group": (el) => {
+      if (!window.confirm("Delete this group for everyone? This can't be undone.")) return;
+      groupAction(() => sb.rpc("delete_group", { p_group: el.dataset.id }), "Group deleted.");
+    },
+    "export-research": () => exportResearch(),
     "flip-switch": (el) => {
       ui.switchTouched = true;
       const i = Number(el.dataset.i);
@@ -5863,6 +6134,42 @@
     if (e.target.id === "friend-form") {
       e.preventDefault();
       addFriend(document.getElementById("friend-email").value);
+      return;
+    }
+    if (e.target.id === "group-create-form") {
+      e.preventDefault();
+      const name = document.getElementById("group-name").value;
+      await groupAction(async () => {
+        const r = await sb.rpc("create_group", { p_name: name });
+        if (!r.error && r.data && r.data[0]) ui.groupSel = r.data[0].id;
+        return r;
+      }, (r) => "Group created. Share the code " + ((r && r.data && r.data[0] && r.data[0].code) || "") + " to invite people.");
+      return;
+    }
+    if (e.target.id === "group-join-form") {
+      e.preventDefault();
+      const code = document.getElementById("group-code").value;
+      await groupAction(async () => {
+        const r = await sb.rpc("join_group", { p_code: code });
+        if (!r.error && r.data) ui.groupSel = r.data;
+        return r;
+      }, "You've joined the group.");
+      if (friends.groupOk && location.hash.includes("join=")) {
+        history.replaceState(null, "", "#/friends");
+        render();
+      }
+      return;
+    }
+    if (e.target.id === "about-you-form") {
+      e.preventDefault();
+      const role = document.getElementById("about-role").value || null;
+      const research = document.getElementById("about-research").checked;
+      const patch = { role, research_opt_in: research };
+      if (research && !ui.aboutYou.research_opt_in) patch.research_opted_at = new Date().toISOString();
+      const { error } = await sb.from("profiles").update(patch).eq("id", currentUser.id);
+      ui.aboutMsg = error ? { ok: false, text: "Couldn't save. Please try again." } : { ok: true, text: "Saved." };
+      if (!error) ui.aboutYou = { ...ui.aboutYou, role, research_opt_in: research };
+      render();
       return;
     }
     if (e.target.id === "name-form") {

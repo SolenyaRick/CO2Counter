@@ -936,6 +936,10 @@
     { key: "standard_life", label: "Standard Life", tPerMillion: 34.2, source: "Standard Life DC Master Trust TCFD report 2026 (listed equity & credit, 2025)" },
     { key: "tpt", label: "TPT Retirement Solutions", tPerMillion: 28.5, source: "TPT TCFD report 2025 (DC listed equity & corporate bonds, Sep 2025)" },
     { key: "uss", label: "USS (universities)", tPerMillion: 44.2, source: "USS TCFD report 2025 (non-sovereign assets, Dec 2024)" },
+    // Unfunded defined-benefit scheme: pensions are paid from government
+    // funds, not from invested assets, so it doesn't finance company
+    // emissions and isn't counted.
+    { key: "nhs", label: "NHS Pension Scheme", tPerMillion: 0, unfunded: true, source: "NHS Pension Scheme: an unfunded defined-benefit scheme paid from government funds, with no invested fund behind it (NHS Business Services Authority), so it isn't counted" },
     { key: "other", label: "Other / not sure", tPerMillion: 61.1, source: "Corporate Adviser ESG in DC Pensions Report 2024 (average of 20 master trusts and GPPs)" },
   ];
   // A climate-focused pension fund, used to size the "switch fund" saving:
@@ -995,10 +999,15 @@
       ],
     },
     commute: {
-      eyebrow: "Leave the car",
-      title: "Plan it by train",
+      eyebrow: "Leave the car, or change it",
+      title: "Train, bike or electric",
+      // "vehicle" items also show on the commute "If you must drive" pop-up.
       items: [
         { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
+        { label: "Cyclescheme", topic: "vehicle", url: "https://www.cyclescheme.co.uk/", tone: "sky", tags: ["Cycle to Work", "Tax-free"], note: "Get a bike or e-bike through your employer's Cycle to Work scheme, paid from your salary before tax." },
+        { label: "Green Commute Initiative", topic: "vehicle", url: "https://www.greencommuteinitiative.uk/", tone: "leaf", tags: ["Cycle to Work", "E-bikes"], note: "A not-for-profit Cycle to Work scheme with no upper limit, popular for e-bikes and cargo bikes." },
+        { label: "Octopus EV", topic: "vehicle", url: "https://octopusev.com/", tone: "plum", tags: ["Salary sacrifice", "Electric cars"], note: "Lease an electric car through your employer, paid from your salary before tax." },
+        { label: "NHS Fleet Solutions", topic: "vehicle", url: "https://www.nhsfleetsolutions.co.uk/", tone: "amber", tags: ["NHS staff", "Salary sacrifice"], note: "The NHS's own salary-sacrifice car scheme, including electric cars, for NHS staff." },
       ],
     },
     flights: {
@@ -1838,7 +1847,7 @@
     { group: "Pets", key: "cat", label: "Cat", unit: "kg CO₂e a year", path: "CAT_YEARLY", source: "No source recorded yet" },
   ];
   BANKS.forEach((b) => INPUT_DEFS.push({ group: "Banks", key: "bank_" + b.key, label: b.label, unit: "kg CO₂e per £ a year", path: "BANKS[" + b.key + "].factor", source: "MotherTree bank carbon emissions league table (2021)", asOf: "2021-06", every: 12 }));
-  PENSION_PROVIDERS.forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
+  PENSION_PROVIDERS.filter((p) => !p.unfunded).forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
   INPUT_DEFS.push(
     { group: "Pensions", key: "pension_green", label: "Climate-focused fund (saving benchmark)", unit: "t CO₂e per £1m", path: "GREEN_PENSION_T_PER_MILLION", source: "Nest Ethical Fund, Nest TCFD report 2024/25", asOf: "2025-06", every: 12 },
     { group: "Shared and assumed", key: "shop_clothes", label: "Assumed shopping: clothes and shoes", unit: "kg CO₂e a year", path: "ASSUMED_SHOPPING.clothesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },

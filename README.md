@@ -182,6 +182,24 @@ Rebuild them after changing `index.html` (including the `?v=` asset
 version) or a public page: `node scripts/build-pages.cjs` (needs
 Playwright: `npm i --no-save playwright && npx playwright install chromium`).
 
+## Groups, role and research consent
+
+- **Groups** (Friends page): anyone can start a group (team, ward, class)
+  and share its 6-character code or invite link (`#/friends?join=CODE`).
+  Members see each other's display names and yearly totals, the group
+  average and its change since members' first surveys, never answers.
+  The creator can delete a group; it's removed when the last member leaves.
+- **About you** (Account page, optional): what best describes your work,
+  and consent to share answers for research (`profiles.role`,
+  `profiles.research_opt_in`).
+- **Analytics** shows anonymous averages, standard deviations and change
+  by role and by group (rows with fewer than 3 people with results are
+  hidden), and a CSV of opted-in people's answers and footprints with a
+  scrambled id.
+
+Run the "Groups, role and research consent" section of
+`supabase/schema.sql` once. Until then the group sections stay hidden.
+
 ## Bank figures
 
 The per-bank figures (`BANKS` in `data.js`, kg CO2e financed per £ held
