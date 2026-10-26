@@ -3351,7 +3351,10 @@
       });
       if (res.status === 404) return { error: "Sending from the app isn't switched on yet. Use your own email app instead." };
       const out = await res.json().catch(() => ({}));
-      return res.ok && out.ok ? out : { error: out.error || "Couldn't send just now. Please try again, or use your own email app." };
+      if (res.ok && out.ok) return out;
+      // Admins also see why, to fix the setup.
+      const why = ui.isAdmin && out.detail ? " (" + out.detail + ")" : ui.isAdmin && !res.ok ? " (status " + res.status + ")" : "";
+      return { error: (out.error || "Couldn't send just now. Please try again, or use your own email app.") + why };
     } catch (e) {
       return { error: "Couldn't send just now. Please try again, or use your own email app." };
     }
@@ -3406,7 +3409,7 @@
     const verified = info.verified && info.verified.mobilise;
     if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · you wrote to your MP on " + longDate(verified) };
     const { finder, letter } = mpFinderHtml(info);
-    return { ...base, done: false, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
+    return { ...base, done: false, pending: !!ticked.mpSent, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
   }
   function shareButtonsHtml(url, text) {
     return (
@@ -3586,7 +3589,7 @@
     const acts = [
       { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
       asksBillPayer(ready ? survey : null)
-        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!(energyVerified() || ticked.energyAsked),
+        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!energyVerified(), pending: !energyVerified() && !!ticked.energyAsked,
             sub: energyVerified() ? "Verified · they confirmed the switch on " + longDate(energyVerified())
               : ticked.energyAsked ? "Asked · waiting for them to confirm they've switched" : "Someone else chooses your supplier: ask them to switch",
             extra: energyAskBox(), keepExtra: true }
@@ -3601,7 +3604,8 @@
       motivateAct(ticked, url, text),
     ];
     const made = acts.filter((a) => a.done).length;
-    const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>";
+    // Ticked when done; a grey clock while waiting for someone to confirm.
+    const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : a.pending ? icon("clock") : "") + "</span>";
     const body = (a) =>
       '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
     // Acts with extras (the MP finder, the share buttons) keep them inside
@@ -3617,7 +3621,7 @@
         if (a.manual)
           return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
         if (a.extra || (a.verifiedTick && !a.cat && !a.href))
-          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row">' + box(a) + body(a) + "<span></span></div>" + extra + "</li>";
+          return '<li class="hb-item hb-card' + (a.done ? " done" : a.pending ? " pending" : "") + '"><div class="hb-row">' + box(a) + body(a) + "<span></span></div>" + extra + "</li>";
         return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
           '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
       })
@@ -3890,6 +3894,8 @@
   // For people who don't choose their supplier: a message to whoever does,
   // with the whole home's saving, by email (their own app) or copied.
   const asksBillPayer = (s) => !!s && s.energy && s.energy.billPayer === "other" && !s.energy.greenTariff;
+  // The sign-off: the name typed in the form, else their display name.
+  const signName = () => (ui.esName || ui.userName || "").trim();
   function energyAskText(forApp) {
     const e = survey.energy || {};
     const year = 12 * (e.electricityKwh || 0);
@@ -3901,8 +3907,8 @@
       body:
         "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
         "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
-        (forApp ? "Thanks," : (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
-        "Thanks,\n[Your name]"),
+        (forApp ? "Thanks,\n" + signName() : (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
+        "Thanks,\n" + (signName() || "[Your name]")),
     };
   }
   const confirmLink = () => PRODUCTION_URL + "#/confirm/energy?t=" + ui.energyToken;
@@ -7279,7 +7285,11 @@
       e.preventDefault();
       const to = document.getElementById("es-to").value.trim();
       const name = document.getElementById("es-name").value.trim();
-      const message = document.getElementById("es-message").value;
+      let message = document.getElementById("es-message").value;
+      // Sign it with the name in the box (it may have been changed).
+      const old = (ui.esName || ui.userName || "").trim();
+      if (name && old && old !== name && message.trimEnd().endsWith("\n" + old)) message = message.trimEnd().slice(0, -old.length) + name;
+      else if (name && /Thanks,\s*$/.test(message)) message = message.trimEnd() + "\n" + name;
       Object.assign(ui, { esTo: to, esName: name, esDraft: message });
       ui.letterState = { sending: true };
       render();
