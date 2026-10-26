@@ -1046,8 +1046,13 @@
         const bankSaving = !bank || bank.factor <= greenest ? 0 : (b.amount || 0) * (bank.factor - greenest);
         const pension = pensionProvider(b);
         const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
-        const bankBody =
-          "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to {{bank_cut}}.";
+        // Already with a very good bank: say so, and how much further the greenest goes.
+        const greenestBank = D.BANKS.slice().sort((x, y) => x.factor - y.factor)[0];
+        const bankDone = bank && bankRating(bank).key === "vgood";
+        const bankBody = bankDone
+          ? "You're already with " + bank.label.replace(/^The /, "") + ", one of the greenest banks." +
+            (bankSaving > 0.5 ? " You could go a bit further: moving to " + greenestBank.label.replace(/^The /, "") + " would cut about " + kgFmt(bankSaving) + " kg a year more." : " There's no greener bank on our list.")
+          : "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to {{bank_cut}}.";
         if (pensionSaving > bankSaving) {
           return {
             title: "Switch your pension to a climate-focused fund",
@@ -1066,7 +1071,7 @@
         }
         return {
           realisticLabel: "a greener bank and a climate-focused pension fund",
-          title: "Move your money to a greener bank",
+          title: bankDone ? (bankSaving > 0.5 ? "You've switched bank. Go a bit further?" : "You're with the greenest bank") : "Move your money to a greener bank",
           body: bankBody + (pensionSaving > 0 ? " Switching your pension to a climate-focused fund helps too." : ""),
           saving: bankSaving + pensionSaving,
         };
@@ -2718,12 +2723,52 @@
       const rows = D.MEAL_OPTIONS.slice().sort((a, b) => b.factor - a.factor).map((o) => [o.label, o.factor, o.emoji]);
       const beef = byKey(D.MEAL_OPTIONS, "beef").factor;
       const vegan = byKey(D.MEAL_OPTIONS, "vegan").factor;
+      // What to say depends on what's already on the plate.
+      const diet = dietType(survey);
+      const lowWaste = ((survey.meals || {}).foodWaste || "low") === "low";
+      const wasteSteps = [
+        ["Plan the week's meals", "A rough plan and a shopping list mean buying only what you'll eat."],
+        ["Use the freezer", "Freeze bread, leftovers and veg that's about to turn."],
+        ["Check the fridge first", "Eat what's open or nearly out of date before starting something new."],
+        ["Trust your senses", "'Best before' is about quality, not safety. Look and smell before you bin it."],
+      ];
+      const base = { save: tip.saving, saveLabel: "Realistic saving for you", vsTitle: "One day's main meals, kg CO₂e", headline: "1 beef day ≈ " + Math.round(beef / vegan) + " vegan days", unit: "kg", rows, source: "CO2 Counter's meal factors (see How we calculate)." };
+      if (diet === "vegan")
+        return {
+          ...base,
+          title: "You already eat plant-based",
+          lede: "Your days are already the lowest-carbon way to eat." + (lowWaste ? " There's nothing more to switch here." : " Wasting less food is the one thing left to go further."),
+          saveLabel: lowWaste ? "Nothing more to switch" : "Wasting less could save",
+          steps: wasteSteps,
+        };
+      if (diet === "veggie")
+        return {
+          ...base,
+          title: "You're vegetarian. Go a bit further?",
+          lede: "No meat already puts you well below a typical diet. Dairy and eggs are most of what's left, so a few vegan days take you further.",
+          steps: [
+            ["Pick one or two vegan days", "Start with meals that are nearly vegan already: curries, stir-fries, pasta with tomato sauce."],
+            ["Swap the milk", "Oat milk has about {{oat_cut}} less carbon than dairy milk, and works in tea, coffee and cereal."],
+            ["Go easy on cheese", "Cheese is the highest-carbon food most vegetarians eat. Use less, with stronger flavours."],
+            ["Waste less", "Planning meals and using the freezer stops good food going in the bin."],
+          ],
+        };
+      if (diet === "pescatarian" || diet === "other_meat")
+        return {
+          ...base,
+          title: "Swap a few meat days for plants",
+          lede: "You already skip red meat, which is the biggest food change. Swapping a few " + (diet === "pescatarian" ? "fish" : "chicken or fish") + " days for plant-based meals takes you further.",
+          steps: [
+            ["Pick your swap days", "Choose one or two days a week to go plant-based. The same days each week makes it stick."],
+            ["Swap like for like", "Use lentils, beans or tofu in the same recipe: curry, stir-fry, tacos, pasta."],
+            ["Keep the flavour", "Smoked paprika, soy sauce, mushrooms and tomato purée give the savoury depth people miss."],
+            ["Waste less", "Planning meals and using the freezer stops good food going in the bin."],
+          ],
+        };
       return {
+        ...base,
         title: "Cut red meat first",
         lede: "Beef and lamb are the outliers in any week. Swapping two or three red-meat days for chicken, fish or plants is usually the single biggest food change you can make.",
-        save: tip.saving, saveLabel: "Realistic saving for you",
-        vsTitle: "One day's main meals, kg CO₂e", headline: "1 beef day ≈ " + Math.round(beef / vegan) + " vegan days", unit: "kg", rows,
-        source: "CO2 Counter's meal factors (see How we calculate).",
         steps: [
           ["Pick your swap days", "Choose two or three red-meat days a week to change first. The same days each week makes it stick."],
           ["Swap like for like", "Use chicken, lentils or beans in the same recipe: chilli, bolognese, curry, burgers."],
@@ -2741,13 +2786,23 @@
       const avg = others.reduce((t, x) => t + x.factor, 0) / Math.max(1, others.length);
       const myF = mine ? mine.factor : avg;
       const pension = byKey(D.PENSION_PROVIDERS, b.pensionProvider);
+      // Already with a very good bank: show how far they've come from the
+      // worst, and the little extra the greenest would add.
+      const worst = D.BANKS.reduce((m, x) => (x.factor > m.factor ? x : m), D.BANKS[0]);
+      const done = mine && bankRating(mine).key === "vgood";
+      const bare = (x) => x.label.replace(/^The /, "");
       return {
-        title: "Move your money somewhere greener",
-        lede: "Banks lend out the money you keep with them. Some lend heavily to fossil fuels, others don't. Switching is a one-off job with a lasting effect.",
+        title: done ? (mine.key === best.key ? "You're with the greenest bank" : "You've switched. Go a bit further?") : "Move your money somewhere greener",
+        lede: done
+          ? "You're already with " + bare(mine) + ", one of the greenest banks: your £" + amount.toLocaleString() + " finances about " + kgFmt(amount * (worst.factor - mine.factor)) + " kg CO₂e a year less than at " + bare(worst) + "." +
+            (mine.key === best.key ? " There's no greener bank on our list." : " " + bare(best) + " would cut a little more.")
+          : "Banks lend out the money you keep with them. Some lend heavily to fossil fuels, others don't. Switching is a one-off job with a lasting effect.",
         save: Math.max(0, (myF - best.factor) * amount), saveLabel: "Moving £" + amount.toLocaleString() + " to " + best.label,
         vsTitle: "£" + amount.toLocaleString() + " kept for a year, kg CO₂e financed",
         headline: myF > best.factor ? Math.round((1 - best.factor / myF) * 100) + "% less at " + best.label : "You're already with the best bank here", unit: "kg",
-        rows: [[(mine ? mine.label + " (yours)" : "Average high-street bank"), amount * myF, "🏦"], [best.label, amount * best.factor, "🌱"]],
+        rows: (done ? [[bare(worst) + " (one of the worst)", amount * worst.factor, "🏦"]] : [])
+          .concat([[(mine ? mine.label + " (yours)" : "Average high-street bank"), amount * myF, "🏦"]])
+          .concat(mine && mine.key === best.key ? [] : [[best.label, amount * best.factor, "🌱"]]),
         source: "Bank factors from CO2 Counter's data (MotherTree bank league table).",
         steps: [
           ["Check how your bank ranks", "Independent league tables rank UK banks by the emissions your money helps finance."],
@@ -2800,9 +2855,15 @@
       };
     }
     if (cat === "flights") {
+      const fl = (survey.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+      const allLong = fl.length && fl.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM);
       return {
-        title: "Take the train for trips under {{swap_km}} km",
-        lede: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
+        title: !fl.length ? "No flights to switch" : allLong ? "Fly a little less, and in economy" : "Take the train for trips under {{swap_km}} km",
+        lede: !fl.length
+          ? "You haven't added any flights, so there's nothing to switch. If you travel, the train is usually the low-carbon way to reach the UK and nearby Europe."
+          : allLong
+            ? "Your flights are too far for the train to be realistic. Flying a little less often, staying longer when you go, and choosing economy are what cut these."
+            : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
         save: tip.saving, saveLabel: "Realistic saving for you", eqFlights: true,
         vsTitle: "London → Paris and back, per person", headline: Math.round((1 - trainToFlightRatio()) * 100) + "% less by train", unit: "kg",
         rows: [["Plane", A.PARIS_FLIGHT_KG, "✈️"], ["Train", A.PARIS_FLIGHT_KG * trainToFlightRatio(), "🚆"]],
@@ -2886,8 +2947,11 @@
       '<p class="crumbs"><a href="#/results">Overview</a> › <a href="#/explainer/' + cat + '">' + esc(ex.title) + "</a> › <span>Guide</span></p>" +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
       '<div class="cat-hero-main"><span class="tag done-tag">Your biggest step here</span><h1 class="cat-title display">' + esc(g.title) + '</h1><p class="cat-why">' + esc(g.lede) + "</p></div>" +
-      '<div class="cat-hero-side"><div class="cat-figs"><div class="muted">' + esc(g.saveLabel) + '</div><div class="cat-kg display tnum green-dark">−' + kgFmt(shownSave) +
-      '</div><div class="muted">kg CO₂e a year</div></div></div></header>' +
+      '<div class="cat-hero-side"><div class="cat-figs"><div class="muted">' + esc(g.saveLabel) + "</div>" +
+      (shownSave >= 0.5
+        ? '<div class="cat-kg display tnum green-dark">−' + kgFmt(shownSave) + '</div><div class="muted">kg CO₂e a year</div>'
+        : '<div class="cat-kg display green-dark">' + icon("check") + '</div><div class="muted">You\'re already doing this</div>') +
+      "</div></div></header>" +
       '<section class="glass guide-card rise" style="animation-delay:.06s"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:flex-end"><div><span class="eyebrow">Side by side</span>' +
       '<h2 class="display">' + esc(g.vsTitle) + "</h2></div>" + (g.headline ? '<span class="display guide-headline">' + esc(g.headline) + "</span>" : "") + "</div>" +
       '<ul class="vs-list">' +
@@ -3000,9 +3064,50 @@
 
 
 
-  const linksFor = (cat) => {
+  // Which partner links suit someone's finished survey: no bank that isn't
+  // greener than theirs, and commute options only where they're feasible.
+  // Eurostar runs from the UK to these countries.
+  const EUROSTAR_COUNTRIES = ["France", "Belgium", "Netherlands"];
+  function linkFits(cat, l, s) {
+    // Food: going by the meals someone has entered so far.
+    if (cat === "meals" && l.when && s) {
+      const diet = dietType(s);
+      const lowWaste = ((s.meals || {}).foodWaste || "low") === "low";
+      if (l.when === "meat") return diet !== "veggie" && diet !== "vegan";
+      if (l.when === "plants") return diet !== "vegan";
+      if (l.when === "waste") return diet !== "vegan" || !lowWaste;
+    }
+    if (!s || !s.completedAt) return true;
+    if (cat === "flights" && l.when) {
+      const fl = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+      const country = (code) => (airport(code) || {}).country;
+      if (l.when === "eurostar")
+        return fl.some((f) => [country(f.from), country(f.to)].includes("UK") && [country(f.from), country(f.to)].some((c) => EUROSTAR_COUNTRIES.includes(c)));
+      if (l.when === "rail") return fl.some((f) => flightKm(f.from, f.to) <= A.TRAIN_SWAP_MAX_KM);
+      if (l.when === "rail_far") return fl.some((f) => flightKm(f.from, f.to) <= A.SHORT_HAUL_KM);
+    }
+    if (cat === "banking" && l.bank) {
+      const own = byKey(D.BANKS, (s.banking || {}).bank);
+      const b = byKey(D.BANKS, l.bank);
+      return !own || !b || b.factor < own.factor;
+    }
+    if (cat === "commute" && l.when) {
+      const c = s.commute || {};
+      const days = DAYS.map((d) => c[d]).filter((m) => m && m !== "wfh");
+      const commutes = (c.distance || 0) > 0 && days.length > 0;
+      const drivesFuel = days.some((m) => m === "car_petrol" || m === "car_diesel");
+      if (l.when === "train") return (commutes && days.some((m) => MOTOR_MODES.includes(m) || m === "bus")) || (s.longTrips || []).some((x) => CAR_MODES.includes(x.mode));
+      if (l.when === "cycle") return commutes && c.distance <= A.ACTIVE_TRAVEL_MAX_KM && days.some((m) => m !== "walk_bike");
+      if (l.when === "ev") return (commutes && drivesFuel) || ownedCars(s).some((x) => x.fuel !== "ev");
+    }
+    return true;
+  }
+  const linksFor = (cat, s) => {
+    const who = s || survey;
     const links = D.USEFUL_LINKS[cat];
-    return links && !(links.hideForDiets || []).includes(dietType(survey)) ? links : null;
+    if (!links) return null;
+    const items = links.items.filter((l) => linkFits(cat, l, who));
+    return items.length ? { ...links, items } : null;
   };
   const linkHref = (l) => esc(l.ref || l.url);
   const linkKey = (cat, l) => cat + ":" + l.label.toLowerCase().replace(/^the /, "").replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -3097,6 +3202,40 @@
     );
   }
 
+  // Habits has two parts: switches (one-off changes, ready) and daily
+  // habits (coming soon). Switches is a short checklist: ticked where your
+  // answers show you've made the change, empty where you haven't, each
+  // opening the full Greener switches page at that switch.
+  function renderHabitsPage() {
+    const ready = survey && survey.completedAt;
+    const areas = ready ? switchAreas({ s: survey, mine: true }) : [];
+    const made = areas.filter((a) => a.done).length;
+    const LABEL = { banking: "Greener bank", energy: "Green electricity tariff", meals: "Plant-forward food", flights: "Train instead of short flights", commute: "Low-carbon commute" };
+    const rows = areas
+      .map(
+        (a) =>
+          '<li><a class="hb-row' + (a.done ? " done" : "") + '" href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '">' +
+          '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>" +
+          '<span class="min0"><span class="fw-600 hb-name">' + LABEL[a.key] + '</span><span class="xs muted hb-sub">' +
+          (a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet") +
+          '</span></span><span class="sr-only">' + (a.done ? "made" : "not made yet") + "</span>" + icon("chevronRight") + "</a></li>"
+      )
+      .join("");
+    const switches = ready
+      ? '<p class="sm muted mb-3"><b class="green-dark">' + made + " of " + areas.length + "</b> switches made, going by your latest survey.</p>" +
+        '<ul class="hb-list">' + rows + "</ul>" +
+        '<a class="btn btn-green btn-block mt-4" href="/greener-switches/">See your switches in full ' + icon("arrowRight") + "</a>"
+      : '<p class="sm muted">Finish your survey and we\'ll tick off the switches you\'ve already made, and show what the rest would save.</p>' +
+        '<div class="row gap-3 mt-4" style="flex-wrap:wrap"><a class="btn btn-green" href="#/">Take the survey</a><a class="btn btn-outline" href="/greener-switches/">See the switches</a></div>';
+    return (
+      '<div class="container narrow">' + pageHeader("My Habits", "Switches you make once, and habits you keep") +
+      '<section class="card mb-6 fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("refresh") + '</span><h2 class="card-title">Switches</h2>' +
+      '<span class="tag ml-auto">One-off changes</span></div>' + switches + "</section>" +
+      '<section class="card fade-up"><div class="label-row mb-3"><span class="round-badge sm">' + icon("leaf") + '</span><h2 class="card-title">Daily habits</h2>' +
+      '<span class="tag amber ml-auto">Coming soon</span></div><p class="sm muted">Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We\'re building this next.</p></section></div>'
+    );
+  }
+
   function openSectionDialog(cat, index) {
     const ex = D.EXPLAINERS[cat];
     if (!ex) return;
@@ -3119,6 +3258,8 @@
     else if (s.dynamicKey === "bankLeague") body = bankSheet();
     else if (s.dynamicKey === "switchAccount") body = switchSheet();
     else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
+    else if (s.dynamicKey === "greenTariff") body = greenTariffSheet();
+    else if (s.dynamicKey === "cheeseDairy") body = cheeseSheet();
     else body = pos === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "";
 
     modalRoot.innerHTML = glyphify(fillTokens(
@@ -3314,7 +3455,7 @@
     const km = Number(c.distance) || 0;
     const days = carDaysOf(survey);
     const n = days.length;
-    const links = D.USEFUL_LINKS.commute.items.filter((l) => l.topic === "vehicle");
+    const links = D.USEFUL_LINKS.commute.items.filter((l) => l.topic === "vehicle" && linkFits("commute", l, survey));
     let html = "";
     if (n && km) {
       const W = D.WEEKS_PER_YEAR;
@@ -3332,13 +3473,83 @@
         carKey === "ev" ? "" : chipBig("Electric saves " + kgFmt(yearOf(carKey) - yearOf("ev")) + " kg")
       );
     }
+    // Only the schemes that suit the answers: cycling for short commutes,
+    // an electric car for people who drive petrol or diesel.
+    const fits = (when) => D.USEFUL_LINKS.commute.items.some((l) => l.when === when && linkFits("commute", l, survey));
+    const schemes = [
+      fits("cycle") ? '<section class="sheet-panel"><span class="eyebrow">Cycle to Work</span><p class="sm mt-2">Most employers, including the NHS, offer a Cycle to Work scheme: a bike or e-bike and safety kit, paid from your salary before tax and National Insurance, so it costs noticeably less. Ask HR or check your staff benefits site.</p></section>' : "",
+      fits("ev") ? '<section class="sheet-panel"><span class="eyebrow">Salary-sacrifice electric car</span><p class="sm mt-2">Many employers, including NHS trusts, let you lease an electric car from your salary before tax. Electric cars have a low benefit-in-kind tax, so it\'s often cheaper than leasing one yourself. Check what your employer offers.</p></section>' : "",
+    ].filter(Boolean);
+    if (!links.length) return html + '<p class="xs muted mt-3">' + nightNote + "</p>";
     html +=
-      '<div class="sheet-two">' +
-      '<section class="sheet-panel"><span class="eyebrow">Cycle to Work</span><p class="sm mt-2">Most employers, including the NHS, offer a Cycle to Work scheme: a bike or e-bike and safety kit, paid from your salary before tax and National Insurance, so it costs noticeably less. Ask HR or check your staff benefits site.</p></section>' +
-      '<section class="sheet-panel"><span class="eyebrow">Salary-sacrifice electric car</span><p class="sm mt-2">Many employers, including NHS trusts, let you lease an electric car from your salary before tax. Electric cars have a low benefit-in-kind tax, so it\'s often cheaper than leasing one yourself. Check what your employer offers.</p></section></div>' +
+      (schemes.length ? '<div class="sheet-two">' + schemes.join("") + "</div>" : "") +
       panel("Schemes to look at", '<div class="chip-links">' + links.map((l) => '<a class="chip-link" ' + linkAttrs("commute", l, "popup") + ">" + monogram(l) + esc(l.label) + (l.ref ? '<span class="affiliate-dot">Affiliate</span>' : "") + "</a>").join("") + "</div>" +
         '<p class="xs muted mt-2">Your employer has to offer the scheme, and some use a particular provider. Independent suggestions; we don\'t get paid for these links.</p>') +
       '<p class="xs muted mt-3">' + nightNote + "</p>";
+    return html;
+  }
+
+  // Standard against green for their own electricity, then the suppliers.
+  function greenTariffSheet() {
+    const e = survey.energy || {};
+    const hh = Math.max(1, e.household || 1);
+    const year = (f) => (12 * (e.electricityKwh || 0) * f) / hh;
+    const std = year(D.ELECTRICITY_FACTOR);
+    const green = year(D.GREEN_ELECTRICITY_FACTOR);
+    const max = Math.max(1, std);
+    let html = panel(
+      "Your electricity for a year, kg CO₂e",
+      '<ul class="sbars">' +
+        sheetBar("Standard tariff" + (e.greenTariff ? "" : " (yours)"), std, max, "var(--clay)", { text: kgFmt(std) + " kg", mine: !e.greenTariff }) +
+        sheetBar("Green tariff" + (e.greenTariff ? " (yours)" : ""), green, max, "var(--em-600)", { text: kgFmt(green) + " kg", mine: !!e.greenTariff }) +
+        "</ul>" +
+        '<p class="xs muted mt-2">' + kgFmt(e.electricityKwh || 0) + " kWh a month" + (hh > 1 ? ", your share of " + hh : "") + ". Grid " + D.ELECTRICITY_FACTOR + " kg per kWh, renewable " + D.GREEN_ELECTRICITY_FACTOR + ".</p>",
+      e.greenTariff ? chipBig("Already saving " + kgFmt(std - green) + " kg") : chipBig("Switching saves " + kgFmt(std - green) + " kg")
+    );
+    const links = linksFor("energy");
+    if (links)
+      html += panel(
+        e.greenTariff ? "Renewable suppliers, if you move again" : "Renewable suppliers to look at",
+        linkChips("energy", 0, "popup") + '<p class="xs muted mt-2">Switching takes a few minutes, your new supplier handles it, and your power never cuts out.</p>'
+      );
+    return html;
+  }
+
+  // Cheese and dairy: kilo for kilo against meat, what dropping cheese, milk
+  // and eggs would save on their vegetarian days, and where the animals come from.
+  function cheeseSheet() {
+    const c = mealCounts(survey);
+    const veggieDays = c.veggie || 0;
+    const perDay = Math.max(0, factorOf(D.MEAL_OPTIONS, "veggie") - factorOf(D.MEAL_OPTIONS, "vegan"));
+    const yearly = perDay * veggieDays * D.WEEKS_PER_YEAR;
+    const rows = [
+      ["Cheese", A.CHEESE_KG, "var(--clay)"],
+      ["Pork", D.MEAT_PER_KG.pork, "#D9A441"],
+      ["Chicken", D.MEAT_PER_KG.chicken, "#8fa58a"],
+    ];
+    const max = Math.max(...rows.map((r) => r[1]));
+    let html = panel(
+      "Kilo for kilo, kg CO₂e",
+      '<ul class="sbars">' + rows.map(([l, v, col]) => sheetBar(l, v, max, col, { text: (Math.round(v * 10) / 10) + " kg", mine: l === "Cheese" })).join("") + "</ul>" +
+        '<p class="xs muted mt-2">It takes about 10 litres of milk to make 1 kg of hard cheese, so cheese carries the cows\' emissions in concentrated form. A litre of dairy milk is about ' + A.DAIRY_MILK_KG + " kg CO₂e, oat milk " + A.OAT_MILK_KG + ". Poore & Nemecek (2018).</p>",
+      chipBig("Cheese ≈ " + (A.CHEESE_KG / D.MEAT_PER_KG.chicken).toFixed(1) + "× chicken")
+    );
+    html += panel(
+      "Without cheese, milk and eggs",
+      '<p class="sm">' +
+        (veggieDays > 0
+          ? "A vegan day is about " + (Math.round(perDay * 100) / 100) + " kg CO₂e lower than a vegetarian one. Making your " + plural(Math.round(veggieDays), "vegetarian day") + " a week dairy- and egg-free would save about <strong>" + kgFmt(yearly) + " kg a year</strong>."
+          : "A vegan day is about " + (Math.round(perDay * 100) / 100) + " kg CO₂e lower than a vegetarian one, almost all of it from cheese, milk and eggs.") +
+        " You don't have to go all the way: oat milk and half the cheese gets you a good part of it.</p>",
+      yearly > 0.5 ? chipBig("−" + kgFmt(yearly) + " kg a year") : ""
+    );
+    html += panel(
+      "Factory farming",
+      '<p class="sm">Most UK milk, eggs and pork come from intensive farms. Dairy cows are made pregnant about once a year to keep them giving milk.</p>' +
+        '<p class="sm mt-2">Pigs are mostly killed with gas: about 90% of pigs in England and Wales are stunned with high-concentration CO₂ before slaughter (Food Standards Agency, 2024). In October 2025 the government\'s Animal Welfare Committee recommended phasing this out within five years, finding it causes pain, breathing distress and fear. Meat industry bodies oppose a ban.</p>' +
+        '<p class="sm mt-2">In spring 2026 the campaign group Project Slingshot ran its "Don\'t Buy It" adverts against these gas chambers across the London Underground.</p>' +
+        '<p class="xs muted mt-2">Sources: <a href="https://www.fwi.co.uk/news/farm-policy/animal-welfare-committee-seeks-end-to-co2-stunning-of-pigs" target="_blank" rel="noopener">Farmers Weekly on the Animal Welfare Committee report</a> · <a href="https://www.globenewswire.com/news-release/2026/04/30/3284510/0/en/don-t-buy-it-celebrities-back-provocative-project-slingshot-campaign-to-end-gas-chambers-for-pigs.html" target="_blank" rel="noopener">Project Slingshot campaign</a></p>'
+    );
     return html;
   }
 
@@ -3792,29 +4003,100 @@
     const best = banks[0];
     const own = byKey(D.BANKS, s.banking.bank);
     const amount = base.mine && s.banking.amount > 0 && own ? s.banking.amount : A.EXAMPLE_SAVINGS;
-    const before = base.mine && own && s.banking.amount > 0 ? own : banks[banks.length - 1];
+    const worst = banks[banks.length - 1];
+    // Already with a very good bank: compare with the worst instead, and
+    // say how much further the greenest would go.
+    const bankDone = base.mine && own && s.banking.amount > 0 && bankRating(own).key === "vgood";
+    const before = bankDone ? worst : base.mine && own && s.banking.amount > 0 ? own : worst;
+    const bankAfter = bankDone ? own : best;
+    const further = bankDone ? amount * (own.factor - best.factor) : 0;
+    const energyDone = base.mine && !!s.energy.greenTariff;
+    // Food: vegan or vegetarian already. Flights: none to swap.
+    const diet = dietType(s);
+    const foodDone = base.mine && (diet === "vegan" || diet === "veggie");
+    const myFlights = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
+    const flightsDone = base.mine && !myFlights.length;
+    // Commute: nothing to switch without a commute, or when every trip is
+    // already on foot, by bike or from home, and there's no car to change.
+    const cm = s.commute || {};
+    const cmDays = DAYS.map((d) => cm[d]).filter((m) => m && m !== "wfh");
+    const noCommute = !(cm.distance > 0 && cmDays.length);
+    const commuteDone = base.mine && !ownedCars(s).some((x) => x.fuel !== "ev") && cmDays.every((m) => m === "walk_bike");
     const elecKwh = (12 * (s.energy.electricityKwh || 0)) / householdOf(s) || (D.UK_PROFILE.electricityKwh / D.UK_PROFILE.household);
     const dist = s.commute.distance || D.UK_PROFILE.commuteKm;
     const day = (k) => byKey(D.MEAL_OPTIONS, k).factor;
     const petrol = petrolKm();
     const train = factorOf(D.COMMUTE_MODES, "train");
+    // Compare someone's own heaviest day, not beef unless they eat it: a
+    // vegetarian against vegan, a vegan against a typical UK day.
+    const counts = mealCounts(s);
+    const MEATS = ["beef", "lamb", "pork", "chicken", "fish"];
+    const heaviest = MEATS.filter((k) => counts[k] > 0).sort((a, b) => day(b) - day(a))[0];
+    const ukCounts = mealCounts(D.UK_TYPICAL_SURVEY);
+    const ukDays = Object.values(ukCounts).reduce((t, v) => t + v, 0) || 1;
+    const ukDay = Object.keys(ukCounts).reduce((t, k) => t + day(k) * ukCounts[k], 0) / ukDays;
+    const food = !base.mine
+      ? { beforeLabel: "Beef", before: day("beef"), afterLabel: "Vegan", after: day("vegan"), what: "A beef day" }
+      : diet === "vegan"
+        ? { beforeLabel: "Typical UK day", before: ukDay, afterLabel: "Yours: vegan", after: day("vegan") }
+        : diet === "veggie"
+          ? { beforeLabel: "Yours: vegetarian", before: day("veggie"), afterLabel: "Vegan", after: day("vegan") }
+          : heaviest
+            ? { beforeLabel: "Yours: " + byKey(D.MEAL_OPTIONS, heaviest).label.toLowerCase(), before: day(heaviest), afterLabel: "Vegan", after: day("vegan"), what: "A " + byKey(D.MEAL_OPTIONS, heaviest).label.toLowerCase() + " day" }
+            : { beforeLabel: "Typical UK day", before: ukDay, afterLabel: "Vegan", after: day("vegan") };
+    const times = (a, b) => { const r = a / b; return r >= 1.95 ? Math.round(r) + " times" : r >= 1.15 ? r.toFixed(1) + " times" : "about the same as"; };
     return [
       { key: "banking", short: "Bank", effort: "One-off · about 7 working days", ex: 22, save: saving("banking"), verb: "Switch to", independent: true, panel: "#3F5B3A", panelInk: "#F6F1E6", dropInk: "#E8C88A",
-        fact: "Banks lend out the money you keep with them. The free Current Account Switch Service moves your account in 7 working days, guaranteed, direct debits and all.",
-        vsTitle: "£" + kgFmt(amount) + " for a year, kg CO₂e financed", beforeLabel: before.label.replace(/^The /, ""), before: amount * before.factor, afterLabel: best.label.replace(/^The /, ""), after: amount * best.factor },
+        done: bankDone,
+        doneTitle: further > 0.5 ? "You've switched. Go a bit further?" : "You're with the greenest bank",
+        fact: bankDone
+          ? "You're already with " + own.label.replace(/^The /, "") + ", one of the greenest banks. Your £" + kgFmt(amount) + " there finances about " + kgFmt(amount * (worst.factor - own.factor)) + " kg CO₂e a year less than at " + worst.label.replace(/^The /, "") + "." +
+            (further > 0.5 ? " You could go a bit further: " + best.label.replace(/^The /, "") + " would cut another " + kgFmt(further) + " kg a year." : " There's no greener bank on our list.")
+          : "Banks lend out the money you keep with them. The free Current Account Switch Service moves your account in 7 working days, guaranteed, direct debits and all.",
+        vsTitle: "£" + kgFmt(amount) + " for a year, kg CO₂e financed", beforeLabel: before.label.replace(/^The /, ""), before: amount * before.factor,
+        afterLabel: (bankDone ? "Yours: " : "") + bankAfter.label.replace(/^The /, ""), after: amount * bankAfter.factor },
       { key: "energy", short: "Energy", effort: "One-off · a few minutes", ex: 8, save: saving("energy"), verb: "Switch to", panel: "#D9A441", panelInk: "#2E2A22", dropInk: "#2B4128",
-        fact: "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment, and your power never cuts out during the switch.",
-        vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
+        done: energyDone,
+        doneTitle: "You're on a green tariff",
+        fact: energyDone
+          ? "You're already on a renewable tariff, which cuts your electricity emissions by {{green_cut}}. Going further means using less: heating, insulation and, in time, a heat pump."
+          : "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment, and your power never cuts out during the switch.",
+        vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: energyDone ? "Yours: green tariff" : "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
       { key: "meals", short: "Food", effort: "Ongoing · a weekly habit", ex: 84, save: saving("meals"), verb: "Explore", panel: "#6E8B5E", panelInk: "#F6F1E6", dropInk: "#F6F1E6",
-        fact: "A beef day emits {{beef_vs_vegan}} a vegan day. A veg box or a recipe app makes the swap the easy option.",
-        vsTitle: "A day of food, kg CO₂e", beforeLabel: "Beef", before: day("beef"), afterLabel: "Vegan", after: day("vegan") },
+        done: foodDone,
+        doneTitle: diet === "vegan" ? "You already eat plant-based" : "You're vegetarian. Go a bit further?",
+        fact: foodDone
+          ? diet === "vegan"
+            ? "Your days are already plant-based, the lowest-carbon way to eat." + (saving("meals") >= 0.5 ? " Wasting less food is the one thing left to go further." : " Nothing more to switch here.")
+            : "No meat already puts you well below a typical diet. You could go a bit further with a few vegan days: dairy and eggs are most of what's left."
+          : food.what
+            ? food.what + " emits " + times(food.before, food.after) + " a vegan day" + (base.mine ? ", and it's your highest-carbon day of food" : "") + ". A veg box or a recipe app makes the swap the easy option."
+            : "Swapping a few meat days for plant-based ones is the biggest food change. A veg box or a recipe app makes it the easy option.",
+        vsTitle: "A day of food, kg CO₂e", beforeLabel: food.beforeLabel, before: food.before, afterLabel: food.afterLabel, after: food.after },
       { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
-        fact: "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
+        done: flightsDone,
+        doneTitle: "No flights to switch",
+        fact: flightsDone
+          ? "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+          : base.mine && myFlights.length && myFlights.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM)
+            ? "Your flights are too far for the train to be realistic. The switches here are flying a little less often and choosing economy, which shares the plane's emissions between more people."
+            : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
         vsTitle: "London → Paris, return, kg CO₂e", beforeLabel: "Plane", before: A.PARIS_FLIGHT_KG, afterLabel: "Train", after: A.PARIS_TRAIN_KG },
       { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Visit", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
-        fact: "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
-        vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol, afterLabel: "Train", after: dist * 2 * train },
-    ].map((a) => ({ ...a, title: D.USEFUL_LINKS[a.key].title, eyebrow: D.USEFUL_LINKS[a.key].eyebrow, links: D.USEFUL_LINKS[a.key].items }));
+        done: commuteDone,
+        doneTitle: noCommute ? "No commute to switch" : "You already walk or cycle",
+        fact: commuteDone
+          ? noCommute
+            ? "You don't commute, so there's nothing to switch here. If that changes, walking, cycling or the train are the ones to look at."
+            : "You already walk or cycle to work, so your commute is as low as it gets. Nothing to switch here."
+          : "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
+        vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol,
+        afterLabel: commuteDone && !noCommute ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute ? 0 : dist * 2 * train },
+    ].map((a) => {
+      // Your own page only shows the links that suit your answers.
+      const fit = base.mine ? linksFor(a.key, s) : D.USEFUL_LINKS[a.key];
+      return { ...a, title: a.done ? a.doneTitle : D.USEFUL_LINKS[a.key].title, eyebrow: D.USEFUL_LINKS[a.key].eyebrow, links: fit ? fit.items : [] };
+    });
   }
 
   function renderSwitches() {
@@ -3836,7 +4118,7 @@
         .map(
           (a, i) =>
             '<li class="sw-row" data-sw="' + i + '"><span class="sw-tile">' + svgPath(SW_ICONS[a.key], 22) + "</span>" +
-            '<span class="min0"><span class="display sw-short">' + a.short + '</span><span class="sw-effort">' + a.effort + "</span></span>" +
+            '<span class="min0"><span class="display sw-short">' + a.short + (a.done ? '<span class="sw-done">' + icon("check") + "Done</span>" : "") + '</span><span class="sw-effort">' + (a.done ? (a.save >= 0.5 ? "Could go a bit further" : "Nothing more to switch") : a.effort) + "</span></span>" +
             '<span class="sw-save tnum">' + (a.save >= 0.5 ? "−" + kgFmt(a.save) : "0") + "</span>" +
             '<button type="button" class="sw-tog" role="switch" aria-checked="false" aria-label="' + esc(a.title) + ", saves " + kgFmt(a.save) + ' kg a year" data-action="flip-switch" data-i="' + i + '"><span class="sw-knob"></span></button></li>'
         )
@@ -3875,9 +4157,9 @@
           '<div class="sw-panel-top"><span class="display tnum sw-no">0' + (i + 1) + '</span><span class="sw-drop"><b class="display tnum" style="color:' + a.dropInk + '">−' + drop + "%</b><span>less CO₂e</span></span></div>" +
           '<div><div class="sw-vs-title">' + esc(a.vsTitle) + '</div><div class="sw-vs"><span>' + esc(a.beforeLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-before"></span></span><b class="display tnum">' + fmtKg(a.before) + "</b>" +
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
-          '<div class="sw-body"><div class="chip-row"><span class="sw-chip honey">' + esc(a.eyebrow) + '</span><span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
+          '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">' + esc(a.eyebrow) + "</span>") + '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
           (a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") + "</div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + '</p><div class="sw-offers">' +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.links.length ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;
@@ -3893,7 +4175,7 @@
             .join("") +
           '</div><p class="sw-disc">' +
           (a.independent ? "Chosen using the bank league table. These are never affiliate links." : paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : "Independent suggestions. We don't get paid for these links.") +
-          "</p></div></div></section>"
+          "</p>" : "") + "</div></div></section>"
         );
       })
       .join("");
@@ -5559,7 +5841,7 @@
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
-    else if (path === "/check-in" || path === "/habits") html = renderHabitsPending();
+    else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
@@ -5575,6 +5857,11 @@
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
     if (path === "/switches" && app.querySelector(".sw-board")) startSwitchDemo();
+    if (path === "/switches" && ui.jumpSwitch) {
+      const card = document.getElementById("switch-" + ui.jumpSwitch);
+      ui.jumpSwitch = null;
+      if (card) setTimeout(() => card.scrollIntoView({ block: "start" }), 50);
+    }
     kept.forEach(([id, el]) => {
       const now = document.getElementById(id);
       if (now) now.value = el.value;
@@ -5966,7 +6253,10 @@
     "jump-switch": (el, e) => {
       e.preventDefault();
       const card = document.getElementById("switch-" + el.dataset.cat);
-      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (card) return card.scrollIntoView({ behavior: "smooth", block: "start" });
+      // From the Habits page: open the switches page at that switch.
+      ui.jumpSwitch = el.dataset.cat;
+      location.hash = "#/switches";
     },
     "refresh-analytics": () => {
       analytics.loaded = false;

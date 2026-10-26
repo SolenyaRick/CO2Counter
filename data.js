@@ -1013,8 +1013,8 @@
   ];
   const CASS_URL = "https://www.currentaccountswitch.co.uk/";
 
-  // Hand-picked services shown on each category's guide page. "hideForDiets"
-  // skips the card for people whose diet it wouldn't help. Give an item a
+  // Hand-picked services shown on each category's guide page. "when" says
+  // who an item suits once their survey is finished (linkFits in app.js). Give an item a
   // "ref" URL (an affiliate or referral link) and it's used instead of "url",
   // the tile gets an "Affiliate" tag and the disclosure line changes to say
   // so. "affiliate" notes a programme we've applied to but has no link yet.
@@ -1022,33 +1022,35 @@
     meals: {
       eyebrow: "Make it easy",
       title: "Plant-forward food, delivered",
-      hideForDiets: ["vegan", "veggie"],
       items: [
-        { label: "Riverford", affiliate: "pending: Awin", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
-        { label: "Abel & Cole", affiliate: "pending: Awin", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
-        { label: "Oddbox", affiliate: "pending: Impact", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
-        { label: "Fork Ranger", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
+        { label: "Riverford", when: "plants", affiliate: "pending: Awin", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
+        { label: "Abel & Cole", when: "plants", affiliate: "pending: Awin", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
+        { label: "Oddbox", when: "waste", affiliate: "pending: Impact", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
+        { label: "Fork Ranger", when: "meat", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
       ],
     },
     commute: {
       eyebrow: "Leave the car, or change it",
       title: "Train, bike or electric",
       // "vehicle" items also show on the commute "If you must drive" pop-up.
+      // "when" says who they suit (see linkFits in app.js): "train" for people
+      // who drive or bus, "cycle" for commutes short enough to walk or cycle,
+      // "ev" for people who drive a petrol or diesel car.
       items: [
-        { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
-        { label: "Cyclescheme", topic: "vehicle", url: "https://www.cyclescheme.co.uk/", tone: "sky", tags: ["Cycle to Work", "Tax-free"], note: "Get a bike or e-bike through your employer's Cycle to Work scheme, paid from your salary before tax." },
-        { label: "Green Commute Initiative", topic: "vehicle", url: "https://www.greencommuteinitiative.uk/", tone: "leaf", tags: ["Cycle to Work", "E-bikes"], note: "A not-for-profit Cycle to Work scheme with no upper limit, popular for e-bikes and cargo bikes." },
-        { label: "Octopus EV", topic: "vehicle", url: "https://octopusev.com/", tone: "plum", tags: ["Salary sacrifice", "Electric cars"], note: "Lease an electric car through your employer, paid from your salary before tax." },
-        { label: "NHS Fleet Solutions", topic: "vehicle", url: "https://www.nhsfleetsolutions.co.uk/", tone: "amber", tags: ["NHS staff", "Salary sacrifice"], note: "The NHS's own salary-sacrifice car scheme, including electric cars, for NHS staff." },
+        { label: "Trainline", when: "train", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
+        { label: "Cyclescheme", topic: "vehicle", when: "cycle", url: "https://www.cyclescheme.co.uk/", tone: "sky", tags: ["Cycle to Work", "Tax-free"], note: "Get a bike or e-bike through your employer's Cycle to Work scheme, paid from your salary before tax." },
+        { label: "Green Commute Initiative", topic: "vehicle", when: "cycle", url: "https://www.greencommuteinitiative.uk/", tone: "leaf", tags: ["Cycle to Work", "E-bikes"], note: "A not-for-profit Cycle to Work scheme with no upper limit, popular for e-bikes and cargo bikes." },
+        { label: "Octopus EV", topic: "vehicle", when: "ev", url: "https://octopusev.com/", tone: "plum", tags: ["Salary sacrifice", "Electric cars"], note: "Lease an electric car through your employer, paid from your salary before tax." },
+        { label: "NHS Fleet Solutions", topic: "vehicle", when: "ev", url: "https://www.nhsfleetsolutions.co.uk/", tone: "amber", tags: ["NHS staff", "Salary sacrifice"], note: "The NHS's own salary-sacrifice car scheme, including electric cars, for NHS staff." },
       ],
     },
     flights: {
       eyebrow: "Swap the plane",
       title: "Go by train instead",
       items: [
-        { label: "Eurostar", affiliate: "pending: Partnerize", url: "https://www.eurostar.com/uk-en", tone: "amber", tags: ["City centre to centre"], note: "London to Paris, Brussels and Amsterdam in a few hours." },
-        { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["UK & Europe"], note: "Book trains across the UK and Europe in one place." },
-        { label: "The Man in Seat 61", url: "https://www.seat61.com/", tone: "sky", tags: ["Free guides"], note: "Step-by-step guides to reaching almost anywhere by rail." },
+        { label: "Eurostar", when: "eurostar", affiliate: "pending: Partnerize", url: "https://www.eurostar.com/uk-en", tone: "amber", tags: ["City centre to centre"], note: "London to Paris, Brussels and Amsterdam in a few hours." },
+        { label: "Trainline", when: "rail", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["UK & Europe"], note: "Book trains across the UK and Europe in one place." },
+        { label: "The Man in Seat 61", when: "rail_far", url: "https://www.seat61.com/", tone: "sky", tags: ["Free guides"], note: "Step-by-step guides to reaching almost anywhere by rail." },
       ],
     },
     energy: {
@@ -1064,9 +1066,9 @@
       eyebrow: "Seven-day switch",
       title: "Move to a greener bank",
       items: [
-        { label: "Triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", tone: "leaf", tags: ["Top rated", "Ethical lending"], note: "Only lends to social and environmental projects." },
-        { label: "The Co-operative Bank", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", tone: "sky", tags: ["Which? Eco Provider"], note: "Ethical policy rules out fossil-fuel finance." },
-        { label: "Nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", tone: "amber", tags: ["Which? Eco Provider", "Member-owned"], note: "Building society that lends mainly for UK homes." },
+        { label: "Triodos", bank: "triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", tone: "leaf", tags: ["Top rated", "Ethical lending"], note: "Only lends to social and environmental projects." },
+        { label: "The Co-operative Bank", bank: "co_op", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", tone: "sky", tags: ["Which? Eco Provider"], note: "Ethical policy rules out fossil-fuel finance." },
+        { label: "Nationwide", bank: "nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", tone: "amber", tags: ["Which? Eco Provider", "Member-owned"], note: "Building society that lends mainly for UK homes." },
       ],
     },
   };
@@ -1088,6 +1090,7 @@
       },
       {
         "heading": "Rethink dairy if you're vegetarian",
+        "dynamicKey": "cheeseDairy",
         "body": "Once red meat is gone, cheese and dairy become the dominant food emission. Hard cheeses (cheddar, parmesan, mozzarella) are the worst offenders. Try oat or soy milk, nutritional yeast for cheesy flavour, and reserve cheese for meals where it really matters."
       },
       {
@@ -1257,6 +1260,7 @@
     "sections": [
       {
         "heading": "Switch to a green tariff",
+        "dynamicKey": "greenTariff",
         "body": "This is the single easiest high-impact change. Moving to a renewable electricity tariff can cut your electricity emissions by {{green_cut}} with a few clicks — no behaviour change required. Many green tariffs are price-competitive."
       },
       {
@@ -1659,6 +1663,7 @@
       },
       {
         "heading": "Watch dairy & cheese",
+        "dynamicKey": "cheeseDairy",
         "body": "With meat off the menu, cheese and dairy are now your biggest food-emission driver. Try oat or soy milk and reserve hard cheeses for meals where they matter."
       }
     ],
@@ -1699,6 +1704,7 @@
     "sections": [
       {
         "heading": "Cheese & dairy are now your biggest lever",
+        "dynamicKey": "cheeseDairy",
         "body": "With meat and fish off the menu, dairy — especially cheese — dominates your food emissions. This is where your gains are."
       },
       {
@@ -1819,6 +1825,7 @@
     PET_FOOD_CUT_MAX: 0.5,
     DAIRY_MILK_KG: 3.15, // per litre (Poore & Nemecek 2018)
     OAT_MILK_KG: 0.9,
+    CHEESE_KG: 23.88, // per kg of cheese (Poore & Nemecek 2018)
     UK_TOTAL_KG: (699201.9 / 68265) * 1000, // full UK footprint per person (Defra 2023)
     EXAMPLE_SAVINGS: 5000, // £ in a bank, for the Greener switches example
     CAR_LIFE_YEARS: 14, // a car's making is spread over this many years (UK scrappage age)
@@ -1919,6 +1926,7 @@
     { group: "UK average (for the comparison)", key: "uk_beef", label: "Beef bought", unit: "g per person a week", path: "UK_PROFILE.beefG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_lamb", label: "Lamb bought", unit: "g per person a week", path: "UK_PROFILE.lambG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
     { group: "Comparisons", key: "dairy_milk", label: "Dairy milk", unit: "kg CO₂e per litre", path: "ASSUMPTIONS.DAIRY_MILK_KG", source: PN2018, asOf: "2018-06", every: 96 },
+    { group: "Comparisons", key: "cheese", label: "Cheese", unit: "kg CO₂e per kg", path: "ASSUMPTIONS.CHEESE_KG", source: PN2018, asOf: "2018-06", every: 96 },
     { group: "Comparisons", key: "oat_milk", label: "Oat milk", unit: "kg CO₂e per litre", path: "ASSUMPTIONS.OAT_MILK_KG", source: PN2018, asOf: "2018-06", every: 96 },
     { group: "Comparisons", key: "example_savings", label: "Example savings in a bank (Greener switches page)", unit: "£", path: "ASSUMPTIONS.EXAMPLE_SAVINGS", source: "Illustration only: the bank comparison on Greener switches uses this amount" },
     { group: "Comparisons", key: "tree", label: "A mature tree absorbs", unit: "kg CO₂ a year", path: "ASSUMPTIONS.TREE_KG", source: "No source recorded yet" },
