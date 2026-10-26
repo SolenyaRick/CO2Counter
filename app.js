@@ -43,6 +43,12 @@
   });
   D.AIRPORTS.forEach((a) => (a.search = (a.city + " " + a.code + " " + a.country + " " + (a.name || "")).toLowerCase()));
   const AIRPORT_BY_CODE = new Map(D.AIRPORTS.map((a) => [a.code, a]));
+  // An invite link (?ref=CODE) is remembered until the person signs in,
+  // then claimed for whoever shared it (act 7 on the Habits page).
+  (() => {
+    const m = (location.search + location.hash).match(/[?&]ref=([A-Za-z0-9]{4,12})/);
+    if (m) try { localStorage.setItem("co2_ref", m[1].toUpperCase()); } catch (e) {}
+  })();
   const DAYS = D.DAYS;
   const CATEGORIES = Object.keys(D.EXPLAINERS);
 
@@ -1466,7 +1472,8 @@
     surveyChanged();
     ui.editing = false;
     saveSnapshot(footprint(survey).totalYearly);
-    recordHistory(survey);
+    // Once saved, tell whoever invited this person (their act 7 may tick).
+    recordHistory(survey).then(() => setTimeout(() => { if (currentUser && sb) sb.rpc("check_referrer").then(() => {}, () => {}); }, 1500));
     ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
     location.hash = "#/results";
   }
@@ -3217,9 +3224,24 @@
     if (uid && sb && ui.actsFor !== uid) loadActs(uid);
     return ui.actsFor === uid && ui.acts ? ui.acts : localActs();
   }
+  async function claimReferral() {
+    let code = null;
+    try { code = localStorage.getItem("co2_ref"); } catch (e) {}
+    if (!code || !currentUser || !sb) return;
+    try {
+      const { error } = await sb.rpc("claim_referral", { p_code: code });
+      if (!error) localStorage.removeItem("co2_ref");
+    } catch (e) {}
+  }
   async function loadActs(uid) {
     ui.actsFor = uid;
     ui.acts = null;
+    ui.actsInfo = null;
+    try {
+      // Invite code, invitees, and verified acts (null until the SQL is run).
+      const { data, error } = await sb.rpc("my_acts");
+      if (!error && data) ui.actsInfo = data;
+    } catch (e) {}
     try {
       const { data, error } = await sb.from("profiles").select("acts").eq("id", uid).maybeSingle();
       if (error) return; // column not added yet: the device copy is used
@@ -3233,11 +3255,92 @@
     } catch (e) {}
     if (currentPath() === "/habits") render();
   }
+  const inviteLink = () => PRODUCTION_URL + (ui.actsInfo && ui.actsInfo.code ? "?ref=" + ui.actsInfo.code : "");
+  const MP_COPY = "mp@co2counter.co.uk";
+  // A ready-to-edit letter. The reference lets us match the BCC copy to the
+  // account; MPs need a name and full address to reply to a constituent.
+  function mpLetter(mp) {
+    const ref = "CO2-" + ui.actsInfo.code;
+    const body =
+      "Dear " + mp.name + ",\n\n" +
+      "I'm writing as your constituent to ask you to support stronger action on climate change.\n\n" +
+      "[Say what matters most to you, for example home insulation, cheaper public transport, renewable energy, or protecting nature.]\n\n" +
+      "I've measured my own carbon footprint and I'm cutting it where I can. I'd like to know what you will do in Parliament to help the UK reach net zero, and how you'll vote on climate policy.\n\n" +
+      "Yours sincerely,\n\n[Your name]\n[Your full address and postcode]\n\nRef: " + ref;
+    return "mailto:" + mp.email + "?bcc=" + encodeURIComponent(MP_COPY) + "&subject=" + encodeURIComponent("Climate action: a letter from a constituent") + "&body=" + encodeURIComponent(body);
+  }
+  // Parliament's public members API: postcode -> constituency -> MP -> email.
+  async function findMp(postcode) {
+    ui.mp = { loading: true };
+    render();
+    try {
+      const api = "https://members-api.parliament.uk/api/";
+      const found = await (await fetch(api + "Location/Constituency/Search?take=1&searchText=" + encodeURIComponent(postcode))).json();
+      const c = found.items && found.items[0] && found.items[0].value;
+      const m = c && c.currentRepresentation && c.currentRepresentation.member && c.currentRepresentation.member.value;
+      if (!m) throw new Error("none");
+      const contact = await (await fetch(api + "Members/" + m.id + "/Contact")).json();
+      const emails = (contact.value || []).filter((x) => x.email);
+      const email = (emails.find((x) => /parliament/i.test(x.type || "")) || emails[0] || {}).email;
+      ui.mp = { name: m.nameDisplayAs, constituency: c.name, email: email || "", id: m.id };
+    } catch (e) {
+      ui.mp = { error: "We couldn't find an MP for that postcode. Check it and try again." };
+    }
+    render();
+  }
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
     return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
       "Find yours, free, with CO2 Counter:";
   }
+  const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  // Act 6: verified when the BCC copy of the letter reaches us. Without the
+  // verification set up yet, it falls back to a tick by hand.
+  function mobiliseAct(ticked) {
+    const base = { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action" };
+    const info = ui.actsInfo;
+    if (!info) return { ...base, manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
+      extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" };
+    const verified = info.verified && info.verified.mobilise;
+    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · your letter to your MP reached us on " + longDate(verified) };
+    const mp = ui.mp || {};
+    const finder =
+      '<form id="mp-form" class="hb-mp-form"><input class="input" id="mp-postcode" autocomplete="postal-code" placeholder="Your postcode" maxlength="10" value="' + esc(ui.mpPostcode || "") + '" aria-label="Your postcode" />' +
+      '<button type="submit" class="btn btn-outline btn-sm"' + (mp.loading ? " disabled" : "") + ">" + (mp.loading ? "Finding…" : "Find my MP") + "</button></form>" +
+      (mp.error ? '<p class="xs red">' + esc(mp.error) + "</p>" : "");
+    const letter = mp.name
+      ? '<div class="hb-mp"><p class="sm"><b>' + esc(mp.name) + "</b>, MP for " + esc(mp.constituency) + "</p>" +
+        (mp.email
+          ? '<a class="btn btn-green btn-sm mt-2" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
+            '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>"
+          : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
+        "</div>"
+      : "";
+    return { ...base, done: false, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
+  }
+  // Act 7: verified by invite link, once seven people who joined with it
+  // have finished the survey.
+  function motivateAct(ticked, url, text) {
+    const base = { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts" };
+    const info = ui.actsInfo;
+    const shares =
+      '<span class="hb-share">' +
+      '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
+      '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
+      '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
+      '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
+      '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "");
+    if (!info) return { ...base, manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in", extra: shares };
+    const n = Math.min(7, info.finished || 0);
+    const verified = (info.verified && info.verified.motivate) || n >= 7;
+    return {
+      ...base, done: !!verified, verifiedTick: !!verified,
+      sub: verified ? "Verified · seven people you invited have taken the survey" : n + " of 7 people you invited have taken the survey" + (info.joined > n ? " (" + info.joined + " joined)" : ""),
+      extra: '<span class="xs muted hb-invite">Your invite link: <b>' + esc(inviteLink().replace(/^https:\/\//, "")) + "</b></span>" + shares,
+    };
+  }
+
   function renderHabitsPage() {
     const ready = survey && survey.completedAt;
     const areas = ready ? switchAreas({ s: survey, mine: true }) : [];
@@ -3246,8 +3349,8 @@
     const travel = ready ? [area("commute"), area("flights")] : [];
     const travelSave = travel.reduce((t, a) => t + (a.done ? 0 : a.save), 0);
     const auto = (a) => (ready ? { done: a.done, sub: a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet" } : { done: false, sub: "Finish your survey to see" });
-    const url = encodeURIComponent(PRODUCTION_URL);
-    const text = encodeURIComponent(shareText() + " " + PRODUCTION_URL);
+    const url = encodeURIComponent(inviteLink());
+    const text = encodeURIComponent(shareText() + " " + inviteLink());
     const acts = [
       { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
       { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
@@ -3257,17 +3360,8 @@
         sub: !ready ? "Finish your survey to see" : travel.every((a) => a.done) ? "Done · green commute and no flights" :
           [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
       { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: ready ? "#/results" : "#/", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
-      { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action", manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
-        extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" },
-      { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts", manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in",
-        extra:
-          '<span class="hb-share">' +
-          '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
-          '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
-          '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
-          '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
-          '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
-          '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "") },
+      mobiliseAct(ticked),
+      motivateAct(ticked, url, text),
     ];
     const made = acts.filter((a) => a.done).length;
     const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>";
@@ -3275,7 +3369,9 @@
       '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
     const rows = acts
       .map((a) =>
-        a.manual
+        (a.extra && !a.manual) || (a.verifiedTick && !a.cat && !a.href)
+          ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '">' + box(a) + body(a) + "<span></span></div>" + (a.done || !a.extra ? "" : '<div class="hb-extra">' + a.extra + "</div>") + "</li>"
+          : a.manual
           ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" +
             '<div class="hb-extra">' + a.extra + "</div></li>"
           : '<li class="hb-item"><a class="hb-row' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
@@ -4578,6 +4674,11 @@
     let html = '<div class="container analytics-page">' + pageHeader("Analytics", "How people use CO2 Counter", "chart");
     if (!analytics.loaded) return html + '<section class="glass an-card"><p class="muted">Loading…</p></section></div>';
     if (analytics.error) return html + '<section class="glass an-card"><p class="fw-700">Couldn\'t load the analytics</p><p class="sm muted">' + esc(analytics.error) + '</p><button type="button" class="btn btn-outline btn-sm mt-3" data-action="refresh-analytics">Try again</button></section></div>';
+    // Letters to MPs arrive by BCC with a reference; verifying ticks act 6.
+    html +=
+      '<section class="glass an-card"><h2 class="card-title">Verify a letter to an MP</h2><p class="sm muted">Letters BCC\'d to ' + MP_COPY + " carry a reference like CO2-ABC123. Enter it to verify that person's act 6, then delete the email.</p>" +
+      '<form id="verify-mp-form" class="hb-mp-form mt-3"><input class="input" id="verify-mp-code" placeholder="CO2-ABC123" maxlength="12" aria-label="Reference" /><button type="submit" class="btn btn-green btn-sm">Verify</button></form>' +
+      (ui.verifyMsg ? '<p class="xs mt-2 ' + (ui.verifyMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.verifyMsg.text) + "</p>" : "") + "</section>";
     const m = analyticsModel();
     const t = m.totals;
     const uk = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY).totalYearly);
@@ -4983,7 +5084,9 @@
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
-            "<strong>Habits</strong>: the actions you tick yourself on the Habits page, such as writing to your MP or sharing CO2 Counter, so they're there on any device.",
+            "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
+            "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey, never who they are or their answers.",
+            "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
@@ -5696,6 +5799,7 @@
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
     await checkAdmin();
+    claimReferral();
     if (canSync()) {
       // Answers entered on this device as a guest are uploaded if the
       // account has nothing saved yet.
@@ -6319,17 +6423,25 @@
         try { await sb.from("profiles").update({ acts: t }).eq("id", currentUser.id); } catch (e) {}
       }
     },
+    // The mailto opens as normal; this just remembers it was sent.
+    "mp-sent": () => {
+      const t = { ...actsTicked(), mpSent: true };
+      try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      if (ui.acts) ui.acts = t;
+      if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
+      setTimeout(render, 300);
+    },
     "share-app": async () => {
       const text = shareText();
       try {
-        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: PRODUCTION_URL });
-        else { await navigator.clipboard.writeText(text + " " + PRODUCTION_URL); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
+        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: inviteLink() });
+        else { await navigator.clipboard.writeText(text + " " + inviteLink()); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
       } catch (e) {}
     },
     // Instagram has no share link: copy the words, then open Instagram to
     // paste them into a story or post.
     "share-instagram": async () => {
-      try { await navigator.clipboard.writeText(shareText() + " " + PRODUCTION_URL); } catch (e) {}
+      try { await navigator.clipboard.writeText(shareText() + " " + inviteLink()); } catch (e) {}
       ui.shareMsg = "Copied. Paste it into an Instagram story or post, with a link sticker to co2counter.co.uk.";
       render();
       window.open("https://www.instagram.com/", "_blank", "noopener");
@@ -6664,6 +6776,21 @@
       }
       return;
     }
+    if (e.target.id === "mp-form") {
+      e.preventDefault();
+      ui.mpPostcode = document.getElementById("mp-postcode").value.trim();
+      if (ui.mpPostcode.length >= 5) findMp(ui.mpPostcode);
+      return;
+    }
+    if (e.target.id === "verify-mp-form") {
+      e.preventDefault();
+      const code = document.getElementById("verify-mp-code").value.trim();
+      if (!code) return;
+      const { data, error } = await sb.rpc("verify_mp_letter", { p_code: code });
+      ui.verifyMsg = error ? { ok: false, text: /reference/i.test(error.message || "") ? "No account has that reference." : "Couldn't verify: " + (error.message || "try again") } : { ok: true, text: "Verified for " + data + "." };
+      render();
+      return;
+    }
     if (e.target.id === "about-you-form") {
       e.preventDefault();
       const role = document.getElementById("about-role").value || null;
@@ -6756,6 +6883,7 @@
       ui.userName = await displayName(currentUser);
       await checkMembership();
       checkAdmin().then(() => ui.isAdmin && render());
+      claimReferral();
     }
     // The latest figures from the Inputs page (the cached ones are already in use).
     loadInputs().then((changed) => changed && render());

@@ -4295,3 +4295,7 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .hb-act-link .icon { width: 13px; height: 13px; }
 .hb-share-msg { flex-basis: 100%; }
 @media (max-width: 420px) { .hb-extra { padding-left: 0; } }
+.hb-mp-form { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+.hb-mp-form .input { flex: 1 1 140px; min-width: 0; max-width: 220px; }
+.hb-mp { width: 100%; }
+.hb-invite { flex-basis: 100%; overflow-wrap: anywhere; }
