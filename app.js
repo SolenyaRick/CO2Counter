@@ -2694,10 +2694,12 @@
     // Diet cards the survey shows are already done are left out (habits are
     // separate: they track changes from here). Flight cards stay, marked
     // Done, so people come back to them.
-    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s));
+    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s))
+      .sort((a, b) => (sectionNA(cat, a.s) ? 1 : 0) - (sectionNA(cat, b.s) ? 1 : 0));
+    const live = shown.filter(({ s }) => !sectionNA(cat, s)).length;
     html +=
       '<div class="cat-grid"><section class="cat-col"><div class="row-between gap-3 cat-sub" style="flex-wrap:wrap;align-items:baseline">' +
-      '<h2 class="display">Your ' + (shown.length === 1 ? "next step" : shown.length + " next steps") + '</h2><span class="muted">Tap one for the details</span></div>' +
+      '<h2 class="display">Your ' + (live === 1 ? "next step" : live + " next steps") + '</h2><span class="muted">Tap one for the details</span></div>' +
       '<ol class="todo-list">' +
       shown
         .map(({ s, i }, k) => {
@@ -3046,15 +3048,22 @@
   // The banks in the switching card, and when a guide card doesn't apply.
   const GREEN_BANKS = ["triodos", "co_op", "nationwide"];
   const sectionNA = (cat, s) => {
-    if (cat !== "banking" || s.dynamicKey !== "savingsPensions") return false;
-    const b = survey.banking || {};
-    return !b.pensionPot || !!(byKey(D.PENSION_PROVIDERS, b.pensionProvider) || {}).unfunded;
+    // No pension pot, or the unfunded NHS scheme: nothing to switch.
+    if (cat === "banking" && s.dynamicKey === "savingsPensions") {
+      const b = survey.banking || {};
+      return !b.pensionPot || !!(byKey(D.PENSION_PROVIDERS, b.pensionProvider) || {}).unfunded;
+    }
+    // Driving cards, for people who don't drive to work.
+    if (cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving")) return carDaysOf(survey).length === 0;
+    // No gas, so no boiler to replace.
+    if (cat === "energy" && /electrify heating/i.test(s.heading)) return !((survey.energy || {}).gasKwh > 0);
+    return false;
   };
 
-  // Driving cards only make sense for people who drive to work.
   const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
-  function sectionHidden(cat, s) {
-    return cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving") && carDaysOf(survey).length === 0;
+  // Cards that don't apply are shown greyed out (sectionNA) rather than hidden.
+  function sectionHidden() {
+    return false;
   }
 
 
@@ -3093,7 +3102,7 @@
     if (cat === "meals" && l.when && s) {
       const diet = dietType(s);
       const lowWaste = ((s.meals || {}).foodWaste || "low") === "low";
-      if (l.when === "meat") return diet !== "veggie" && diet !== "vegan";
+      if (l.when === "meat") return diet !== "vegan";
       if (l.when === "plants") return diet !== "vegan";
       if (l.when === "waste") return diet !== "vegan" || !lowWaste;
     }
@@ -4538,7 +4547,7 @@
           : "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
         vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol,
         afterLabel: commuteDone && !noCommute ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute ? 0 : dist * 2 * train },
-      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
+      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 59, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
         done: flightsDone,
         doneTitle: "No flights to switch",
         fact: flightsDone
