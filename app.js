@@ -3240,7 +3240,7 @@
     try {
       // Invite code, invitees, and verified acts (null until the SQL is run).
       const { data, error } = await sb.rpc("my_acts");
-      if (!error && data) ui.actsInfo = data;
+      if (!error && data && data.code) ui.actsInfo = data;
     } catch (e) {}
     try {
       const { data, error } = await sb.from("profiles").select("acts").eq("id", uid).maybeSingle();
@@ -3367,16 +3367,18 @@
     const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>";
     const body = (a) =>
       '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
+    // Acts with extras (the MP finder, the share buttons) keep them inside
+    // their own box, under the act.
     const rows = acts
-      .map((a) =>
-        (a.extra && !a.manual) || (a.verifiedTick && !a.cat && !a.href)
-          ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '">' + box(a) + body(a) + "<span></span></div>" + (a.done || !a.extra ? "" : '<div class="hb-extra">' + a.extra + "</div>") + "</li>"
-          : a.manual
-          ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" +
-            '<div class="hb-extra">' + a.extra + "</div></li>"
-          : '<li class="hb-item"><a class="hb-row' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
-            '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>"
-      )
+      .map((a) => {
+        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + "</div>" : "";
+        if (a.manual)
+          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
+        if (a.extra || (a.verifiedTick && !a.cat && !a.href))
+          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row">' + box(a) + body(a) + "<span></span></div>" + extra + "</li>";
+        return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
+          '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
+      })
       .join("");
     return (
       '<div class="container narrow">' + pageHeader("My Habits", "One-off changes, and habits you keep") +
