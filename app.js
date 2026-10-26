@@ -3356,7 +3356,8 @@
       const why = ui.isAdmin && out.detail ? " (" + out.detail + ")" : ui.isAdmin && !res.ok ? " (status " + res.status + ")" : "";
       return { error: (out.error || "Couldn't send just now. Please try again, or use your own email app.") + why };
     } catch (e) {
-      return { error: "Couldn't send just now. Please try again, or use your own email app." };
+      // Usually the function isn't deployed yet (the browser can't reach it).
+      return { error: "Couldn't send just now. Please try again, or use your own email app." + (ui.isAdmin ? " (Couldn't reach the send-letter function: check it's deployed in Supabase under Edge Functions.)" : "") };
     }
   }
   // The letter without the sign-off placeholders: name and address are
