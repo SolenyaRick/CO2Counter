@@ -1668,7 +1668,7 @@
     if (key === "energy") {
       const e = s.energy || {};
       return [
-        Math.round(e.electricityKwh || 0).toLocaleString() + " kWh electricity, " + Math.round(e.gasKwh || 0).toLocaleString() + " kWh gas a month" + (e.greenTariff ? " · green tariff" : ""),
+        Math.round(e.electricityKwh || 0).toLocaleString() + " kWh electricity, " + Math.round(e.gasKwh || 0).toLocaleString() + " kWh gas a month" + (e.greenTariff ? " · green tariff" : e.billPayer === "other" ? " · someone else chooses the supplier" : ""),
         ((e.household || 1) === 1 ? "1 person" : (e.household || 1) + " people") + " at home · " + Math.round((s.water && s.water.liters) || 0).toLocaleString() + " L water a month",
       ];
     }
@@ -2234,7 +2234,14 @@
         3,
         "Are you on a green electricity tariff?",
         "A 100% renewable tariff cuts electricity emissions by {{green_cut}}.",
-        '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>"
+        '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>" +
+          // Renters, students and people living with family often don't pick the supplier.
+          (e.greenTariff
+            ? ""
+            : '<div class="q-sub"><p class="q-sub-title display">Who chooses your energy supplier?</p><div class="chip-wrap">' +
+              chip(e.billPayer !== "other", 'data-action="set-billpayer" data-value="me"', "Me or my household") +
+              chip(e.billPayer === "other", 'data-action="set-billpayer" data-value="other"', "Someone else", "landlord, family, bills included") +
+              "</div>" + (e.billPayer === "other" ? '<p class="q-tip">No problem. We\'ll give you a ready-made message to send whoever does, asking them to switch.</p>' : "") + "</div>")
       ),
       qCard(4, "How many people live in your home?", "We share the home's energy, water and pets between everyone who lives there.", stepper("energy.household", hh, 1, 1, hh === 1 ? "person" : "people", "People in your home")),
       qCard(5, "How much water do you use?", "For the whole home, per month. A typical person uses about 3,000–5,000 litres.", fieldInput("water.liters", w.liters == null ? 0 : w.liters, "litres a month", "Water per month in litres")),
@@ -3353,7 +3360,11 @@
     const text = encodeURIComponent(shareText() + " " + inviteLink());
     const acts = [
       { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
-      { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
+      asksBillPayer(ready ? survey : null)
+        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!ticked.energyAsked,
+            sub: ticked.energyAsked ? "Done · you've asked whoever chooses your supplier to switch" : "Someone else chooses your supplier: ask them to switch",
+            extra: energyAskBox(), keepExtra: true }
+        : { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
       { n: 3, name: "More plant-based food", what: "seasonal and local where you can", cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
       { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", cat: travel.length && travel[0].done ? "flights" : "commute",
         done: ready && travel.every((a) => a.done),
@@ -3645,6 +3656,35 @@
     return html;
   }
 
+  // For people who don't choose their supplier: a message to whoever does,
+  // with the whole home's saving, by email (their own app) or copied.
+  const asksBillPayer = (s) => !!s && s.energy && s.energy.billPayer === "other" && !s.energy.greenTariff;
+  function energyAskText() {
+    const e = survey.energy || {};
+    const year = 12 * (e.electricityKwh || 0);
+    const cut = year * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR);
+    const pct = Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100);
+    const names = D.USEFUL_LINKS.energy.items.map((l) => l.label).join(", ").replace(/, ([^,]*)$/, " and $1");
+    return {
+      subject: "Could we switch to a renewable electricity tariff?",
+      body:
+        "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
+        "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\nThanks,\n[Your name]",
+    };
+  }
+  function energyAskBox() {
+    const t = energyAskText();
+    const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
+    return (
+      '<div class="ask-box"><p class="sm">Someone else chooses your supplier, so your switch is asking them. Here\'s a message ready to send, with your home\'s numbers in it.</p>' +
+      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">Email them ' + icon("arrowRight") + "</a>" +
+      '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
+      '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
+      (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
+      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app opens with the message, and you add who it\'s to.</p></div>'
+    );
+  }
+
   // Standard against green for their own electricity, then the suppliers.
   function greenTariffSheet() {
     const e = survey.energy || {};
@@ -3662,6 +3702,7 @@
         '<p class="xs muted mt-2">' + kgFmt(e.electricityKwh || 0) + " kWh a month" + (hh > 1 ? ", your share of " + hh : "") + ". Grid " + D.ELECTRICITY_FACTOR + " kg per kWh, renewable " + D.GREEN_ELECTRICITY_FACTOR + ".</p>",
       e.greenTariff ? chipBig("Already saving " + kgFmt(std - green) + " kg") : chipBig("Switching saves " + kgFmt(std - green) + " kg")
     );
+    if (asksBillPayer(survey)) return html + panel("Ask whoever chooses your supplier", energyAskBox());
     const links = linksFor("energy");
     if (links)
       html += panel(
@@ -4214,7 +4255,10 @@
       { key: "energy", short: "Energy", effort: "One-off · a few minutes", ex: 8, save: saving("energy"), verb: "Switch to", panel: "#D9A441", panelInk: "#2E2A22", dropInk: "#2B4128",
         done: energyDone,
         doneTitle: "You're on a green tariff",
-        fact: energyDone
+        askHtml: base.mine && asksBillPayer(s) ? energyAskBox() : "",
+        fact: base.mine && asksBillPayer(s)
+          ? "Someone else chooses your supplier, so the switch is asking them. A renewable tariff would cut your home's electricity emissions by {{green_cut}}."
+          : energyDone
           ? "You're already on a renewable tariff, which cuts your electricity emissions by {{green_cut}}. Going further means using less: heating, insulation and, in time, a heat pump."
           : "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment, and your power never cuts out during the switch.",
         vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: energyDone ? "Yours: green tariff" : "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
@@ -4315,7 +4359,7 @@
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
           '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">' + esc(a.eyebrow) + "</span>") + '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
           (a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") + "</div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.links.length ? '<div class="sw-offers">' +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;
@@ -6213,6 +6257,22 @@
       ui.airport = null;
       surveyChanged();
       render();
+    },
+    "set-billpayer": (el) => {
+      survey.energy = { ...survey.energy, billPayer: el.dataset.value };
+      surveyChanged();
+      render();
+    },
+    "energy-asked": () => {
+      const t = { ...actsTicked(), energyAsked: true };
+      try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      if (ui.acts) ui.acts = t;
+      if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
+      setTimeout(render, 300);
+    },
+    "copy-energy-ask": async () => {
+      try { await navigator.clipboard.writeText(energyAskText().body); ui.askMsg = "Copied. Paste it into a message to them."; } catch (e) { ui.askMsg = "Couldn't copy. Select the text in your email app instead."; }
+      actions["energy-asked"]();
     },
     "set-green": (el) => {
       survey.energy = { ...survey.energy, greenTariff: el.dataset.value === "1" };

@@ -4301,3 +4301,5 @@ a.hb-card:hover { background: rgba(163, 181, 143, 0.22); }
 .hb-mp-form .input { flex: 1 1 140px; min-width: 0; max-width: 220px; }
 .hb-mp { width: 100%; }
 .hb-invite { flex-basis: 100%; overflow-wrap: anywhere; }
+.ask-box { width: 100%; }
+.sw-body .ask-box { margin-top: 16px; padding: 16px; border-radius: 16px; background: rgba(217, 164, 65, 0.12); }
