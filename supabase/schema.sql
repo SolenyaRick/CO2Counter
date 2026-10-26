@@ -1810,3 +1810,185 @@ grant execute on function public.owner_analytics() to authenticated;
 -- e.g. {"mobilise": true, "motivate": true}. Covered by the existing
 -- "profiles: owner can select/update" policies.
 alter table public.profiles add column if not exists acts jsonb not null default '{}'::jsonb;
+
+-- ---------- Verified 7 Acts: referral codes and MP letters ----------
+-- Everyone gets a short code. It's in their invite link (act 7: motivate
+-- seven others, which ticks itself when seven people they invited finish
+-- the survey) and in the reference on their letter to their MP (act 6,
+-- verified by an admin when the BCC copy arrives). The tables can only be
+-- changed through the functions below, so nobody can verify themselves.
+create table if not exists public.referral_codes (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  code text not null unique,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.referrals (
+  referred_id uuid primary key references auth.users(id) on delete cascade,
+  referrer_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.act_verifications (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  act text not null check (act in ('mobilise', 'motivate')),
+  verified_at timestamptz not null default now(),
+  primary key (user_id, act)
+);
+alter table public.referral_codes enable row level security;
+alter table public.referrals enable row level security;
+alter table public.act_verifications enable row level security;
+
+-- How much people who joined by invite have cut: each person's first
+-- measured footprint minus their latest (rises count as 0), over everyone a
+-- referrer invited, or everyone who joined by any invite (p_referrer null).
+-- Only people who have measured at least twice count. Internal only.
+create or replace function public.referral_cut(p_referrer uuid)
+returns table (people bigint, cut numeric)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with r as (
+    select referred_id from public.referrals where p_referrer is null or referrer_id = p_referrer
+  ), h as (
+    select h.user_id, h.total_yearly,
+      row_number() over (partition by h.user_id order by h.completed_at asc) as first_n,
+      row_number() over (partition by h.user_id order by h.completed_at desc) as last_n,
+      count(*) over (partition by h.user_id) as n
+    from public.survey_history h join r on r.referred_id = h.user_id
+    where h.total_yearly is not null
+  ), each_person as (
+    select f.user_id, greatest(0, f.total_yearly - l.total_yearly) as cut
+    from h f join h l on l.user_id = f.user_id and l.last_n = 1
+    where f.first_n = 1 and f.n >= 2
+  )
+  select count(*), coalesce(sum(cut), 0) from each_person;
+$$;
+revoke all on function public.referral_cut(uuid) from public, anon, authenticated;
+
+-- Your code (made the first time), how many people joined with it, how many
+-- of them have finished the survey, which acts are verified, and how much
+-- the people you invited (and everyone's invitees) have cut.
+create or replace function public.my_acts()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code text;
+  v_alphabet text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first';
+  end if;
+  select code into v_code from public.referral_codes where user_id = auth.uid();
+  while v_code is null loop
+    v_code := '';
+    for i in 1..6 loop
+      v_code := v_code || substr(v_alphabet, 1 + floor(random() * length(v_alphabet))::int, 1);
+    end loop;
+    begin
+      insert into public.referral_codes (user_id, code) values (auth.uid(), v_code);
+    exception when unique_violation then
+      select code into v_code from public.referral_codes where user_id = auth.uid();
+    end;
+  end loop;
+  return jsonb_build_object(
+    'code', v_code,
+    'joined', (select count(*) from public.referrals r where r.referrer_id = auth.uid()),
+    'finished', (select count(*) from public.referrals r where r.referrer_id = auth.uid()
+      and (exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
+        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt'))),
+    'verified', coalesce((select jsonb_object_agg(v.act, v.verified_at) from public.act_verifications v where v.user_id = auth.uid()), '{}'::jsonb),
+    -- Totals only, and only once enough people count that no one stands out.
+    'cut', (select case when c.people >= 2 then round(c.cut) end from public.referral_cut(auth.uid()) c),
+    'cut_people', (select c.people from public.referral_cut(auth.uid()) c),
+    'global_cut', (select case when c.people >= 3 then round(c.cut) end from public.referral_cut(null) c),
+    'global_people', (select case when c.people >= 3 then c.people end from public.referral_cut(null) c)
+  );
+end;
+$$;
+revoke all on function public.my_acts() from public;
+grant execute on function public.my_acts() to authenticated;
+
+-- Joining with someone's link. Only counts for a new person (no finished
+-- survey yet), once, and not with your own code. When the inviter reaches
+-- seven who've finished, act 7 is verified for them.
+create or replace function public.claim_referral(p_code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_referrer uuid;
+begin
+  if auth.uid() is null then
+    return false;
+  end if;
+  select user_id into v_referrer from public.referral_codes where code = upper(trim(p_code));
+  if v_referrer is null or v_referrer = auth.uid() then
+    return false;
+  end if;
+  if exists (select 1 from public.survey_history h where h.user_id = auth.uid()) then
+    return false;
+  end if;
+  insert into public.referrals (referred_id, referrer_id) values (auth.uid(), v_referrer) on conflict (referred_id) do nothing;
+  return found;
+end;
+$$;
+revoke all on function public.claim_referral(text) from public;
+grant execute on function public.claim_referral(text) to authenticated;
+
+-- Called after someone finishes a survey: verifies act 7 for whoever
+-- invited them, once seven of their invitees have finished.
+create or replace function public.check_referrer()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_referrer uuid;
+  v_finished int;
+begin
+  select referrer_id into v_referrer from public.referrals where referred_id = auth.uid();
+  if v_referrer is null then
+    return;
+  end if;
+  select count(*) into v_finished from public.referrals r where r.referrer_id = v_referrer
+    and (exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
+      or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt'));
+  if v_finished >= 7 then
+    insert into public.act_verifications (user_id, act) values (v_referrer, 'motivate') on conflict do nothing;
+  end if;
+end;
+$$;
+revoke all on function public.check_referrer() from public;
+grant execute on function public.check_referrer() to authenticated;
+
+-- Admins: verify a letter to an MP from the reference code in the BCC copy.
+-- Returns the person's username (or "someone") so you know it worked.
+create or replace function public.verify_mp_letter(p_code text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'Admins only';
+  end if;
+  select user_id into v_user from public.referral_codes where code = replace(upper(trim(p_code)), 'CO2-', '');
+  if v_user is null then
+    raise exception 'No account has that reference';
+  end if;
+  insert into public.act_verifications (user_id, act) values (v_user, 'mobilise') on conflict (user_id, act) do update set verified_at = now();
+  return coalesce((select nullif(username, '') from public.profiles where id = v_user), 'someone');
+end;
+$$;
+revoke all on function public.verify_mp_letter(text) from public;
+grant execute on function public.verify_mp_letter(text) to authenticated;

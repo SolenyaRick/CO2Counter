@@ -43,6 +43,12 @@
   });
   D.AIRPORTS.forEach((a) => (a.search = (a.city + " " + a.code + " " + a.country + " " + (a.name || "")).toLowerCase()));
   const AIRPORT_BY_CODE = new Map(D.AIRPORTS.map((a) => [a.code, a]));
+  // An invite link (?ref=CODE) is remembered until the person signs in,
+  // then claimed for whoever shared it (act 7 on the Habits page).
+  (() => {
+    const m = (location.search + location.hash).match(/[?&]ref=([A-Za-z0-9]{4,12})/);
+    if (m) try { localStorage.setItem("co2_ref", m[1].toUpperCase()); } catch (e) {}
+  })();
   const DAYS = D.DAYS;
   const CATEGORIES = Object.keys(D.EXPLAINERS);
 
@@ -1466,7 +1472,8 @@
     surveyChanged();
     ui.editing = false;
     saveSnapshot(footprint(survey).totalYearly);
-    recordHistory(survey);
+    // Once saved, tell whoever invited this person (their act 7 may tick).
+    recordHistory(survey).then(() => setTimeout(() => { if (currentUser && sb) sb.rpc("check_referrer").then(() => {}, () => {}); }, 1500));
     ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
     location.hash = "#/results";
   }
@@ -1661,7 +1668,7 @@
     if (key === "energy") {
       const e = s.energy || {};
       return [
-        Math.round(e.electricityKwh || 0).toLocaleString() + " kWh electricity, " + Math.round(e.gasKwh || 0).toLocaleString() + " kWh gas a month" + (e.greenTariff ? " · green tariff" : ""),
+        Math.round(e.electricityKwh || 0).toLocaleString() + " kWh electricity, " + Math.round(e.gasKwh || 0).toLocaleString() + " kWh gas a month" + (e.greenTariff ? " · green tariff" : e.billPayer === "other" ? " · someone else chooses the supplier" : ""),
         ((e.household || 1) === 1 ? "1 person" : (e.household || 1) + " people") + " at home · " + Math.round((s.water && s.water.liters) || 0).toLocaleString() + " L water a month",
       ];
     }
@@ -2227,7 +2234,14 @@
         3,
         "Are you on a green electricity tariff?",
         "A 100% renewable tariff cuts electricity emissions by {{green_cut}}.",
-        '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>"
+        '<div class="chip-wrap">' + chip(!!e.greenTariff, 'data-action="set-green" data-value="1"', "Yes") + chip(!e.greenTariff, 'data-action="set-green" data-value="0"', "No") + "</div>" +
+          // Renters, students and people living with family often don't pick the supplier.
+          (e.greenTariff
+            ? ""
+            : '<div class="q-sub"><p class="q-sub-title display">Who chooses your energy supplier?</p><div class="chip-wrap">' +
+              chip(e.billPayer !== "other", 'data-action="set-billpayer" data-value="me"', "Me or my household") +
+              chip(e.billPayer === "other", 'data-action="set-billpayer" data-value="other"', "Someone else", "landlord, family, bills included") +
+              "</div>" + (e.billPayer === "other" ? '<p class="q-tip">No problem. We\'ll give you a ready-made message to send whoever does, asking them to switch.</p>' : "") + "</div>")
       ),
       qCard(4, "How many people live in your home?", "We share the home's energy, water and pets between everyone who lives there.", stepper("energy.household", hh, 1, 1, hh === 1 ? "person" : "people", "People in your home")),
       qCard(5, "How much water do you use?", "For the whole home, per month. A typical person uses about 3,000–5,000 litres.", fieldInput("water.liters", w.liters == null ? 0 : w.liters, "litres a month", "Water per month in litres")),
@@ -3217,9 +3231,24 @@
     if (uid && sb && ui.actsFor !== uid) loadActs(uid);
     return ui.actsFor === uid && ui.acts ? ui.acts : localActs();
   }
+  async function claimReferral() {
+    let code = null;
+    try { code = localStorage.getItem("co2_ref"); } catch (e) {}
+    if (!code || !currentUser || !sb) return;
+    try {
+      const { error } = await sb.rpc("claim_referral", { p_code: code });
+      if (!error) localStorage.removeItem("co2_ref");
+    } catch (e) {}
+  }
   async function loadActs(uid) {
     ui.actsFor = uid;
     ui.acts = null;
+    ui.actsInfo = null;
+    try {
+      // Invite code, invitees, and verified acts (null until the SQL is run).
+      const { data, error } = await sb.rpc("my_acts");
+      if (!error && data && data.code) ui.actsInfo = data;
+    } catch (e) {}
     try {
       const { data, error } = await sb.from("profiles").select("acts").eq("id", uid).maybeSingle();
       if (error) return; // column not added yet: the device copy is used
@@ -3231,13 +3260,222 @@
       try { localStorage.setItem(actsKey(), JSON.stringify(merged)); } catch (e) {}
       if (JSON.stringify(merged) !== JSON.stringify(server)) await sb.from("profiles").update({ acts: merged }).eq("id", uid);
     } catch (e) {}
-    if (currentPath() === "/habits") render();
+    if (currentPath() === "/habits" || currentPath().startsWith("/acts/")) render();
+  }
+  const inviteLink = () => PRODUCTION_URL + (ui.actsInfo && ui.actsInfo.code ? "?ref=" + ui.actsInfo.code : "");
+  const MP_COPY = "mp@co2counter.co.uk";
+  // A ready-to-edit letter. The reference lets us match the BCC copy to the
+  // account; MPs need a name and full address to reply to a constituent.
+  function mpLetter(mp) {
+    const ref = "CO2-" + ui.actsInfo.code;
+    const body =
+      "Dear " + mp.name + ",\n\n" +
+      "I'm writing as your constituent to ask you to support stronger action on climate change.\n\n" +
+      "[Say what matters most to you, for example home insulation, cheaper public transport, renewable energy, or protecting nature.]\n\n" +
+      "I've measured my own carbon footprint and I'm cutting it where I can. I'd like to know what you will do in Parliament to help the UK reach net zero, and how you'll vote on climate policy.\n\n" +
+      "Yours sincerely,\n\n[Your name]\n[Your full address and postcode]\n\nRef: " + ref;
+    return "mailto:" + mp.email + "?bcc=" + encodeURIComponent(MP_COPY) + "&subject=" + encodeURIComponent("Climate action: a letter from a constituent") + "&body=" + encodeURIComponent(body);
+  }
+  // Parliament's public members API: postcode -> constituency -> MP -> email.
+  async function findMp(postcode) {
+    ui.mp = { loading: true };
+    render();
+    try {
+      const api = "https://members-api.parliament.uk/api/";
+      const found = await (await fetch(api + "Location/Constituency/Search?take=1&searchText=" + encodeURIComponent(postcode))).json();
+      const c = found.items && found.items[0] && found.items[0].value;
+      const m = c && c.currentRepresentation && c.currentRepresentation.member && c.currentRepresentation.member.value;
+      if (!m) throw new Error("none");
+      const contact = await (await fetch(api + "Members/" + m.id + "/Contact")).json();
+      const emails = (contact.value || []).filter((x) => x.email);
+      const email = (emails.find((x) => /parliament/i.test(x.type || "")) || emails[0] || {}).email;
+      ui.mp = { name: m.nameDisplayAs, constituency: c.name, email: email || "", id: m.id };
+    } catch (e) {
+      ui.mp = { error: "We couldn't find an MP for that postcode. Check it and try again." };
+    }
+    render();
   }
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
     return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
       "Find yours, free, with CO2 Counter:";
   }
+  const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  // Postcode -> MP, then the email button with the letter (Habits box and
+  // the act 6 page share this).
+  function mpFinderHtml(info) {
+    const mp = ui.mp || {};
+    const finder =
+      '<form id="mp-form" class="hb-mp-form"><input class="input" id="mp-postcode" autocomplete="postal-code" placeholder="Your postcode" maxlength="10" value="' + esc(ui.mpPostcode || "") + '" aria-label="Your postcode" />' +
+      '<button type="submit" class="btn btn-outline btn-sm"' + (mp.loading ? " disabled" : "") + ">" + (mp.loading ? "Finding…" : "Find my MP") + "</button></form>" +
+      (mp.error ? '<p class="xs red">' + esc(mp.error) + "</p>" : "");
+    const letter = mp.name
+      ? '<div class="hb-mp"><p class="sm"><b>' + esc(mp.name) + "</b>, MP for " + esc(mp.constituency) + "</p>" +
+        (mp.email
+          ? '<a class="btn btn-green btn-sm mt-2" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
+            '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>"
+          : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
+        "</div>"
+      : "";
+    return { finder, letter };
+  }
+  // Act 6: verified when the BCC copy of the letter reaches us. Without the
+  // verification set up yet, it falls back to a tick by hand.
+  function mobiliseAct(ticked) {
+    const base = { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action" };
+    const info = ui.actsInfo;
+    if (!info) return { ...base, manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
+      extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" };
+    const verified = info.verified && info.verified.mobilise;
+    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · your letter to your MP reached us on " + longDate(verified) };
+    const { finder, letter } = mpFinderHtml(info);
+    return { ...base, done: false, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
+  }
+  function shareButtonsHtml(url, text) {
+    return (
+      '<span class="hb-share">' +
+      '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
+      '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
+      '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
+      '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
+      '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "")
+    );
+  }
+  // Act 7: verified by invite link, once seven people who joined with it
+  // have finished the survey.
+  function motivateAct(ticked, url, text) {
+    const base = { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts" };
+    const info = ui.actsInfo;
+    const shares = shareButtonsHtml(url, text);
+    if (!info) return { ...base, manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in", extra: shares };
+    const n = Math.min(7, info.finished || 0);
+    const verified = (info.verified && info.verified.motivate) || n >= 7;
+    return {
+      ...base, done: !!verified, verifiedTick: !!verified,
+      sub: verified ? "Verified · seven people you invited have taken the survey" : n + " of 7 people you invited have taken the survey" + (info.joined > n ? " (" + info.joined + " joined)" : ""),
+      extra: '<span class="xs muted hb-invite">Your invite link: <b>' + esc(inviteLink().replace(/^https:\/\//, "")) + "</b></span>" + shares,
+    };
+  }
+
+  // ---------- 7 Acts pages (acts 5-7; acts 1-4 open Greener switches) ----------
+
+  const ACT_PAGES = { monitor: 5, mobilise: 6, motivate: 7 };
+  function actHero(n, title, why, done, statusText) {
+    return (
+      '<p class="crumbs"><a href="#/habits">My Habits</a> › <span>Act ' + n + " of 7</span></p>" +
+      '<header class="glass cat-hero rise"><span class="cat-watermark display act-num" aria-hidden="true">' + n + "</span>" +
+      '<div class="cat-hero-main"><span class="tag done-tag">Real Zero · Act ' + n + '</span><h1 class="cat-title display">' + esc(title) + '</h1><p class="cat-why">' + why + "</p></div>" +
+      '<div class="cat-hero-side"><div class="cat-figs act-status' + (done ? " done" : "") + '"><span class="hb-box" aria-hidden="true">' + (done ? icon("check") : "") + '</span><b class="display">' + (done ? "Done" : "Not yet") + '</b><span class="muted sm">' + esc(statusText) + "</span></div></div></header>"
+    );
+  }
+  const actStep = (n, title, body) =>
+    '<section class="glass guide-card act-step"><div class="label-row"><span class="act-step-n display">' + n + '</span><h2 class="display">' + title + "</h2></div>" + body + "</section>";
+  const actLinks = (rows) =>
+    '<section class="glass guide-card"><h2 class="display">' + rows.title + '</h2><ul class="act-more">' +
+    rows.items.map(([t, b, href]) => '<li><a href="' + href + '" target="_blank" rel="noopener"><b>' + t + "</b><span class=\"sm muted\">" + b + "</span>" + icon("link") + "</a></li>").join("") + "</ul></section>";
+
+  function renderActPage(key) {
+    const n = ACT_PAGES[key];
+    if (!n) return '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/habits">Back to My Habits</a></div></div>';
+    const ready = survey && survey.completedAt;
+    const ticked = actsTicked();
+    const info = ui.actsInfo;
+    let html = '<div class="container narrow act-page">';
+
+    if (key === "monitor") {
+      const hist = historyByDay();
+      const last = hist[0] || (ready ? { completedAt: survey.completedAt, totalYearly: footprint(survey).totalYearly } : null);
+      const first = hist[hist.length - 1];
+      const days = last ? Math.floor((Date.now() - Date.parse(last.completedAt)) / 86400000) : null;
+      html += actHero(5, "Monitor your CO₂ footprint", "Measuring shows where your biggest cuts are, and measuring again shows what's working. Your survey is the measurement: check in whenever something changes.", !!ready,
+        last ? "Last measured " + longDate(last.completedAt) : "Take the survey to measure it");
+      html += actStep(1, "Your measurements",
+        last
+          ? '<ol class="act-hist">' + (hist.length ? hist : [last]).slice(0, 6).map((h, i) =>
+              '<li><span class="sm">' + esc(longDate(h.completedAt)) + (i === 0 ? ' <span class="xs muted">latest</span>' : "") + '</span><b class="display tnum">' + kgFmt(h.totalYearly) + " kg</b></li>").join("") + "</ol>" +
+            (hist.length > 1 && first ? '<p class="sm mt-3 ' + (last.totalYearly <= first.totalYearly ? "green-dark" : "clay") + '">' + (last.totalYearly <= first.totalYearly ? "▼ " : "▲ ") + kgFmt(Math.abs(last.totalYearly - first.totalYearly)) + " kg a year since your first, on " + esc(longDate(first.completedAt)) + ".</p>" : "") +
+            '<a class="btn btn-outline btn-sm mt-3" href="#/results">See your results ' + icon("arrowRight") + "</a>"
+          : '<p class="sm muted">You haven\'t measured your footprint yet. It takes about five minutes.</p><a class="btn btn-green mt-3" href="#/">Take the survey ' + icon("arrowRight") + "</a>");
+      html += actStep(2, "When to measure again",
+        '<p class="sm">Every three months, or after a big change: moving home, a new car, a new job, switching bank or energy, or changing how you eat.</p>' +
+        (days != null && days >= 90 ? '<p class="sm fw-700 mt-2">It\'s been ' + days + " days since you last measured. Time for a check-in.</p>" : days != null ? '<p class="sm muted mt-2">You measured ' + (days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago") + ".</p>" : "") +
+        (ready ? '<button type="button" class="btn btn-green btn-sm mt-3" data-action="whats-changed">Update my survey ' + icon("arrowRight") + "</button>" : ""));
+      html += actStep(3, "Cut where you can", '<p class="sm">Your results show your biggest areas first, and Acts 1 to 4 are the switches that cut them.</p><a class="btn btn-outline btn-sm mt-3" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>");
+    }
+
+    if (key === "mobilise") {
+      const verified = info && info.verified && info.verified.mobilise;
+      const done = info ? !!verified : !!ticked.mobilise;
+      html += actHero(6, "Mobilise: use your vote", "Personal choices matter, and so do the rules everyone lives by. MPs read what their constituents send them, and a letter in your own words is one of the most direct ways to show that climate matters to voters where you live.", done,
+        verified ? "Verified · your letter reached us on " + longDate(verified) : !info ? (ticked.mobilise ? "Ticked by you" : "Write to your MP, then tick it") : ticked.mpSent ? "Waiting for our copy of your letter" : "Write to your MP to complete it");
+      if (info && !verified) {
+        const { finder, letter } = mpFinderHtml(info);
+        const mp = ui.mp || {};
+        html += actStep(1, "Find your MP", '<p class="sm mb-3">Enter your postcode. We look it up on Parliament\'s own records.</p>' + finder + (mp.name ? '<p class="sm mt-3"><b>' + esc(mp.name) + "</b>, MP for " + esc(mp.constituency) + "</p>" : ""));
+        html += actStep(2, "Send your letter",
+          mp.name
+            ? letter.replace(/<p class="sm"><b>[^<]*<\/b>, MP for [^<]*<\/p>/, "") +
+              (mp.email ? '<details class="act-letter mt-3"><summary class="sm fw-700">Preview the letter</summary><pre>' + esc(decodeURIComponent(mpLetter(mp).split("&body=")[1] || "")) + "</pre></details>" : "")
+            : '<p class="sm muted">Find your MP first. Then a button opens your own email app with a letter ready to edit: say what matters to you, and add your name and address.</p>');
+        html += actStep(3, "We verify it", '<p class="sm">We\'re copied in (BCC, ' + MP_COPY + "), so your MP doesn't see us. When our copy arrives we match your reference, <b>CO2-" + esc(info.code) + "</b>, tick this act as verified and delete the email.</p>");
+      } else if (!info) {
+        html += actStep(1, "Write to your MP", '<p class="sm">WriteToThem finds your MP from your postcode and sends your message for you.</p><a class="btn btn-green btn-sm mt-3" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>");
+        html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="mobilise">' + (ticked.mobilise ? "Untick" : "I've written to my MP") + "</button>");
+      } else {
+        html += actStep(1, "Thank you", '<p class="sm">Your letter reached us, so this act is verified. Keep an eye out for your MP\'s reply, and write again when climate votes come up.</p>');
+      }
+      html += actLinks({ title: "More ways to use your voice", items: [
+        ["Register to vote", "Takes about 5 minutes. You need to be registered to vote in elections.", "https://www.gov.uk/register-to-vote"],
+        ["Write to your councillors", "Councils run planning, transport and housing. WriteToThem finds yours.", "https://www.writetothem.com/"],
+        ["Sign or start a petition", "Parliament considers petitions with 100,000 signatures for debate.", "https://petition.parliament.uk/"],
+        ["Find your MP's contact details", "Including their office and surgery details.", "https://members.parliament.uk/FindYourMP"],
+      ] });
+    }
+
+    if (key === "motivate") {
+      const nDone = info ? Math.min(7, info.finished || 0) : 0;
+      const verified = info && ((info.verified && info.verified.motivate) || nDone >= 7);
+      const done = info ? !!verified : !!ticked.motivate;
+      const url = encodeURIComponent(inviteLink());
+      const text = encodeURIComponent(shareText() + " " + inviteLink());
+      html += actHero(7, "Motivate seven other people", "Change spreads through the people we know. The seventh act is to get seven others measuring their footprint and doing their own 7 Acts.", done,
+        !info ? (ticked.motivate ? "Ticked by you" : "Share CO2 Counter, then tick it") : verified ? "Verified · seven people you invited have taken the survey" : nDone + " of 7 so far");
+      if (info) {
+        html += actStep(1, "Your progress",
+          '<div class="act-dots" role="img" aria-label="' + nDone + ' of 7">' + [0, 1, 2, 3, 4, 5, 6].map((i) => '<span class="' + (i < nDone ? "on" : "") + '">' + (i < nDone ? icon("check") : "") + "</span>").join("") + "</div>" +
+          '<p class="sm mt-3"><b>' + nDone + " of 7</b> people you invited have taken the survey" + (info.joined > nDone ? ", and " + (info.joined - nDone) + " more have joined but not finished yet" : "") + ".</p>" +
+          '<p class="xs muted mt-2">Someone counts when they sign up with your link and finish their survey. We never show you who they are or their answers.</p>');
+        // Reductions by people who joined with an invite: yours, and everyone's.
+        const cutLine = (kg) => '<b class="display tnum act-cut">−' + kgFmt(kg) + ' kg</b><span class="sm muted"> CO₂e a year</span>';
+        html += actStep(2, "Your invites' impact",
+          '<div class="act-impact"><div><span class="eyebrow">People you invited</span>' +
+            (info.cut != null
+              ? '<p>' + cutLine(info.cut) + '</p><p class="xs muted">Cut between them since their first survey, across ' + info.cut_people + (info.cut_people === 1 ? " person" : " people") + " who've measured twice.</p>"
+              : '<p class="sm muted mt-1">Once two or more people you invited have updated their survey, you\'ll see how much they\'ve cut between them.</p>') +
+          '</div><div><span class="eyebrow">Everyone\'s invites</span>' +
+            (info.global_cut != null
+              ? '<p>' + cutLine(info.global_cut) + '</p><p class="xs muted">Cut by the ' + kgFmt(info.global_people) + " people who joined CO2 Counter through a friend and have measured twice.</p>"
+              : '<p class="sm muted mt-1">The total across CO2 Counter appears once enough people who joined through a friend have measured twice.</p>') +
+          "</div></div>" +
+          '<p class="xs muted mt-3">A reduction is the drop from someone\'s first survey to their latest. Totals only: we never show anyone\'s own figures.</p>');
+        html += actStep(3, "Share your invite link",
+          '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" +
+          '<div class="mt-3">' + shareButtonsHtml(url, text) + "</div>");
+      } else {
+        html += actStep(1, "Share CO2 Counter", shareButtonsHtml(url, text));
+        html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="motivate">' + (ticked.motivate ? "Untick" : "Seven people have joined in") + "</button>");
+      }
+      html += actStep(info ? 4 : 3, "Ideas that work",
+        '<ul class="act-ideas">' +
+        '<li><b>Start a group.</b> Make one on the <a href="#/friends">Friends</a> page for your team, family or housemates, and compare progress together.</li>' +
+        "<li><b>Share your result.</b> Your footprint is a good conversation starter. The share message includes it.</li>" +
+        "<li><b>Bring it to work.</b> Staff networks and green teams are a natural fit, and many employers run sustainability weeks.</li>" +
+        "<li><b>Do it together.</b> Taking the survey side by side takes five minutes and makes it easy to start.</li></ul>");
+    }
+    return html + '<div class="center mt-6"><a class="btn btn-outline" href="#/habits">' + icon("arrowLeft") + " Back to My Habits</a></div></div>";
+  }
+
   function renderHabitsPage() {
     const ready = survey && survey.completedAt;
     const areas = ready ? switchAreas({ s: survey, mine: true }) : [];
@@ -3246,41 +3484,45 @@
     const travel = ready ? [area("commute"), area("flights")] : [];
     const travelSave = travel.reduce((t, a) => t + (a.done ? 0 : a.save), 0);
     const auto = (a) => (ready ? { done: a.done, sub: a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet" } : { done: false, sub: "Finish your survey to see" });
-    const url = encodeURIComponent(PRODUCTION_URL);
-    const text = encodeURIComponent(shareText() + " " + PRODUCTION_URL);
+    const url = encodeURIComponent(inviteLink());
+    const text = encodeURIComponent(shareText() + " " + inviteLink());
     const acts = [
       { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
-      { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
+      asksBillPayer(ready ? survey : null)
+        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!ticked.energyAsked,
+            sub: ticked.energyAsked ? "Done · you've asked whoever chooses your supplier to switch" : "Someone else chooses your supplier: ask them to switch",
+            extra: energyAskBox(), keepExtra: true }
+        : { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
       { n: 3, name: "More plant-based food", what: "seasonal and local where you can", cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
       { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", cat: travel.length && travel[0].done ? "flights" : "commute",
         done: ready && travel.every((a) => a.done),
         sub: !ready ? "Finish your survey to see" : travel.every((a) => a.done) ? "Done · green commute and no flights" :
           [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
-      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: ready ? "#/results" : "#/", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
-      { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action", manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
-        extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" },
-      { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts", manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in",
-        extra:
-          '<span class="hb-share">' +
-          '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
-          '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
-          '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
-          '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
-          '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
-          '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "") },
+      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: "#/acts/monitor", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
+      mobiliseAct(ticked),
+      motivateAct(ticked, url, text),
     ];
     const made = acts.filter((a) => a.done).length;
     const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>";
     const body = (a) =>
       '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
+    // Acts with extras (the MP finder, the share buttons) keep them inside
+    // their own box, under the act.
     const rows = acts
-      .map((a) =>
-        a.manual
-          ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" +
-            '<div class="hb-extra">' + a.extra + "</div></li>"
-          : '<li class="hb-item"><a class="hb-row' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
-            '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>"
-      )
+      .map((a) => {
+        const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
+        const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
+        // Hand-ticked acts keep their tick box, so they can be unticked here.
+        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + pageLink + "</div>" : a.manual && page ? '<div class="hb-extra">' + pageLink + "</div>" : "";
+        if (page && !a.manual && (a.done || !a.extra))
+          return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + page + '">' + box(a) + body(a) + icon("chevronRight") + "</a></li>";
+        if (a.manual)
+          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
+        if (a.extra || (a.verifiedTick && !a.cat && !a.href))
+          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row">' + box(a) + body(a) + "<span></span></div>" + extra + "</li>";
+        return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
+          '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
+      })
       .join("");
     return (
       '<div class="container narrow">' + pageHeader("My Habits", "One-off changes, and habits you keep") +
@@ -3547,6 +3789,35 @@
     return html;
   }
 
+  // For people who don't choose their supplier: a message to whoever does,
+  // with the whole home's saving, by email (their own app) or copied.
+  const asksBillPayer = (s) => !!s && s.energy && s.energy.billPayer === "other" && !s.energy.greenTariff;
+  function energyAskText() {
+    const e = survey.energy || {};
+    const year = 12 * (e.electricityKwh || 0);
+    const cut = year * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR);
+    const pct = Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100);
+    const names = D.USEFUL_LINKS.energy.items.map((l) => l.label).join(", ").replace(/, ([^,]*)$/, " and $1");
+    return {
+      subject: "Could we switch to a renewable electricity tariff?",
+      body:
+        "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
+        "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\nThanks,\n[Your name]",
+    };
+  }
+  function energyAskBox() {
+    const t = energyAskText();
+    const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
+    return (
+      '<div class="ask-box"><p class="sm">Someone else chooses your supplier, so your switch is asking them. Here\'s a message ready to send, with your home\'s numbers in it.</p>' +
+      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">Email them ' + icon("arrowRight") + "</a>" +
+      '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
+      '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
+      (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
+      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app opens with the message, and you add who it\'s to.</p></div>'
+    );
+  }
+
   // Standard against green for their own electricity, then the suppliers.
   function greenTariffSheet() {
     const e = survey.energy || {};
@@ -3564,6 +3835,7 @@
         '<p class="xs muted mt-2">' + kgFmt(e.electricityKwh || 0) + " kWh a month" + (hh > 1 ? ", your share of " + hh : "") + ". Grid " + D.ELECTRICITY_FACTOR + " kg per kWh, renewable " + D.GREEN_ELECTRICITY_FACTOR + ".</p>",
       e.greenTariff ? chipBig("Already saving " + kgFmt(std - green) + " kg") : chipBig("Switching saves " + kgFmt(std - green) + " kg")
     );
+    if (asksBillPayer(survey)) return html + panel("Ask whoever chooses your supplier", energyAskBox());
     const links = linksFor("energy");
     if (links)
       html += panel(
@@ -4116,7 +4388,10 @@
       { key: "energy", short: "Energy", effort: "One-off · a few minutes", ex: 8, save: saving("energy"), verb: "Switch to", panel: "#D9A441", panelInk: "#2E2A22", dropInk: "#2B4128",
         done: energyDone,
         doneTitle: "You're on a green tariff",
-        fact: energyDone
+        askHtml: base.mine && asksBillPayer(s) ? energyAskBox() : "",
+        fact: base.mine && asksBillPayer(s)
+          ? "Someone else chooses your supplier, so the switch is asking them. A renewable tariff would cut your home's electricity emissions by {{green_cut}}."
+          : energyDone
           ? "You're already on a renewable tariff, which cuts your electricity emissions by {{green_cut}}. Going further means using less: heating, insulation and, in time, a heat pump."
           : "A renewable tariff can cut electricity emissions by {{green_cut}}, with no new equipment, and your power never cuts out during the switch.",
         vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: energyDone ? "Yours: green tariff" : "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
@@ -4217,7 +4492,7 @@
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
           '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">' + esc(a.eyebrow) + "</span>") + '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
           (a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") + "</div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.links.length ? '<div class="sw-offers">' +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;
@@ -4578,6 +4853,11 @@
     let html = '<div class="container analytics-page">' + pageHeader("Analytics", "How people use CO2 Counter", "chart");
     if (!analytics.loaded) return html + '<section class="glass an-card"><p class="muted">Loading…</p></section></div>';
     if (analytics.error) return html + '<section class="glass an-card"><p class="fw-700">Couldn\'t load the analytics</p><p class="sm muted">' + esc(analytics.error) + '</p><button type="button" class="btn btn-outline btn-sm mt-3" data-action="refresh-analytics">Try again</button></section></div>';
+    // Letters to MPs arrive by BCC with a reference; verifying ticks act 6.
+    html +=
+      '<section class="glass an-card"><h2 class="card-title">Verify a letter to an MP</h2><p class="sm muted">Letters BCC\'d to ' + MP_COPY + " carry a reference like CO2-ABC123. Enter it to verify that person's act 6, then delete the email.</p>" +
+      '<form id="verify-mp-form" class="hb-mp-form mt-3"><input class="input" id="verify-mp-code" placeholder="CO2-ABC123" maxlength="12" aria-label="Reference" /><button type="submit" class="btn btn-green btn-sm">Verify</button></form>' +
+      (ui.verifyMsg ? '<p class="xs mt-2 ' + (ui.verifyMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.verifyMsg.text) + "</p>" : "") + "</section>";
     const m = analyticsModel();
     const t = m.totals;
     const uk = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY).totalYearly);
@@ -4983,7 +5263,9 @@
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
-            "<strong>Habits</strong>: the actions you tick yourself on the Habits page, such as writing to your MP or sharing CO2 Counter, so they're there on any device.",
+            "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
+            "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
+            "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
@@ -5696,6 +5978,7 @@
     ui.userName = currentUser ? await displayName(currentUser) : "";
     await checkMembership();
     await checkAdmin();
+    claimReferral();
     if (canSync()) {
       // Answers entered on this device as a guest are uploaded if the
       // account has nothing saved yet.
@@ -5901,6 +6184,7 @@
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
+    else if (parts[0] === "acts" && parts[1]) html = renderActPage(parts[1]);
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
@@ -6107,6 +6391,22 @@
       ui.airport = null;
       surveyChanged();
       render();
+    },
+    "set-billpayer": (el) => {
+      survey.energy = { ...survey.energy, billPayer: el.dataset.value };
+      surveyChanged();
+      render();
+    },
+    "energy-asked": () => {
+      const t = { ...actsTicked(), energyAsked: true };
+      try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      if (ui.acts) ui.acts = t;
+      if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
+      setTimeout(render, 300);
+    },
+    "copy-energy-ask": async () => {
+      try { await navigator.clipboard.writeText(energyAskText().body); ui.askMsg = "Copied. Paste it into a message to them."; } catch (e) { ui.askMsg = "Couldn't copy. Select the text in your email app instead."; }
+      actions["energy-asked"]();
     },
     "set-green": (el) => {
       survey.energy = { ...survey.energy, greenTariff: el.dataset.value === "1" };
@@ -6319,17 +6619,29 @@
         try { await sb.from("profiles").update({ acts: t }).eq("id", currentUser.id); } catch (e) {}
       }
     },
+    // The mailto opens as normal; this just remembers it was sent.
+    "mp-sent": () => {
+      const t = { ...actsTicked(), mpSent: true };
+      try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      if (ui.acts) ui.acts = t;
+      if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
+      setTimeout(render, 300);
+    },
+    "copy-invite": async () => {
+      try { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied."; } catch (e) { ui.shareMsg = "Couldn't copy. Select the link instead."; }
+      render();
+    },
     "share-app": async () => {
       const text = shareText();
       try {
-        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: PRODUCTION_URL });
-        else { await navigator.clipboard.writeText(text + " " + PRODUCTION_URL); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
+        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: inviteLink() });
+        else { await navigator.clipboard.writeText(text + " " + inviteLink()); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
       } catch (e) {}
     },
     // Instagram has no share link: copy the words, then open Instagram to
     // paste them into a story or post.
     "share-instagram": async () => {
-      try { await navigator.clipboard.writeText(shareText() + " " + PRODUCTION_URL); } catch (e) {}
+      try { await navigator.clipboard.writeText(shareText() + " " + inviteLink()); } catch (e) {}
       ui.shareMsg = "Copied. Paste it into an Instagram story or post, with a link sticker to co2counter.co.uk.";
       render();
       window.open("https://www.instagram.com/", "_blank", "noopener");
@@ -6664,6 +6976,21 @@
       }
       return;
     }
+    if (e.target.id === "mp-form") {
+      e.preventDefault();
+      ui.mpPostcode = document.getElementById("mp-postcode").value.trim();
+      if (ui.mpPostcode.length >= 5) findMp(ui.mpPostcode);
+      return;
+    }
+    if (e.target.id === "verify-mp-form") {
+      e.preventDefault();
+      const code = document.getElementById("verify-mp-code").value.trim();
+      if (!code) return;
+      const { data, error } = await sb.rpc("verify_mp_letter", { p_code: code });
+      ui.verifyMsg = error ? { ok: false, text: /reference/i.test(error.message || "") ? "No account has that reference." : "Couldn't verify: " + (error.message || "try again") } : { ok: true, text: "Verified for " + data + "." };
+      render();
+      return;
+    }
     if (e.target.id === "about-you-form") {
       e.preventDefault();
       const role = document.getElementById("about-role").value || null;
@@ -6756,6 +7083,7 @@
       ui.userName = await displayName(currentUser);
       await checkMembership();
       checkAdmin().then(() => ui.isAdmin && render());
+      claimReferral();
     }
     // The latest figures from the Inputs page (the cached ones are already in use).
     loadInputs().then((changed) => changed && render());
