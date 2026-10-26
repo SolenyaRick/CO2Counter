@@ -4362,3 +4362,8 @@ a.hb-card:hover { background: rgba(163, 181, 143, 0.22); }
 .section-card.todo.na .todo-title, .section-card.todo.na .todo-body { color: var(--muted-fg); }
 .section-card.todo.na .num-badge { background: rgba(46, 42, 34, 0.1); color: var(--muted-fg); }
 .section-card.todo.na .todo-more { opacity: 0.4; }
+/* Habits: asked, waiting for someone to confirm (not ticked yet) */
+.hb-card.pending { background: rgba(46, 42, 34, 0.05); border-color: rgba(46, 42, 34, 0.18); }
+.hb-card.pending .hb-box { background: rgba(46, 42, 34, 0.1); border-color: rgba(46, 42, 34, 0.35); color: var(--muted-fg); }
+.hb-card.pending .hb-box .icon { width: 15px; height: 15px; }
+.hb-card.pending .hb-sub { color: var(--muted-fg); font-weight: 700; }

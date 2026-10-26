@@ -10,7 +10,8 @@
 // Limits: one MP letter a week, three energy messages a day, per person.
 //
 // Secrets (Supabase > Edge Functions > Secrets): RESEND_API_KEY, and
-// optionally LETTERS_FROM (default "CO2 Counter <letters@send.co2counter.co.uk>").
+// optionally LETTERS_FROM (default "CO2 Counter <letters@co2counter.co.uk>": Resend verifies
+// co2counter.co.uk itself; "send." only holds its bounce records).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
 const env = (k: string) => (globalThis as any).Deno.env.get(k);
@@ -67,7 +68,7 @@ async function sendEmail(mail: Record<string, unknown>) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: "Bearer " + env("RESEND_API_KEY"), "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env("LETTERS_FROM") || "CO2 Counter <letters@send.co2counter.co.uk>", ...mail }),
+    body: JSON.stringify({ from: env("LETTERS_FROM") || "CO2 Counter <letters@co2counter.co.uk>", ...mail }),
   });
   if (!res.ok) throw new Error("resend " + res.status + " " + (await res.text()));
 }
@@ -128,7 +129,9 @@ export async function handler(req: Request): Promise<Response> {
     return json({ error: "Unknown letter type." }, 400);
   } catch (e) {
     console.error(e);
-    return json({ error: "Couldn't send just now. Please try again, or use your own email app." }, 500);
+    // The reason, for the site's admin to see (no personal data in it).
+    const detail = String((e && (e as Error).message) || e).slice(0, 300);
+    return json({ error: "Couldn't send just now. Please try again, or use your own email app.", detail }, 500);
   }
 }
 
