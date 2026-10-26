@@ -53,9 +53,8 @@ nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span
 .me .meName{font-size:19px!important}
 .me .av{width:46px!important;height:46px!important;font-size:17px!important}
 .feed{order:2;gap:10px!important}
-.rail{order:3}
+.invite{order:3}
 .manage{order:4}
-.invite{order:5}
 .strip{margin:0 -16px!important;padding:2px 16px 4px!important;gap:12px!important}
 .story .av{width:54px!important;height:54px!important;font-size:18px!important}
 .story svg{width:62px!important;height:62px!important}
@@ -126,10 +125,35 @@ footer[style]{flex-direction:column;gap:10px!important}
           </div>
           <div style="margin-top: 6px; font-size: 12px; font-weight: 700; color: #5C5649">2 of 7 have taken the survey</div>
         </section>
+        <section class="manage box glass" aria-labelledby="addf" style="padding: 20px; border-radius: 26px">
+          <h2 id="addf" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Add a friend</h2>
+          <form onSubmit="{{send}}" style="margin-top: 12px; display: flex; gap: 8px">
+            <input class="fld" style="flex: 1; font-size: 14px" placeholder="Username or email" aria-label="Friend’s username or email" autocapitalize="none" spellcheck="false">
+            <button class="btn" type="submit" style="height: 46px; padding: 0 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-size: 15px">Send</button>
+          </form>
+          <sc-if value="{{sent}}" hint-placeholder-val="{{false}}"><p style="margin: 8px 0 0; font-size: 13px; font-weight: 700; color: #2B4128">Request sent.</p></sc-if>
+          <div style="margin-top: 16px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Waiting for a reply</div>
+          <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px">
+            <span class="av" style="width: 32px; height: 32px; background: rgba(46,42,34,.08); color: #5C5649; font-size: 13px; border: 1.5px dashed rgba(46,42,34,.25)">T</span>
+            <span style="flex: 1; font-size: 15px; font-weight: 700">Tom</span>
+            <button class="btn" type="button" style="height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(46,42,34,.06); color: #5C5649; font-size: 13px">Cancel</button>
+          </div>
+          <details style="margin-top: 14px; border-top: 1px solid rgba(46,42,34,.1); padding-top: 12px">
+            <summary style="cursor: pointer; font-size: 14px; font-weight: 700; color: #3F5B3A">Manage friends and your name</summary>
+            <div style="margin-top: 10px; display: grid; gap: 6px">
+              <sc-for list="{{manage}}" as="m" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 10px"><span class="av" style="width: 28px; height: 28px; background: {{m.bg}}; color: {{m.ink}}; font-size: 12px">{{m.ini}}</span><span style="flex: 1; font-size: 14px; font-weight: 600">{{m.name}}</span><button class="btn" type="button" style="font-size: 13px; color: #8A3A1C">Remove</button></div>
+              </sc-for>
+              <label style="margin-top: 8px; font-size: 13px; font-weight: 700">Name your friends see
+                <span style="margin-top: 6px; display: flex; gap: 8px"><input class="fld" style="flex: 1; height: 40px" value="Alex"><button class="btn" type="button" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.18); font-size: 14px">Save</button></span>
+              </label>
+            </div>
+          </details>
+        </section>
       </aside>
 
       <!-- Centre: feed -->
-      <main class="feed" style="flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+      <main class="feed" style="flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
         <div class="strip" role="list" aria-label="Your friends" style="display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 6px">
           <sc-for list="{{stories}}" as="s" hint-placeholder-count="6">
             <a class="story" role="listitem" href="{{s.href}}" style="flex: none; width: 70px; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #2E2A22; text-decoration: none">
@@ -152,12 +176,30 @@ footer[style]{flex-direction:column;gap:10px!important}
           </div>
         </sc-if>
         <sc-if value="{{reqMsg}}" hint-placeholder-val="{{false}}"><p style="margin: 0; padding: 0 6px; font-size: 14px; font-weight: 700; color: #2B4128">{{reqText}}</p></sc-if>
-
-        <section class="digest" aria-label="This week in your circle" style="display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 24px; background: #2B3F28; color: #F6F1E6">
-          <span style="flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: rgba(163,181,143,.22); color: #C9D3BC"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7"></path></svg></span>
-          <span style="flex: 1; min-width: 0"><span style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #C9D3BC">This month in your circle</span><span style="font-size: 15px; color: #F6F1E6">2 retakes · 1 new friend</span></span>
-          <span style="text-align: right"><span class="num" style="display: block; font-size: 30px; font-weight: 800; color: #E8C88A; line-height: 1">−995</span><span style="font-size: 12px; color: #C9D3BC">kg a year, net</span></span>
+        <section class="rail box glass" aria-labelledby="standings" style="padding: 22px; border-radius: 26px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap"><h2 id="standings" class="hd" style="margin: 0; font-size: 24px; font-weight: 800">Standings</h2><span style="font-size: 13px; color: #8A8273">Updated 1 November</span></div>
+          <div role="tablist" aria-label="Standings" style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(46,42,34,.06)">
+            <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+              <button class="btn tab" role="tab" aria-selected="{{t.on}}" type="button" onClick="{{t.pick}}" style="height: 36px; border-radius: 10px; background: {{t.bg}}; color: {{t.ink}}; font-size: 14px; box-shadow: {{t.shadow}}">{{t.label}}</button>
+            </sc-for>
+          </div>
+          <ol style="list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px">
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+              <li style="display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border-radius: 14px; background: {{r.bg}}">
+                <span class="num" style="font-size: 14px; font-weight: 800; color: {{r.rankInk}}; text-align: center">{{r.n}}</span>
+                <span class="av" style="width: 34px; height: 34px; background: {{r.avBg}}; color: {{r.avInk}}; font-size: 13px">{{r.ini}}</span>
+                <span style="min-width: 0"><span style="display: block; font-size: 15px; font-weight: 700">{{r.name}}</span><span style="display: block; margin-top: 4px; height: 5px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 100%; width: {{r.w}}%; border-radius: 99px; background: {{r.bar}}"></span></span></span>
+                <span class="num" style="font-size: 15px; font-weight: 800; color: {{r.valInk}}; white-space: nowrap">{{r.val}}</span>
+              </li>
+            </sc-for>
+          </ol>
+          <p style="margin: 10px 0 0; font-size: 12px; line-height: 1.45; color: #8A8273">{{tabNote}}</p>
         </section>
+        <div class="feedhead" style="margin-top: 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+          <h2 class="hd" style="margin: 0; font-size: 24px; font-weight: 800">Feed</h2>
+          <span style="font-size: 13px; color: #8A8273">Retakes, monthly standings and milestones</span>
+        </div>
+
 
         <sc-for list="{{posts}}" as="p" hint-placeholder-count="5">
           <article class="post glass rise" style="padding: 20px; border-radius: 26px; animation-delay: {{p.delay}}s">
@@ -177,6 +219,26 @@ footer[style]{flex-direction:column;gap:10px!important}
                   <span style="color: #5C5649">Before</span><span style="height: 10px; border-radius: 99px; background: rgba(46,42,34,.06)"><span class="bar" style="display: block; height: 100%; width: {{p.beforeW}}%; border-radius: 99px; background: rgba(46,42,34,.22)"></span></span><span class="num" style="text-align: right; font-weight: 700">{{p.before}} t</span>
                   <span style="color: #5C5649">Now</span><span style="height: 10px; border-radius: 99px; background: rgba(46,42,34,.06)"><span class="bar" style="display: block; height: 100%; width: {{p.afterW}}%; border-radius: 99px; background: {{p.afterBar}}; animation-delay: .25s"></span></span><span class="num" style="text-align: right; font-weight: 800">{{p.after}} t</span>
                 </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{p.isMonthly}}" hint-placeholder-val="{{false}}">
+              <div class="pcard" style="margin-top: 14px; padding: 16px; border-radius: 18px; background: #2B3F28; color: #F6F1E6">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+                  <span style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #C9D3BC">Your circle in October</span>
+                  <span><span class="num big" style="font-size: 26px; font-weight: 800; color: #E8C88A">−995</span> <span style="font-size: 13px; color: #C9D3BC">kg a year, net</span></span>
+                </div>
+                <ol style="list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px">
+                  <sc-for list="{{p.moves}}" as="m" hint-placeholder-count="5">
+                    <li style="display: grid; grid-template-columns: 22px 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 12px; background: {{m.bg}}">
+                      <span class="num" style="font-size: 14px; font-weight: 800; color: #C9D3BC; text-align: center">{{m.n}}</span>
+                      <span class="av" style="width: 28px; height: 28px; background: {{m.avBg}}; color: {{m.avInk}}; font-size: 11px">{{m.ini}}</span>
+                      <span style="font-size: 14px; font-weight: 700">{{m.name}}</span>
+                      <span class="num" style="font-size: 13px; font-weight: 800; color: {{m.ink}}">{{m.move}}</span>
+                    </li>
+                  </sc-for>
+                </ol>
+                <p style="margin: 10px 0 0; font-size: 13px; color: #C9D3BC">2 retakes · 1 new friend this month</p>
               </div>
             </sc-if>
 
@@ -204,54 +266,6 @@ footer[style]{flex-direction:column;gap:10px!important}
         <p style="margin: 4px 0 0; text-align: center; font-size: 14px; color: #8A8273">You’re all caught up</p>
       </main>
 
-      <!-- Right: standings and friends -->
-      <aside class="side" style="flex: 0 0 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
-        <section class="rail box glass" aria-labelledby="standings" style="padding: 20px; border-radius: 26px">
-          <h2 id="standings" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Standings</h2>
-          <div role="tablist" aria-label="Standings" style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(46,42,34,.06)">
-            <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
-              <button class="btn tab" role="tab" aria-selected="{{t.on}}" type="button" onClick="{{t.pick}}" style="height: 36px; border-radius: 10px; background: {{t.bg}}; color: {{t.ink}}; font-size: 14px; box-shadow: {{t.shadow}}">{{t.label}}</button>
-            </sc-for>
-          </div>
-          <ol style="list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px">
-            <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
-              <li style="display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px; border-radius: 14px; background: {{r.bg}}">
-                <span class="num" style="font-size: 14px; font-weight: 800; color: {{r.rankInk}}; text-align: center">{{r.n}}</span>
-                <span class="av" style="width: 34px; height: 34px; background: {{r.avBg}}; color: {{r.avInk}}; font-size: 13px">{{r.ini}}</span>
-                <span style="min-width: 0"><span style="display: block; font-size: 15px; font-weight: 700">{{r.name}}</span><span style="display: block; margin-top: 4px; height: 5px; border-radius: 99px; background: rgba(46,42,34,.07)"><span class="bar" style="display: block; height: 100%; width: {{r.w}}%; border-radius: 99px; background: {{r.bar}}"></span></span></span>
-                <span class="num" style="font-size: 15px; font-weight: 800; color: {{r.valInk}}; white-space: nowrap">{{r.val}}</span>
-              </li>
-            </sc-for>
-          </ol>
-          <p style="margin: 10px 0 0; font-size: 12px; line-height: 1.45; color: #8A8273">{{tabNote}}</p>
-        </section>
-
-        <section class="manage box glass" aria-labelledby="addf" style="padding: 20px; border-radius: 26px">
-          <h2 id="addf" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Add a friend</h2>
-          <form onSubmit="{{send}}" style="margin-top: 12px; display: flex; gap: 8px">
-            <input class="fld" style="flex: 1" placeholder="Username or email" aria-label="Friend’s username or email" autocapitalize="none" spellcheck="false">
-            <button class="btn" type="submit" style="height: 46px; padding: 0 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-size: 15px">Send</button>
-          </form>
-          <sc-if value="{{sent}}" hint-placeholder-val="{{false}}"><p style="margin: 8px 0 0; font-size: 13px; font-weight: 700; color: #2B4128">Request sent.</p></sc-if>
-          <div style="margin-top: 16px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Waiting for a reply</div>
-          <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px">
-            <span class="av" style="width: 32px; height: 32px; background: rgba(46,42,34,.08); color: #5C5649; font-size: 13px; border: 1.5px dashed rgba(46,42,34,.25)">T</span>
-            <span style="flex: 1; font-size: 15px; font-weight: 700">Tom</span>
-            <button class="btn" type="button" style="height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(46,42,34,.06); color: #5C5649; font-size: 13px">Cancel</button>
-          </div>
-          <details style="margin-top: 14px; border-top: 1px solid rgba(46,42,34,.1); padding-top: 12px">
-            <summary style="cursor: pointer; font-size: 14px; font-weight: 700; color: #3F5B3A">Manage friends and your name</summary>
-            <div style="margin-top: 10px; display: grid; gap: 6px">
-              <sc-for list="{{manage}}" as="m" hint-placeholder-count="4">
-                <div style="display: flex; align-items: center; gap: 10px"><span class="av" style="width: 28px; height: 28px; background: {{m.bg}}; color: {{m.ink}}; font-size: 12px">{{m.ini}}</span><span style="flex: 1; font-size: 14px; font-weight: 600">{{m.name}}</span><button class="btn" type="button" style="font-size: 13px; color: #8A3A1C">Remove</button></div>
-              </sc-for>
-              <label style="margin-top: 8px; font-size: 13px; font-weight: 700">Name your friends see
-                <span style="margin-top: 6px; display: flex; gap: 8px"><input class="fld" style="flex: 1; height: 40px" value="Alex"><button class="btn" type="button" style="height: 40px; padding: 0 12px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.18); font-size: 14px">Save</button></span>
-              </label>
-            </div>
-          </details>
-        </section>
-      </aside>
     </div>
 
     <footer style="margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
@@ -265,7 +279,7 @@ footer[style]{flex-direction:column;gap:10px!important}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, tab: 'board', cheered: { priya: false, sam: true, chris: false, you: false, jordan: false }, req: 'open', sent: false, copied: false };
+    this.state = { scroll: 0, tab: 'board', cheered: { month: false, priya: false, sam: true, chris: false, you: false, jordan: false }, req: 'open', sent: false, copied: false };
   }
   componentDidMount() {
     this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
@@ -300,14 +314,14 @@ class Component extends DCLogic {
       href: x.name === 'Invite' ? '#inv' : '#'
     }));
     const cheer = (key) => () => this.setState({ cheered: { ...st.cheered, [key]: !st.cheered[key] } });
-    const base = { priya: 11, sam: 6, chris: 3, you: 4, jordan: 2 };
+    const base = { month: 6, priya: 11, sam: 6, chris: 3, you: 4, jordan: 2 };
     const post = (key, o) => {
       const on = st.cheered[key];
       return {
         ...(P[o.name] || P.Alex), ...o, cheer: cheer(key), cheered: on ? 'true' : 'false', count: base[key] + (on ? 1 : 0),
         cheerBg: on ? '#3F5B3A' : 'rgba(63,91,58,.1)', cheerInk: on ? '#F6F1E6' : '#2B4128', cheerFill: on ? 'currentColor' : 'none',
         cheerLabel: on ? 'Cheered' : 'Cheer',
-        isRetake: o.type === 'retake', isText: !!o.text, isTip: o.type === 'tip', hasLink: !!o.link, social: o.type !== 'tip'
+        isRetake: o.type === 'retake', isText: !!o.text, isTip: o.type === 'tip', isMonthly: o.type === 'monthly', hasLink: !!o.link, social: o.type !== 'tip'
       };
     };
     const retake = (before, after) => {
@@ -318,7 +332,12 @@ class Component extends DCLogic {
         deltaInk: up ? UP : DOWN, afterBar: up ? UP : DOWN, cardBg: up ? 'rgba(184,101,61,.08)' : 'rgba(63,91,58,.08)'
       };
     };
+    const moves = [['Sam', '–'], ['Priya', '▲ 1'], ['Alex (you)', '▼ 1'], ['Jordan', '–'], ['Chris', 'New']].map(([n, mv], i) => ({
+      n: i + 1, name: n, move: mv, ini: (P[n.replace(' (you)', '')] || P.Alex).ini, avBg: (P[n.replace(' (you)', '')] || P.Alex).bg, avInk: (P[n.replace(' (you)', '')] || P.Alex).ink,
+      ink: mv.startsWith('▲') ? '#A3B58F' : mv.startsWith('▼') ? '#E8A07A' : mv === 'New' ? '#E8C88A' : '#C9D3BC', bg: n === 'Alex (you)' ? 'rgba(246,241,230,.1)' : 'transparent'
+    }));
     const posts = [
+      post('month', { name: 'CO2 Counter', ini: 'CO', bg: '#3F5B3A', ink: '#F6F1E6', verb: 'monthly standings', when: '1 November', tag: 'Monthly', tagBg: 'rgba(63,91,58,.12)', tagInk: '#2B4128', type: 'monthly', moves, cheerers: 'Priya, Sam and 4 others', link: 'Full standings', linkHref: '#standings' }),
       post('priya', { name: 'Priya', verb: 'retook the survey', when: '2 hours ago', tag: 'Retake', tagBg: 'rgba(63,91,58,.12)', tagInk: '#2B4128', ...retake(7.195, 5.9), note: 'Up to 2nd on your board', cheerers: 'Sam, Chris and 9 others', link: 'Compare', linkHref: '#standings' }),
       post('you', { name: 'Your next move', verb: '', when: 'Based on your latest results', tag: 'For you', tagBg: 'rgba(217,164,65,.22)', tagInk: '#6B4A12', type: 'tip', text: 'You’re 846 kg a year behind Priya.', cheerers: 'Priya and 3 others' }),
       post('sam', { name: 'Sam', verb: 'is still top of the board', when: 'Yesterday', tag: 'Milestone', tagBg: '#E8C88A', tagInk: '#2E2A22', text: 'Under 5 t a year for three months running, the lowest in your circle.', cheerers: 'You and 5 others', link: 'See standings', linkHref: '#standings' }),
