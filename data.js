@@ -1023,10 +1023,10 @@
       eyebrow: "Make it easy",
       title: "Plant-forward food, delivered",
       items: [
-        { label: "Riverford", when: "plants", affiliate: "pending: Awin", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
-        { label: "Abel & Cole", when: "plants", affiliate: "pending: Awin", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
-        { label: "Oddbox", when: "waste", affiliate: "pending: Impact", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
-        { label: "Fork Ranger", when: "meat", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
+        { label: "Riverford", affiliate: "pending: Awin", url: "https://www.riverford.co.uk/", tone: "leaf", tags: ["Organic", "UK farms"], note: "Seasonal veg and recipe boxes, straight from the farm." },
+        { label: "Abel & Cole", affiliate: "pending: Awin", url: "https://www.abelandcole.co.uk/", tone: "amber", tags: ["Organic", "Recipe boxes"], note: "Fruit, veg and plant-based recipe kits to your door." },
+        { label: "Oddbox", affiliate: "pending: Impact", url: "https://www.oddbox.co.uk/", tone: "plum", tags: ["Cuts waste", "Good value"], note: "Wonky and surplus fruit and veg rescued from the bin." },
+        { label: "Fork Ranger", url: "https://www.forkranger.com/", tone: "sky", tags: ["Free app", "Veggie recipes"], note: "Quick vegetarian recipes with a ready-made shopping list." },
       ],
     },
     commute: {

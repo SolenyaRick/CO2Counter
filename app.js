@@ -2758,7 +2758,7 @@
       if (diet === "vegan")
         return {
           ...base,
-          title: "You already eat plant-based",
+          title: "You eat plant-based. Go a bit further?",
           lede: "Your days are already the lowest-carbon way to eat. You can still go a bit further by wasting less and choosing local, seasonal produce.",
           saveLabel: lowWaste ? "Already low-waste" : "Wasting less could save",
           steps: [
@@ -3105,13 +3105,8 @@
   // Eurostar runs from the UK to these countries.
   const EUROSTAR_COUNTRIES = ["France", "Belgium", "Netherlands"];
   function linkFits(cat, l, s) {
-    // Food: going by the meals someone has entered so far.
-    if (cat === "meals" && l.when && s) {
-      const diet = dietType(s);
-      if (l.when === "meat") return diet !== "vegan";
-      // Veg boxes (local, seasonal) and Oddbox (less waste) suit everyone,
-      // vegans included.
-    }
+    // Food links (recipes, local seasonal veg boxes, less waste) suit
+    // everyone, vegans included, so they're never filtered.
     if (!s || !s.completedAt) return true;
     if (cat === "flights" && l.when) {
       const fl = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
