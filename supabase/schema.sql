@@ -2066,3 +2066,53 @@ create table if not exists public.letters_sent (
 );
 create index if not exists letters_sent_user_kind on public.letters_sent (user_id, kind, sent_at);
 alter table public.letters_sent enable row level security;
+
+-- ---------- Owner analytics: the 7 Acts ----------
+-- Admins only. Totals and scrambled ids, never names, emails or letters.
+create or replace function public.owner_acts_analytics()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_people bigint;
+  v_cut numeric;
+begin
+  if not public.is_admin() then
+    raise exception 'Admins only';
+  end if;
+  select c.people, c.cut into v_people, v_cut from public.referral_cut(null) c;
+  return jsonb_build_object(
+    'referrals', jsonb_build_object(
+      'joined', (select count(*) from public.referrals),
+      'finished', (select count(*) from public.referrals r where exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
+        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt')),
+      'inviters', (select count(distinct referrer_id) from public.referrals),
+      'codes', (select count(*) from public.referral_codes),
+      'cut_people', v_people,
+      'cut', round(v_cut),
+      'top', coalesce((select jsonb_agg(t order by t.finished desc, t.joined desc) from (
+        select left(md5('co2:' || r.referrer_id::text), 12) as u, count(*) as joined,
+          count(*) filter (where exists (select 1 from public.survey_history h where h.user_id = r.referred_id)) as finished
+        from public.referrals r group by r.referrer_id order by 3 desc, 2 desc limit 10) t), '[]'::jsonb)
+    ),
+    'letters', coalesce((select jsonb_object_agg(kind, jsonb_build_object('total', total, 'month', month)) from (
+      select kind, count(*) as total, count(*) filter (where sent_at > now() - interval '30 days') as month
+      from public.letters_sent group by kind) l), '{}'::jsonb),
+    'verified', coalesce((select jsonb_object_agg(act, n) from (select act, count(*) as n from public.act_verifications group by act) v), '{}'::jsonb),
+    'energy_asks', jsonb_build_object(
+      'links', (select count(*) from public.energy_asks),
+      'confirmed', (select count(*) from public.energy_asks where confirmed_at is not null)
+    ),
+    'hand_ticks', jsonb_build_object(
+      'mobilise', (select count(*) from public.profiles where acts ->> 'mobilise' = 'true'),
+      'mp_sent', (select count(*) from public.profiles where acts ->> 'mpSent' = 'true'),
+      'energy_asked', (select count(*) from public.profiles where acts ->> 'energyAsked' = 'true')
+    )
+  );
+end;
+$$;
+revoke all on function public.owner_acts_analytics() from public, anon;
+grant execute on function public.owner_acts_analytics() to authenticated;

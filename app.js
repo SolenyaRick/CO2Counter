@@ -2286,6 +2286,12 @@
       pension && pension.unfunded
         ? ""
         : qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
+      // Optional, for anonymous totals by role (also on the Account page).
+      qCard(pension && pension.unfunded ? 4 : 5, "What best describes your work?", "Only used for anonymous totals, like the average footprint of nurses. Never shown with your name.",
+        '<select class="input q-select" data-field="about.role" data-type="text" aria-label="Your work">' +
+          '<option value="">Prefer not to say</option>' +
+          ROLES.map(([k, l]) => '<option value="' + k + '"' + (((survey.about || {}).role || "") === k ? " selected" : "") + ">" + l + "</option>").join("") +
+          "</select>", { optional: true }),
     ]);
   }
 
@@ -2688,10 +2694,12 @@
     // Diet cards the survey shows are already done are left out (habits are
     // separate: they track changes from here). Flight cards stay, marked
     // Done, so people come back to them.
-    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s));
+    const shown = sections.map((s, i) => ({ s, i })).filter(({ s }) => !(diet && sectionDone(cat, s)) && !sectionHidden(cat, s))
+      .sort((a, b) => (sectionNA(cat, a.s) ? 1 : 0) - (sectionNA(cat, b.s) ? 1 : 0));
+    const live = shown.filter(({ s }) => !sectionNA(cat, s)).length;
     html +=
       '<div class="cat-grid"><section class="cat-col"><div class="row-between gap-3 cat-sub" style="flex-wrap:wrap;align-items:baseline">' +
-      '<h2 class="display">Your ' + (shown.length === 1 ? "next step" : shown.length + " next steps") + '</h2><span class="muted">Tap one for the details</span></div>' +
+      '<h2 class="display">' + (live === 0 ? "Nothing to do here" : "Your " + (live === 1 ? "next step" : live + " next steps")) + '</h2><span class="muted">' + (live === 0 ? "None of these apply to you" : "Tap one for the details") + "</span></div>" +
       '<ol class="todo-list">' +
       shown
         .map(({ s, i }, k) => {
@@ -2750,10 +2758,15 @@
       if (diet === "vegan")
         return {
           ...base,
-          title: "You already eat plant-based",
-          lede: "Your days are already the lowest-carbon way to eat." + (lowWaste ? " There's nothing more to switch here." : " Wasting less food is the one thing left to go further."),
-          saveLabel: lowWaste ? "Nothing more to switch" : "Wasting less could save",
-          steps: wasteSteps,
+          title: "You eat plant-based. Go a bit further?",
+          lede: "Your days are already the lowest-carbon way to eat. You can still go a bit further by wasting less and choosing local, seasonal produce.",
+          saveLabel: lowWaste ? "Already low-waste" : "Wasting less could save",
+          steps: [
+            wasteSteps[0],
+            ["Eat local and seasonal", "In-season produce grown nearby needs less heated greenhouse growing, storage and transport. A local veg box makes it easy."],
+            wasteSteps[1],
+            wasteSteps[3],
+          ],
         };
       if (diet === "veggie")
         return {
@@ -3040,15 +3053,24 @@
   // The banks in the switching card, and when a guide card doesn't apply.
   const GREEN_BANKS = ["triodos", "co_op", "nationwide"];
   const sectionNA = (cat, s) => {
-    if (cat !== "banking" || s.dynamicKey !== "savingsPensions") return false;
-    const b = survey.banking || {};
-    return !b.pensionPot || !!(byKey(D.PENSION_PROVIDERS, b.pensionProvider) || {}).unfunded;
+    // No pension pot, or the unfunded NHS scheme: nothing to switch.
+    if (cat === "banking" && s.dynamicKey === "savingsPensions") {
+      const b = survey.banking || {};
+      return !b.pensionPot || !!(byKey(D.PENSION_PROVIDERS, b.pensionProvider) || {}).unfunded;
+    }
+    // Driving cards, for people who don't drive to work.
+    if (cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving")) return carDaysOf(survey).length === 0;
+    // No pets, so none of the pet steps apply.
+    if (cat === "pets") return !((survey.pets || {}).dogs > 0 || (survey.pets || {}).cats > 0);
+    // No gas, so no boiler to replace.
+    if (cat === "energy" && /electrify heating/i.test(s.heading)) return !((survey.energy || {}).gasKwh > 0);
+    return false;
   };
 
-  // Driving cards only make sense for people who drive to work.
   const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
-  function sectionHidden(cat, s) {
-    return cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving") && carDaysOf(survey).length === 0;
+  // Cards that don't apply are shown greyed out (sectionNA) rather than hidden.
+  function sectionHidden() {
+    return false;
   }
 
 
@@ -3083,14 +3105,8 @@
   // Eurostar runs from the UK to these countries.
   const EUROSTAR_COUNTRIES = ["France", "Belgium", "Netherlands"];
   function linkFits(cat, l, s) {
-    // Food: going by the meals someone has entered so far.
-    if (cat === "meals" && l.when && s) {
-      const diet = dietType(s);
-      const lowWaste = ((s.meals || {}).foodWaste || "low") === "low";
-      if (l.when === "meat") return diet !== "veggie" && diet !== "vegan";
-      if (l.when === "plants") return diet !== "vegan";
-      if (l.when === "waste") return diet !== "vegan" || !lowWaste;
-    }
+    // Food links (recipes, local seasonal veg boxes, less waste) suit
+    // everyone, vegans included, so they're never filtered.
     if (!s || !s.completedAt) return true;
     if (cat === "flights" && l.when) {
       const fl = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
@@ -4513,10 +4529,10 @@
         vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: energyDone ? "Yours: green tariff" : "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
       { key: "meals", short: "Food", effort: "Ongoing · a weekly habit", ex: 84, save: saving("meals"), verb: "Explore", panel: "#6E8B5E", panelInk: "#F6F1E6", dropInk: "#F6F1E6",
         done: foodDone,
-        doneTitle: diet === "vegan" ? "You already eat plant-based" : "You're vegetarian. Go a bit further?",
+        doneTitle: diet === "vegan" ? "You eat plant-based. Go a bit further?" : "You're vegetarian. Go a bit further?",
         fact: foodDone
           ? diet === "vegan"
-            ? "Your days are already plant-based, the lowest-carbon way to eat." + (saving("meals") >= 0.5 ? " Wasting less food is the one thing left to go further." : " Nothing more to switch here.")
+            ? "Your days are already plant-based, the lowest-carbon way to eat. You can still go a bit further by wasting less and choosing local, seasonal produce: a veg box helps with both."
             : "No meat already puts you well below a typical diet. You could go a bit further with a few vegan days: dairy and eggs are most of what's left."
           : food.what
             ? food.what + " emits " + times(food.before, food.after) + " a vegan day" + (base.mine ? ", and it's your highest-carbon day of food" : "") + ". A veg box or a recipe app makes the swap the easy option."
@@ -4532,7 +4548,7 @@
           : "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
         vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol,
         afterLabel: commuteDone && !noCommute ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute ? 0 : dist * 2 * train },
-      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
+      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 59, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
         done: flightsDone,
         doneTitle: "No flights to switch",
         fact: flightsDone
@@ -4889,6 +4905,34 @@
   // people are a scrambled id, never an account.
 
   const analytics = { loaded: false, loading: false, error: "", data: null, at: null };
+  // Owner view of the 7 Acts: invites, letters, verifications. Totals only.
+  function actsAnalyticsHtml(a) {
+    const head = '<section class="glass an-card"><h2 class="card-title">The 7 Acts</h2>';
+    if (!a) return head + '<p class="sm muted">Run the 7 Acts analytics SQL in Supabase to see invites, letters and verified acts here.</p></section>';
+    const r = a.referrals || {}, l = a.letters || {}, v = a.verified || {}, e = a.energy_asks || {}, h = a.hand_ticks || {};
+    const tile = (label, value, sub) => '<div class="an-tile"><span class="eyebrow">' + label + '</span><b class="display tnum">' + value + '</b><span class="xs muted">' + sub + "</span></div>";
+    const n = (x) => kgFmt(Number(x) || 0);
+    const latest = (analytics.data && analytics.data.latest) || [];
+    const askers = latest.filter((x) => x.data && x.data.energy && x.data.energy.billPayer === "other" && !x.data.energy.greenTariff).length;
+    return (
+      head + '<p class="sm muted">Invites, letters sent from the app and verified acts. People are scrambled ids, as everywhere here.</p>' +
+      '<h3 class="display mt-4">Invites (Act 7)</h3><div class="an-tiles mt-2">' +
+      tile("Joined by invite", n(r.joined), n(r.finished) + " finished the survey") +
+      tile("People inviting", n(r.inviters), n(r.codes) + " have an invite code") +
+      tile("Cut by invitees", r.cut != null ? "−" + n(r.cut) + " kg" : "–", "a year, across " + n(r.cut_people) + " who've measured twice") +
+      tile("Act 7 verified", n(v.motivate), "seven invitees finished") + "</div>" +
+      ((r.top || []).length
+        ? '<div class="an-table an-table-3" role="table"><div class="an-tr an-th" role="row"><span role="columnheader">Top inviters</span><span role="columnheader">Joined</span><span role="columnheader">Finished</span></div>' +
+          r.top.map((t) => '<div class="an-tr" role="row"><span role="cell"><code>' + esc(t.u) + '</code></span><span class="tnum" role="cell">' + n(t.joined) + '</span><span class="tnum" role="cell">' + n(t.finished) + "</span></div>").join("") + "</div>"
+        : "") +
+      '<h3 class="display mt-4">Letters and verified acts</h3><div class="an-tiles mt-2">' +
+      tile("MP letters sent", n((l.mp || {}).total), n((l.mp || {}).month) + " in the last 30 days") +
+      tile("Act 6 verified", n(v.mobilise), "MP letters sent or BCC'd · " + n(h.mobilise) + " ticked by hand") +
+      tile("Bill payer messages", n((l.energy || {}).total), n((l.energy || {}).month) + " in the last 30 days · " + n(h.energy_asked) + " asked by any route") +
+      tile("Switch confirmed", n(v.energy), "of " + n(e.links) + " confirm links · " + askers + (askers === 1 ? " person doesn't" : " people don't") + " choose their supplier") + "</div></section>"
+    );
+  }
+
   async function loadAnalytics() {
     if (!sb || analytics.loading) return;
     analytics.loading = true;
@@ -4897,6 +4941,13 @@
       if (error) throw error;
       analytics.data = data || {};
       analytics.error = "";
+      // The 7 Acts totals (null until that SQL is run).
+      try {
+        const acts = await sb.rpc("owner_acts_analytics");
+        analytics.acts = acts.error ? null : acts.data;
+      } catch (e2) {
+        analytics.acts = null;
+      }
       analytics.at = new Date();
     } catch (e) {
       analytics.error = (e && e.message) || "Couldn't load the analytics.";
@@ -4988,10 +5039,16 @@
       const vals = us.map((u) => latestBy[u]).filter((v) => v != null);
       return { label, members: us.length, ...stats(vals), change: changeOf(us) };
     };
-    const people = d.people || [];
+    // Role: the Account page answer, else the survey's optional question.
+    const roleBy = {};
+    (d.latest || []).forEach((r) => { const role = r.data && r.data.about && r.data.about.role; if (role) roleBy[r.u] = role; });
+    (d.people || []).forEach((p) => { if (p.role) roleBy[p.u] = p.role; });
+    const everyone = Array.from(new Set((d.latest || []).map((r) => r.u).concat((d.people || []).map((p) => p.u))));
+    const people = everyone.map((u) => ({ u, role: roleBy[u] || null }));
     const roles = ROLES.map(([k, l]) => breakdown(l, people.filter((p) => p.role === k).map((p) => p.u))).concat([breakdown("Not given", people.filter((p) => !p.role).map((p) => p.u))]);
     const groups = (d.groups || []).map((g) => breakdown(g.name, g.members || []));
-    const research = people.filter((p) => p.research).map((p) => p.u);
+    // Research consent lives on the profile only.
+    const research = (d.people || []).filter((p) => p.research).map((p) => p.u);
     return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size, roles, groups, research, fps, latestUsers: (d.latest || []).map((r) => r.u), roleOf: Object.fromEntries(people.map((p) => [p.u, p.role])) };
   }
 
@@ -5087,7 +5144,8 @@
         "</section>"
       );
     };
-    html += table("By role", "From the optional \"What best describes your work?\" on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
+    html += actsAnalyticsHtml(analytics.acts);
+    html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step) or on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
     html +=
       '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
       " opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
@@ -5193,7 +5251,11 @@
       friends.groupOk = true;
       return r;
     } catch (e) {
-      friends.groupMsg = (e && e.message) || "Something went wrong. Please try again.";
+      const msg = (e && e.message) || "";
+      // Before the groups SQL is run the functions don't exist yet.
+      friends.groupMsg = /does not exist|could not find the function|schema cache/i.test(msg)
+        ? "Groups aren't switched on yet." + (ui.isAdmin ? " Run run-in-supabase-groups.sql in Supabase to switch them on." : " Please try again soon.")
+        : msg || "Something went wrong. Please try again.";
     } finally {
       await loadGroups();
       render();
@@ -5201,7 +5263,6 @@
   }
 
   function groupsHtml() {
-    if (!friends.groupsReady) return "";
     const groups = friends.groups || [];
     const g = groups.find((x) => x.id === ui.groupSel);
     let body;
@@ -5238,7 +5299,6 @@
   }
 
   function groupFormsHtml() {
-    if (!friends.groupsReady) return "";
     const invite = (location.hash.split("?")[1] || "").match(/(?:^|&)join=([A-Za-z0-9]{6})/);
     return (
       '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
@@ -7126,6 +7186,11 @@
       if (t.tagName === "SELECT") {
         setPath(survey, t.dataset.field, t.value);
         surveyChanged();
+        // Keep the Account page's answer in step with the survey's.
+        if (t.dataset.field === "about.role" && currentUser && sb) {
+          sb.from("profiles").update({ role: t.value || null }).eq("id", currentUser.id).then(() => {}, () => {});
+          if (ui.aboutYou) ui.aboutYou = { ...ui.aboutYou, role: t.value };
+        }
       }
       if (t.dataset.rerender) render();
     } else if (t.dataset.flight) {
