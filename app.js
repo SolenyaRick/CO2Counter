@@ -3592,67 +3592,149 @@
     return html + '<div class="center mt-6"><a class="btn btn-outline" href="#/habits">' + icon("arrowLeft") + " Back to My Habits</a></div></div>";
   }
 
-  function renderHabitsPage() {
+  // The 7 Acts with their state, for My Habits and the Account tile.
+  function habitActs() {
     const ready = survey && survey.completedAt;
     const areas = ready ? switchAreas({ s: survey, mine: true }) : [];
     const area = (k) => areas.find((a) => a.key === k);
     const ticked = actsTicked();
     const travel = ready ? [area("commute"), area("flights")] : [];
     const travelSave = travel.reduce((t, a) => t + (a.done ? 0 : a.save), 0);
-    const auto = (a) => (ready ? { done: a.done, sub: a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet" } : { done: false, sub: "Finish your survey to see" });
+    const auto = (a) => (ready ? { done: a.done, save: a.done ? 0 : a.save, sub: a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet" } : { done: false, sub: "Finish your survey to see" });
     const url = encodeURIComponent(inviteLink());
     const text = encodeURIComponent(shareText() + " " + inviteLink());
+    const billPayer = asksBillPayer(ready ? survey : null);
+    const travelDone = ready && travel.every((a) => a.done);
     const acts = [
-      { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
-      asksBillPayer(ready ? survey : null)
-        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!energyVerified(), pending: !energyVerified() && !!ticked.energyAsked,
+      { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", icon: SW_ICONS.banking, cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
+      billPayer
+        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", icon: SW_ICONS.energy, done: !!energyVerified(), pending: !energyVerified() && !!ticked.energyAsked,
             sub: energyVerified() ? "Verified · they confirmed the switch on " + longDate(energyVerified())
               : ticked.energyAsked ? "Asked · waiting for them to confirm they've switched" : "Someone else chooses your supplier: ask them to switch",
-            extra: energyAskBox(), keepExtra: true }
-        : { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
-      { n: 3, name: "More plant-based food", what: "seasonal and local where you can", cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
-      { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", cat: travel.length && travel[0].done ? "flights" : "commute",
-        done: ready && travel.every((a) => a.done),
-        sub: !ready ? "Finish your survey to see" : travel.every((a) => a.done) ? "Done · green commute and no flights" :
+            extra: energyAskBox(), keepExtra: true, energy: true }
+        : { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", icon: SW_ICONS.energy, cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
+      { n: 3, name: "More plant-based food", what: "seasonal and local where you can", icon: SW_ICONS.meals, cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
+      { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", icon: HB_TRAIN, cat: travel.length && travel[0].done ? "flights" : "commute",
+        done: travelDone, save: travelDone ? 0 : travelSave,
+        sub: !ready ? "Finish your survey to see" : travelDone ? "Done · green commute and no flights" :
           [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
-      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: "#/acts/monitor", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
-      mobiliseAct(ticked),
-      motivateAct(ticked, url, text),
+      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", icon: HB_CHART, href: "#/acts/monitor", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
+      { ...mobiliseAct(ticked), icon: HB_VOTE },
+      { ...motivateAct(ticked, url, text), icon: SW_ICONS.motivate },
     ];
+    return { acts, ready, billPayer };
+  }
+  function renderHabitsPage() {
+    const { acts, ready, billPayer } = habitActs();
+    const state = (a) => (a.done ? "done" : a.pending ? "wait" : "todo");
     const made = acts.filter((a) => a.done).length;
-    // Ticked when done; a grey clock while waiting for someone to confirm.
-    const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : a.pending ? icon("clock") : "") + "</span>";
+    const waiting = acts.filter((a) => state(a) === "wait").length;
+    const toSave = acts.slice(0, 4).reduce((t, a) => t + (a.done || !a.save ? 0 : a.save), 0);
+    const animate = !ui.habitsSeen;
+    ui.habitsSeen = true;
+
+    // The number on the timeline: a tick when done, a clock while someone
+    // else confirms it, otherwise the act's number.
+    const node = (a) => '<span class="hb-node num ' + state(a) + '" aria-hidden="true">' + (a.done ? icon("check") : a.pending ? icon("clock") : a.n) + "</span>";
+    const tile = (a) => '<span class="hb-tile" aria-hidden="true">' + svgPath(a.icon, 26) + "</span>";
     const body = (a) =>
-      '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
-    // Acts with extras (the MP finder, the share buttons) keep them inside
-    // their own box, under the act.
-    const rows = acts
-      .map((a) => {
-        const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
-        const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
-        // Hand-ticked acts keep their tick box, so they can be unticked here.
-        const extra = a.extra && (!a.done || a.keepExtra) ? '<div class="hb-extra">' + a.extra + pageLink + "</div>" : a.manual && page ? '<div class="hb-extra">' + pageLink + "</div>" : "";
-        if (page && !a.manual && (a.done || !a.extra))
-          return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + page + '">' + box(a) + body(a) + icon("chevronRight") + "</a></li>";
-        if (a.manual)
-          return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
-        if (a.extra || (a.verifiedTick && !a.cat && !a.href))
-          return '<li class="hb-item hb-card' + (a.done ? " done" : a.pending ? " pending" : "") + '"><div class="hb-row">' + box(a) + body(a) + "<span></span></div>" + extra + "</li>";
-        return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
-          '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
-      })
-      .join("");
+      '<span class="min0 hb-body"><span class="hb-eyeb">Act ' + a.n + '</span><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-what">' + esc(a.what) + '</span><span class="hb-sub">' + esc(a.sub) + "</span></span>";
+    const save = (a) => (ready && !a.done && a.save >= 0.5 ? '<span class="hb-save"><b class="display tnum">−' + kgFmt(a.save) + "</b><span>kg a year</span></span>" : "");
+    const howTicks =
+      '<div class="hb-how"><span class="hb-box-label">How it ticks</span><ol>' +
+      "<li><b>1</b>Write your letter here, or in Gmail or Outlook</li><li><b>2</b>We're copied in, so your MP doesn't see us</li><li><b>3</b>We match your reference, tick it and delete our copy</li></ol></div>";
+    const people = () => {
+      const info = ui.actsInfo;
+      if (!info) return "";
+      const n = Math.min(7, info.finished || 0);
+      const joined = Math.min(7, Math.max(n, info.joined || 0));
+      const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < n ? "fin" : i < joined ? "joined" : "") + '">' + icon(i < n ? "check" : i < joined ? "user" : "plus") + "</span>").join("");
+      return (
+        '<div class="hb-people"><span class="hb-box-label">People you\'ve invited</span><div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>" +
+        "<p>" + n + " of 7 have taken the survey · " + joined + " joined. It ticks itself at seven.</p></div>"
+      );
+    };
+    // Acts 2, 6 and 7 keep their tools in boxes under the act.
+    const extraHtml = (a) => {
+      if (a.n === 6 && ui.actsInfo && !a.done)
+        return '<div class="hb-boxes"><div class="hb-light"><span class="display hb-box-title">Find your MP</span><p class="xs muted">We look it up on Parliament\'s own records.</p>' + a.extra + "</div>" + howTicks + "</div>";
+      if (a.n === 7) return '<div class="hb-boxes">' + people() + '<div class="hb-light">' + a.extra + "</div></div>";
+      if (a.energy && a.pending) return '<div class="hb-ebox">' + a.extra + "</div>";
+      return '<div class="hb-light">' + a.extra + "</div>";
+    };
+    const row = (a) => {
+      const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
+      const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
+      const cls = "hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
+      if (page && !a.manual && (a.done || !a.extra))
+        return '<li class="hb-item"><a class="hb-row ' + cls + '" href="' + page + '">' + node(a) + tile(a) + body(a) + icon("chevronRight") + "</a></li>";
+      if (a.manual)
+        return '<li class="hb-item"><div class="' + cls + ' hb-boxed"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button>" +
+          '<div class="hb-row">' + tile(a) + body(a) + "</div>" + (a.extra && !a.done ? '<div class="hb-light">' + a.extra + "</div>" : "") + pageLink + "</div></li>";
+      if (a.extra || (a.verifiedTick && !a.cat && !a.href))
+        return '<li class="hb-item"><div class="' + cls + ' hb-boxed">' + node(a) + '<div class="hb-row">' + tile(a) + body(a) + "</div>" +
+          (a.extra && (!a.done || a.keepExtra) ? extraHtml(a) : "") + pageLink + "</div></li>";
+      return '<li class="hb-item"><a class="hb-row ' + cls + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + tile(a) + body(a) + save(a) +
+        '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
+    };
+    const group = (title, note, list) =>
+      '<section class="glass hb-group' + (animate ? " fade-up" : "") + '" aria-label="' + esc(title) + '"><div class="hb-ghead"><h2 class="display">' + esc(title) + "</h2><span>" + esc(note) + "</span></div>" +
+      '<ol class="hb-list"><span class="hb-rail" aria-hidden="true"></span>' + list.map(row).join("") + "</ol></section>";
+
+    // Seven ring segments with small gaps, starting at the top.
+    const R = 96, C = 120, gap = 9;
+    const pt = (deg) => { const r = ((deg - 90) * Math.PI) / 180; return [C + R * Math.cos(r), C + R * Math.sin(r)]; };
+    const COL = { done: "#3F5B3A", wait: "#D9A441", todo: "transparent" };
+    const segs = acts.map((a, i) => {
+      const a0 = i * (360 / 7) + gap / 2, a1 = (i + 1) * (360 / 7) - gap / 2;
+      const [x0, y0] = pt(a0), [x1, y1] = pt(a1), [tx, ty] = pt((i + 0.5) * (360 / 7));
+      const d = "M" + x0.toFixed(1) + " " + y0.toFixed(1) + "A" + R + " " + R + " 0 0 1 " + x1.toFixed(1) + " " + y1.toFixed(1);
+      const len = Math.ceil((R * Math.PI * (a1 - a0)) / 180);
+      const st = state(a);
+      return {
+        path: '<path d="' + d + '" fill="none" stroke="rgba(46,42,34,.08)" stroke-width="22" stroke-linecap="round"/>' +
+          '<path class="' + (animate ? "hb-seg" : "") + '" d="' + d + '" fill="none" stroke="' + COL[st] + '" stroke-width="22" stroke-linecap="round" style="--len:' + len + ";stroke-dasharray:" + len + ";animation-delay:" + (0.3 + i * 0.12).toFixed(2) + 's"/>',
+        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#8A8273" : st === "wait" ? "#2E2A22" : "#F6F1E6") + '">' + a.n + "</text>",
+      };
+    });
+    const ring =
+      '<div class="glass hb-ringwrap' + (animate ? " rise d2" : "") + '"><div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
+      segs.map((s) => s.path).join("") + segs.map((s) => s.label).join("") + "</svg>" +
+      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small>/7</small></b><span>acts done</span></div></div></div>' +
+      '<div class="hb-legend"><span><i class="done"></i><b class="tnum">' + made + "</b> done</span><span><i class=\"wait\"></i><b class=\"tnum\">" + waiting + "</b> waiting</span>" +
+      '<span><i></i><b class="tnum">' + (7 - made - waiting) + "</b> to do</span></div></div>";
+
+    const DAILY = [
+      ["Meat-free lunch", SW_ICONS.meals, "gg-gg--"],
+      ["Shorter shower", SW_ICONS.water, "ggg----"],
+      ["Walk the short trips", HB_WALK, "a-g----"],
+    ];
     return (
-      '<div class="container narrow">' + pageHeader("My Habits", "One-off changes, and habits you keep") +
-      '<section class="card mb-6 fade-up"><div class="label-row mb-2"><span class="round-badge sm">' + icon("refresh") + '</span><h2 class="card-title">One-off changes</h2>' +
-      '<span class="tag ml-auto">The 7 Acts</span></div>' +
-      '<p class="sm muted mb-4">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> for individuals. <b class="green-dark">' + made + " of 7</b> done" + (ready ? ", going by your latest survey." : ".") + "</p>" +
-      '<ul class="hb-list">' + rows + "</ul>" +
-      '<a class="btn btn-green btn-block mt-4" href="/greener-switches/">' + (ready ? "See your switches in full " : "See the switches ") + icon("arrowRight") + "</a></section>" +
-      '<section class="card fade-up"><div class="label-row mb-3"><span class="round-badge sm">' + icon("leaf") + '</span><h2 class="card-title">Daily habits</h2>' +
-      '<span class="tag amber ml-auto">Coming soon</span></div><p class="sm muted">Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We\'re building this next.</p></section></div>'
+      '<div class="container hb-page">' +
+      '<header class="hb-hero"><div class="hb-hero-main">' +
+      '<span class="hb-eyebrow' + (animate ? " rise" : "") + '">My Habits · The 7 Acts</span>' +
+      '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
+      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> for individuals: one-off changes that cut the most. ' +
+      (ready ? "Acts 1 to 5 tick themselves from your latest survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
+      '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
+      (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
+      (ready ? '<a class="hb-swlink" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
+      "</div></div>" + ring + "</header>" +
+      group("Switch the big things", billPayer ? "Acts 1 to 4 · 1, 3 and 4 tick from your survey" : "Acts 1 to 4 · they tick from your survey", acts.slice(0, 4)) +
+      group("Keep measuring", "Act 5", acts.slice(4, 5)) +
+      group("Use your voice", "Acts 6 and 7 · verified, never ticked by hand", acts.slice(5)) +
+      '<section class="hb-soon" aria-labelledby="hb-daily"><div class="hb-soon-main"><span class="hb-soon-tag">Coming soon</span><h2 id="hb-daily" class="display">Daily habits</h2>' +
+      "<p>Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We're building this next.</p></div>" +
+      '<div class="hb-daily" aria-hidden="true">' +
+      DAILY.map(([label, d, week]) => '<div><span class="hb-daily-icon">' + svgPath(d, 20) + '</span><span class="display">' + label + '</span><span class="hb-week">' + week.split("").map((c) => '<i class="' + (c === "g" ? "g" : c === "a" ? "a" : "") + '"></i>').join("") + "</span></div>").join("") +
+      "</div></section>" +
+      '<p class="xs muted hb-credit">The 7 Acts are by <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">Real Zero</a>.</p></div>'
     );
   }
+  const HB_TRAIN = "M6 4h12a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2ZM4 11h16M8 21l2-3M16 21l-2-3M8.5 14.5v.01M15.5 14.5v.01";
+  const HB_CHART = "M4 20V10M10 20V4M16 20v-7M2 20h20";
+  const HB_VOTE = "M4 13h16v7H4zM8 13V5h8v8M10.5 8.5l1.5 1.5 3-3";
+  const HB_WALK = "M13 4.5a1.5 1.5 0 1 0 0-.1M10 21l2-6 3 3v3M9 12l3-4 3 2 3 1M12 8l-2 5";
 
   function openSectionDialog(cat, index) {
     const ex = D.EXPLAINERS[cat];
@@ -5778,9 +5860,20 @@
 
   // ==================== Account page ====================
 
+  // Account: the 7 Acts at a glance, one bar per act.
+  function actsTile() {
+    const { acts } = habitActs();
+    const made = acts.filter((a) => a.done).length;
+    const waiting = acts.filter((a) => !a.done && a.pending).length;
+    const bars = acts.map((a, i) => '<rect x="' + i * 6 + '" y="2" width="4" height="6" rx="2" fill="' + (a.done ? "#A3B58F" : a.pending ? "#D9A441" : "rgba(246,241,230,.22)") + '"/>').join("");
+    return (
+      '<a class="stat-tile acts-tile" href="#/habits"><span class="row-between"><span class="sm">7 Acts</span><svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true">' + bars + "</svg></span>" +
+      '<span class="display tnum stat-tile-num">' + made + "<small>/7</small></span>" +
+      '<span class="xs fw-700">done' + (waiting ? " · " + waiting + " waiting" : "") + " · See habits →</span></a>"
+    );
+  }
   function renderAccount() {
     const fp = footprint(survey);
-    const habitCount = CATEGORIES.reduce((sum, c) => sum + committedHabits(c).length, 0);
     const hist = historyByDay();
     const change = hist.length > 1 ? hist[0].totalYearly - hist[hist.length - 1].totalYearly : 0;
     if (!friends.loaded && !friends.loading) loadFriends();
@@ -5811,15 +5904,15 @@
       '<div class="account-id"><span class="account-av display">' + esc(initials(name) || "?") + "</span><div class=\"min0\">" +
       '<span class="eyebrow">Account</span><h1 class="cat-title display account-name">' + esc(name) + "</h1>" +
       '<p class="cat-why">' + (ui.username ? "@" + esc(ui.username) + " · " : "") + esc(currentUser.email) + "</p></div></div>" +
-      '<button type="button" class="btn btn-outline" data-action="sign-out">' + icon("logOut") + " Sign out</button></header>" +
+      '<button type="button" class="btn btn-outline acc-signout" data-action="sign-out">' + icon("logOut") + " Sign out</button></header>" +
       '<div class="cat-grid"><div class="cat-col stack-5">' +
       '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Your saved data</h2><span class="muted">' +
       (canSync() ? "Synced across your devices" : "Saved on this device") + '</span></div><div class="stat-tiles">' +
       tile("Footprint", '<span data-countup="' + Math.round(fp.totalYearly) + '">0</span>', "kg CO₂e a year") +
       tile("Surveys taken", Math.max(hist.length, survey.completedAt ? 1 : 0), hist.length > 1 && Math.abs(change) >= 1 ? '<b class="' + (change < 0 ? "green" : "clay") + '">' + (change < 0 ? "▼ " : "▲ ") + Math.round((Math.abs(change) / hist[hist.length - 1].totalYearly) * 100) + "% since your first</b>" : "") +
       tile("Friends", friendCount, rank ? "You're " + rank.label : "") +
-      tile("Habits", habitCount, "tracking coming soon", "honey") +
-      '</div><div class="chip-row mt-5"><a class="btn btn-green" href="#/">Retake survey</a><a class="btn btn-outline" href="#/results">View results</a><a class="btn btn-outline" href="#/friends">Friends</a></div></section>' +
+      actsTile() +
+      '</div><div class="chip-row mt-5 acc-btns"><a class="btn btn-green" href="#/">Retake survey</a><a class="btn btn-outline" href="#/results">View results</a><a class="btn btn-outline" href="#/friends">Friends</a><a class="btn btn-outline" href="#/habits">My Habits</a></div></section>' +
       '<section class="glass guide-card"><span class="eyebrow">' + (FREE_MODE ? "Your plan" : "Membership") + "</span><div class=\"mt-2\">" + plan + "</div>" +
       (FREE_MODE && !m.owner && !isSupporter() && !isNativeApp() && STRIPE_PAYMENT_LINK
         ? '<div class="mt-4"><a class="btn btn-green" href="' + esc(supportUrl()) + '">' + icon("heart") + ' Support for £2 a year</a><p class="xs muted mt-2">Secure payment by Stripe. Cancel any time. No ads, and we never sell your data.</p></div>'
