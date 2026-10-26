@@ -41,6 +41,31 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+.floaty{display:none!important}
+header[style*="margin-top: 48px"]{margin-top:24px!important;padding:0!important}
+header p{font-size:16px!important;line-height:1.55!important;margin-top:14px!important}
+header .cta{min-height:50px!important}
+section[style*="margin-top: 64px"]{margin-top:32px!important}
+section[style*="margin-top: 20px"]{margin-top:14px!important}
+ol[style*="minmax(170px"]{gap:8px!important;margin-top:18px!important}
+.node{display:grid!important;grid-template-columns:36px minmax(0,1fr);column-gap:12px!important;row-gap:4px!important;align-items:start!important;padding:12px 14px!important;transform:none!important;box-shadow:none!important;border-radius:16px!important}
+.node>div:first-child{grid-row:1 / span 2}
+.node>div:first-child svg{display:none}
+.node>span:first-of-type{display:none}
+.node>span:last-child{grid-column:2;justify-self:start}
+.node-dot{width:36px!important;height:36px!important;font-size:17px!important;border-radius:11px!important}
+.node h3{font-size:16px!important}
+.node p{font-size:13.5px!important;margin-top:2px!important}
+ul[style*="minmax(150px"]{grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:14px!important}
+ul[style*="minmax(150px"] .chip{padding:10px 12px!important;font-size:14px!important;gap:8px!important;border-radius:12px!important}
+ul[style*="minmax(150px"] svg{width:20px;height:20px}
+section[style*="flex-wrap: wrap; gap: 20px"]{gap:14px!important}
+section p[style*="font-size: 17px"]{font-size:15px!important}
+section[style*="minmax(260px"]{gap:10px!important}
+section[style*="minmax(260px"]>*{padding:16px 18px!important;border-radius:20px!important}
+section[style*="minmax(260px"] h3{font-size:17px!important;margin-top:6px!important}
+section[style*="minmax(260px"] p{font-size:14px!important}
+.faq summary{font-size:16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
@@ -150,7 +175,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
               <h3 class="hd" style="margin: 0; font-size: 19px; font-weight: 700; line-height: 1.25">{{s.title}}</h3>
               <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #3A362D">{{s.body}}</p>
             </div>
-            <sc-if value="{{s.soon}}" hint-placeholder-val="{{false}}"><span style="align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 12px; font-weight: 700">Coming soon</span></sc-if>
+            <sc-if value="{{s.soon}}" hint-placeholder-val="{{false}}"><span style="align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: rgba(217,164,65,.22); color: #6B4A12; font-size: 12px; font-weight: 700">Daily habits soon</span></sc-if>
           </li>
         </sc-for>
       </ol>

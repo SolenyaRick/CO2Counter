@@ -41,6 +41,24 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+header .pop{width:44px!important;height:44px!important;border-radius:14px!important}
+header .pop svg{width:24px;height:24px}
+header>div:first-of-type{gap:12px!important}
+header h1{font-size:27px!important}
+header p{font-size:15px!important;line-height:1.5!important}
+header .num{font-size:36px!important}
+header>div:last-child{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+header>div:last-child>.num{order:2}header>div:last-child>div:last-child{order:3}
+section[style*="minmax(260px"]{grid-template-columns:1fr 1fr!important;gap:10px!important}
+.choice{padding:16px!important;gap:8px!important;border-radius:20px!important}
+.choice:first-child{grid-column:1 / -1}
+.choice h2{font-size:19px!important}
+.choice p{font-size:14px!important}
+.choice.card svg,.choice.card p{display:none}
+.choice.card h2{font-size:16px!important}
+.choice .cta{min-height:44px!important;font-size:14px!important}
+.tile{padding:12px 14px!important;gap:4px!important;border-radius:14px!important}
+.tile .hd{font-size:16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}

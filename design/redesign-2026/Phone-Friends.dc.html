@@ -41,6 +41,17 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+.podium{grid-template-columns:repeat(3,minmax(0,1fr))!important;height:190px!important;gap:8px!important;margin-top:16px!important}
+.podium>div{gap:4px!important}
+.podium .hd{font-size:14px!important}
+.podium .num[style*="font-size: 22px"]{font-size:17px!important}
+.podium .pod .num{width:32px!important;height:32px!important;font-size:12px!important}
+li.row{grid-template-columns:34px minmax(0,1fr) 54px 64px!important;gap:10px!important;padding:8px!important}
+li.row[style*="1fr) auto"]{grid-template-columns:34px minmax(0,1fr) auto!important}
+li.row>span:last-child{white-space:nowrap}
+li.row>span:first-child{width:34px!important;height:34px!important}
+li.row>span:nth-child(2){font-size:15px!important}
+li.row .num{font-size:16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
@@ -102,7 +113,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Leaderboard</h2>
             <span style="font-size: 15px; color: #4A453A">Lowest footprint first</span>
           </div>
-          <div style="margin-top: 24px; height: 220px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; max-width: 520px; margin-left: auto; margin-right: auto">
+          <div class="podium" style="margin-top: 24px; height: 220px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; max-width: 520px; margin-left: auto; margin-right: auto">
             <sc-for list="{{podium}}" as="p" hint-placeholder-count="3">
               <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end">
                 <span class="hd" style="font-size: 17px; font-weight: 700; text-align: center">{{p.name}}</span>

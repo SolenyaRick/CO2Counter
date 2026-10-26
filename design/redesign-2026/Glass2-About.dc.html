@@ -50,15 +50,43 @@ nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
 nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
 [style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
-h1{font-size:44px!important;line-height:1.02!important}
+h1{font-size:38px!important;line-height:1.02!important}
 h2[style*="font-size: 4"]{font-size:30px!important}
 .belief{grid-template-columns:56px 1fr!important;padding:20px 4px!important;gap:12px!important}
 .belief h3{font-size:26px!important}
 .bno{font-size:34px!important}
 .belief p{grid-column:1 / -1}
-.diagram{padding:18px!important;border-radius:28px!important}
-.band{padding:28px 22px!important;border-radius:26px!important}
-.founder{padding:24px!important}
+header{margin-top:28px!important}
+header>p{font-size:17px!important;line-height:1.5!important;margin-top:14px!important}
+.proms{margin-top:18px!important;gap:6px!important}
+.proms li{padding:5px 12px 5px 5px!important;font-size:14px!important;gap:8px!important}
+.proms li>span{width:24px!important;height:24px!important}
+.proms svg{width:12px;height:12px}
+section[style*="margin-top: 104px"],section[style*="margin-top: 96px"]{margin-top:48px!important}
+section h2[style*="font-size: 4"]{font-size:27px!important}
+section p[style*="font-size: 18px"],section p[style*="font-size: 17px"]{font-size:15.5px!important;line-height:1.55!important}
+.belief{grid-template-columns:44px 1fr!important;padding:14px 2px!important;gap:6px 10px!important}
+.belief h3{font-size:21px!important}
+.bno{font-size:26px!important}
+.diagram{margin-top:18px!important;padding:16px!important;border-radius:24px!important}
+.founder{padding:20px!important;border-radius:26px!important}
+.founder [style*="width: 72px"]{width:52px!important;height:52px!important;font-size:19px!important;border-radius:16px!important}
+.founder [style*="margin-top: 28px"]{margin-top:16px!important}
+.stat{padding:14px 18px!important;border-radius:20px!important;gap:14px!important}
+.stat .num{font-size:34px!important;min-width:56px!important}
+.stat span:last-child{font-size:14.5px!important}
+section[aria-labelledby="who"]{gap:10px!important}
+section[aria-labelledby="who"]>div:last-child{gap:10px!important}
+.pgrid{grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:18px!important}
+.pc{padding:14px!important;border-radius:20px!important}
+.pc>span{width:38px!important;height:38px!important;border-radius:12px!important}
+.pc svg{width:20px;height:20px}
+.pc h3{font-size:16.5px!important;margin-top:10px!important}
+.pc p{font-size:13.5px!important;line-height:1.45!important;margin-top:6px!important}
+section[aria-labelledby="affiliate"]{gap:24px!important}
+.band{padding:24px 20px!important;border-radius:24px!important;gap:16px!important}
+.band h2{font-size:28px!important}
+.band a{min-height:50px!important;font-size:16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
@@ -87,7 +115,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       <div class="rise" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #3F5B3A; font-size: 14px; font-weight: 800">About CO2 Counter</div>
       <h1 class="hd rise d1" style="margin: 20px 0 0; max-width: 960px; font-size: 84px; line-height: .96; font-weight: 800">Your footprint, counted honestly. <span style="color: #3F5B3A">Then made smaller.</span></h1>
       <p class="rise d2" style="margin: 24px 0 0; max-width: 620px; font-size: 21px; line-height: 1.6; color: #3A362D">CO2 Counter is a free, six-step survey that works out your yearly carbon footprint from official UK data, then shows you the changes that cut it the most.</p>
-      <ul class="rise d3" aria-label="Our promises" style="list-style: none; margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px">
+      <ul class="rise d3 proms" aria-label="Our promises" style="list-style: none; margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px">
         <sc-for list="{{promises}}" as="p" hint-placeholder-count="4">
           <li style="display: inline-flex; align-items: center; gap: 12px; padding: 10px 20px 10px 10px; border-radius: 99px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); font-size: 17px; font-weight: 700">
             <span style="width: 34px; height: 34px; border-radius: 99px; display: grid; place-items: center; background: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EFE9DC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
@@ -218,7 +246,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       </div>
       <div style="flex: 1 1 300px; min-width: 0; display: grid; gap: 16px">
         <sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
-          <div style="padding: 24px 28px; border-radius: 28px; background: {{s.bg}}; color: {{s.ink}}; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(46,42,34,.06)">
+          <div class="stat" style="padding: 24px 28px; border-radius: 28px; background: {{s.bg}}; color: {{s.ink}}; display: flex; align-items: center; gap: 20px; border: 1px solid rgba(46,42,34,.06)">
             <span class="num" style="font-size: 52px; font-weight: 800; line-height: 1; min-width: 84px">{{s.big}}</span>
             <span style="font-size: 17px; line-height: 1.45; font-weight: 600">{{s.text}}</span>
           </div>
@@ -229,9 +257,9 @@ footer[style]{flex-direction:column;gap:10px!important}
     <section aria-labelledby="principles" style="margin-top: 104px">
       <div style="font-size: 15px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #6B6455">How we choose partners</div>
       <h2 id="principles" class="hd" style="margin: 10px 0 0; max-width: 760px; font-size: 46px; line-height: 1.02; font-weight: 800">The climate comes first. <span style="color: #3F5B3A">Every time.</span></h2>
-      <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
+      <div class="pgrid" style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
         <sc-for list="{{principles}}" as="p" hint-placeholder-count="4">
-          <div class="pcard" style="padding: 26px; border-radius: 28px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+          <div class="pcard pc" style="padding: 26px; border-radius: 28px; background: rgba(255,252,245,.7); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
             <span style="width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{p.bg}}">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{p.ink}}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg>
             </span>

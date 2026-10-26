@@ -41,6 +41,10 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+div[style*="minmax(170px, 1fr)"],div[style*="minmax(140px, 1fr)"]{grid-template-columns:1fr 1fr!important;gap:8px!important}
+.opt{min-height:0!important;padding:12px 14px!important;border-radius:14px!important}
+.opt .hd{font-size:16px!important}
+.opt span:not(.hd){font-size:13px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
