@@ -3301,15 +3301,9 @@
       "Find yours, free, with CO2 Counter:";
   }
   const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
-  // Act 6: verified when the BCC copy of the letter reaches us. Without the
-  // verification set up yet, it falls back to a tick by hand.
-  function mobiliseAct(ticked) {
-    const base = { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action" };
-    const info = ui.actsInfo;
-    if (!info) return { ...base, manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
-      extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" };
-    const verified = info.verified && info.verified.mobilise;
-    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · your letter to your MP reached us on " + longDate(verified) };
+  // Postcode -> MP, then the email button with the letter (Habits box and
+  // the act 6 page share this).
+  function mpFinderHtml(info) {
     const mp = ui.mp || {};
     const finder =
       '<form id="mp-form" class="hb-mp-form"><input class="input" id="mp-postcode" autocomplete="postal-code" placeholder="Your postcode" maxlength="10" value="' + esc(ui.mpPostcode || "") + '" aria-label="Your postcode" />' +
@@ -3323,21 +3317,37 @@
           : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
         "</div>"
       : "";
+    return { finder, letter };
+  }
+  // Act 6: verified when the BCC copy of the letter reaches us. Without the
+  // verification set up yet, it falls back to a tick by hand.
+  function mobiliseAct(ticked) {
+    const base = { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action" };
+    const info = ui.actsInfo;
+    if (!info) return { ...base, manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
+      extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" };
+    const verified = info.verified && info.verified.mobilise;
+    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · your letter to your MP reached us on " + longDate(verified) };
+    const { finder, letter } = mpFinderHtml(info);
     return { ...base, done: false, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
   }
-  // Act 7: verified by invite link, once seven people who joined with it
-  // have finished the survey.
-  function motivateAct(ticked, url, text) {
-    const base = { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts" };
-    const info = ui.actsInfo;
-    const shares =
+  function shareButtonsHtml(url, text) {
+    return (
       '<span class="hb-share">' +
       '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
       '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
       '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
       '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
       '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
-      '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "");
+      '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "")
+    );
+  }
+  // Act 7: verified by invite link, once seven people who joined with it
+  // have finished the survey.
+  function motivateAct(ticked, url, text) {
+    const base = { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts" };
+    const info = ui.actsInfo;
+    const shares = shareButtonsHtml(url, text);
     if (!info) return { ...base, manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in", extra: shares };
     const n = Math.min(7, info.finished || 0);
     const verified = (info.verified && info.verified.motivate) || n >= 7;
@@ -3346,6 +3356,111 @@
       sub: verified ? "Verified · seven people you invited have taken the survey" : n + " of 7 people you invited have taken the survey" + (info.joined > n ? " (" + info.joined + " joined)" : ""),
       extra: '<span class="xs muted hb-invite">Your invite link: <b>' + esc(inviteLink().replace(/^https:\/\//, "")) + "</b></span>" + shares,
     };
+  }
+
+  // ---------- 7 Acts pages (acts 5-7; acts 1-4 open Greener switches) ----------
+
+  const ACT_PAGES = { monitor: 5, mobilise: 6, motivate: 7 };
+  function actHero(n, title, why, done, statusText) {
+    return (
+      '<p class="crumbs"><a href="#/habits">My Habits</a> › <span>Act ' + n + " of 7</span></p>" +
+      '<header class="glass cat-hero rise"><span class="cat-watermark display act-num" aria-hidden="true">' + n + "</span>" +
+      '<div class="cat-hero-main"><span class="tag done-tag">Real Zero · Act ' + n + '</span><h1 class="cat-title display">' + esc(title) + '</h1><p class="cat-why">' + why + "</p></div>" +
+      '<div class="cat-hero-side"><div class="cat-figs act-status' + (done ? " done" : "") + '"><span class="hb-box" aria-hidden="true">' + (done ? icon("check") : "") + '</span><b class="display">' + (done ? "Done" : "Not yet") + '</b><span class="muted sm">' + esc(statusText) + "</span></div></div></header>"
+    );
+  }
+  const actStep = (n, title, body) =>
+    '<section class="glass guide-card act-step"><div class="label-row"><span class="act-step-n display">' + n + '</span><h2 class="display">' + title + "</h2></div>" + body + "</section>";
+  const actLinks = (rows) =>
+    '<section class="glass guide-card"><h2 class="display">' + rows.title + '</h2><ul class="act-more">' +
+    rows.items.map(([t, b, href]) => '<li><a href="' + href + '" target="_blank" rel="noopener"><b>' + t + "</b><span class=\"sm muted\">" + b + "</span>" + icon("link") + "</a></li>").join("") + "</ul></section>";
+
+  function renderActPage(key) {
+    const n = ACT_PAGES[key];
+    if (!n) return '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/habits">Back to My Habits</a></div></div>';
+    const ready = survey && survey.completedAt;
+    const ticked = actsTicked();
+    const info = ui.actsInfo;
+    let html = '<div class="container narrow act-page">';
+
+    if (key === "monitor") {
+      const hist = historyByDay();
+      const last = hist[0] || (ready ? { completedAt: survey.completedAt, totalYearly: footprint(survey).totalYearly } : null);
+      const first = hist[hist.length - 1];
+      const days = last ? Math.floor((Date.now() - Date.parse(last.completedAt)) / 86400000) : null;
+      html += actHero(5, "Monitor your CO₂ footprint", "Measuring shows where your biggest cuts are, and measuring again shows what's working. Your survey is the measurement: check in whenever something changes.", !!ready,
+        last ? "Last measured " + longDate(last.completedAt) : "Take the survey to measure it");
+      html += actStep(1, "Your measurements",
+        last
+          ? '<ol class="act-hist">' + (hist.length ? hist : [last]).slice(0, 6).map((h, i) =>
+              '<li><span class="sm">' + esc(longDate(h.completedAt)) + (i === 0 ? ' <span class="xs muted">latest</span>' : "") + '</span><b class="display tnum">' + kgFmt(h.totalYearly) + " kg</b></li>").join("") + "</ol>" +
+            (hist.length > 1 && first ? '<p class="sm mt-3 ' + (last.totalYearly <= first.totalYearly ? "green-dark" : "clay") + '">' + (last.totalYearly <= first.totalYearly ? "▼ " : "▲ ") + kgFmt(Math.abs(last.totalYearly - first.totalYearly)) + " kg a year since your first, on " + esc(longDate(first.completedAt)) + ".</p>" : "") +
+            '<a class="btn btn-outline btn-sm mt-3" href="#/results">See your results ' + icon("arrowRight") + "</a>"
+          : '<p class="sm muted">You haven\'t measured your footprint yet. It takes about five minutes.</p><a class="btn btn-green mt-3" href="#/">Take the survey ' + icon("arrowRight") + "</a>");
+      html += actStep(2, "When to measure again",
+        '<p class="sm">Every three months, or after a big change: moving home, a new car, a new job, switching bank or energy, or changing how you eat.</p>' +
+        (days != null && days >= 90 ? '<p class="sm fw-700 mt-2">It\'s been ' + days + " days since you last measured. Time for a check-in.</p>" : days != null ? '<p class="sm muted mt-2">You measured ' + (days === 0 ? "today" : days === 1 ? "yesterday" : days + " days ago") + ".</p>" : "") +
+        (ready ? '<button type="button" class="btn btn-green btn-sm mt-3" data-action="whats-changed">Update my survey ' + icon("arrowRight") + "</button>" : ""));
+      html += actStep(3, "Cut where you can", '<p class="sm">Your results show your biggest areas first, and Acts 1 to 4 are the switches that cut them.</p><a class="btn btn-outline btn-sm mt-3" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>");
+    }
+
+    if (key === "mobilise") {
+      const verified = info && info.verified && info.verified.mobilise;
+      const done = info ? !!verified : !!ticked.mobilise;
+      html += actHero(6, "Mobilise: use your vote", "Personal choices matter, and so do the rules everyone lives by. MPs read what their constituents send them, and a letter in your own words is one of the most direct ways to show that climate matters to voters where you live.", done,
+        verified ? "Verified · your letter reached us on " + longDate(verified) : !info ? (ticked.mobilise ? "Ticked by you" : "Write to your MP, then tick it") : ticked.mpSent ? "Waiting for our copy of your letter" : "Write to your MP to complete it");
+      if (info && !verified) {
+        const { finder, letter } = mpFinderHtml(info);
+        const mp = ui.mp || {};
+        html += actStep(1, "Find your MP", '<p class="sm mb-3">Enter your postcode. We look it up on Parliament\'s own records.</p>' + finder + (mp.name ? '<p class="sm mt-3"><b>' + esc(mp.name) + "</b>, MP for " + esc(mp.constituency) + "</p>" : ""));
+        html += actStep(2, "Send your letter",
+          mp.name
+            ? letter.replace(/<p class="sm"><b>[^<]*<\/b>, MP for [^<]*<\/p>/, "") +
+              (mp.email ? '<details class="act-letter mt-3"><summary class="sm fw-700">Preview the letter</summary><pre>' + esc(decodeURIComponent(mpLetter(mp).split("&body=")[1] || "")) + "</pre></details>" : "")
+            : '<p class="sm muted">Find your MP first. Then a button opens your own email app with a letter ready to edit: say what matters to you, and add your name and address.</p>');
+        html += actStep(3, "We verify it", '<p class="sm">We\'re copied in (BCC, ' + MP_COPY + "), so your MP doesn't see us. When our copy arrives we match your reference, <b>CO2-" + esc(info.code) + "</b>, tick this act as verified and delete the email.</p>");
+      } else if (!info) {
+        html += actStep(1, "Write to your MP", '<p class="sm">WriteToThem finds your MP from your postcode and sends your message for you.</p><a class="btn btn-green btn-sm mt-3" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>");
+        html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="mobilise">' + (ticked.mobilise ? "Untick" : "I've written to my MP") + "</button>");
+      } else {
+        html += actStep(1, "Thank you", '<p class="sm">Your letter reached us, so this act is verified. Keep an eye out for your MP\'s reply, and write again when climate votes come up.</p>');
+      }
+      html += actLinks({ title: "More ways to use your voice", items: [
+        ["Register to vote", "Takes about 5 minutes. You need to be registered to vote in elections.", "https://www.gov.uk/register-to-vote"],
+        ["Write to your councillors", "Councils run planning, transport and housing. WriteToThem finds yours.", "https://www.writetothem.com/"],
+        ["Sign or start a petition", "Parliament considers petitions with 100,000 signatures for debate.", "https://petition.parliament.uk/"],
+        ["Find your MP's contact details", "Including their office and surgery details.", "https://members.parliament.uk/FindYourMP"],
+      ] });
+    }
+
+    if (key === "motivate") {
+      const nDone = info ? Math.min(7, info.finished || 0) : 0;
+      const verified = info && ((info.verified && info.verified.motivate) || nDone >= 7);
+      const done = info ? !!verified : !!ticked.motivate;
+      const url = encodeURIComponent(inviteLink());
+      const text = encodeURIComponent(shareText() + " " + inviteLink());
+      html += actHero(7, "Motivate seven other people", "Change spreads through the people we know. The seventh act is to get seven others measuring their footprint and doing their own 7 Acts.", done,
+        !info ? (ticked.motivate ? "Ticked by you" : "Share CO2 Counter, then tick it") : verified ? "Verified · seven people you invited have taken the survey" : nDone + " of 7 so far");
+      if (info) {
+        html += actStep(1, "Your progress",
+          '<div class="act-dots" role="img" aria-label="' + nDone + ' of 7">' + [0, 1, 2, 3, 4, 5, 6].map((i) => '<span class="' + (i < nDone ? "on" : "") + '">' + (i < nDone ? icon("check") : "") + "</span>").join("") + "</div>" +
+          '<p class="sm mt-3"><b>' + nDone + " of 7</b> people you invited have taken the survey" + (info.joined > nDone ? ", and " + (info.joined - nDone) + " more have joined but not finished yet" : "") + ".</p>" +
+          '<p class="xs muted mt-2">Someone counts when they sign up with your link and finish their survey. We never show you who they are or their answers.</p>');
+        html += actStep(2, "Share your invite link",
+          '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" +
+          '<div class="mt-3">' + shareButtonsHtml(url, text) + "</div>");
+      } else {
+        html += actStep(1, "Share CO2 Counter", shareButtonsHtml(url, text));
+        html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="motivate">' + (ticked.motivate ? "Untick" : "Seven people have joined in") + "</button>");
+      }
+      html += actStep(3, "Ideas that work",
+        '<ul class="act-ideas">' +
+        '<li><b>Start a group.</b> Make one on the <a href="#/friends">Friends</a> page for your team, family or housemates, and compare progress together.</li>' +
+        "<li><b>Share your result.</b> Your footprint is a good conversation starter. The share message includes it.</li>" +
+        "<li><b>Bring it to work.</b> Staff networks and green teams are a natural fit, and many employers run sustainability weeks.</li>" +
+        "<li><b>Do it together.</b> Taking the survey side by side takes five minutes and makes it easy to start.</li></ul>");
+    }
+    return html + '<div class="center mt-6"><a class="btn btn-outline" href="#/habits">' + icon("arrowLeft") + " Back to My Habits</a></div></div>";
   }
 
   function renderHabitsPage() {
@@ -3370,7 +3485,7 @@
         done: ready && travel.every((a) => a.done),
         sub: !ready ? "Finish your survey to see" : travel.every((a) => a.done) ? "Done · green commute and no flights" :
           [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
-      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: ready ? "#/results" : "#/", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
+      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: "#/acts/monitor", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
       mobiliseAct(ticked),
       motivateAct(ticked, url, text),
     ];
@@ -3382,7 +3497,10 @@
     // their own box, under the act.
     const rows = acts
       .map((a) => {
-        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + "</div>" : "";
+        const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
+        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + (page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "") + "</div>" : "";
+        if (page && (a.done || !a.extra))
+          return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + page + '">' + box(a) + body(a) + icon("chevronRight") + "</a></li>";
         if (a.manual)
           return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
         if (a.extra || (a.verifiedTick && !a.cat && !a.href))
@@ -6051,6 +6169,7 @@
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
+    else if (parts[0] === "acts" && parts[1]) html = renderActPage(parts[1]);
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
@@ -6492,6 +6611,10 @@
       if (ui.acts) ui.acts = t;
       if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
       setTimeout(render, 300);
+    },
+    "copy-invite": async () => {
+      try { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied."; } catch (e) { ui.shareMsg = "Couldn't copy. Select the link instead."; }
+      render();
     },
     "share-app": async () => {
       const text = shareText();
