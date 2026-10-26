@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My Habits</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<style>
+body{margin:0;background:#EFE9DC}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(217,164,65,.55)}50%{box-shadow:0 0 0 9px rgba(217,164,65,0)}}
+.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+.d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
+.seg{animation:draw .9s cubic-bezier(.2,.8,.2,1) both}
+.wait{animation:pulse 2.2s ease-in-out infinite}
+.clock{transform-origin:12px 12px;animation:spin 6s linear infinite}
+.act{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,border-color .3s}
+a.act:hover{transform:translateY(-3px);box-shadow:0 18px 34px rgba(46,42,34,.1);border-color:rgba(63,91,58,.35)}
+a.act:hover .chev{transform:translateX(4px)}
+.chev{transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.chip{transition:background .25s,transform .25s cubic-bezier(.3,1.5,.5,1)}
+.chip:hover{transform:translateY(-2px);background:#FFFCF5}
+.btn{transition:transform .25s cubic-bezier(.3,1.5,.5,1),background .25s}
+.btn:hover{transform:translateY(-2px)}
+.act:focus-visible,.btn:focus-visible,.chip:focus-visible,input:focus-visible{outline:2px solid #D9A441;outline-offset:3px}
+input::placeholder{color:#8A8273}
+/* phone layout */
+@media (max-width: 640px){
+nav[aria-label="Main"]{gap:10px!important}
+nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
+nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
+[style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
+h1{font-size:40px!important;line-height:1.02!important}
+h2[style*="font-size: 3"],h2[style*="font-size: 4"]{font-size:28px!important}
+.ringwrap{flex-basis:100%!important}
+.ring{width:200px!important;height:200px!important}
+.path{padding-left:0!important}
+.path>.rail{display:none}
+.node{position:static!important;width:44px!important;height:44px!important;font-size:18px!important;flex:none}
+.act{padding:18px!important;border-radius:22px!important;gap:12px!important}
+.act .save{display:none!important}
+.group{padding:20px!important;border-radius:26px!important}
+.soon{padding:24px!important}
+footer[style]{flex-direction:column;gap:10px!important}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+<div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
+  <div style="position: absolute; left: -10%; top: -260px; width: 720px; height: 720px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; right: -8%; top: 1100px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .45; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+
+  <div style="position: relative; max-width: 1160px; margin: 0 auto; padding: 20px 32px 64px">
+    <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
+      <a href="Glass2-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
+        <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
+        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+      </a>
+      <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <a href="Glass2-SurveyDone.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
+        <a href="Glass2-Results.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Results</a>
+        <a href="Glass2-Friends.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Friends</a>
+        <a href="Glass2-Habits.dc.html" aria-current="page" style="padding: 9px 18px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 15px; font-weight: 700; text-decoration: none">Habits</a>
+      </span>
+      <a href="Glass2-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
+    </nav>
+
+    <header style="margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
+      <div style="flex: 1 1 520px; min-width: 0">
+        <div class="rise" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #3F5B3A; font-size: 14px; font-weight: 800">My Habits · The 7 Acts</div>
+        <h1 class="hd rise d1" style="margin: 18px 0 0; font-size: 68px; line-height: .98; font-weight: 800">Seven acts.<br><span style="color: #3F5B3A">{{doneCount}} done,</span> {{leftCount}} to go.</h1>
+        <p class="rise d2" style="margin: 20px 0 0; max-width: 520px; font-size: 20px; line-height: 1.6; color: #3A362D">Real Zero’s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" style="font-weight: 700">7 Acts</a> for individuals: one-off changes that cut the most. Acts 1 to 5 tick themselves from your latest survey.</p>
+        <div class="rise d3" style="margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px">
+          <span style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 16px; background: #2B3F28; color: #F6F1E6"><span class="num" style="font-size: 24px; font-weight: 800; color: #E8C88A">−{{toSave}}</span><span style="font-size: 14px; line-height: 1.3; color: #C9D3BC">kg a year still to save<br>in acts 1 to 4</span></span>
+          <a class="btn" href="Glass2-Switches.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 54px; padding: 0 20px; border-radius: 16px; background: rgba(63,91,58,.12); color: #2B4128; font-weight: 800; font-size: 16px; text-decoration: none">See your switches<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+        </div>
+      </div>
+
+      <div class="ringwrap rise d2" style="flex: 0 1 380px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px; border-radius: 32px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(24px)">
+        <div style="position: relative">
+          <svg class="ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="{{ringLabel}}">
+            <sc-for list="{{segs}}" as="s" hint-placeholder-count="7">
+              <path d="{{s.d}}" fill="none" stroke="rgba(46,42,34,.08)" stroke-width="22" stroke-linecap="round"></path>
+              <path class="seg" d="{{s.d}}" fill="none" stroke="{{s.c}}" stroke-width="22" stroke-linecap="round" style="--len: {{s.len}}; stroke-dasharray: {{s.len}}; animation-delay: {{s.delay}}s"></path>
+            </sc-for>
+            <sc-for list="{{segs}}" as="s" hint-placeholder-count="7">
+              <text x="{{s.tx}}" y="{{s.ty}}" text-anchor="middle" dominant-baseline="central" font-family="Bricolage Grotesque, sans-serif" font-size="12" font-weight="800" fill="{{s.ink}}">{{s.n}}</text>
+            </sc-for>
+          </svg>
+          <div style="position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none">
+            <div><div class="num" style="font-size: 56px; font-weight: 800; line-height: 1">{{doneCount}}<span style="font-size: 26px; color: #8A8273">/7</span></div><div style="font-size: 14px; font-weight: 700; color: #5C5649">acts done</div></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 14px; font-weight: 700; color: #3A362D">
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #3F5B3A"></span>Done</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #D9A441"></span>Waiting</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: rgba(46,42,34,.14)"></span>To do</span>
+        </div>
+      </div>
+    </header>
+
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+      <section class="group" aria-label="{{g.title}}" style="margin-top: 40px; padding: 32px; border-radius: 36px; background: rgba(255,252,245,.5); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between">
+          <h2 class="hd" style="margin: 0; font-size: 32px; line-height: 1.05; font-weight: 800">{{g.title}}</h2>
+          <span style="font-size: 16px; color: #5C5649">{{g.note}}</span>
+        </div>
+        <ol class="path" style="list-style: none; margin: 22px 0 0; padding: 0 0 0 76px; position: relative; display: grid; gap: 14px">
+          <span class="rail" aria-hidden="true" style="position: absolute; left: 27px; top: 30px; bottom: 30px; width: 3px; border-radius: 99px; background: repeating-linear-gradient(rgba(46,42,34,.16) 0 6px, transparent 6px 12px)"></span>
+          <sc-for list="{{g.acts}}" as="a" hint-placeholder-count="3">
+            <li style="position: relative">
+              <sc-if value="{{a.isLink}}" hint-placeholder-val="{{true}}">
+                <a class="act" href="{{a.href}}" style="display: flex; align-items: center; gap: 18px; padding: 22px 24px; border-radius: 26px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}; color: #2E2A22; text-decoration: none">
+                  <span class="node num {{a.nodeCls}}" style="position: absolute; left: -76px; top: 50%; margin-top: -29px; width: 58px; height: 58px; border-radius: 99px; display: grid; place-items: center; background: {{a.nodeBg}}; color: {{a.nodeInk}}; font-size: 22px; font-weight: 800; box-shadow: 0 0 0 6px #EFE9DC">
+                    <sc-if value="{{a.done}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
+                    <sc-if value="{{a.showNum}}" hint-placeholder-val="{{true}}">{{a.n}}</sc-if>
+                  </span>
+                  <span style="flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
+                  <span style="flex: 1; min-width: 0">
+                    <span style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Act {{a.n}}</span>
+                    <span class="hd" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}</span>
+                    <span style="display: block; margin-top: 2px; font-size: 16px; color: #5C5649">{{a.what}}</span>
+                    <span style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 11px; border-radius: 99px; background: {{a.statusBg}}; color: {{a.statusInk}}; font-size: 14px; font-weight: 700">{{a.sub}}</span>
+                  </span>
+                  <sc-if value="{{a.hasSave}}" hint-placeholder-val="{{true}}"><span class="save" style="flex: none; text-align: right"><span class="num" style="display: block; font-size: 28px; font-weight: 800; color: #3F5B3A">−{{a.save}}</span><span style="font-size: 13px; color: #5C5649">kg a year</span></span></sc-if>
+                  <svg class="chev" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A8273" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M9 6l6 6-6 6"></path></svg>
+                </a>
+              </sc-if>
+              <sc-if value="{{a.isBox}}" hint-placeholder-val="{{false}}">
+                <div class="act" style="padding: 22px 24px; border-radius: 26px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}">
+                  <span class="node num {{a.nodeCls}}" style="position: absolute; left: -76px; top: 22px; width: 58px; height: 58px; border-radius: 99px; display: grid; place-items: center; background: {{a.nodeBg}}; color: {{a.nodeInk}}; font-size: 22px; font-weight: 800; box-shadow: 0 0 0 6px #EFE9DC">
+                    <sc-if value="{{a.pending}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path class="clock" d="M12 12V7"></path></svg></sc-if>
+                    <sc-if value="{{a.showNum}}" hint-placeholder-val="{{true}}">{{a.n}}</sc-if>
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 18px">
+                    <span style="flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
+                    <span style="flex: 1; min-width: 0">
+                      <span style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Act {{a.n}}</span>
+                      <span class="hd" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}</span>
+                      <span style="display: block; margin-top: 2px; font-size: 16px; color: #5C5649">{{a.what}}</span>
+                      <span style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 11px; border-radius: 99px; background: {{a.statusBg}}; color: {{a.statusInk}}; font-size: 14px; font-weight: 700">{{a.sub}}</span>
+                    </span>
+                  </div>
+
+                  <sc-if value="{{a.isEnergy}}" hint-placeholder-val="{{false}}">
+                    <div style="margin-top: 18px; padding: 18px; border-radius: 20px; background: rgba(217,164,65,.12); border: 1px dashed rgba(217,164,65,.6)">
+                      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A5F12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6"></path></svg>
+                        <span style="flex: 1; min-width: 200px; font-size: 16px; line-height: 1.5; color: #3A362D">You asked the bill payer to switch. This ticks as soon as they tap <b>“Yes, we’ve switched”</b> in their message.</span>
+                      </div>
+                      <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px">
+                        <sc-for list="{{a.emailApps}}" as="e" hint-placeholder-count="3"><a class="chip" href="#" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.1); color: #2B4128; font-size: 14px; font-weight: 700; text-decoration: none">{{e}}</a></sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{a.isMp}}" hint-placeholder-val="{{false}}">
+                    <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 20px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
+                        <div class="hd" style="font-size: 17px; font-weight: 800">Find your MP</div>
+                        <p style="margin: 4px 0 12px; font-size: 15px; color: #5C5649">We look it up on Parliament’s own records.</p>
+                        <form onSubmit="{{a.findMp}}" style="display: flex; gap: 8px">
+                          <input aria-label="Your postcode" placeholder="Your postcode" maxlength="10" style="flex: 1; min-width: 0; height: 50px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; border: 1.5px solid rgba(46,42,34,.16); background: #FFFCF5; font: 600 17px Karla, sans-serif; color: #2E2A22; text-transform: uppercase">
+                          <button class="btn" type="submit" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; height: 50px; padding: 0 18px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 16px">Find my MP</button>
+                        </form>
+                        <sc-if value="{{a.mpFound}}" hint-placeholder-val="{{false}}"><p style="margin: 12px 0 0; font-size: 15px; color: #2B4128; font-weight: 700">Found your MP. Your letter is ready to edit and send.</p></sc-if>
+                      </div>
+                      <div style="flex: 1 1 260px; min-width: 0; padding: 18px; border-radius: 20px; background: #6F4E63; color: #F6F1E6">
+                        <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #E3D3DC">How it ticks</div>
+                        <ol style="margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 15px; line-height: 1.45">
+                          <li style="display: flex; gap: 10px"><b class="num" style="color: #E8C88A">1</b>Write your letter here, or in Gmail or Outlook</li>
+                          <li style="display: flex; gap: 10px"><b class="num" style="color: #E8C88A">2</b>We’re copied in, so your MP doesn’t see us</li>
+                          <li style="display: flex; gap: 10px"><b class="num" style="color: #E8C88A">3</b>We match your reference, tick it and delete our copy</li>
+                        </ol>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{a.isInvite}}" hint-placeholder-val="{{false}}">
+                    <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+                      <div style="flex: 1 1 280px; min-width: 0; padding: 18px; border-radius: 20px; background: #2B3F28; color: #F6F1E6">
+                        <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #C9D3BC">People you’ve invited</div>
+                        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap" role="img" aria-label="{{a.inviteLabel}}">
+                          <sc-for list="{{a.people}}" as="p" hint-placeholder-count="7">
+                            <span style="width: 38px; height: 38px; border-radius: 99px; display: grid; place-items: center; background: {{p.bg}}; color: {{p.ink}}; border: 2px {{p.line}} {{p.edge}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg></span>
+                          </sc-for>
+                        </div>
+                        <p style="margin: 12px 0 0; font-size: 15px; color: #C9D3BC">{{a.inviteText}}</p>
+                      </div>
+                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 20px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+                          <span><span style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Your invite code</span><span class="num" style="font-size: 30px; font-weight: 800; letter-spacing: .08em">{{a.code}}</span></span>
+                          <button class="btn" type="button" onClick="{{a.copy}}" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg>{{a.copyLabel}}</button>
+                        </div>
+                        <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px">
+                          <sc-for list="{{a.shares}}" as="s" hint-placeholder-count="6"><a class="chip" href="{{s.href}}" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(63,91,58,.08); border: 1px solid rgba(46,42,34,.08); color: #2B4128; font-size: 14px; font-weight: 700; text-decoration: none">{{s.label}}</a></sc-for>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </li>
+          </sc-for>
+        </ol>
+      </section>
+    </sc-for>
+
+    <section class="soon" aria-labelledby="daily" style="margin-top: 40px; padding: 36px; border-radius: 36px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; position: relative; overflow: hidden">
+      <div style="flex: 1 1 380px; min-width: 0; position: relative">
+        <span style="display: inline-block; padding: 4px 12px; border-radius: 99px; background: rgba(232,200,138,.2); color: #E8C88A; font-size: 13px; font-weight: 800">Coming soon</span>
+        <h2 id="daily" class="hd" style="margin: 14px 0 0; font-size: 38px; line-height: 1.05; font-weight: 800">Daily habits</h2>
+        <p style="margin: 12px 0 0; max-width: 460px; font-size: 18px; line-height: 1.6; color: #C9D3BC">Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We’re building this next.</p>
+      </div>
+      <div aria-hidden="true" style="flex: 1 1 380px; min-width: 0; display: grid; gap: 10px; opacity: .9">
+        <sc-for list="{{daily}}" as="h" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: rgba(246,241,230,.08); border: 1px solid rgba(246,241,230,.1)">
+            <span style="flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(163,181,143,.2); color: #C9D3BC"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{h.icon}}"></path></svg></span>
+            <span class="hd" style="flex: 1; min-width: 0; font-size: 17px; font-weight: 700">{{h.label}}</span>
+            <span style="display: flex; gap: 5px">
+              <sc-for list="{{h.week}}" as="d" hint-placeholder-count="7"><span style="width: 14px; height: 14px; border-radius: 5px; background: {{d}}"></span></sc-for>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <footer style="margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
+      <span>The 7 Acts are by <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">Real Zero</a>. Example account shown.</span>
+      <span style="display: flex; gap: 20px"><a href="Glass2-About.dc.html">About</a><a href="Glass2-Switches.dc.html">Greener switches</a><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a></span>
+    </footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":2900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { scroll: 0, copied: false, mpFound: false };
+  }
+  componentDidMount() {
+    this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
+    window.addEventListener('scroll', this.onWin, { passive: true });
+  }
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.onWin);
+    clearTimeout(this.t);
+  }
+  renderVals() {
+    const st = this.state;
+    const s = Math.min(st.scroll, 3000);
+    const k = this.props.parallax ?? 1;
+    const fmt = (n) => Math.round(n).toLocaleString('en-GB');
+    const I = {
+      bank: 'M3 9.5 12 4l9 5.5H3ZM5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18',
+      bolt: 'M13 2 4 14h7l-1 8 9-12h-7Z',
+      food: 'M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7',
+      train: 'M6 4h12a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2ZM4 11h16M8 21l2-3M16 21l-2-3M8.5 14.5v.01M15.5 14.5v.01',
+      chart: 'M4 20V10M10 20V4M16 20v-7M2 20h20',
+      vote: 'M4 13h16v7H4zM8 13V5h8v8M10.5 8.5l1.5 1.5 3-3',
+      people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6',
+      person: 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7',
+      check: 'M5 12.5l4.5 4.5L19 7.5',
+      plus: 'M12 5v14M5 12h14'
+    };
+    // status: done | wait | todo
+    const acts = [
+      { n: 1, name: 'Move your money', what: 'away from banks that finance fossil fuels', icon: I.bank, status: 'todo', save: 1029, sub: 'Not yet · could save 1,029 kg a year', href: 'Glass2-Switches.dc.html#banking' },
+      { n: 2, name: 'Move your energy', what: 'to a 100% renewable supplier, and electrify', icon: I.bolt, status: 'wait', sub: 'Asked · waiting for the bill payer to confirm', box: 'energy' },
+      { n: 3, name: 'More plant-based food', what: 'seasonal and local where you can', icon: I.food, status: 'todo', save: 1066, sub: 'Not yet · could save 1,066 kg a year', href: 'Glass2-Switches.dc.html#meals' },
+      { n: 4, name: 'More green travel', what: 'walk, cycle, take the train, fly less', icon: I.train, status: 'todo', save: 571, sub: 'Commute not yet · flights not yet', href: 'Glass2-Switches.dc.html#flights' },
+      { n: 5, name: 'Monitor your CO₂ footprint', what: 'and cut where you can', icon: I.chart, status: 'done', sub: 'Done · you’ve measured it with CO2 Counter', href: 'Glass2-Results.dc.html' },
+      { n: 6, name: 'Mobilise: use your vote', what: 'to ask your representatives for action', icon: I.vote, status: 'todo', sub: 'Email your MP, and this ticks once our copy arrives', box: 'mp' },
+      { n: 7, name: 'Motivate seven other people', what: 'to do their 7 Acts', icon: I.people, status: 'todo', sub: '2 of 7 people you invited have taken the survey', box: 'invite' }
+    ];
+    const LOOK = {
+      done: { c: '#3F5B3A', ink: '#F6F1E6', card: 'rgba(63,91,58,.08)', border: 'rgba(63,91,58,.3)', sBg: 'rgba(63,91,58,.14)', sInk: '#2B4128', tile: '#3F5B3A', tileInk: '#F6F1E6', cls: '' },
+      wait: { c: '#D9A441', ink: '#2E2A22', card: '#FFFCF5', border: 'rgba(217,164,65,.55)', sBg: 'rgba(217,164,65,.2)', sInk: '#6B4A12', tile: 'rgba(217,164,65,.22)', tileInk: '#8A5F12', cls: 'wait' },
+      todo: { c: 'rgba(46,42,34,.14)', ink: '#2E2A22', card: 'rgba(255,252,245,.9)', border: 'rgba(46,42,34,.08)', sBg: 'rgba(46,42,34,.06)', sInk: '#4A453A', tile: 'rgba(63,91,58,.1)', tileInk: '#3F5B3A', cls: '' }
+    };
+    const invited = 2, joined = 3;
+    const people = Array.from({ length: 7 }, (_, i) => i < invited
+      ? { bg: '#A3B58F', ink: '#1F2D1C', edge: '#A3B58F', line: 'solid', icon: I.check }
+      : i < joined ? { bg: 'transparent', ink: '#E8C88A', edge: '#E8C88A', line: 'solid', icon: I.person }
+      : { bg: 'transparent', ink: 'rgba(246,241,230,.4)', edge: 'rgba(246,241,230,.3)', line: 'dashed', icon: I.plus });
+    // The inline boxes (acts 2, 6 and 7) read everything from their own act
+    const extras = {
+      emailApps: ['Send it again', 'Open in Gmail', 'Open in Outlook'],
+      findMp: (e) => { e.preventDefault(); this.setState({ mpFound: true }); },
+      mpFound: st.mpFound,
+      people, inviteLabel: invited + ' of 7 invited people have taken the survey, ' + joined + ' have joined',
+      inviteText: invited + ' of 7 have taken the survey · ' + joined + ' have joined. It ticks itself at seven.',
+      code: 'K7Q2MX',
+      copy: () => { this.setState({ copied: true }); clearTimeout(this.t); this.t = setTimeout(() => this.setState({ copied: false }), 1600); },
+      copyLabel: st.copied ? 'Copied' : 'Copy code',
+      shares: [['Share', '#'], ['WhatsApp', '#'], ['Instagram', '#'], ['X', '#'], ['Facebook', '#'], ['Add friends', 'Glass2-Friends.dc.html']].map(([label, href]) => ({ label, href }))
+    };
+    const view = (a) => {
+      const L = LOOK[a.status];
+      return {
+        ...a, ...extras, done: a.status === 'done', pending: a.status === 'wait', showNum: a.status === 'todo',
+        isLink: !a.box, isBox: !!a.box, isEnergy: a.box === 'energy', isMp: a.box === 'mp', isInvite: a.box === 'invite',
+        hasSave: !!a.save, save: a.save ? fmt(a.save) : '',
+        nodeBg: L.c, nodeInk: a.status === 'todo' ? '#4A453A' : L.ink, nodeCls: L.cls,
+        cardBg: L.card, border: L.border, statusBg: L.sBg, statusInk: L.sInk, tile: L.tile, tileInk: L.tileInk
+      };
+    };
+    // Seven ring segments with small gaps, starting at the top
+    const R = 96, C = 120, gap = 9;
+    const pt = (deg) => { const r = ((deg - 90) * Math.PI) / 180; return [C + R * Math.cos(r), C + R * Math.sin(r)]; };
+    const segs = acts.map((a, i) => {
+      const a0 = i * (360 / 7) + gap / 2, a1 = (i + 1) * (360 / 7) - gap / 2;
+      const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+      const mid = ((i + 0.5) * 360) / 7, r = ((mid - 90) * Math.PI) / 180;
+      const L = LOOK[a.status];
+      return {
+        n: a.n, d: 'M' + x0.toFixed(1) + ' ' + y0.toFixed(1) + 'A' + R + ' ' + R + ' 0 0 1 ' + x1.toFixed(1) + ' ' + y1.toFixed(1),
+        len: Math.ceil((R * Math.PI * (a1 - a0)) / 180), c: a.status === 'todo' ? 'transparent' : L.c, delay: (0.3 + i * 0.12).toFixed(2),
+        tx: (C + R * Math.cos(r)).toFixed(1), ty: (C + R * Math.sin(r)).toFixed(1), ink: a.status === 'todo' ? '#8A8273' : L.ink
+      };
+    });
+    const doneCount = acts.filter((a) => a.status === 'done').length;
+    const off = 'rgba(246,241,230,.12)';
+    return {
+      pBlobA: (s * 0.3 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
+      doneCount, leftCount: 7 - doneCount, toSave: fmt(1029 + 1066 + 571),
+      ringLabel: doneCount + ' of 7 acts done, 1 waiting for confirmation',
+      segs,
+      groups: [
+        { title: 'Switch the big things', note: 'Acts 1 to 4 · they tick from your survey', acts: acts.slice(0, 4).map(view) },
+        { title: 'Keep measuring', note: 'Act 5', acts: acts.slice(4, 5).map(view) },
+        { title: 'Use your voice', note: 'Acts 6 and 7 · verified, never ticked by hand', acts: acts.slice(5).map(view) }
+      ],
+      daily: [
+        { label: 'Meat-free lunch', icon: I.food, week: ['#A3B58F', '#A3B58F', off, '#A3B58F', '#A3B58F', off, off] },
+        { label: 'Shorter shower', icon: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z', week: ['#A3B58F', '#A3B58F', '#A3B58F', off, off, off, off] },
+        { label: 'Walk the short trips', icon: 'M13 4.5a1.5 1.5 0 1 0 0-.1M10 21l2-6 3 3v3M9 12l3-4 3 2 3 1M12 8l-2 5', week: ['#E8C88A', off, '#A3B58F', off, off, off, off] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

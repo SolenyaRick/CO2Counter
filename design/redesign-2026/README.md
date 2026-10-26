@@ -42,6 +42,10 @@ canvas layout.
   beliefs, an animated diagram of your answers and official factors flowing as dots through the
   calculator into an estimated footprint, who runs it, partner principles and an
   affiliate disclosure showing the exact tag.
+- `Glass2-Habits.dc.html`: My Habits. Real Zero's 7 Acts as a 7-segment
+  progress ring and a numbered path in three groups (switch the big things,
+  keep measuring, use your voice), with the bill-payer, MP finder and invite
+  boxes inline, then a "coming soon" preview of daily habits with streaks.
 - `App-Icon.dc.html`: the "Leaf Ledger" app icon, sizes, variants and splash.
 
 Every Glass v2 page includes a phone layout (under 640 px wide: the nav links
