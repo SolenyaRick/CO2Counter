@@ -3669,7 +3669,7 @@
       if (page && !a.manual && (a.done || !a.extra))
         return '<li class="hb-item"><a class="hb-row ' + cls + '" href="' + page + '">' + node(a) + tile(a) + body(a) + icon("chevronRight") + "</a></li>";
       if (a.manual)
-        return '<li class="hb-item"><div class="' + cls + ' hb-boxed"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button>" +
+        return '<li class="hb-item"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button><div class=\"" + cls + ' hb-boxed">' +
           '<div class="hb-row">' + tile(a) + body(a) + "</div>" + (a.extra && !a.done ? '<div class="hb-light">' + a.extra + "</div>" : "") + pageLink + "</div></li>";
       if (a.extra || (a.verifiedTick && !a.cat && !a.href))
         return '<li class="hb-item"><div class="' + cls + ' hb-boxed">' + node(a) + '<div class="hb-row">' + tile(a) + body(a) + "</div>" +
