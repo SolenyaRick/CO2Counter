@@ -2699,7 +2699,7 @@
     const live = shown.filter(({ s }) => !sectionNA(cat, s)).length;
     html +=
       '<div class="cat-grid"><section class="cat-col"><div class="row-between gap-3 cat-sub" style="flex-wrap:wrap;align-items:baseline">' +
-      '<h2 class="display">Your ' + (live === 1 ? "next step" : live + " next steps") + '</h2><span class="muted">Tap one for the details</span></div>' +
+      '<h2 class="display">' + (live === 0 ? "Nothing to do here" : "Your " + (live === 1 ? "next step" : live + " next steps")) + '</h2><span class="muted">' + (live === 0 ? "None of these apply to you" : "Tap one for the details") + "</span></div>" +
       '<ol class="todo-list">' +
       shown
         .map(({ s, i }, k) => {
@@ -2759,9 +2759,14 @@
         return {
           ...base,
           title: "You already eat plant-based",
-          lede: "Your days are already the lowest-carbon way to eat." + (lowWaste ? " There's nothing more to switch here." : " Wasting less food is the one thing left to go further."),
-          saveLabel: lowWaste ? "Nothing more to switch" : "Wasting less could save",
-          steps: wasteSteps,
+          lede: "Your days are already the lowest-carbon way to eat. You can still go a bit further by wasting less and choosing local, seasonal produce.",
+          saveLabel: lowWaste ? "Already low-waste" : "Wasting less could save",
+          steps: [
+            wasteSteps[0],
+            ["Eat local and seasonal", "In-season produce grown nearby needs less heated greenhouse growing, storage and transport. A local veg box makes it easy."],
+            wasteSteps[1],
+            wasteSteps[3],
+          ],
         };
       if (diet === "veggie")
         return {
@@ -3055,6 +3060,8 @@
     }
     // Driving cards, for people who don't drive to work.
     if (cat === "commute" && (s.dynamicKey === "commuteSwap" || s.dynamicKey === "ifDriving")) return carDaysOf(survey).length === 0;
+    // No pets, so none of the pet steps apply.
+    if (cat === "pets") return !((survey.pets || {}).dogs > 0 || (survey.pets || {}).cats > 0);
     // No gas, so no boiler to replace.
     if (cat === "energy" && /electrify heating/i.test(s.heading)) return !((survey.energy || {}).gasKwh > 0);
     return false;
@@ -3101,10 +3108,9 @@
     // Food: going by the meals someone has entered so far.
     if (cat === "meals" && l.when && s) {
       const diet = dietType(s);
-      const lowWaste = ((s.meals || {}).foodWaste || "low") === "low";
       if (l.when === "meat") return diet !== "vegan";
-      if (l.when === "plants") return diet !== "vegan";
-      if (l.when === "waste") return diet !== "vegan" || !lowWaste;
+      // Veg boxes (local, seasonal) and Oddbox (less waste) suit everyone,
+      // vegans included.
     }
     if (!s || !s.completedAt) return true;
     if (cat === "flights" && l.when) {
@@ -4528,10 +4534,10 @@
         vsTitle: (base.mine ? "Your" : "Typical") + " electricity for a year, kg CO₂e", beforeLabel: "Standard", before: elecKwh * D.ELECTRICITY_FACTOR, afterLabel: energyDone ? "Yours: green tariff" : "Green tariff", after: elecKwh * D.GREEN_ELECTRICITY_FACTOR },
       { key: "meals", short: "Food", effort: "Ongoing · a weekly habit", ex: 84, save: saving("meals"), verb: "Explore", panel: "#6E8B5E", panelInk: "#F6F1E6", dropInk: "#F6F1E6",
         done: foodDone,
-        doneTitle: diet === "vegan" ? "You already eat plant-based" : "You're vegetarian. Go a bit further?",
+        doneTitle: diet === "vegan" ? "You eat plant-based. Go a bit further?" : "You're vegetarian. Go a bit further?",
         fact: foodDone
           ? diet === "vegan"
-            ? "Your days are already plant-based, the lowest-carbon way to eat." + (saving("meals") >= 0.5 ? " Wasting less food is the one thing left to go further." : " Nothing more to switch here.")
+            ? "Your days are already plant-based, the lowest-carbon way to eat. You can still go a bit further by wasting less and choosing local, seasonal produce: a veg box helps with both."
             : "No meat already puts you well below a typical diet. You could go a bit further with a few vegan days: dairy and eggs are most of what's left."
           : food.what
             ? food.what + " emits " + times(food.before, food.after) + " a vegan day" + (base.mine ? ", and it's your highest-carbon day of food" : "") + ". A veg box or a recipe app makes the swap the easy option."
@@ -5046,7 +5052,8 @@
     const people = everyone.map((u) => ({ u, role: roleBy[u] || null }));
     const roles = ROLES.map(([k, l]) => breakdown(l, people.filter((p) => p.role === k).map((p) => p.u))).concat([breakdown("Not given", people.filter((p) => !p.role).map((p) => p.u))]);
     const groups = (d.groups || []).map((g) => breakdown(g.name, g.members || []));
-    const research = people.filter((p) => p.research).map((p) => p.u);
+    // Research consent lives on the profile only.
+    const research = (d.people || []).filter((p) => p.research).map((p) => p.u);
     return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size, roles, groups, research, fps, latestUsers: (d.latest || []).map((r) => r.u), roleOf: Object.fromEntries(people.map((p) => [p.u, p.role])) };
   }
 
