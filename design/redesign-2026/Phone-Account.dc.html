@@ -41,6 +41,17 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
+header.card{padding:18px!important;gap:14px!important}
+header.card>svg{display:none}
+.who{flex-wrap:nowrap!important;gap:14px!important;min-width:0}
+.av{width:56px!important;height:56px!important;border-radius:18px!important;font-size:22px!important;flex:none}
+.who h1{font-size:26px!important;margin-top:2px!important}
+.who p{font-size:14px!important;margin-top:2px!important}
+.who [style*="text-transform: uppercase"]{font-size:12px!important}
+.so{position:absolute!important;top:14px!important;right:14px!important;min-height:36px!important;padding:0 12px!important;font-size:13px!important;border-radius:12px!important}
+.so svg{width:15px;height:15px}
+.accbtns{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
+.accbtns .btn{min-height:44px;font-size:14px;padding:0 10px}
 footer[style]{flex-direction:column;gap:10px!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
@@ -81,15 +92,15 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 
     <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
       <svg width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 46%; top: -40px; opacity: .07; transform: rotate(-8deg)" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"></path></svg>
-      <div style="position: relative; display: flex; align-items: center; gap: 22px; flex-wrap: wrap">
-        <span class="hd" style="width: 88px; height: 88px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-size: 34px; font-weight: 800">AG</span>
+      <div class="who" style="position: relative; display: flex; align-items: center; gap: 22px; flex-wrap: wrap">
+        <span class="hd av" style="width: 88px; height: 88px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-size: 34px; font-weight: 800">AG</span>
         <div>
           <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">Account</div>
           <h1 class="hd" style="margin: 6px 0 0; font-size: 44px; line-height: 1.05; font-weight: 800">Alex Green</h1>
           <p style="margin: 6px 0 0; font-size: 17px; color: #3A362D">@alexg · alex@example.com</p>
         </div>
       </div>
-      <button class="btn ghost" onClick="{{signOut}}" style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>{{signOutLabel}}</button>
+      <button class="btn ghost so" onClick="{{signOut}}" style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>{{signOutLabel}}</button>
     </header>
 
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
@@ -103,9 +114,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Footprint</div><div class="num" style="font-size: 34px; font-weight: 800">{{count}}</div><div style="font-size: 13px; color: #4A453A">kg CO₂e a year</div></div>
             <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Surveys taken</div><div class="num" style="font-size: 34px; font-weight: 800">2</div><div style="font-size: 13px; font-weight: 700; color: #3F5B3A">▼ 9% since your first</div></div>
             <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Friends</div><div class="num" style="font-size: 34px; font-weight: 800">4</div><div style="font-size: 13px; color: #4A453A">You’re 3rd of 5</div></div>
-            <a href="Phone-Habits.dc.html" style="display: block; padding: 18px; border-radius: 18px; background: rgba(63,91,58,.1); border: 1px solid rgba(63,91,58,.25); color: #2E2A22; text-decoration: none"><div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-size: 14px; color: #4A453A">7 Acts</span><svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true"><rect x="0" y="2" width="4" height="6" rx="2" fill="rgba(46,42,34,.15)"></rect><rect x="6" y="2" width="4" height="6" rx="2" fill="#D9A441"></rect><rect x="12" y="2" width="4" height="6" rx="2" fill="rgba(46,42,34,.15)"></rect><rect x="18" y="2" width="4" height="6" rx="2" fill="rgba(46,42,34,.15)"></rect><rect x="24" y="2" width="4" height="6" rx="2" fill="#3F5B3A"></rect><rect x="30" y="2" width="4" height="6" rx="2" fill="rgba(46,42,34,.15)"></rect><rect x="36" y="2" width="4" height="6" rx="2" fill="rgba(46,42,34,.15)"></rect></svg></div><div class="num" style="font-size: 34px; font-weight: 800">1<span style="font-size: 18px; color: #8A8273">/7</span></div><div style="font-size: 13px; color: #2B4128; font-weight: 700">done · 1 waiting · See habits →</div></a>
+            <a class="actstile" href="Phone-Habits.dc.html" style="display: block; padding: 18px; border-radius: 18px; background: #2B3F28; color: #F6F1E6; text-decoration: none"><div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-size: 14px; color: #C9D3BC">7 Acts</span><svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true"><rect x="0" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="6" y="2" width="4" height="6" rx="2" fill="#D9A441"></rect><rect x="12" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="18" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="24" y="2" width="4" height="6" rx="2" fill="#A3B58F"></rect><rect x="30" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="36" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect></svg></div><div class="num" style="font-size: 34px; font-weight: 800">1<span style="font-size: 18px; color: #A3B58F">/7</span></div><div style="font-size: 13px; color: #E8C88A; font-weight: 700">done · 1 waiting · See habits →</div></a>
           </div>
-          <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px">
+          <div class="accbtns" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px">
             <a class="btn solid" href="Phone-SurveyDone.dc.html">Retake survey</a>
             <a class="btn ghost" href="Phone-Results.dc.html">View results</a>
             <a class="btn ghost" href="Phone-Friends.dc.html">Friends</a>
