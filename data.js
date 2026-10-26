@@ -1034,12 +1034,15 @@
       eyebrow: "Leave the car, or change it",
       title: "Train, bike or electric",
       // "vehicle" items also show on the commute "If you must drive" pop-up.
+      // "when" says who they suit (see linkFits in app.js): "train" for people
+      // who drive or bus, "cycle" for commutes short enough to walk or cycle,
+      // "ev" for people who drive a petrol or diesel car.
       items: [
-        { label: "Trainline", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
-        { label: "Cyclescheme", topic: "vehicle", url: "https://www.cyclescheme.co.uk/", tone: "sky", tags: ["Cycle to Work", "Tax-free"], note: "Get a bike or e-bike through your employer's Cycle to Work scheme, paid from your salary before tax." },
-        { label: "Green Commute Initiative", topic: "vehicle", url: "https://www.greencommuteinitiative.uk/", tone: "leaf", tags: ["Cycle to Work", "E-bikes"], note: "A not-for-profit Cycle to Work scheme with no upper limit, popular for e-bikes and cargo bikes." },
-        { label: "Octopus EV", topic: "vehicle", url: "https://octopusev.com/", tone: "plum", tags: ["Salary sacrifice", "Electric cars"], note: "Lease an electric car through your employer, paid from your salary before tax." },
-        { label: "NHS Fleet Solutions", topic: "vehicle", url: "https://www.nhsfleetsolutions.co.uk/", tone: "amber", tags: ["NHS staff", "Salary sacrifice"], note: "The NHS's own salary-sacrifice car scheme, including electric cars, for NHS staff." },
+        { label: "Trainline", when: "train", affiliate: "pending: Partnerize", url: "https://www.thetrainline.com/", tone: "leaf", tags: ["Times & tickets", "Railcards"], note: "Find trains, split tickets and season tickets for your commute." },
+        { label: "Cyclescheme", topic: "vehicle", when: "cycle", url: "https://www.cyclescheme.co.uk/", tone: "sky", tags: ["Cycle to Work", "Tax-free"], note: "Get a bike or e-bike through your employer's Cycle to Work scheme, paid from your salary before tax." },
+        { label: "Green Commute Initiative", topic: "vehicle", when: "cycle", url: "https://www.greencommuteinitiative.uk/", tone: "leaf", tags: ["Cycle to Work", "E-bikes"], note: "A not-for-profit Cycle to Work scheme with no upper limit, popular for e-bikes and cargo bikes." },
+        { label: "Octopus EV", topic: "vehicle", when: "ev", url: "https://octopusev.com/", tone: "plum", tags: ["Salary sacrifice", "Electric cars"], note: "Lease an electric car through your employer, paid from your salary before tax." },
+        { label: "NHS Fleet Solutions", topic: "vehicle", when: "ev", url: "https://www.nhsfleetsolutions.co.uk/", tone: "amber", tags: ["NHS staff", "Salary sacrifice"], note: "The NHS's own salary-sacrifice car scheme, including electric cars, for NHS staff." },
       ],
     },
     flights: {
@@ -1064,9 +1067,9 @@
       eyebrow: "Seven-day switch",
       title: "Move to a greener bank",
       items: [
-        { label: "Triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", tone: "leaf", tags: ["Top rated", "Ethical lending"], note: "Only lends to social and environmental projects." },
-        { label: "The Co-operative Bank", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", tone: "sky", tags: ["Which? Eco Provider"], note: "Ethical policy rules out fossil-fuel finance." },
-        { label: "Nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", tone: "amber", tags: ["Which? Eco Provider", "Member-owned"], note: "Building society that lends mainly for UK homes." },
+        { label: "Triodos", bank: "triodos", url: "https://www.triodos.co.uk/current-accounts/current-account", tone: "leaf", tags: ["Top rated", "Ethical lending"], note: "Only lends to social and environmental projects." },
+        { label: "The Co-operative Bank", bank: "co_op", url: "https://www.co-operativebank.co.uk/products/bank-accounts/switch-to-us/", tone: "sky", tags: ["Which? Eco Provider"], note: "Ethical policy rules out fossil-fuel finance." },
+        { label: "Nationwide", bank: "nationwide", url: "https://www.nationwide.co.uk/current-accounts/switch/", tone: "amber", tags: ["Which? Eco Provider", "Member-owned"], note: "Building society that lends mainly for UK homes." },
       ],
     },
   };

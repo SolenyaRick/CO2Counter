@@ -4272,3 +4272,5 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .research-consent { align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; }
 .research-consent input { margin-top: 3px; flex: none; }
 .group-tabs .btn { white-space: normal; height: auto; min-height: 36px; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.sw-done { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: #A3B58F; color: #1F2D1C; font-size: 11px; font-weight: 800; font-family: inherit; vertical-align: 2px; }
+.sw-done .icon { width: 11px; height: 11px; }
