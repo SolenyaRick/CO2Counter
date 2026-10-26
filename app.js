@@ -3289,6 +3289,19 @@
   const MP_COPY = "mp@co2counter.co.uk";
   // A ready-to-edit letter. The reference lets us match the BCC copy to the
   // account; MPs need a name and full address to reply to a constituent.
+  // Webmail drafts, for people who use Gmail or Outlook in the browser.
+  // Outlook's web link can't add a BCC, so MP letters there need it adding.
+  const gmailLink = (m) =>
+    "https://mail.google.com/mail/?view=cm&fs=1" + (m.to ? "&to=" + encodeURIComponent(m.to) : "") + (m.bcc ? "&bcc=" + encodeURIComponent(m.bcc) : "") +
+    "&su=" + encodeURIComponent(m.subject) + "&body=" + encodeURIComponent(m.body);
+  const outlookLink = (m) =>
+    "https://outlook.office.com/mail/deeplink/compose?" + (m.to ? "to=" + encodeURIComponent(m.to) + "&" : "") + "subject=" + encodeURIComponent(m.subject) + "&body=" + encodeURIComponent(m.body);
+  const webmailButtons = (m, action) =>
+    '<a class="hb-act-link" href="' + esc(gmailLink(m)) + '" target="_blank" rel="noopener" data-action="' + action + '">Open in Gmail</a>' +
+    '<a class="hb-act-link" href="' + esc(outlookLink(m)) + '" target="_blank" rel="noopener" data-action="' + action + '">Open in Outlook</a>';
+  function mpLetterParts(mp) {
+    return { to: mp.email, bcc: MP_COPY, subject: "Climate action: a letter from a constituent", body: decodeURIComponent(mpLetter(mp).split("&body=")[1] || "") };
+  }
   function mpLetter(mp) {
     const ref = "CO2-" + ui.actsInfo.code;
     const body =
@@ -3392,7 +3405,9 @@
         (mp.email
           ? (currentUser ? mpSendForm(mp) : "") +
             (currentUser ? '<details class="letter-alt mt-3"><summary class="sm fw-700">Or use your own email app</summary>' : "") +
-            '<a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm mt-2" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
+            '<div class="hb-share mt-2"><a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
+            webmailButtons(mpLetterParts(mp), "mp-sent") + "</div>" +
+            '<p class="xs muted mt-2">Outlook can\'t add our copy for you: add ' + MP_COPY + ' as BCC there if you want it verified.</p>' +
             '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>" +
             (currentUser ? "</details>" : "")
           : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
@@ -3945,10 +3960,11 @@
       "</p>" +
       form + (currentUser ? '<p class="xs fw-700 mt-3">Or send it yourself</p>' : "") +
       '<div class="hb-share mt-2"><a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
+      webmailButtons({ subject: t.subject, body: t.body }, "energy-asked") +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
-      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app opens with the message, and you add who it\'s to.</p></div>'
+      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app, Gmail or Outlook opens with the message ready, and you add who it\'s to.</p></div>'
     );
   }
 
