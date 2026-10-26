@@ -86,6 +86,7 @@
     catsPerPerson: 13.1 / 69.3,
     commuteKm: 3.1, // one way, per weekday (DfT NTS)
     carsPerPerson: 34.353 / 69.3, // licensed cars (DfT, June 2025) per person
+    driverMiles: 2758, // miles a year as a car or van driver, per person (DfT NTS 2025)
     chickenG: 230, // Defra Family Food, g per person per week
     porkG: 137,
     fishG: 120,
@@ -108,7 +109,8 @@
       commute: { distance: p.commuteKm, Mon: "car_petrol", Tue: "car_petrol", Wed: "car_petrol", Thu: "car_petrol", Fri: "train" },
       // A medium petrol car's making, shared out by the number of cars per person.
       car: { owns: "yes" },
-      cars: [{ fuel: "petrol", size: "medium", share: 1 / p.carsPerPerson, miles: 0 }],
+      // Driving beyond the commute comes from the yearly miles, so nothing counts twice.
+      cars: [{ fuel: "petrol", size: "medium", share: 1 / p.carsPerPerson, miles: p.driverMiles }],
       flights: [{ from: "LHR", to: "BCN", cabin: "economy", returnTrip: true, trips: p.flightsPerPerson }],
       energy: { electricityKwh: p.electricityKwh / 12, gasKwh: p.gasKwh / 12, greenTariff: false, household: p.household },
       water: { liters: p.waterLitres * 30.4 * p.household },
@@ -1909,6 +1911,7 @@
     { group: "UK average (for the comparison)", key: "uk_dogs", label: "Dogs", unit: "per person", path: "UK_PROFILE.dogsPerPerson", source: "UK Pet Food 2026: 15.5m dogs ÷ 69.3m people", asOf: "2026-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_cats", label: "Cats", unit: "per person", path: "UK_PROFILE.catsPerPerson", source: "UK Pet Food 2026: 13.1m cats ÷ 69.3m people", asOf: "2026-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_cars", label: "Cars", unit: "per person", path: "UK_PROFILE.carsPerPerson", source: "DfT Vehicle licensing statistics: 34.35m licensed cars (June 2025) ÷ 69.3m people. The comparison counts a share of making a medium petrol car.", asOf: "2025-09", every: 12 },
+    { group: "UK average (for the comparison)", key: "uk_driver_miles", label: "Miles driven", unit: "miles a year per person, as a car or van driver", path: "UK_PROFILE.driverMiles", source: "DfT National Travel Survey 2025, table NTS0303 (England): 2,758 miles per person as a car or van driver (2,932 in 2024). Averaged over everyone, including children and non-drivers. Driving beyond the commute counts as a medium petrol car.", asOf: "2026-09", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_commute", label: "Commute distance", unit: "km one way, per weekday", path: "UK_PROFILE.commuteKm", source: "DfT National Travel Survey 2024: 1,007 commuting miles a person, about 3/4 by car", asOf: "2025-08", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_chicken", label: "Chicken bought", unit: "g per person a week", path: "UK_PROFILE.chickenG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
     { group: "UK average (for the comparison)", key: "uk_pork", label: "Pork, bacon, ham and sausages bought", unit: "g per person a week", path: "UK_PROFILE.porkG", source: "Defra Family Food 2023/24", asOf: "2025-03", every: 12 },
