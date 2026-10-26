@@ -3260,7 +3260,7 @@
       try { localStorage.setItem(actsKey(), JSON.stringify(merged)); } catch (e) {}
       if (JSON.stringify(merged) !== JSON.stringify(server)) await sb.from("profiles").update({ acts: merged }).eq("id", uid);
     } catch (e) {}
-    if (currentPath() === "/habits" || currentPath().startsWith("/acts/")) render();
+    if (currentPath() === "/habits" || currentPath() === "/switches" || currentPath().startsWith("/acts/")) render();
   }
   const inviteLink = () => PRODUCTION_URL + (ui.actsInfo && ui.actsInfo.code ? "?ref=" + ui.actsInfo.code : "");
   const MP_COPY = "mp@co2counter.co.uk";
@@ -4305,6 +4305,8 @@
     commute: "M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1ZM3.5 12h17",
     pets: "M12 13c-3 0-5.5 3-5.5 5.5 0 1.5 1.5 2 3 1.5s3.5-.5 5 0 3 0 3-1.5C17.5 16 15 13 12 13ZM5 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M16 9.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M8.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0M12.5 5.5a1.5 2 0 1 0 3 0 1.5 2 0 1 0-3 0",
     water: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z",
+    mobilise: "M3 6h18v12H3ZM3 6l9 7 9-7",
+    motivate: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .7 3.5 2.8 3.5 6",
   };
   const svgPath = (d, size, extra) =>
     '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (extra || "") + '><path d="' + d + '"></path></svg>';
@@ -4317,11 +4319,14 @@
   // The survey the page is worked out from, and who it belongs to.
   function switchBase() {
     if (survey && survey.completedAt) return { s: survey, mine: true };
+    return { s: switchBaseTypical(), mine: false };
+  }
+  function switchBaseTypical() {
     const s = normaliseSurvey(JSON.parse(JSON.stringify(D.UK_TYPICAL_SURVEY)));
     s.flights = D.UK_TYPICAL_SURVEY.flights;
     const worst = D.BANKS.slice().sort((a, b) => b.factor - a.factor)[0];
     s.banking = { ...s.banking, amount: A.EXAMPLE_SAVINGS, bank: worst.key };
-    return { s, mine: false };
+    return s;
   }
 
   // The five areas, with savings and a before/after for each.
@@ -4406,15 +4411,6 @@
             ? food.what + " emits " + times(food.before, food.after) + " a vegan day" + (base.mine ? ", and it's your highest-carbon day of food" : "") + ". A veg box or a recipe app makes the swap the easy option."
             : "Swapping a few meat days for plant-based ones is the biggest food change. A veg box or a recipe app makes it the easy option.",
         vsTitle: "A day of food, kg CO₂e", beforeLabel: food.beforeLabel, before: food.before, afterLabel: food.afterLabel, after: food.after },
-      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
-        done: flightsDone,
-        doneTitle: "No flights to switch",
-        fact: flightsDone
-          ? "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
-          : base.mine && myFlights.length && myFlights.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM)
-            ? "Your flights are too far for the train to be realistic. The switches here are flying a little less often and choosing economy, which shares the plane's emissions between more people."
-            : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
-        vsTitle: "London → Paris, return, kg CO₂e", beforeLabel: "Plane", before: A.PARIS_FLIGHT_KG, afterLabel: "Train", after: A.PARIS_TRAIN_KG },
       { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Visit", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
         done: commuteDone,
         doneTitle: noCommute ? "No commute to switch" : "You already walk or cycle",
@@ -4425,6 +4421,15 @@
           : "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
         vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol,
         afterLabel: commuteDone && !noCommute ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute ? 0 : dist * 2 * train },
+      { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 50, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
+        done: flightsDone,
+        doneTitle: "No flights to switch",
+        fact: flightsDone
+          ? "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+          : base.mine && myFlights.length && myFlights.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM)
+            ? "Your flights are too far for the train to be realistic. The switches here are flying a little less often and choosing economy, which shares the plane's emissions between more people."
+            : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
+        vsTitle: "London → Paris, return, kg CO₂e", beforeLabel: "Plane", before: A.PARIS_FLIGHT_KG, afterLabel: "Train", after: A.PARIS_TRAIN_KG },
     ].map((a) => {
       // Your own page only shows the links that suit your answers.
       const fit = base.mine ? linksFor(a.key, s) : D.USEFUL_LINKS[a.key];
@@ -4432,11 +4437,50 @@
     });
   }
 
+  // Real Zero's 7 Acts: the five footprint switches are acts 1-4, and
+  // acts 6 and 7 work through other people. Their effect can't honestly be
+  // put in kg, so they sit on the chart as medium impact, low effort.
+  const ACT_NO = { banking: 1, energy: 2, meals: 3, commute: 4, flights: 4, mobilise: 6, motivate: 7 };
+  function indirectActs(base, typicalSave) {
+    const info = base.mine ? ui.actsInfo : null;
+    const ticked = base.mine ? actsTicked() : {};
+    const mpDone = base.mine && (info ? !!(info.verified && info.verified.mobilise) : !!ticked.mobilise);
+    const friends = info ? Math.min(7, info.finished || 0) : 0;
+    const motDone = base.mine && (info ? !!((info.verified && info.verified.motivate) || friends >= 7) : !!ticked.motivate);
+    const url = encodeURIComponent(inviteLink());
+    const text = encodeURIComponent(shareText() + " " + inviteLink());
+    const mp = info ? mpFinderHtml(info) : null;
+    return [
+      {
+        key: "mobilise", short: "Your MP", title: mpDone ? "You've written to your MP" : "Write to your MP", effort: "One-off · one letter", ex: 32, ey: 52,
+        panel: "#6F4E63", panelInk: "#F6F1E6", done: mpDone, big: "650", bigLabel: "MPs vote on the UK's climate laws",
+        fact: "Your switches cut your own footprint. The rules everyone lives by cut everyone's, and MPs make them. A letter in your own words is one of the most direct ways to show that climate matters to voters where you live.",
+        action: mpDone ? "" : mp ? '<div class="sw-act-box">' + mp.finder + mp.letter + "</div>" : '<a class="btn btn-green mt-4" href="#/acts/mobilise">Write to your MP ' + icon("arrowRight") + "</a>",
+        page: "#/acts/mobilise", status: mpDone ? "Done" : info && ticked.mpSent ? "Waiting for our copy" : "Not yet",
+      },
+      {
+        key: "motivate", short: "Friends", title: motDone ? "Seven people are in" : "Bring seven people with you", effort: "One-off · a few messages", ex: 46, ey: 72,
+        panel: "#2B4128", panelInk: "#F6F1E6", done: motDone,
+        big: "~" + (Math.round((typicalSave * 7) / 100) / 10).toString() + " t", bigLabel: "a year if seven people each made a typical person's switches",
+        fact: "Change spreads through the people we know. When people you invite take the survey and make their own switches, their cuts add up on your Act 7 page." +
+          (info && info.cut != null ? " So far, the people you invited have cut " + kgFmt(info.cut) + " kg a year between them." : ""),
+        action: motDone
+          ? ""
+          : '<div class="sw-act-box">' + (info ? '<p class="sm"><b>' + friends + " of 7</b> people you invited have taken the survey.</p>" : "") +
+            (info ? '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" : "") +
+            shareButtonsHtml(url, text) + "</div>",
+        page: "#/acts/motivate", status: motDone ? "Done" : info ? friends + " of 7" : "Not yet",
+      },
+    ];
+  }
+
   function renderSwitches() {
     const base = switchBase();
     const fp = footprint(base.s);
     const areas = switchAreas(base);
     const total = areas.reduce((t, a) => t + a.save, 0);
+    const typical = base.mine ? switchAreas({ s: switchBaseTypical(), mine: false }).reduce((t, a) => t + a.save, 0) : total;
+    const others = indirectActs(base, typical);
     const who = base.mine ? "for you" : "for a typical person";
     ui.switchModel = { foot: fp.totalYearly, saves: areas.map((a) => a.save) };
     if (!ui.switchOn) ui.switchOn = areas.map(() => false);
@@ -4451,9 +4495,18 @@
         .map(
           (a, i) =>
             '<li class="sw-row" data-sw="' + i + '"><span class="sw-tile">' + svgPath(SW_ICONS[a.key], 22) + "</span>" +
-            '<span class="min0"><span class="display sw-short">' + a.short + (a.done ? '<span class="sw-done">' + icon("check") + "Done</span>" : "") + '</span><span class="sw-effort">' + (a.done ? (a.save >= 0.5 ? "Could go a bit further" : "Nothing more to switch") : a.effort) + "</span></span>" +
+            '<span class="min0"><span class="display sw-short">' + a.short + (a.done ? '<span class="sw-done">' + icon("check") + "Done</span>" : "") + '</span><span class="sw-effort">Act ' + ACT_NO[a.key] + " · " + (a.done ? (a.save >= 0.5 ? "Could go a bit further" : "Nothing more to switch") : a.effort) + "</span></span>" +
             '<span class="sw-save tnum">' + (a.save >= 0.5 ? "−" + kgFmt(a.save) : "0") + "</span>" +
             '<button type="button" class="sw-tog" role="switch" aria-checked="false" aria-label="' + esc(a.title) + ", saves " + kgFmt(a.save) + ' kg a year" data-action="flip-switch" data-i="' + i + '"><span class="sw-knob"></span></button></li>'
+        )
+        .join("") +
+      '</ul><p class="sw-board-sub">Through others</p><ul>' +
+      others
+        .map(
+          (a) =>
+            '<li class="sw-row sw-row-ind"><span class="sw-tile">' + svgPath(SW_ICONS[a.key], 22) + "</span>" +
+            '<span class="min0"><span class="display sw-short">' + a.short + (a.done ? '<span class="sw-done">' + icon("check") + "Done</span>" : "") + '</span><span class="sw-effort">Act ' + ACT_NO[a.key] + " · indirect impact</span></span>" +
+            '<a class="sw-ind-go" href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '">' + esc(a.status) + icon("chevronRight") + "</a></li>"
         )
         .join("") +
       '</ul><div class="sw-foot"><div class="sw-foot-row"><span>' + (base.mine ? "Your footprint" : "A typical footprint") + '</span><span><b class="display tnum" id="sw-foot">' + kgFmt(fp.totalYearly) + "</b> kg a year</span></div>" +
@@ -4470,16 +4523,29 @@
           '<span class="sw-blab" style="bottom:' + (size / 2 + 8) + 'px"><span class="display">' + a.short + '</span><span class="display tnum sw-blab-kg">−' + kgFmt(a.save) + " kg</span><span>" + a.effort.split(" · ")[1] + "</span></span></div>"
         );
       })
-      .join("");
+      .join("") +
+      // Acts 6 and 7: medium impact, low effort, outlined, no kg figure.
+      others
+        .map(
+          (a, i) =>
+            '<div class="sw-pin" style="left:' + a.ex + "%;bottom:" + a.ey + '%">' +
+            '<a class="sw-bub sw-bub-ind" href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '" aria-label="' + a.short + ": indirect impact, " + a.effort +
+            '" style="width:58px;height:58px;left:-29px;top:-29px;background:' + a.panel + ";color:" + a.panelInk + ";animation-delay:" + (0.8 + i * 0.12).toFixed(2) + 's">' +
+            svgPath(SW_ICONS[a.key], 21) + "</a>" +
+            '<span class="sw-blab" style="bottom:37px"><span class="display">' + a.short + '</span><span class="display sw-blab-kg">Indirect</span><span>' + a.effort.split(" · ")[1] + "</span></span></div>"
+        )
+        .join("");
     const plot =
       '<section class="sw-sec"><div class="sw-sec-head"><div><span class="sw-kicker">Where to start</span><h2 class="display">Impact against effort</h2></div>' +
-      "<p>Bigger bubbles save more. Start top left, where the saving is big and the effort is small. Tap a bubble to jump to it.</p></div>" +
+      "<p>Bigger bubbles save more. Start top left, where the saving is big and the effort is small. The outlined bubbles work through other people, so they have no kg figure. Tap a bubble to jump to it.</p></div>" +
       '<div class="sw-plot"><span class="sw-ytitle">KG SAVED A YEAR ↑</span><div class="sw-area"><div class="sw-quick"></div><div class="sw-vmid"></div><div class="sw-hmid"></div>' +
       ticks.map((f) => '<div class="sw-tick' + (f ? "" : " zero") + '" style="bottom:' + f * 100 + '%"><span class="tnum">' + kgFmt(maxSave * f) + "</span></div>").join("") +
       '<span class="sw-q" style="left:12px;top:12px;color:#2B4128">★ Quick wins</span><span class="sw-q" style="right:4px;top:calc(50% - 26px)">Big, but a habit</span>' +
       '<span class="sw-q" style="left:12px;top:calc(50% + 10px)">Easy extras</span><span class="sw-q" style="right:4px;top:calc(50% + 10px)">Slow burners</span>' +
       bubbles + '</div><div class="sw-xaxis"><span>Once, in minutes</span><i></i><b>MORE EFFORT →</b><i></i><span>Every day, a habit</span></div></div>' +
-      '<ul class="sw-legend">' + areas.map((a) => '<li><a href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="tnum sw-leg-kg">−' + kgFmt(a.save) + ' kg</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") + "</ul></section>";
+      '<ul class="sw-legend">' + areas.map((a) => '<li><a href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="tnum sw-leg-kg">−' + kgFmt(a.save) + ' kg</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") +
+      others.map((a) => '<li><a href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '"><span class="sw-leg-dot sw-leg-ind" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 16) + '</span><span class="display">' + a.short + '</span><span class="sw-leg-kg">Indirect</span><span class="sw-leg-when">' + a.effort.split(" · ")[1] + "</span></a></li>").join("") + "</ul></section>";
+
     const feats = areas
       .map((a, i) => {
         const drop = a.before > 0 ? Math.round((1 - a.after / a.before) * 100) : 0;
@@ -4487,7 +4553,7 @@
         return (
           '<section class="sw-feat' + (i % 2 ? " flip" : "") + '" id="switch-' + a.key + '"><div class="sw-feat-in">' +
           '<div class="sw-panel" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 260, ' class="sw-panel-bg"') +
-          '<div class="sw-panel-top"><span class="display tnum sw-no">0' + (i + 1) + '</span><span class="sw-drop"><b class="display tnum" style="color:' + a.dropInk + '">−' + drop + "%</b><span>less CO₂e</span></span></div>" +
+          '<div class="sw-panel-top"><span class="display tnum sw-no">Act ' + ACT_NO[a.key] + '</span><span class="sw-drop"><b class="display tnum" style="color:' + a.dropInk + '">−' + drop + "%</b><span>less CO₂e</span></span></div>" +
           '<div><div class="sw-vs-title">' + esc(a.vsTitle) + '</div><div class="sw-vs"><span>' + esc(a.beforeLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-before"></span></span><b class="display tnum">' + fmtKg(a.before) + "</b>" +
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
           '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">' + esc(a.eyebrow) + "</span>") + '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
@@ -4514,10 +4580,25 @@
       .join("");
     return (
       '<div class="container sw-page">' +
-      '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches</span>' +
-      '<h1 class="display rise d1">Five switches.<br><span>Up to ' + kgFmt(total) + " kg</span> a year.</h1>" +
-      '<p class="rise d2">The biggest, easiest changes ' + (base.mine ? "for your footprint" : "for a typical UK footprint") + ", with options we'd recommend anyway. Flip a switch to see what it saves.</p></div>" + board + "</header>" +
+      '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches · the 7 Acts</span>' +
+      '<h1 class="display rise d1">The 7 Acts.<br><span>Up to ' + kgFmt(total) + " kg</span> a year, and more through others.</h1>" +
+      '<p class="rise d2">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>, worked out ' + (base.mine ? "for your footprint" : "for a typical UK footprint") +
+      ": switches that cut your own emissions (Acts 1 to 4), and two that reach further through other people (Acts 6 and 7). Act 5, measuring your footprint, is what CO2 Counter does. Flip a switch to see what it saves.</p></div>" + board + "</header>" +
       plot + feats +
+      others
+        .map(
+          (a, i) =>
+            '<section class="sw-feat' + ((areas.length + i) % 2 ? " flip" : "") + '" id="switch-' + a.key + '"><div class="sw-feat-in">' +
+            '<div class="sw-panel" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 260, ' class="sw-panel-bg"') +
+            '<div class="sw-panel-top"><span class="display tnum sw-no">Act ' + ACT_NO[a.key] + '</span><span class="sw-drop"><b class="display">Indirect</b><span>impact</span></span></div>' +
+            '<div><b class="display tnum sw-big">' + esc(a.big) + '</b><p class="sw-big-label">' + esc(a.bigLabel) + "</p></div></div>" +
+            '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">Through others</span>') +
+            '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
+            '<h2 class="display">' + esc(a.title) + '</h2><p class="sw-fact">' + esc(a.fact) + "</p>" + a.action +
+            '<p class="sw-disc"><a href="' + a.page + '">More on Act ' + ACT_NO[a.key] + " " + icon("arrowRight") + "</a></p></div></div></section>"
+        )
+        .join("") +
+
       '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, including options that pay us nothing. Partners never change anyone\'s figures, and bank and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
       '<a class="sw-band-cta" href="#/">' + (base.mine ? "Update your survey" : "Find your biggest switch") + icon("arrowRight") + "</a></section>" +
       '<p class="xs muted sw-note-foot">' + (base.mine ? "Savings are worked out from your latest survey." : "Savings are for a typical UK resident with £" + kgFmt(A.EXAMPLE_SAVINGS) + " in a high-street bank. Take the survey to see yours.") +
@@ -4532,7 +4613,7 @@
     const m = ui.switchModel;
     if (!m || !document.getElementById("sw-foot")) return;
     const saved = m.saves.reduce((t, v, i) => t + (ui.switchOn[i] ? v : 0), 0);
-    app.querySelectorAll(".sw-row").forEach((row) => {
+    app.querySelectorAll(".sw-row[data-sw]").forEach((row) => {
       const on = !!ui.switchOn[Number(row.dataset.sw)];
       row.classList.toggle("on", on);
       row.querySelector(".sw-tog").setAttribute("aria-checked", on ? "true" : "false");
