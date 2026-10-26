@@ -3298,7 +3298,18 @@
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
     return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
-      "Find yours, free, with CO2 Counter:";
+      "Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
+  }
+  // The invite code on its own, and the link, each with a copy button.
+  function inviteCodeHtml() {
+    const code = ui.actsInfo && ui.actsInfo.code;
+    if (!code) return "";
+    return (
+      '<div class="invite-code"><div class="min0"><span class="eyebrow">Your invite code</span><b class="display tnum">' + esc(code) + "</b></div>" +
+      '<button type="button" class="btn btn-green btn-sm" data-action="copy-code">' + icon("copy") + "Copy code</button></div>" +
+      '<div class="act-link"><span class="sm">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-outline btn-sm" data-action="copy-invite">' + icon("copy") + "Copy link</button></div>" +
+      '<p class="xs muted">Friends can open the link, or type the code on their Act 7 page after signing up.</p>'
+    );
   }
   const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
   // Postcode -> MP, then the email button with the letter (Habits box and
@@ -3348,13 +3359,14 @@
     const base = { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts" };
     const info = ui.actsInfo;
     const shares = shareButtonsHtml(url, text);
-    if (!info) return { ...base, manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in", extra: shares };
+    // Never ticked by hand: only seven people who joined and finished count.
+    if (!info) return { ...base, done: false, sub: "Ticks itself once seven people you invite have taken the survey", extra: shares };
     const n = Math.min(7, info.finished || 0);
     const verified = (info.verified && info.verified.motivate) || n >= 7;
     return {
       ...base, done: !!verified, verifiedTick: !!verified,
       sub: verified ? "Verified · seven people you invited have taken the survey" : n + " of 7 people you invited have taken the survey" + (info.joined > n ? " (" + info.joined + " joined)" : ""),
-      extra: '<span class="xs muted hb-invite">Your invite link: <b>' + esc(inviteLink().replace(/^https:\/\//, "")) + "</b></span>" + shares,
+      extra: '<div class="hb-invite">' + inviteCodeHtml() + "</div>" + shares,
     };
   }
 
@@ -3436,11 +3448,11 @@
     if (key === "motivate") {
       const nDone = info ? Math.min(7, info.finished || 0) : 0;
       const verified = info && ((info.verified && info.verified.motivate) || nDone >= 7);
-      const done = info ? !!verified : !!ticked.motivate;
+      const done = !!verified;
       const url = encodeURIComponent(inviteLink());
       const text = encodeURIComponent(shareText() + " " + inviteLink());
       html += actHero(7, "Motivate seven other people", "Change spreads through the people we know. The seventh act is to get seven others measuring their footprint and doing their own 7 Acts.", done,
-        !info ? (ticked.motivate ? "Ticked by you" : "Share CO2 Counter, then tick it") : verified ? "Verified · seven people you invited have taken the survey" : nDone + " of 7 so far");
+        !info ? "Ticks itself once seven people you invite have taken the survey" : verified ? "Verified · seven people you invited have taken the survey" : nDone + " of 7 so far");
       if (info) {
         html += actStep(1, "Your progress",
           '<div class="act-dots" role="img" aria-label="' + nDone + ' of 7">' + [0, 1, 2, 3, 4, 5, 6].map((i) => '<span class="' + (i < nDone ? "on" : "") + '">' + (i < nDone ? icon("check") : "") + "</span>").join("") + "</div>" +
@@ -3459,14 +3471,17 @@
               : '<p class="sm muted mt-1">The total across CO2 Counter appears once enough people who joined through a friend have measured twice.</p>') +
           "</div></div>" +
           '<p class="xs muted mt-3">A reduction is the drop from someone\'s first survey to their latest. Totals only: we never show anyone\'s own figures.</p>');
-        html += actStep(3, "Share your invite link",
-          '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" +
-          '<div class="mt-3">' + shareButtonsHtml(url, text) + "</div>");
+        html += actStep(3, "Your invite code", '<div class="stack-3">' + inviteCodeHtml() + "</div>" + '<div class="mt-3">' + shareButtonsHtml(url, text) + "</div>");
+        // Someone handed just a code can still be counted for their friend.
+        html += actStep(4, "Got a code from a friend?",
+          '<form id="claim-form" class="hb-mp-form"><input class="input" id="claim-code" placeholder="e.g. ABC234" maxlength="12" autocomplete="off" aria-label="Friend\'s invite code" />' +
+          '<button type="submit" class="btn btn-outline btn-sm">Use code</button></form>' +
+          (ui.claimMsg ? '<p class="xs mt-2 ' + (ui.claimMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.claimMsg.text) + "</p>" : "") +
+          '<p class="xs muted mt-2">Enter it before you finish your first survey. You count towards their Act 7 once you have. Each person can only be counted once.</p>');
       } else {
-        html += actStep(1, "Share CO2 Counter", shareButtonsHtml(url, text));
-        html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="motivate">' + (ticked.motivate ? "Untick" : "Seven people have joined in") + "</button>");
+        html += actStep(1, "Share CO2 Counter", shareButtonsHtml(url, text) + '<p class="xs muted mt-3">This act can\'t be ticked by hand: it ticks itself once seven people you invite have taken the survey.</p>');
       }
-      html += actStep(info ? 4 : 3, "Ideas that work",
+      html += actStep(info ? 5 : 2, "Ideas that work",
         '<ul class="act-ideas">' +
         '<li><b>Start a group.</b> Make one on the <a href="#/friends">Friends</a> page for your team, family or housemates, and compare progress together.</li>' +
         "<li><b>Share your result.</b> Your footprint is a good conversation starter. The share message includes it.</li>" +
@@ -4446,7 +4461,7 @@
     const ticked = base.mine ? actsTicked() : {};
     const mpDone = base.mine && (info ? !!(info.verified && info.verified.mobilise) : !!ticked.mobilise);
     const friends = info ? Math.min(7, info.finished || 0) : 0;
-    const motDone = base.mine && (info ? !!((info.verified && info.verified.motivate) || friends >= 7) : !!ticked.motivate);
+    const motDone = base.mine && !!info && !!((info.verified && info.verified.motivate) || friends >= 7);
     const url = encodeURIComponent(inviteLink());
     const text = encodeURIComponent(shareText() + " " + inviteLink());
     const mp = info ? mpFinderHtml(info) : null;
@@ -4467,7 +4482,7 @@
         action: motDone
           ? ""
           : '<div class="sw-act-box">' + (info ? '<p class="sm"><b>' + friends + " of 7</b> people you invited have taken the survey.</p>" : "") +
-            (info ? '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" : "") +
+            inviteCodeHtml() +
             shareButtonsHtml(url, text) + "</div>",
         page: "#/acts/motivate", status: motDone ? "Done" : info ? friends + " of 7" : "Not yet",
       },
@@ -6708,6 +6723,10 @@
       if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
       setTimeout(render, 300);
     },
+    "copy-code": async () => {
+      try { await navigator.clipboard.writeText(ui.actsInfo.code); ui.shareMsg = "Invite code copied: " + ui.actsInfo.code; } catch (e) { ui.shareMsg = "Your code is " + ui.actsInfo.code; }
+      render();
+    },
     "copy-invite": async () => {
       try { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied."; } catch (e) { ui.shareMsg = "Couldn't copy. Select the link instead."; }
       render();
@@ -7055,6 +7074,21 @@
         history.replaceState(null, "", "#/friends");
         render();
       }
+      return;
+    }
+    if (e.target.id === "claim-form") {
+      e.preventDefault();
+      const code = document.getElementById("claim-code").value.trim().toUpperCase();
+      if (!code) return;
+      if (ui.actsInfo && code === ui.actsInfo.code) {
+        ui.claimMsg = { ok: false, text: "That's your own code. Share it with friends instead." };
+      } else {
+        const { data, error } = await sb.rpc("claim_referral", { p_code: code });
+        ui.claimMsg = error ? { ok: false, text: "Couldn't use that code. Please try again." }
+          : data ? { ok: true, text: "Done. You're counted towards your friend's Act 7 once you've finished your survey." }
+          : { ok: false, text: "That code didn't work. Check it, or you may already be counted for someone." };
+      }
+      render();
       return;
     }
     if (e.target.id === "mp-form") {
