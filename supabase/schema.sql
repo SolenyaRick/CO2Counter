@@ -2055,3 +2055,14 @@ end;
 $$;
 revoke all on function public.confirm_energy_switch(text) from public;
 grant execute on function public.confirm_energy_switch(text) to anon, authenticated;
+
+-- ---------- Letters sent from the app (Edge Function: send-letter) ----------
+-- One row per letter, for the sending limits. No content is stored.
+create table if not exists public.letters_sent (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('mp', 'energy')),
+  sent_at timestamptz not null default now()
+);
+create index if not exists letters_sent_user_kind on public.letters_sent (user_id, kind, sent_at);
+alter table public.letters_sent enable row level security;
