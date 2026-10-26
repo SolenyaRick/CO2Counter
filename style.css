@@ -4349,3 +4349,10 @@ a.hb-card:hover { background: rgba(163, 181, 143, 0.22); }
 .invite-code b { display: block; font-size: 30px; letter-spacing: 0.12em; color: #2B4128; }
 .hb-invite { flex-basis: 100%; display: grid; gap: 8px; }
 .sw-act-box .invite-code, .sw-act-box .act-link { width: 100%; }
+/* Letters sent from the app */
+.letter-form { display: grid; gap: 10px; width: 100%; }
+.letter-form label { display: grid; gap: 4px; }
+.letter-form textarea { min-height: 120px; resize: vertical; font: inherit; font-size: 14px; line-height: 1.5; }
+.letter-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.letter-form .btn { justify-self: start; }
+.letter-alt summary { cursor: pointer; }

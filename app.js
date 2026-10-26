@@ -3321,6 +3321,46 @@
   const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
   // Postcode -> MP, then the email button with the letter (Habits box and
   // the act 6 page share this).
+  // Sending from the app: the Edge Function (supabase/functions/send-letter)
+  // sends through Resend, with the person's copy and replies to them.
+  async function sendLetter(body) {
+    try {
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      if (!token) return { error: "Please sign in again." };
+      const res = await fetch(SUPABASE_URL + "/functions/v1/send-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + token },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 404) return { error: "Sending from the app isn't switched on yet. Use your own email app instead." };
+      const out = await res.json().catch(() => ({}));
+      return res.ok && out.ok ? out : { error: out.error || "Couldn't send just now. Please try again, or use your own email app." };
+    } catch (e) {
+      return { error: "Couldn't send just now. Please try again, or use your own email app." };
+    }
+  }
+  // The letter without the sign-off placeholders: name and address are
+  // added by the server from the boxes below it.
+  const mpLetterBody = (mp) =>
+    "Dear " + mp.name + ",\n\nI'm writing as your constituent to ask you to support stronger action on climate change.\n\n" +
+    "[Say what matters most to you, for example home insulation, cheaper public transport, renewable energy, or protecting nature.]\n\n" +
+    "I've measured my own carbon footprint and I'm cutting it where I can. I'd like to know what you will do in Parliament to help the UK reach net zero, and how you'll vote on climate policy.\n\nYours sincerely,";
+  function mpSendForm(mp) {
+    const st = ui.letterState || {};
+    if (st.mpSentTo) return '<p class="sm green-dark fw-700 mt-2">' + icon("check") + " Sent to " + esc(st.mpSentTo) + ". You'll get a copy, and their reply comes straight to you.</p>";
+    return (
+      '<form id="mp-send-form" class="letter-form mt-2">' +
+      '<label class="xs fw-700">Your letter <span class="muted fw-400">(change the part in [brackets])</span><textarea class="input" id="ls-message" rows="11">' + esc(ui.mpDraft || mpLetterBody(mp)) + "</textarea></label>" +
+      '<div class="letter-two"><label class="xs fw-700">Your name<input class="input" id="ls-name" autocomplete="name" maxlength="80" value="' + esc(ui.lsName || ui.userName || "") + '" /></label>' +
+      '<label class="xs fw-700">Your address<input class="input" id="ls-address" autocomplete="street-address" maxlength="300" placeholder="House number, street, town" value="' + esc(ui.lsAddress || "") + '" /></label></div>' +
+      '<p class="xs muted">Your postcode, ' + esc((ui.mpPostcode || "").toUpperCase()) + ", is added. MPs only reply to people in their constituency, so they need your address.</p>" +
+      '<button type="submit" class="btn btn-green btn-sm"' + (st.sending ? " disabled" : "") + ">" + (st.sending ? "Sending…" : "Send to " + esc(mp.name)) + "</button>" +
+      (st.error ? '<p class="xs red" role="status">' + esc(st.error) + "</p>" : "") +
+      '<p class="xs muted">Sent from CO2 Counter\'s address. You get a copy, replies go straight to you, and Act 6 is verified as soon as it\'s sent. We keep only the date, not your letter.</p></form>'
+    );
+  }
+
   function mpFinderHtml(info) {
     const mp = ui.mp || {};
     const finder =
@@ -3330,8 +3370,11 @@
     const letter = mp.name
       ? '<div class="hb-mp"><p class="sm"><b>' + esc(mp.name) + "</b>, MP for " + esc(mp.constituency) + "</p>" +
         (mp.email
-          ? '<a class="btn btn-green btn-sm mt-2" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
-            '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>"
+          ? (currentUser ? mpSendForm(mp) : "") +
+            (currentUser ? '<details class="letter-alt mt-3"><summary class="sm fw-700">Or use your own email app</summary>' : "") +
+            '<a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm mt-2" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
+            '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>" +
+            (currentUser ? "</details>" : "")
           : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
         "</div>"
       : "";
@@ -3345,7 +3388,7 @@
     if (!info) return { ...base, manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
       extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" };
     const verified = info.verified && info.verified.mobilise;
-    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · your letter to your MP reached us on " + longDate(verified) };
+    if (verified) return { ...base, done: true, verifiedTick: true, sub: "Verified · you wrote to your MP on " + longDate(verified) };
     const { finder, letter } = mpFinderHtml(info);
     return { ...base, done: false, sub: ticked.mpSent ? "Waiting for our copy of your letter · this ticks once it arrives" : "Email your MP, and this ticks once our copy arrives", extra: finder + letter };
   }
@@ -3443,7 +3486,7 @@
       const verified = info && info.verified && info.verified.mobilise;
       const done = info ? !!verified : !!ticked.mobilise;
       html += actHero(6, "Mobilise: use your vote", "Personal choices matter, and so do the rules everyone lives by. MPs read what their constituents send them, and a letter in your own words is one of the most direct ways to show that climate matters to voters where you live.", done,
-        verified ? "Verified · your letter reached us on " + longDate(verified) : !info ? (ticked.mobilise ? "Ticked by you" : "Write to your MP, then tick it") : ticked.mpSent ? "Waiting for our copy of your letter" : "Write to your MP to complete it");
+        verified ? "Verified · you wrote to your MP on " + longDate(verified) : !info ? (ticked.mobilise ? "Ticked by you" : "Write to your MP, then tick it") : ticked.mpSent ? "Waiting for our copy of your letter" : "Write to your MP to complete it");
       if (info && !verified) {
         const { finder, letter } = mpFinderHtml(info);
         const mp = ui.mp || {};
@@ -3458,7 +3501,7 @@
         html += actStep(1, "Write to your MP", '<p class="sm">WriteToThem finds your MP from your postcode and sends your message for you.</p><a class="btn btn-green btn-sm mt-3" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>");
         html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="mobilise">' + (ticked.mobilise ? "Untick" : "I've written to my MP") + "</button>");
       } else {
-        html += actStep(1, "Thank you", '<p class="sm">Your letter reached us, so this act is verified. Keep an eye out for your MP\'s reply, and write again when climate votes come up.</p>');
+        html += actStep(1, "Thank you", '<p class="sm">Your letter to your MP is verified. Keep an eye out for your MP\'s reply, and write again when climate votes come up.</p>');
       }
       html += actLinks({ title: "More ways to use your voice", items: [
         ["Register to vote", "Takes about 5 minutes. You need to be registered to vote in elections.", "https://www.gov.uk/register-to-vote"],
@@ -3831,7 +3874,7 @@
   // For people who don't choose their supplier: a message to whoever does,
   // with the whole home's saving, by email (their own app) or copied.
   const asksBillPayer = (s) => !!s && s.energy && s.energy.billPayer === "other" && !s.energy.greenTariff;
-  function energyAskText() {
+  function energyAskText(forApp) {
     const e = survey.energy || {};
     const year = 12 * (e.electricityKwh || 0);
     const cut = year * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR);
@@ -3842,8 +3885,8 @@
       body:
         "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
         "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
-        (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
-        "Thanks,\n[Your name]",
+        (forApp ? "Thanks," : (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
+        "Thanks,\n[Your name]"),
     };
   }
   const confirmLink = () => PRODUCTION_URL + "#/confirm/energy?t=" + ui.energyToken;
@@ -3857,6 +3900,19 @@
       );
     const t = energyAskText();
     const asked = actsTicked().energyAsked;
+    const st = ui.letterState || {};
+    // Signed in: send it from the app (the private link is added for them).
+    const form = !currentUser
+      ? ""
+      : st.energySentTo
+        ? '<p class="sm green-dark fw-700 mt-2">' + icon("check") + " Sent to " + esc(st.energySentTo) + ". You'll get a copy.</p>"
+        : '<form id="energy-send-form" class="letter-form mt-2">' +
+          '<div class="letter-two"><label class="xs fw-700">Their email<input class="input" id="es-to" type="email" autocomplete="off" maxlength="200" placeholder="landlord@example.com" value="' + esc(ui.esTo || "") + '" /></label>' +
+          '<label class="xs fw-700">Your name<input class="input" id="es-name" autocomplete="name" maxlength="80" value="' + esc(ui.esName || ui.userName || "") + '" /></label></div>' +
+          '<label class="xs fw-700">Your message<textarea class="input" id="es-message" rows="7">' + esc(ui.esDraft || energyAskText(true).body) + "</textarea></label>" +
+          '<button type="submit" class="btn btn-green btn-sm"' + (st.sending ? " disabled" : "") + ">" + (st.sending ? "Sending…" : "Send it") + "</button>" +
+          (st.error ? '<p class="xs red" role="status">' + esc(st.error) + "</p>" : "") +
+          '<p class="xs muted">Sent from CO2 Counter\'s address with a link for them to confirm once you\'ve switched. You get a copy and replies go to you.</p></form>';
     const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
     return (
       '<div class="ask-box"><p class="sm">' +
@@ -3864,7 +3920,8 @@
         ? "You've asked. " + (ui.energyToken ? "When they tap the link in your message to say you've switched, this act is verified." : "Send it again any time.")
         : "Someone else chooses your supplier, so your switch is asking them. Here's a message ready to send, with your home's numbers in it" + (ui.energyToken ? ", and a link for them to tap once you've switched." : ".")) +
       "</p>" +
-      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
+      form + (currentUser ? '<p class="xs fw-700 mt-3">Or send it yourself</p>' : "") +
+      '<div class="hb-share mt-2"><a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
@@ -5401,6 +5458,7 @@
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
             "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
             "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
+            "<strong>Letters sent from the app</strong>: if you send a letter to your MP or a message to whoever pays your energy bills from CO2 Counter, it's sent through our email provider, Resend, from our address, with a copy to you and replies going to you. We keep only the date and the type of letter, not what you wrote or your address.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
@@ -7134,6 +7192,36 @@
         history.replaceState(null, "", "#/friends");
         render();
       }
+      return;
+    }
+    if (e.target.id === "mp-send-form") {
+      e.preventDefault();
+      // Read everything before the form is redrawn.
+      const message = document.getElementById("ls-message").value;
+      const name = document.getElementById("ls-name").value.trim();
+      const address = document.getElementById("ls-address").value.trim();
+      Object.assign(ui, { mpDraft: message, lsName: name, lsAddress: address });
+      ui.letterState = { sending: true };
+      render();
+      const out = await sendLetter({ kind: "mp", postcode: ui.mpPostcode, name, address, message });
+      ui.letterState = out.error ? { error: out.error } : { mpSentTo: out.to };
+      if (!out.error) ui.flash = "Sent to " + out.to + ". You'll get a copy, and their reply comes straight to you.";
+      if (!out.error && ui.actsInfo) ui.actsInfo = { ...ui.actsInfo, verified: { ...(ui.actsInfo.verified || {}), mobilise: new Date().toISOString() } };
+      render();
+      return;
+    }
+    if (e.target.id === "energy-send-form") {
+      e.preventDefault();
+      const to = document.getElementById("es-to").value.trim();
+      const name = document.getElementById("es-name").value.trim();
+      const message = document.getElementById("es-message").value;
+      Object.assign(ui, { esTo: to, esName: name, esDraft: message });
+      ui.letterState = { sending: true };
+      render();
+      const out = await sendLetter({ kind: "energy", to, name, message });
+      ui.letterState = out.error ? { error: out.error } : { energySentTo: to };
+      if (!out.error) actions["energy-asked"]();
+      render();
       return;
     }
     if (e.target.id === "claim-form") {
