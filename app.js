@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "25 October 2026";
+  const LEGAL_UPDATED = "26 October 2026";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -3205,9 +3205,33 @@
   // Habits has two parts: one-off changes, set out as Real Zero's 7 Acts
   // (realzero.earth/7-acts), and daily habits (coming soon). Acts 1-5 tick
   // themselves from the latest survey; 6 and 7 are ticked by hand.
+  // Hand ticks (acts 6 and 7) live in the account (profiles.acts), with a
+  // copy on the device; ticks made before saving to the account was
+  // possible get merged in the first time the page loads.
   const actsKey = () => "co2_acts_" + ((currentUser && currentUser.id) || "guest");
-  function actsTicked() {
+  const localActs = () => {
     try { return JSON.parse(localStorage.getItem(actsKey()) || "{}"); } catch (e) { return {}; }
+  };
+  function actsTicked() {
+    const uid = currentUser && currentUser.id;
+    if (uid && sb && ui.actsFor !== uid) loadActs(uid);
+    return ui.actsFor === uid && ui.acts ? ui.acts : localActs();
+  }
+  async function loadActs(uid) {
+    ui.actsFor = uid;
+    ui.acts = null;
+    try {
+      const { data, error } = await sb.from("profiles").select("acts").eq("id", uid).maybeSingle();
+      if (error) return; // column not added yet: the device copy is used
+      const server = (data && data.acts) || {};
+      const local = localActs();
+      const merged = { ...server };
+      Object.keys(local).forEach((k) => { if (local[k]) merged[k] = true; });
+      ui.acts = merged;
+      try { localStorage.setItem(actsKey(), JSON.stringify(merged)); } catch (e) {}
+      if (JSON.stringify(merged) !== JSON.stringify(server)) await sb.from("profiles").update({ acts: merged }).eq("id", uid);
+    } catch (e) {}
+    if (currentPath() === "/habits") render();
   }
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
@@ -4959,6 +4983,7 @@
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
+            "<strong>Habits</strong>: the actions you tick yourself on the Habits page, such as writing to your MP or sharing CO2 Counter, so they're there on any device.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
@@ -6284,11 +6309,15 @@
       ui.switchOn = ui.switchOn.map(() => v);
       updateSwitchboard();
     },
-    "tick-act": (el) => {
-      const t = actsTicked();
+    "tick-act": async (el) => {
+      const t = { ...actsTicked() };
       t[el.dataset.act] = !t[el.dataset.act];
       try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      if (currentUser && ui.actsFor === currentUser.id && ui.acts) ui.acts = t;
       render();
+      if (currentUser && sb) {
+        try { await sb.from("profiles").update({ acts: t }).eq("id", currentUser.id); } catch (e) {}
+      }
     },
     "share-app": async () => {
       const text = shareText();

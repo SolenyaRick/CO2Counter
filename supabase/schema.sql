@@ -1805,3 +1805,8 @@ end;
 $$;
 revoke all on function public.owner_analytics() from public;
 grant execute on function public.owner_analytics() to authenticated;
+
+-- ---------- Habits: the 7 Acts someone has ticked by hand ----------
+-- e.g. {"mobilise": true, "motivate": true}. Covered by the existing
+-- "profiles: owner can select/update" policies.
+alter table public.profiles add column if not exists acts jsonb not null default '{}'::jsonb;
