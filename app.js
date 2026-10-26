@@ -3283,7 +3283,7 @@
       try { localStorage.setItem(actsKey(), JSON.stringify(merged)); } catch (e) {}
       if (JSON.stringify(merged) !== JSON.stringify(server)) await sb.from("profiles").update({ acts: merged }).eq("id", uid);
     } catch (e) {}
-    if (currentPath() === "/habits" || currentPath() === "/switches" || currentPath().startsWith("/acts/")) render();
+    if (["/habits", "/switches", "/friends", "/account"].includes(currentPath()) || currentPath().startsWith("/acts/")) render();
   }
   const inviteLink = () => PRODUCTION_URL + (ui.actsInfo && ui.actsInfo.code ? "?ref=" + ui.actsInfo.code : "");
   const MP_COPY = "mp@co2counter.co.uk";
@@ -5300,6 +5300,14 @@
         sb.rpc("friends_progress").then((x) => x, () => ({ data: null })),
       ]);
       friends.progress = (prog && !prog.error && prog.data) || [];
+      // The feed and cheers; missing until the feed SQL is run.
+      const [feed, cheers] = await Promise.all([
+        sb.rpc("friends_feed").then((x) => x, () => ({ error: true })),
+        sb.rpc("my_cheers").then((x) => x, () => ({ error: true })),
+      ]);
+      friends.feedReady = !!(feed && !feed.error && Array.isArray(feed.data));
+      friends.feed = friends.feedReady ? feed.data : [];
+      friends.cheersGot = (cheers && !cheers.error && Number(cheers.data)) || 0;
       await loadGroups();
       const list = rows || [];
       const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
@@ -5468,6 +5476,154 @@
     );
   }
 
+  // ---------- Friends: social feed (Glass v2) ----------
+  const FR_COLOURS = [["#7FA3AE", "#14262B"], ["#D9A441", "#2E2A22"], ["#B8653D", "#FFF7EE"], ["#8FA58A", "#1F2D1C"], ["#6F4E63", "#F6F1E6"], ["#A3B58F", "#1F2D1C"], ["#E8C88A", "#2E2A22"]];
+  function frColour(id, self) {
+    if (self) return ["#3F5B3A", "#F6F1E6"];
+    let h = 0;
+    for (const ch of String(id || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return FR_COLOURS[h % FR_COLOURS.length];
+  }
+  const frAv = (id, name, size, self, extra) => {
+    const [bg, ink] = frColour(id, self);
+    return '<span class="fr-av' + (extra ? " " + extra : "") + '" style="width:' + size + "px;height:" + size + "px;font-size:" + Math.round(size * 0.36) + "px;background:" + bg + ";color:" + ink + '" aria-hidden="true">' + esc(initials(name) || "?") + "</span>";
+  };
+  const tonnes = (kg) => (Number(kg) / 1000).toFixed(1);
+  const frWhen = (t) => {
+    const d = new Date(t), days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (days < 1) { const h = Math.floor((Date.now() - d.getTime()) / 3600000); return h < 1 ? "Just now" : h + (h === 1 ? " hour ago" : " hours ago"); }
+    if (days === 1) return "Yesterday";
+    if (days < 7) return days + " days ago";
+    if (days < 14) return "Last week";
+    return d.toLocaleDateString(undefined, { day: "numeric", month: "long" });
+  };
+
+  // Each person's yearly total at a moment, from their retakes in the feed.
+  function totalAt(uid, t, events) {
+    const mine = events.filter((e) => e.user_id === uid).sort((a, b) => new Date(a.at) - new Date(b.at));
+    const before = mine.filter((e) => new Date(e.at) <= t);
+    if (before.length) return Number(before[before.length - 1].after_total);
+    const after = mine.find((e) => new Date(e.at) > t);
+    if (after) return after.before_total == null ? null : Number(after.before_total);
+    const b = friends.board.find((x) => x.user_id === uid);
+    return b && new Date(b.updated_at || 0) <= t ? Number(b.total_yearly) : null;
+  }
+  // Last month's standings: who moved up or down, and the circle's net change.
+  function monthlyPost() {
+    const events = (friends.feed || []).filter((e) => e.kind === "retake" || e.kind === "first");
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const ids = friends.board.map((b) => b.user_id);
+    const at = (t) => ids.map((id) => ({ id, v: totalAt(id, t, events) })).filter((x) => x.v != null).sort((a, b) => a.v - b.v);
+    const atEnd = at(end), atStart = at(start);
+    if (atEnd.length < 2) return null;
+    const both = atEnd.filter((x) => atStart.some((y) => y.id === x.id));
+    const net = both.reduce((s, x) => s + x.v - atStart.find((y) => y.id === x.id).v, 0);
+    const retakes = events.filter((e) => e.kind === "retake" && new Date(e.at) >= start && new Date(e.at) < end).length;
+    const month = start.toLocaleDateString(undefined, { month: "long" });
+    const rows = atEnd.map((x, i) => {
+      const was = atStart.findIndex((y) => y.id === x.id);
+      const b = friends.board.find((y) => y.user_id === x.id) || {};
+      const move = was < 0 ? "New" : was === i ? "–" : was > i ? "▲ " + (was - i) : "▼ " + (i - was);
+      return '<li class="' + (b.is_self ? "me" : "") + '"><span class="fr-n">' + (i + 1) + "</span>" + frAv(x.id, b.display_name, 28, b.is_self) +
+        '<span class="fr-mname">' + esc(b.is_self ? "You" : b.display_name) + '</span><span class="fr-move ' + (move[0] === "▲" ? "up" : move[0] === "▼" ? "down" : move === "New" ? "new" : "") + '">' + move + "</span></li>";
+    }).join("");
+    return {
+      at: end, tag: ["Monthly", "green"], name: "CO2 Counter", verb: "monthly standings", av: '<span class="fr-av" style="width:44px;height:44px;font-size:15px;background:#3F5B3A;color:#F6F1E6" aria-hidden="true">CO</span>',
+      body: '<div class="fr-pcard dark"><div class="fr-pcard-top"><span class="fr-eyeb">Your circle in ' + esc(month) + "</span>" +
+        (both.length ? '<span><b class="display tnum fr-big honey">' + (net <= 0 ? "−" : "+") + kgFmt(Math.abs(net)) + '</b> <span class="fr-small">kg a year, net</span></span>' : "") +
+        '</div><ol class="fr-moves">' + rows + '</ol><p class="fr-small mt-2">' + retakes + (retakes === 1 ? " retake" : " retakes") + " last month</p></div>",
+      link: ["Full standings", "#fr-standings"],
+    };
+  }
+  // A nudge from your own results: what moves you up the board.
+  function nextMovePost() {
+    const board = friends.board, i = board.findIndex((b) => b.is_self);
+    if (i < 1 || !survey || !survey.completedAt) return null;
+    const ahead = board[i - 1], gap = Number(board[i].total_yearly) - Number(ahead.total_yearly);
+    const best = CATEGORIES.map((c) => ({ c, tip: tipFor(c, survey) })).sort((a, b) => b.tip.saving - a.tip.saving)[0];
+    if (!best || best.tip.saving < 0.5) return null;
+    return {
+      at: new Date(), pin: true, tag: ["For you", "honey"], name: "Your next move", verb: "", when: "Based on your latest results", av: frAv(currentUser.id, friends.myName || "You", 44, true),
+      body: '<p class="fr-ptext">You\'re ' + kgFmt(gap) + " kg a year behind " + esc(ahead.display_name) + ".</p>" +
+        '<div class="fr-pcard tip"><span>' + esc(capFirst(best.tip.realisticLabel || best.tip.title)) + ' saves about <b class="honey">' + kgFmt(best.tip.saving) + " kg</b>" +
+        (best.tip.saving >= gap ? " and would put you ahead of " + esc(ahead.display_name) + "." : ", " + Math.round((best.tip.saving / gap) * 100) + "% of the gap.") +
+        '</span><a class="fr-btn honey" href="' + catHref(best.c) + '">See how ' + icon("arrowRight") + "</a></div>",
+    };
+  }
+  function feedPosts() {
+    const rankOf = (uid) => friends.board.findIndex((b) => b.user_id === uid);
+    const posts = (friends.feed || []).map((e) => {
+      const who = e.is_self ? "You" : e.display_name;
+      const base = { key: e.post_key, at: new Date(e.at), name: who, av: frAv(e.user_id, e.display_name, 44, e.is_self), when: frWhen(e.at), social: !e.is_self, mine: e.is_self, cheers: e.cheers || 0, cheered: !!e.cheered, cheerers: e.cheerers || [] };
+      if (e.kind === "retake") {
+        const before = Number(e.before_total), after = Number(e.after_total), up = after > before;
+        const pct = before > 0 ? Math.round((Math.abs(after - before) / before) * 100) : 0;
+        const scale = Math.max(10000, before, after) * 1.05;
+        const r = rankOf(e.user_id);
+        return {
+          ...base, verb: "retook the survey", tag: ["Retake", up ? "clay" : "green"],
+          body: '<div class="fr-pcard ' + (up ? "up" : "down") + '"><div class="fr-pcard-top"><span><b class="display tnum fr-big">' + (up ? "▲" : "▼") + pct + '%</b> <span class="fw-700">' + (up ? "+" : "−") + kgFmt(Math.abs(after - before)) + " kg a year</span></span>" +
+            (r >= 0 && friends.board.length > 1 ? '<span class="fr-small muted">' + (e.is_self ? "You're " : "Now ") + ordinal(r + 1) + " on your board</span>" : "") + "</div>" +
+            '<div class="fr-ba"><span>Before</span><span class="fr-track"><span style="width:' + ((before / scale) * 100).toFixed(1) + '%"></span></span><b class="tnum">' + tonnes(before) + " t</b>" +
+            '<span>Now</span><span class="fr-track now"><span style="width:' + ((after / scale) * 100).toFixed(1) + '%"></span></span><b class="tnum">' + tonnes(after) + " t</b></div></div>",
+          link: ["Compare", "#fr-standings"],
+        };
+      }
+      if (e.kind === "first")
+        return { ...base, verb: e.is_self ? "took your first survey" : "took their first survey", tag: ["New", "sky"],
+          body: '<p class="fr-ptext">' + (e.is_self ? "Your" : "Their") + " first footprint: <b>" + tonnes(e.after_total) + " t</b> a year.</p>" };
+      return { ...base, name: e.display_name, verb: "is now your friend", tag: ["Friends", "sky"], social: true,
+        body: '<p class="fr-ptext">You can see each other\'s yearly totals now, never your answers.</p>' };
+    });
+    const extra = [monthlyPost(), nextMovePost()].filter(Boolean);
+    return [...extra.filter((p) => p.pin), ...[...posts, ...extra.filter((p) => !p.pin)].sort((a, b) => b.at - a.at)];
+  }
+  function postHtml(p, i) {
+    p = { cheers: 0, cheered: false, cheerers: [], ...p };
+    const cheer = p.social && p.key
+      ? '<button type="button" class="fr-cheer' + (p.cheered ? " on" : "") + '" data-action="cheer" data-key="' + esc(p.key) + '" aria-pressed="' + p.cheered + '">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="' + (p.cheered ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11v9H4v-9h3Zm0 0 4-7a2 2 0 0 1 3 2l-1 4h6a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7"/></svg>' +
+        (p.cheered ? "Cheered" : "Cheer") + ' <span class="tnum">' + p.cheers + "</span></button>"
+      : p.mine && p.cheers ? '<span class="fr-cheer static"><span class="tnum">' + p.cheers + "</span> " + (p.cheers === 1 ? "cheer" : "cheers") + "</span>" : "";
+    const others = p.cheers - (p.cheered ? 1 : 0) - p.cheerers.length;
+    const who = p.cheerers && p.cheerers.length ? esc(p.cheerers.join(", ")) + (others > 0 ? " and " + others + (others === 1 ? " other" : " others") : "") : p.social && p.key ? (p.verb === "is now your friend" ? "Say hello" : "Send some encouragement") : "";
+    const foot = cheer || p.link ? '<div class="fr-pfoot">' + cheer + '<span class="fr-cheerers">' + who + "</span>" + (p.link ? '<a href="' + p.link[1] + '" data-action="fr-jump">' + p.link[0] + " →</a>" : "") + "</div>" : "";
+    return (
+      '<article class="glass fr-post" style="animation-delay:' + (0.05 + Math.min(i, 8) * 0.07).toFixed(2) + 's"><header class="fr-phead">' + p.av +
+      '<span class="min0 fr-pwho"><b class="display">' + esc(p.name) + "</b> " + (p.verb ? '<span class="fr-verb">' + esc(p.verb) + "</span>" : "") + '<span class="fr-when">' + esc(p.when || frWhen(p.at)) + "</span></span>" +
+      '<span class="fr-tag ' + p.tag[1] + '">' + esc(p.tag[0]) + "</span></header>" + p.body + foot + "</article>"
+    );
+  }
+  function standingsHtml() {
+    const myName = friends.myName || (currentUser.email || "").split("@")[0];
+    const tab = ui.standTab === "imp" ? "imp" : "board";
+    const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
+    let rows;
+    if (tab === "board") {
+      const maxT = Math.max(1, ...friends.board.map((b) => Number(b.total_yearly)));
+      rows = friends.board.map((b, i) => ({ id: b.user_id, self: b.is_self, name: nameOf(b), w: (Number(b.total_yearly) / maxT) * 100, val: tonnes(b.total_yearly) + " t", cls: "", first: i === 0 }));
+    } else {
+      rows = (friends.progress || [])
+        .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0)
+        .map((p) => ({ p, pct: (Number(p.latest_total) - Number(p.first_total)) / Number(p.first_total) }))
+        .sort((a, b) => a.pct - b.pct)
+        .map(({ p, pct }) => ({ id: p.user_id, self: p.is_self, name: nameOf(p), w: Math.min(100, Math.abs(pct) * 400), val: (pct < 0 ? "▼" : pct > 0 ? "▲" : "") + Math.abs(Math.round(pct * 100)) + "%", cls: pct < 0 ? "down" : pct > 0 ? "up" : "" }));
+    }
+    const latest = friends.board.reduce((t, b) => Math.max(t, new Date(b.updated_at || 0).getTime()), 0);
+    return (
+      '<section class="glass fr-box" id="fr-standings" aria-labelledby="fr-st-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="fr-st-h" class="display">Standings</h2>' +
+      (latest ? '<span class="xs muted">Updated ' + new Date(latest).toLocaleDateString(undefined, { day: "numeric", month: "long" }) + "</span>" : "") + "</div>" +
+      '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
+      [["board", "Lowest footprint"], ["imp", "Most improved"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
+      (rows.length
+        ? '<ol class="fr-stand">' + rows.map((r, i) => '<li class="' + (r.self ? "me" : "") + '"><span class="fr-n' + (r.first && tab === "board" ? " gold" : "") + '">' + (i + 1) + "</span>" + frAv(r.id, r.self ? myName : r.name, 34, r.self) +
+            '<span class="min0"><span class="fr-sname">' + esc(r.name) + '</span><span class="fr-sbar ' + r.cls + '"><span style="width:' + r.w.toFixed(1) + '%"></span></span></span><b class="display tnum fr-sval ' + r.cls + '">' + r.val + "</b></li>").join("") + "</ol>"
+        : '<p class="sm muted mt-3">' + (tab === "board" ? "Finish the survey and add friends to compare yearly totals. Lowest footprint wins." : "Take a new survey every few months. Whoever cuts their footprint the most, compared with their first survey, tops this board.") + "</p>") +
+      '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals. Friends who haven't finished the survey don't appear yet." : "Change since each person's first survey. Only people with two or more surveys appear. Anyone can win this one.") + "</p></section>"
+    );
+  }
   function renderFriends() {
     if (!friends.loaded) {
       loadFriends();
@@ -5476,87 +5632,88 @@
     const incoming = friends.rows.filter((f) => f.status === "pending" && !f.iAsked);
     const outgoing = friends.rows.filter((f) => f.status === "pending" && f.iAsked);
     const accepted = friends.rows.filter((f) => f.status === "accepted");
-    const btns = (f, list) =>
-      '<span class="chip-row">' + list.map(([label, action, cls]) => '<button type="button" class="btn btn-sm ' + cls + '" data-action="' + action + '" data-id="' + f.id + '">' + label + "</button>").join("") + "</span>";
-    const side = (title, body) => '<section class="glass cat-drop"><h2 class="display side-title">' + title + "</h2>" + body + "</section>";
-    const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     const rank = accepted.length ? rankInfo() : null;
-    const meOnBoard = friends.board.find((b) => b.is_self);
+    const myName = friends.myName || (currentUser.email || "").split("@")[0];
+    const meBoard = friends.board.find((b) => b.is_self);
+    const myProg = (friends.progress || []).find((p) => p.is_self && p.surveys >= 2 && Number(p.first_total) > 0);
+    const myPct = myProg ? Math.round(((Number(myProg.latest_total) - Number(myProg.first_total)) / Number(myProg.first_total)) * 100) : null;
+    const pctTxt = myPct == null ? "" : '<span class="fr-pct ' + (myPct <= 0 ? "down" : "up") + '">' + (myPct <= 0 ? "▼ " : "▲ ") + Math.abs(myPct) + "%</span>";
+    actsTicked();
+    const info = ui.actsInfo;
+    const done7 = info ? Math.min(7, info.finished || 0) : 0;
 
-    let html =
-      '<div class="container friends-v2">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
-      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("user") + "</span>" +
-      '<div class="cat-hero-main"><span class="eyebrow">Friends</span><h1 class="cat-title display">Compare with people you know</h1>' +
-      "<p class=\"cat-why\">Friends only ever see each other's yearly totals, never your answers.</p></div>" +
-      (rank
-        ? '<div class="rank-side"><p class="display rank-big">You\'re ' + rank.label + '</p><p class="sm">' + rank.nudge + "</p>" +
-          (rank.href ? '<a class="todo-guide" href="' + rank.href + '">See how ' + icon("arrowRight") + "</a>" : "") + "</div>"
-        : "") +
-      "</header>";
+    // You
+    const me =
+      '<section class="glass fr-me rise" aria-label="You"><div class="fr-me-top">' + frAv(currentUser.id, myName, 60, true, "ringed") +
+      '<span class="min0 grow"><span class="display fr-me-name">' + esc(myName) + '</span><span class="fr-me-sub">' + (ui.username ? "@" + esc(ui.username) : "") + (ui.username && rank ? " · " : "") + (rank ? esc(rank.label) : "") + "</span></span>" +
+      (meBoard ? '<span class="fr-me-t"><b class="display tnum">' + tonnes(meBoard.total_yearly) + "<small> t</small></b>" + pctTxt + "</span>" : "") + "</div>" +
+      '<div class="fr-me-stats"><div class="dark"><b class="display tnum">' + (meBoard ? tonnes(meBoard.total_yearly) + "<small> t</small>" : "–") + "</b>" + (pctTxt || '<span class="fr-small">a year</span>') + "</div>" +
+      '<div><b class="display tnum">' + accepted.length + '</b><span class="fr-small">' + (accepted.length === 1 ? "friend" : "friends") + "</span></div>" +
+      '<div class="cheers"><b class="display tnum">' + (friends.cheersGot || 0) + '</b><span class="fr-small">cheers</span></div></div>' +
+      "<p class=\"xs muted fr-me-note\">Friends only ever see each other's yearly totals, never your answers.</p></section>";
 
-    // Leaderboard
-    let board;
-    if (!accepted.length) board = '<p class="sm muted mt-3">Add friends to compare your yearly footprints. Lowest footprint wins.</p>';
-    else {
-      const podium = friends.board.slice(0, 3);
-      const maxT = Math.max(1, ...friends.board.map((b) => b.total_yearly));
-      board =
-        (podium.length >= 2
-          ? '<div class="podium">' +
-            [1, 0, 2]
-              .filter((i) => podium[i])
-              .map(
-                (i) =>
-                  '<div class="podium-spot place-' + (i + 1) + (podium[i].is_self ? " me" : "") + '"><span class="podium-name">' + esc(nameOf(podium[i])) + "</span>" +
-                  '<span class="podium-total display">' + (podium[i].total_yearly / 1000).toFixed(1) + ' t</span><span class="podium-step"><b class="display">' + (i + 1) + "</b></span></div>"
-              )
-              .join("") +
-            "</div>"
-          : "") +
-        '<ol class="board">' +
-        friends.board
-          .map(
-            (b, i) =>
-              '<li class="' + (b.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(nameOf(b)) + "</span>" +
-              '<span class="board-bar"><span style="width:' + ((b.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span>' +
-              '<span class="board-t"><b class="display tnum">' + (b.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>'
-          )
-          .join("") +
-        "</ol>" +
-        (!meOnBoard ? '<p class="xs muted mt-3">Finish the survey to appear on the leaderboard.</p>' : "") +
-        (accepted.length > friends.board.filter((b) => !b.is_self).length ? '<p class="xs muted mt-3">Friends who haven\'t finished the survey yet won\'t appear until they do.</p>' : "");
-    }
-    html +=
-      '<div class="cat-grid"><div class="cat-col stack-5">' +
-      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Leaderboard</h2><span class="muted">Lowest footprint first</span></div>' + board + "</section>" +
-      (accepted.length
-        ? '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Most improved</h2><span class="muted">Since each person\'s first survey</span></div><div class="mt-4">' +
-          mostImprovedHtml() + "</div></section>"
+    // Bring someone in (act 7)
+    const invite =
+      '<section class="glass fr-box fr-invite" id="fr-invite" aria-labelledby="fr-inv-h"><h2 id="fr-inv-h" class="display">Bring someone in</h2><p class="sm muted">Seven friends who take the survey ticks off Act 7.</p>' +
+      (info && info.code
+        ? '<div class="fr-code"><span><span class="fr-code-l">Invite code</span><b class="display tnum">' + esc(info.code) + '</b></span><button type="button" class="fr-btn honey" data-action="copy-code">Copy</button></div>' +
+          '<div class="fr-seven" role="img" aria-label="' + done7 + ' of 7 invited friends have taken the survey">' + Array.from({ length: 7 }, (_, i) => '<span class="' + (i < done7 ? "on" : "") + '"></span>').join("") + "</div>" +
+          '<p class="xs fw-700 muted">' + done7 + " of 7 have taken the survey</p>"
         : "") +
-      groupsHtml() +
-      '</div><aside class="cat-aside">' + groupFormsHtml() +
-      side(
-        "Add a friend",
-        '<p class="sm muted mb-3">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p><form id="friend-form" class="stack-2"><input class="input" type="text" id="friend-email" placeholder="Their username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green btn-block">Send request</button></form>' +
-          (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark" : "red") + '">' + esc(friends.msg) + "</p>" : "")
-      ) +
-      (incoming.length ? side("Requests for you", '<div class="stack-2">' + incoming.map((f) => '<div class="friend-row"><span class="sm fw-600 truncate">' + esc(f.name) + "</span>" + btns(f, [["Accept", "friend-accept", "btn-green"], ["Decline", "friend-remove", "btn-outline"]]) + "</div>").join("") + "</div>") : "") +
-      (outgoing.length ? side("Waiting for a reply", '<div class="stack-2">' + outgoing.map((f) => '<div class="friend-row"><span class="sm fw-600 truncate">' + esc(f.name) + "</span>" + btns(f, [["Cancel", "friend-remove", "btn-outline"]]) + "</div>").join("") + "</div>") : "") +
-      (accepted.length
-        ? side(
-            "Your friends · " + accepted.length,
-            '<div class="stack-2">' +
-              accepted.map((f) => '<div class="friend-row"><span class="label-row min0"><span class="nav-avatar sm-av">' + esc(initials(f.name) || "?") + '</span><span class="sm fw-600 truncate">' + esc(f.name) + "</span></span>" + btns(f, [["Remove", "friend-remove", "btn-outline"]]) + "</div>").join("") +
-              "</div>"
-          )
+      '<div class="chip-row mt-2"><button type="button" class="hb-act-link" data-action="copy-invite">' + icon("copy") + 'Copy invite link</button><a class="hb-act-link" href="#/acts/motivate">Act 7</a></div>' +
+      (ui.shareMsg ? '<p class="xs green-dark mt-1">' + esc(ui.shareMsg) + "</p>" : "") + "</section>";
+
+    // Add a friend, waiting, manage
+    const manage =
+      '<section class="glass fr-box fr-manage" aria-labelledby="fr-add-h"><h2 id="fr-add-h" class="display">Add a friend</h2>' +
+      '<form id="friend-form" class="fr-addform"><input class="input" type="text" id="friend-email" placeholder="Username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send</button></form>' +
+      (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark fw-700" : "red") + '">' + esc(friends.msg) + "</p>" : "") +
+      '<p class="xs muted mt-2">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p>' +
+      (outgoing.length
+        ? '<div class="fr-label">Waiting for a reply</div>' + outgoing.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 32, false, "dashed") + '<span class="grow fw-700 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost" data-action="friend-remove" data-id="' + f.id + '">Cancel</button></div>').join("")
         : "") +
-      side(
-        "Your name",
-        '<p class="sm muted mb-3">This is what your friends see.</p><form id="name-form" class="stack-2"><input class="input" id="display-name" maxlength="40" placeholder="e.g. Sam" aria-label="Your display name" value="' +
-          esc(friends.myName) + '" /><button type="submit" class="btn btn-outline btn-block">Save</button></form>'
-      ) +
-      "</aside></div></div>";
-    return html;
+      '<details class="fr-details"' + (ui.frManageOpen ? " open" : "") + "><summary>Manage friends and your name</summary>" +
+      (accepted.length
+        ? '<div class="fr-plist">' + accepted.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 28) + '<span class="grow fw-600 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost clay" data-action="friend-remove" data-id="' + f.id + '">Remove</button></div>').join("") + "</div>"
+        : '<p class="xs muted mt-2">No friends yet.</p>') +
+      '<form id="name-form" class="fr-nameform"><label class="xs fw-700" for="display-name">Name your friends see</label><span class="fr-addform"><input class="input" id="display-name" maxlength="40" placeholder="e.g. Sam" value="' +
+      esc(friends.myName) + '" /><button type="submit" class="btn btn-outline">Save</button></span></form></details></section>';
+
+    // Friends strip
+    const people = [
+      ...friends.board.filter((b) => !b.is_self).map((b) => ({ id: b.user_id, name: b.display_name, done: true })),
+      ...accepted.filter((f) => !friends.board.some((b) => b.user_id === f.otherId)).map((f) => ({ id: f.otherId, name: f.name, done: false })),
+    ];
+    const leader = friends.board[0];
+    const story = (p) => {
+      const prog = (friends.progress || []).find((x) => x.user_id === p.id && x.surveys >= 2 && Number(x.first_total) > 0);
+      const pct = prog ? Math.round(((Number(prog.latest_total) - Number(prog.first_total)) / Number(prog.first_total)) * 100) : null;
+      const lead = leader && leader.user_id === p.id && friends.board.length > 1;
+      const badge = lead ? ["1st", "gold"] : pct != null && pct !== 0 ? [(pct < 0 ? "▼" : "▲") + Math.abs(pct) + "%", pct < 0 ? "down" : "up"] : !p.done ? ["New", "new"] : null;
+      const ring = !p.done ? "dash" : lead ? "gold" : pct != null && pct > 0 ? "up" : "down";
+      return '<li class="fr-story ' + ring + '"><span class="fr-story-av">' + frAv(p.id, p.name, 62) + (badge ? '<span class="fr-badge ' + badge[1] + '">' + badge[0] + "</span>" : "") + '</span><span class="fr-story-n">' + esc(p.name) + "</span></li>";
+    };
+    const strip =
+      '<ul class="fr-strip" aria-label="Your friends">' + people.map(story).join("") +
+      '<li class="fr-story dash"><a class="fr-story-av" href="#fr-invite" data-action="fr-jump" aria-label="Invite a friend"><span class="fr-av fr-plus" style="width:62px;height:62px">' + icon("plus") + '</span></a><span class="fr-story-n">Invite</span></li></ul>';
+
+    const reqs = incoming.map((f) =>
+      '<div class="fr-req rise">' + frAv(f.otherId, f.name, 42) + '<span class="grow min0"><b>' + esc(f.name) + "</b> wants to be friends</span>" +
+      '<button type="button" class="fr-btn green" data-action="friend-accept" data-id="' + f.id + '">Accept</button>' +
+      '<button type="button" class="fr-btn ghost sq" data-action="friend-remove" data-id="' + f.id + '" aria-label="Decline ' + esc(f.name) + '\'s request">' + icon("x") + "</button></div>").join("");
+
+    const posts = feedPosts();
+    const feed =
+      '<div class="fr-feedhead"><h2 class="display">Feed</h2><span class="xs muted">Retakes, monthly standings and new friends</span></div>' +
+      (posts.length ? posts.map(postHtml).join("") + '<p class="center sm muted">You\'re all caught up</p>'
+        : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
+      (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
+
+    return (
+      '<div class="container friends-v2 fr-page">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
+      '<div class="fr-layout"><aside class="fr-side">' + me + invite + manage + groupFormsHtml() + "</aside>" +
+      '<main class="fr-feed">' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+    );
   }
 
   async function addFriend(email) {
@@ -7099,6 +7256,34 @@
     "clear-habits": () => {
       CATEGORIES.forEach((c) => lsRemove(KEY_HABITS + c));
       render();
+    },
+    cheer: async (el) => {
+      const post = (friends.feed || []).find((p) => p.post_key === el.dataset.key);
+      if (!post || !sb) return;
+      // Show it straight away, then save; put it back if saving fails.
+      const was = !!post.cheered;
+      post.cheered = !was;
+      post.cheers = Math.max(0, (post.cheers || 0) + (was ? -1 : 1));
+      render();
+      const { data, error } = await sb.rpc("toggle_cheer", { p_key: post.post_key });
+      if (error) {
+        post.cheered = was;
+        post.cheers = Math.max(0, post.cheers + (was ? 1 : -1));
+        render();
+      } else if (!!data !== post.cheered) {
+        post.cheered = !!data;
+        post.cheers = Math.max(0, post.cheers + (data ? 1 : -1));
+        render();
+      }
+    },
+    "stand-tab": (el) => {
+      ui.standTab = el.dataset.tab;
+      render();
+    },
+    "fr-jump": (el, e) => {
+      e.preventDefault();
+      const t = document.getElementById(el.getAttribute("href").slice(1));
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
     },
     "friend-accept": async (el) => {
       await sb.from("friendships").update({ status: "accepted" }).eq("id", el.dataset.id);

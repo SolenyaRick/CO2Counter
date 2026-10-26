@@ -2116,3 +2116,117 @@ end;
 $$;
 revoke all on function public.owner_acts_analytics() from public, anon;
 grant execute on function public.owner_acts_analytics() to authenticated;
+
+-- ---------- Friends feed and cheers (October 2026) ----------
+-- friends_feed() lists recent news from you and your accepted friends:
+-- survey retakes (old and new yearly totals), first surveys and new
+-- friendships, with cheer counts. Only totals, never answers. Cheerer names
+-- are only shown when the cheerer is in your own circle.
+
+create table if not exists public.feed_cheers (
+  post_key text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_key, user_id)
+);
+alter table public.feed_cheers enable row level security;
+-- No policies: read and written only through the functions below.
+
+drop function if exists public.friends_feed();
+create function public.friends_feed()
+returns table (post_key text, kind text, user_id uuid, display_name text, is_self boolean, at timestamptz, before_total numeric, after_total numeric, cheers integer, cheered boolean, cheerers text[])
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with people as (
+    select auth.uid() as uid
+    union
+    select case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end
+    from public.friendships f
+    where f.status = 'accepted' and (f.requester_id = auth.uid() or f.addressee_id = auth.uid())
+  ),
+  h as (
+    select sh.id, sh.user_id, sh.total_yearly, sh.completed_at,
+      lag(sh.total_yearly) over (partition by sh.user_id order by sh.completed_at) as prev
+    from public.survey_history sh
+    join people p on p.uid = sh.user_id
+    where sh.total_yearly is not null
+  ),
+  posts as (
+    select 'h' || h.id::text as post_key, case when h.prev is null then 'first' else 'retake' end as kind,
+      h.user_id, h.completed_at as at, h.prev as before_total, h.total_yearly as after_total
+    from h
+    where h.completed_at > now() - interval '120 days'
+    union all
+    select 'f' || f.id::text, 'friend', case when f.requester_id = auth.uid() then f.addressee_id else f.requester_id end,
+      f.created_at, null::numeric, null::numeric
+    from public.friendships f
+    where f.status = 'accepted' and (f.requester_id = auth.uid() or f.addressee_id = auth.uid())
+      and f.created_at > now() - interval '120 days'
+  )
+  select
+    p.post_key, p.kind, p.user_id,
+    coalesce(nullif(pr.display_name, ''), nullif(pr.username, ''), 'Friend'),
+    p.user_id = auth.uid(), p.at, p.before_total, p.after_total,
+    (select count(*)::integer from public.feed_cheers c where c.post_key = p.post_key),
+    exists (select 1 from public.feed_cheers c where c.post_key = p.post_key and c.user_id = auth.uid()),
+    array(
+      select coalesce(nullif(cp.display_name, ''), nullif(cp.username, ''), 'Friend')
+      from public.feed_cheers c
+      join people pe on pe.uid = c.user_id
+      join public.profiles cp on cp.id = c.user_id
+      where c.post_key = p.post_key and c.user_id <> auth.uid()
+      order by c.created_at
+      limit 2
+    )
+  from posts p
+  left join public.profiles pr on pr.id = p.user_id
+  where public.has_access()
+  order by p.at desc
+  limit 60;
+$$;
+revoke all on function public.friends_feed() from public;
+grant execute on function public.friends_feed() to authenticated;
+
+-- Cheer a friend's post, or take the cheer back. Returns true when cheered.
+drop function if exists public.toggle_cheer(text);
+create function public.toggle_cheer(p_key text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first'; end if;
+  if not exists (select 1 from public.friends_feed() f where f.post_key = p_key and not f.is_self) then
+    raise exception 'Post not found';
+  end if;
+  if exists (select 1 from public.feed_cheers where post_key = p_key and user_id = auth.uid()) then
+    delete from public.feed_cheers where post_key = p_key and user_id = auth.uid();
+    return false;
+  end if;
+  insert into public.feed_cheers (post_key, user_id) values (p_key, auth.uid());
+  return true;
+end;
+$$;
+revoke all on function public.toggle_cheer(text) from public;
+grant execute on function public.toggle_cheer(text) to authenticated;
+
+-- Cheers your own surveys have had from friends, all time.
+drop function if exists public.my_cheers();
+create function public.my_cheers()
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select count(*)::integer
+  from public.feed_cheers c
+  join public.survey_history sh on c.post_key = 'h' || sh.id::text
+  where sh.user_id = auth.uid() and c.user_id <> auth.uid();
+$$;
+revoke all on function public.my_cheers() from public;
+grant execute on function public.my_cheers() to authenticated;
