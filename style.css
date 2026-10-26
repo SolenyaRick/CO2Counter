@@ -4356,3 +4356,4 @@ a.hb-card:hover { background: rgba(163, 181, 143, 0.22); }
 .letter-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
 .letter-form .btn { justify-self: start; }
 .letter-alt summary { cursor: pointer; }
+.an-table-3 .an-tr { grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); }

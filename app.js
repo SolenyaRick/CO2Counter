@@ -2286,6 +2286,12 @@
       pension && pension.unfunded
         ? ""
         : qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
+      // Optional, for anonymous totals by role (also on the Account page).
+      qCard(pension && pension.unfunded ? 4 : 5, "What best describes your work?", "Only used for anonymous totals, like the average footprint of nurses. Never shown with your name.",
+        '<select class="input q-select" data-field="about.role" data-type="text" aria-label="Your work">' +
+          '<option value="">Prefer not to say</option>' +
+          ROLES.map(([k, l]) => '<option value="' + k + '"' + (((survey.about || {}).role || "") === k ? " selected" : "") + ">" + l + "</option>").join("") +
+          "</select>", { optional: true }),
     ]);
   }
 
@@ -4889,6 +4895,34 @@
   // people are a scrambled id, never an account.
 
   const analytics = { loaded: false, loading: false, error: "", data: null, at: null };
+  // Owner view of the 7 Acts: invites, letters, verifications. Totals only.
+  function actsAnalyticsHtml(a) {
+    const head = '<section class="glass an-card"><h2 class="card-title">The 7 Acts</h2>';
+    if (!a) return head + '<p class="sm muted">Run the 7 Acts analytics SQL in Supabase to see invites, letters and verified acts here.</p></section>';
+    const r = a.referrals || {}, l = a.letters || {}, v = a.verified || {}, e = a.energy_asks || {}, h = a.hand_ticks || {};
+    const tile = (label, value, sub) => '<div class="an-tile"><span class="eyebrow">' + label + '</span><b class="display tnum">' + value + '</b><span class="xs muted">' + sub + "</span></div>";
+    const n = (x) => kgFmt(Number(x) || 0);
+    const latest = (analytics.data && analytics.data.latest) || [];
+    const askers = latest.filter((x) => x.data && x.data.energy && x.data.energy.billPayer === "other" && !x.data.energy.greenTariff).length;
+    return (
+      head + '<p class="sm muted">Invites, letters sent from the app and verified acts. People are scrambled ids, as everywhere here.</p>' +
+      '<h3 class="display mt-4">Invites (Act 7)</h3><div class="an-tiles mt-2">' +
+      tile("Joined by invite", n(r.joined), n(r.finished) + " finished the survey") +
+      tile("People inviting", n(r.inviters), n(r.codes) + " have an invite code") +
+      tile("Cut by invitees", r.cut != null ? "−" + n(r.cut) + " kg" : "–", "a year, across " + n(r.cut_people) + " who've measured twice") +
+      tile("Act 7 verified", n(v.motivate), "seven invitees finished") + "</div>" +
+      ((r.top || []).length
+        ? '<div class="an-table an-table-3" role="table"><div class="an-tr an-th" role="row"><span role="columnheader">Top inviters</span><span role="columnheader">Joined</span><span role="columnheader">Finished</span></div>' +
+          r.top.map((t) => '<div class="an-tr" role="row"><span role="cell"><code>' + esc(t.u) + '</code></span><span class="tnum" role="cell">' + n(t.joined) + '</span><span class="tnum" role="cell">' + n(t.finished) + "</span></div>").join("") + "</div>"
+        : "") +
+      '<h3 class="display mt-4">Letters and verified acts</h3><div class="an-tiles mt-2">' +
+      tile("MP letters sent", n((l.mp || {}).total), n((l.mp || {}).month) + " in the last 30 days") +
+      tile("Act 6 verified", n(v.mobilise), "MP letters sent or BCC'd · " + n(h.mobilise) + " ticked by hand") +
+      tile("Bill payer messages", n((l.energy || {}).total), n((l.energy || {}).month) + " in the last 30 days · " + n(h.energy_asked) + " asked by any route") +
+      tile("Switch confirmed", n(v.energy), "of " + n(e.links) + " confirm links · " + askers + (askers === 1 ? " person doesn't" : " people don't") + " choose their supplier") + "</div></section>"
+    );
+  }
+
   async function loadAnalytics() {
     if (!sb || analytics.loading) return;
     analytics.loading = true;
@@ -4897,6 +4931,13 @@
       if (error) throw error;
       analytics.data = data || {};
       analytics.error = "";
+      // The 7 Acts totals (null until that SQL is run).
+      try {
+        const acts = await sb.rpc("owner_acts_analytics");
+        analytics.acts = acts.error ? null : acts.data;
+      } catch (e2) {
+        analytics.acts = null;
+      }
       analytics.at = new Date();
     } catch (e) {
       analytics.error = (e && e.message) || "Couldn't load the analytics.";
@@ -4988,7 +5029,12 @@
       const vals = us.map((u) => latestBy[u]).filter((v) => v != null);
       return { label, members: us.length, ...stats(vals), change: changeOf(us) };
     };
-    const people = d.people || [];
+    // Role: the Account page answer, else the survey's optional question.
+    const roleBy = {};
+    (d.latest || []).forEach((r) => { const role = r.data && r.data.about && r.data.about.role; if (role) roleBy[r.u] = role; });
+    (d.people || []).forEach((p) => { if (p.role) roleBy[p.u] = p.role; });
+    const everyone = Array.from(new Set((d.latest || []).map((r) => r.u).concat((d.people || []).map((p) => p.u))));
+    const people = everyone.map((u) => ({ u, role: roleBy[u] || null }));
     const roles = ROLES.map(([k, l]) => breakdown(l, people.filter((p) => p.role === k).map((p) => p.u))).concat([breakdown("Not given", people.filter((p) => !p.role).map((p) => p.u))]);
     const groups = (d.groups || []).map((g) => breakdown(g.name, g.members || []));
     const research = people.filter((p) => p.research).map((p) => p.u);
@@ -5087,7 +5133,8 @@
         "</section>"
       );
     };
-    html += table("By role", "From the optional \"What best describes your work?\" on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
+    html += actsAnalyticsHtml(analytics.acts);
+    html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step) or on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
     html +=
       '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
       " opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
@@ -5193,7 +5240,11 @@
       friends.groupOk = true;
       return r;
     } catch (e) {
-      friends.groupMsg = (e && e.message) || "Something went wrong. Please try again.";
+      const msg = (e && e.message) || "";
+      // Before the groups SQL is run the functions don't exist yet.
+      friends.groupMsg = /does not exist|could not find the function|schema cache/i.test(msg)
+        ? "Groups aren't switched on yet." + (ui.isAdmin ? " Run run-in-supabase-groups.sql in Supabase to switch them on." : " Please try again soon.")
+        : msg || "Something went wrong. Please try again.";
     } finally {
       await loadGroups();
       render();
@@ -5201,7 +5252,6 @@
   }
 
   function groupsHtml() {
-    if (!friends.groupsReady) return "";
     const groups = friends.groups || [];
     const g = groups.find((x) => x.id === ui.groupSel);
     let body;
@@ -5238,7 +5288,6 @@
   }
 
   function groupFormsHtml() {
-    if (!friends.groupsReady) return "";
     const invite = (location.hash.split("?")[1] || "").match(/(?:^|&)join=([A-Za-z0-9]{6})/);
     return (
       '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
@@ -7126,6 +7175,11 @@
       if (t.tagName === "SELECT") {
         setPath(survey, t.dataset.field, t.value);
         surveyChanged();
+        // Keep the Account page's answer in step with the survey's.
+        if (t.dataset.field === "about.role" && currentUser && sb) {
+          sb.from("profiles").update({ role: t.value || null }).eq("id", currentUser.id).then(() => {}, () => {});
+          if (ui.aboutYou) ui.aboutYou = { ...ui.aboutYou, role: t.value };
+        }
       }
       if (t.dataset.rerender) render();
     } else if (t.dataset.flight) {
