@@ -3202,35 +3202,69 @@
     );
   }
 
-  // Habits has two parts: switches (one-off changes, ready) and daily
-  // habits (coming soon). Switches is a short checklist: ticked where your
-  // answers show you've made the change, empty where you haven't, each
-  // opening the full Greener switches page at that switch.
+  // Habits has two parts: one-off changes, set out as Real Zero's 7 Acts
+  // (realzero.earth/7-acts), and daily habits (coming soon). Acts 1-5 tick
+  // themselves from the latest survey; 6 and 7 are ticked by hand.
+  const actsKey = () => "co2_acts_" + ((currentUser && currentUser.id) || "guest");
+  function actsTicked() {
+    try { return JSON.parse(localStorage.getItem(actsKey()) || "{}"); } catch (e) { return {}; }
+  }
+  function shareText() {
+    const fp = survey && survey.completedAt ? footprint(survey) : null;
+    return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
+      "Find yours, free, with CO2 Counter:";
+  }
   function renderHabitsPage() {
     const ready = survey && survey.completedAt;
     const areas = ready ? switchAreas({ s: survey, mine: true }) : [];
-    const made = areas.filter((a) => a.done).length;
-    const LABEL = { banking: "Greener bank", energy: "Green electricity tariff", meals: "Plant-forward food", flights: "Train instead of short flights", commute: "Low-carbon commute" };
-    const rows = areas
-      .map(
-        (a) =>
-          '<li><a class="hb-row' + (a.done ? " done" : "") + '" href="/greener-switches/" data-action="jump-switch" data-cat="' + a.key + '">' +
-          '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>" +
-          '<span class="min0"><span class="fw-600 hb-name">' + LABEL[a.key] + '</span><span class="xs muted hb-sub">' +
-          (a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet") +
-          '</span></span><span class="sr-only">' + (a.done ? "made" : "not made yet") + "</span>" + icon("chevronRight") + "</a></li>"
+    const area = (k) => areas.find((a) => a.key === k);
+    const ticked = actsTicked();
+    const travel = ready ? [area("commute"), area("flights")] : [];
+    const travelSave = travel.reduce((t, a) => t + (a.done ? 0 : a.save), 0);
+    const auto = (a) => (ready ? { done: a.done, sub: a.done ? (a.save >= 0.5 ? "Done · could go a bit further, −" + kgFmt(a.save) + " kg" : "Done · " + a.doneTitle.replace(/^You're /, "you're ").replace(/^You /, "you ").replace(/^No /, "no ")) : a.save >= 0.5 ? "Not yet · could save " + kgFmt(a.save) + " kg a year" : "Not yet" } : { done: false, sub: "Finish your survey to see" });
+    const url = encodeURIComponent(PRODUCTION_URL);
+    const text = encodeURIComponent(shareText() + " " + PRODUCTION_URL);
+    const acts = [
+      { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
+      { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
+      { n: 3, name: "More plant-based food", what: "seasonal and local where you can", cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
+      { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", cat: travel.length && travel[0].done ? "flights" : "commute",
+        done: ready && travel.every((a) => a.done),
+        sub: !ready ? "Finish your survey to see" : travel.every((a) => a.done) ? "Done · green commute and no flights" :
+          [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
+      { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", href: ready ? "#/results" : "#/", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
+      { n: 6, name: "Mobilise: use your vote", what: "to ask your representatives for action", manual: "mobilise", done: !!ticked.mobilise, sub: ticked.mobilise ? "Done · ticked by you" : "Tick when you've done it",
+        extra: '<a class="hb-act-link" href="https://www.writetothem.com/" target="_blank" rel="noopener">Write to your MP ' + icon("link") + "</a>" },
+      { n: 7, name: "Motivate seven other people", what: "to do their 7 Acts", manual: "motivate", done: !!ticked.motivate, sub: ticked.motivate ? "Done · ticked by you" : "Share CO2 Counter, then tick when seven have joined in",
+        extra:
+          '<span class="hb-share">' +
+          '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
+          '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
+          '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
+          '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
+          '<a class="hb-act-link" href="https://www.facebook.com/sharer/sharer.php?u=' + url + '" target="_blank" rel="noopener">Facebook</a>' +
+          '<a class="hb-act-link" href="#/friends">Add friends</a></span>' + (ui.shareMsg ? '<span class="xs green-dark hb-share-msg">' + esc(ui.shareMsg) + "</span>" : "") },
+    ];
+    const made = acts.filter((a) => a.done).length;
+    const box = (a) => '<span class="hb-box" aria-hidden="true">' + (a.done ? icon("check") : "") + "</span>";
+    const body = (a) =>
+      '<span class="min0"><span class="fw-600 hb-name"><span class="hb-n">' + a.n + "</span>" + esc(a.name) + '</span><span class="xs muted hb-what">' + esc(a.what) + '</span><span class="xs hb-sub' + (a.done ? " green-dark" : " muted") + '">' + esc(a.sub) + "</span></span>";
+    const rows = acts
+      .map((a) =>
+        a.manual
+          ? '<li class="hb-item"><div class="hb-row' + (a.done ? " done" : "") + '"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" +
+            '<div class="hb-extra">' + a.extra + "</div></li>"
+          : '<li class="hb-item"><a class="hb-row' + (a.done ? " done" : "") + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + box(a) + body(a) +
+            '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>"
       )
       .join("");
-    const switches = ready
-      ? '<p class="sm muted mb-3"><b class="green-dark">' + made + " of " + areas.length + "</b> switches made, going by your latest survey.</p>" +
-        '<ul class="hb-list">' + rows + "</ul>" +
-        '<a class="btn btn-green btn-block mt-4" href="/greener-switches/">See your switches in full ' + icon("arrowRight") + "</a>"
-      : '<p class="sm muted">Finish your survey and we\'ll tick off the switches you\'ve already made, and show what the rest would save.</p>' +
-        '<div class="row gap-3 mt-4" style="flex-wrap:wrap"><a class="btn btn-green" href="#/">Take the survey</a><a class="btn btn-outline" href="/greener-switches/">See the switches</a></div>';
     return (
-      '<div class="container narrow">' + pageHeader("My Habits", "Switches you make once, and habits you keep") +
-      '<section class="card mb-6 fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("refresh") + '</span><h2 class="card-title">Switches</h2>' +
-      '<span class="tag ml-auto">One-off changes</span></div>' + switches + "</section>" +
+      '<div class="container narrow">' + pageHeader("My Habits", "One-off changes, and habits you keep") +
+      '<section class="card mb-6 fade-up"><div class="label-row mb-2"><span class="round-badge sm">' + icon("refresh") + '</span><h2 class="card-title">One-off changes</h2>' +
+      '<span class="tag ml-auto">The 7 Acts</span></div>' +
+      '<p class="sm muted mb-4">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> for individuals. <b class="green-dark">' + made + " of 7</b> done" + (ready ? ", going by your latest survey." : ".") + "</p>" +
+      '<ul class="hb-list">' + rows + "</ul>" +
+      '<a class="btn btn-green btn-block mt-4" href="/greener-switches/">' + (ready ? "See your switches in full " : "See the switches ") + icon("arrowRight") + "</a></section>" +
       '<section class="card fade-up"><div class="label-row mb-3"><span class="round-badge sm">' + icon("leaf") + '</span><h2 class="card-title">Daily habits</h2>' +
       '<span class="tag amber ml-auto">Coming soon</span></div><p class="sm muted">Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We\'re building this next.</p></section></div>'
     );
@@ -6249,6 +6283,27 @@
       const v = !ui.switchOn.every(Boolean);
       ui.switchOn = ui.switchOn.map(() => v);
       updateSwitchboard();
+    },
+    "tick-act": (el) => {
+      const t = actsTicked();
+      t[el.dataset.act] = !t[el.dataset.act];
+      try { localStorage.setItem(actsKey(), JSON.stringify(t)); } catch (e) {}
+      render();
+    },
+    "share-app": async () => {
+      const text = shareText();
+      try {
+        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: PRODUCTION_URL });
+        else { await navigator.clipboard.writeText(text + " " + PRODUCTION_URL); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
+      } catch (e) {}
+    },
+    // Instagram has no share link: copy the words, then open Instagram to
+    // paste them into a story or post.
+    "share-instagram": async () => {
+      try { await navigator.clipboard.writeText(shareText() + " " + PRODUCTION_URL); } catch (e) {}
+      ui.shareMsg = "Copied. Paste it into an Instagram story or post, with a link sticker to co2counter.co.uk.";
+      render();
+      window.open("https://www.instagram.com/", "_blank", "noopener");
     },
     "jump-switch": (el, e) => {
       e.preventDefault();
