@@ -30,8 +30,13 @@ canvas layout.
   account, and savings and pensions (pension ranking).
 - `Glass2-SurveyDone.dc.html`: survey page once completed (quick update, start
   from scratch, view results), last answers per step and survey history.
-- `Glass2-Friends.dc.html`: leaderboard with podium, rank nudge, most improved,
-  add a friend, requests and your name.
+- `Glass2-Friends.dc.html`: friends as a social feed. A story strip of
+  friends (ring and badge show their trend), friend requests inline, a
+  monthly "your circle" summary, then posts for retakes (before/after bars),
+  milestones and new friends that you can cheer, plus a personal "next
+  move". Side rails hold your profile, invite code (Act 7), standings with
+  Lowest footprint / Most improved tabs, and add or manage friends. Posts
+  only use yearly totals.
 - `Glass2-Account.dc.html`: profile, saved data, plan and support, clearing data
   and account deletion.
 - `Glass2-Switches.dc.html`: greener switches. A switchboard of five toggles
