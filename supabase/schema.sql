@@ -1992,3 +1992,66 @@ end;
 $$;
 revoke all on function public.verify_mp_letter(text) from public;
 grant execute on function public.verify_mp_letter(text) to authenticated;
+
+-- ---------- Act 2: the bill payer confirms the switch ----------
+-- People who don't choose their supplier send the bill payer a message with
+-- a private link. Tapping "Yes, we've switched" verifies the sender's act 2.
+-- The bill payer needs no account; the link is the only key.
+alter table public.act_verifications drop constraint if exists act_verifications_act_check;
+alter table public.act_verifications add constraint act_verifications_act_check check (act in ('mobilise', 'motivate', 'energy'));
+create table if not exists public.energy_asks (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  token text not null unique,
+  created_at timestamptz not null default now(),
+  confirmed_at timestamptz
+);
+alter table public.energy_asks enable row level security;
+
+-- Your private confirmation token (made the first time).
+create or replace function public.my_energy_token()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_token text;
+begin
+  if auth.uid() is null then
+    raise exception 'Sign in first';
+  end if;
+  select token into v_token from public.energy_asks where user_id = auth.uid();
+  if v_token is null then
+    v_token := replace(gen_random_uuid()::text, '-', '');
+    insert into public.energy_asks (user_id, token) values (auth.uid(), v_token)
+      on conflict (user_id) do nothing;
+    select token into v_token from public.energy_asks where user_id = auth.uid();
+  end if;
+  return v_token;
+end;
+$$;
+revoke all on function public.my_energy_token() from public, anon;
+grant execute on function public.my_energy_token() to authenticated;
+
+-- The bill payer's "Yes, we've switched". Works without signing in.
+create or replace function public.confirm_energy_switch(p_token text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user uuid;
+begin
+  update public.energy_asks set confirmed_at = coalesce(confirmed_at, now())
+    where token = trim(p_token) and length(trim(p_token)) >= 24
+    returning user_id into v_user;
+  if v_user is null then
+    return false;
+  end if;
+  insert into public.act_verifications (user_id, act) values (v_user, 'energy') on conflict do nothing;
+  return true;
+end;
+$$;
+revoke all on function public.confirm_energy_switch(text) from public;
+grant execute on function public.confirm_energy_switch(text) to anon, authenticated;

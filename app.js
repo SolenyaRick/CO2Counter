@@ -3247,7 +3247,14 @@
     try {
       // Invite code, invitees, and verified acts (null until the SQL is run).
       const { data, error } = await sb.rpc("my_acts");
-      if (!error && data && data.code) ui.actsInfo = data;
+      if (!error && data && data.code) {
+        ui.actsInfo = data;
+        // Private link for the bill payer to confirm an energy switch (act 2).
+        if (asksBillPayer(survey)) {
+          const t = await sb.rpc("my_energy_token");
+          if (!t.error && t.data) ui.energyToken = t.data;
+        }
+      }
     } catch (e) {}
     try {
       const { data, error } = await sb.from("profiles").select("acts").eq("id", uid).maybeSingle();
@@ -3368,6 +3375,22 @@
       sub: verified ? "Verified · seven people you invited have taken the survey" : n + " of 7 people you invited have taken the survey" + (info.joined > n ? " (" + info.joined + " joined)" : ""),
       extra: '<div class="hb-invite">' + inviteCodeHtml() + "</div>" + shares,
     };
+  }
+
+  // The page the bill payer opens from the message. No account needed.
+  function renderConfirmEnergy() {
+    const st = ui.confirmState;
+    const body =
+      st === "done"
+        ? '<h1 class="cat-title display">Thank you</h1><p class="cat-why">That\'s ticked off for them. Switching to renewable electricity cuts your home\'s electricity emissions by {{green_cut}}, every year.</p>' +
+          '<a class="btn btn-green mt-4" href="#/">Work out your own footprint ' + icon("arrowRight") + "</a>"
+        : st === "bad"
+          ? '<h1 class="cat-title display">That link didn\'t work</h1><p class="cat-why">It may have been copied only in part. Ask them to send it again.</p>'
+          : '<span class="tag done-tag">Real Zero · Act 2</span><h1 class="cat-title display">Have you switched to a renewable tariff?</h1>' +
+            '<p class="cat-why">Someone in your home asked you to switch your electricity to a 100% renewable tariff, and sent you this link. If you have, let them know: it ticks it off on their CO2 Counter. You don\'t need an account.</p>' +
+            '<div class="row gap-3 mt-4" style="flex-wrap:wrap"><button type="button" class="btn btn-green" data-action="confirm-energy"' + (st === "saving" ? " disabled" : "") + ">" + (st === "saving" ? "Saving…" : "Yes, we've switched") + "</button>" +
+            '<a class="btn btn-outline" href="/greener-switches/">Not yet: how to switch</a></div>';
+    return '<div class="container narrow act-page"><header class="glass cat-hero rise"><div class="cat-hero-main">' + body + "</div></header></div>";
   }
 
   // ---------- 7 Acts pages (acts 5-7; acts 1-4 open Greener switches) ----------
@@ -3504,8 +3527,9 @@
     const acts = [
       { n: 1, name: "Move your money", what: "away from banks that finance fossil fuels", cat: "banking", ...(ready ? auto(area("banking")) : auto()) },
       asksBillPayer(ready ? survey : null)
-        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!ticked.energyAsked,
-            sub: ticked.energyAsked ? "Done · you've asked whoever chooses your supplier to switch" : "Someone else chooses your supplier: ask them to switch",
+        ? { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", done: !!(energyVerified() || ticked.energyAsked),
+            sub: energyVerified() ? "Verified · they confirmed the switch on " + longDate(energyVerified())
+              : ticked.energyAsked ? "Asked · waiting for them to confirm they've switched" : "Someone else chooses your supplier: ask them to switch",
             extra: energyAskBox(), keepExtra: true }
         : { n: 2, name: "Move your energy", what: "to a 100% renewable supplier, and electrify", cat: "energy", ...(ready ? auto(area("energy")) : auto()) },
       { n: 3, name: "More plant-based food", what: "seasonal and local where you can", cat: "meals", ...(ready ? auto(area("meals")) : auto()) },
@@ -3528,7 +3552,7 @@
         const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
         const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
         // Hand-ticked acts keep their tick box, so they can be unticked here.
-        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + pageLink + "</div>" : a.manual && page ? '<div class="hb-extra">' + pageLink + "</div>" : "";
+        const extra = a.extra && (!a.done || a.keepExtra) ? '<div class="hb-extra">' + a.extra + pageLink + "</div>" : a.manual && page ? '<div class="hb-extra">' + pageLink + "</div>" : "";
         if (page && !a.manual && (a.done || !a.extra))
           return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + page + '">' + box(a) + body(a) + icon("chevronRight") + "</a></li>";
         if (a.manual)
@@ -3817,15 +3841,30 @@
       subject: "Could we switch to a renewable electricity tariff?",
       body:
         "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
-        "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\nThanks,\n[Your name]",
+        "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
+        (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
+        "Thanks,\n[Your name]",
     };
   }
+  const confirmLink = () => PRODUCTION_URL + "#/confirm/energy?t=" + ui.energyToken;
+  const energyVerified = () => ui.actsInfo && ui.actsInfo.verified && ui.actsInfo.verified.energy;
   function energyAskBox() {
+    // Confirmed by the bill payer: update the survey so results show it.
+    if (energyVerified())
+      return (
+        '<div class="ask-box"><p class="sm"><b>They\'ve confirmed the switch.</b> Update your survey so your results show the green tariff.</p>' +
+        '<button type="button" class="btn btn-green btn-sm mt-2" data-action="set-green-done">We\'re on a green tariff now ' + icon("check") + "</button></div>"
+      );
     const t = energyAskText();
+    const asked = actsTicked().energyAsked;
     const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
     return (
-      '<div class="ask-box"><p class="sm">Someone else chooses your supplier, so your switch is asking them. Here\'s a message ready to send, with your home\'s numbers in it.</p>' +
-      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">Email them ' + icon("arrowRight") + "</a>" +
+      '<div class="ask-box"><p class="sm">' +
+      (asked
+        ? "You've asked. " + (ui.energyToken ? "When they tap the link in your message to say you've switched, this act is verified." : "Send it again any time.")
+        : "Someone else chooses your supplier, so your switch is asking them. Here's a message ready to send, with your home's numbers in it" + (ui.energyToken ? ", and a link for them to tap once you've switched." : ".")) +
+      "</p>" +
+      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
@@ -5361,6 +5400,7 @@
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
             "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
+            "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
@@ -6281,6 +6321,7 @@
     else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
     else if (parts[0] === "acts" && parts[1]) html = renderActPage(parts[1]);
+    else if (path === "/confirm/energy") html = renderConfirmEnergy();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
@@ -6486,6 +6527,25 @@
       survey.flights = survey.flights.map((f, i) => (i === index ? { ...f, [field]: el.dataset.code } : f));
       ui.airport = null;
       surveyChanged();
+      render();
+    },
+    // After the bill payer confirms: record the green tariff in the survey.
+    "set-green-done": () => {
+      survey.energy = { ...survey.energy, greenTariff: true };
+      surveyChanged();
+      ui.flash = "Survey updated: you're on a green tariff.";
+      render();
+    },
+    "confirm-energy": async () => {
+      const token = (location.hash.match(/[?&]t=([A-Za-z0-9]+)/) || [])[1];
+      ui.confirmState = "saving";
+      render();
+      try {
+        const { data, error } = await sb.rpc("confirm_energy_switch", { p_token: token || "" });
+        ui.confirmState = !error && data ? "done" : "bad";
+      } catch (e) {
+        ui.confirmState = "bad";
+      }
       render();
     },
     "set-billpayer": (el) => {
