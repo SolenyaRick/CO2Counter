@@ -1837,8 +1837,38 @@ alter table public.referral_codes enable row level security;
 alter table public.referrals enable row level security;
 alter table public.act_verifications enable row level security;
 
+-- How much people who joined by invite have cut: each person's first
+-- measured footprint minus their latest (rises count as 0), over everyone a
+-- referrer invited, or everyone who joined by any invite (p_referrer null).
+-- Only people who have measured at least twice count. Internal only.
+create or replace function public.referral_cut(p_referrer uuid)
+returns table (people bigint, cut numeric)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with r as (
+    select referred_id from public.referrals where p_referrer is null or referrer_id = p_referrer
+  ), h as (
+    select h.user_id, h.total_yearly,
+      row_number() over (partition by h.user_id order by h.completed_at asc) as first_n,
+      row_number() over (partition by h.user_id order by h.completed_at desc) as last_n,
+      count(*) over (partition by h.user_id) as n
+    from public.survey_history h join r on r.referred_id = h.user_id
+    where h.total_yearly is not null
+  ), each_person as (
+    select f.user_id, greatest(0, f.total_yearly - l.total_yearly) as cut
+    from h f join h l on l.user_id = f.user_id and l.last_n = 1
+    where f.first_n = 1 and f.n >= 2
+  )
+  select count(*), coalesce(sum(cut), 0) from each_person;
+$$;
+revoke all on function public.referral_cut(uuid) from public, anon, authenticated;
+
 -- Your code (made the first time), how many people joined with it, how many
--- of them have finished the survey, and which acts are verified.
+-- of them have finished the survey, which acts are verified, and how much
+-- the people you invited (and everyone's invitees) have cut.
 create or replace function public.my_acts()
 returns jsonb
 language plpgsql
@@ -1870,7 +1900,12 @@ begin
     'finished', (select count(*) from public.referrals r where r.referrer_id = auth.uid()
       and (exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
         or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt'))),
-    'verified', coalesce((select jsonb_object_agg(v.act, v.verified_at) from public.act_verifications v where v.user_id = auth.uid()), '{}'::jsonb)
+    'verified', coalesce((select jsonb_object_agg(v.act, v.verified_at) from public.act_verifications v where v.user_id = auth.uid()), '{}'::jsonb),
+    -- Totals only, and only once enough people count that no one stands out.
+    'cut', (select case when c.people >= 2 then round(c.cut) end from public.referral_cut(auth.uid()) c),
+    'cut_people', (select c.people from public.referral_cut(auth.uid()) c),
+    'global_cut', (select case when c.people >= 3 then round(c.cut) end from public.referral_cut(null) c),
+    'global_people', (select case when c.people >= 3 then c.people end from public.referral_cut(null) c)
   );
 end;
 $$;

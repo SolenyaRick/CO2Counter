@@ -3260,7 +3260,7 @@
       try { localStorage.setItem(actsKey(), JSON.stringify(merged)); } catch (e) {}
       if (JSON.stringify(merged) !== JSON.stringify(server)) await sb.from("profiles").update({ acts: merged }).eq("id", uid);
     } catch (e) {}
-    if (currentPath() === "/habits") render();
+    if (currentPath() === "/habits" || currentPath().startsWith("/acts/")) render();
   }
   const inviteLink = () => PRODUCTION_URL + (ui.actsInfo && ui.actsInfo.code ? "?ref=" + ui.actsInfo.code : "");
   const MP_COPY = "mp@co2counter.co.uk";
@@ -3446,14 +3446,27 @@
           '<div class="act-dots" role="img" aria-label="' + nDone + ' of 7">' + [0, 1, 2, 3, 4, 5, 6].map((i) => '<span class="' + (i < nDone ? "on" : "") + '">' + (i < nDone ? icon("check") : "") + "</span>").join("") + "</div>" +
           '<p class="sm mt-3"><b>' + nDone + " of 7</b> people you invited have taken the survey" + (info.joined > nDone ? ", and " + (info.joined - nDone) + " more have joined but not finished yet" : "") + ".</p>" +
           '<p class="xs muted mt-2">Someone counts when they sign up with your link and finish their survey. We never show you who they are or their answers.</p>');
-        html += actStep(2, "Share your invite link",
+        // Reductions by people who joined with an invite: yours, and everyone's.
+        const cutLine = (kg) => '<b class="display tnum act-cut">−' + kgFmt(kg) + ' kg</b><span class="sm muted"> CO₂e a year</span>';
+        html += actStep(2, "Your invites' impact",
+          '<div class="act-impact"><div><span class="eyebrow">People you invited</span>' +
+            (info.cut != null
+              ? '<p>' + cutLine(info.cut) + '</p><p class="xs muted">Cut between them since their first survey, across ' + info.cut_people + (info.cut_people === 1 ? " person" : " people") + " who've measured twice.</p>"
+              : '<p class="sm muted mt-1">Once two or more people you invited have updated their survey, you\'ll see how much they\'ve cut between them.</p>') +
+          '</div><div><span class="eyebrow">Everyone\'s invites</span>' +
+            (info.global_cut != null
+              ? '<p>' + cutLine(info.global_cut) + '</p><p class="xs muted">Cut by the ' + kgFmt(info.global_people) + " people who joined CO2 Counter through a friend and have measured twice.</p>"
+              : '<p class="sm muted mt-1">The total across CO2 Counter appears once enough people who joined through a friend have measured twice.</p>') +
+          "</div></div>" +
+          '<p class="xs muted mt-3">A reduction is the drop from someone\'s first survey to their latest. Totals only: we never show anyone\'s own figures.</p>');
+        html += actStep(3, "Share your invite link",
           '<div class="act-link"><span class="display">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-green btn-sm" data-action="copy-invite">' + icon("copy") + "Copy</button></div>" +
           '<div class="mt-3">' + shareButtonsHtml(url, text) + "</div>");
       } else {
         html += actStep(1, "Share CO2 Counter", shareButtonsHtml(url, text));
         html += actStep(2, "Tick it off", '<button type="button" class="btn btn-outline btn-sm" data-action="tick-act" data-act="motivate">' + (ticked.motivate ? "Untick" : "Seven people have joined in") + "</button>");
       }
-      html += actStep(3, "Ideas that work",
+      html += actStep(info ? 4 : 3, "Ideas that work",
         '<ul class="act-ideas">' +
         '<li><b>Start a group.</b> Make one on the <a href="#/friends">Friends</a> page for your team, family or housemates, and compare progress together.</li>' +
         "<li><b>Share your result.</b> Your footprint is a good conversation starter. The share message includes it.</li>" +
@@ -3498,8 +3511,10 @@
     const rows = acts
       .map((a) => {
         const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
-        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + (page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "") + "</div>" : "";
-        if (page && (a.done || !a.extra))
+        const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
+        // Hand-ticked acts keep their tick box, so they can be unticked here.
+        const extra = a.extra && !a.done ? '<div class="hb-extra">' + a.extra + pageLink + "</div>" : a.manual && page ? '<div class="hb-extra">' + pageLink + "</div>" : "";
+        if (page && !a.manual && (a.done || !a.extra))
           return '<li class="hb-item"><a class="hb-row hb-card' + (a.done ? " done" : "") + '" href="' + page + '">' + box(a) + body(a) + icon("chevronRight") + "</a></li>";
         if (a.manual)
           return '<li class="hb-item hb-card' + (a.done ? " done" : "") + '"><div class="hb-row"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + box(a) + "</button>" + body(a) + "<span></span></div>" + extra + "</li>";
@@ -5249,7 +5264,7 @@
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
-            "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey, never who they are or their answers.",
+            "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
