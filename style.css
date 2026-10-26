@@ -4334,3 +4334,14 @@ a.hb-card:hover { background: rgba(163, 181, 143, 0.22); }
 .act-impact { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .act-impact > div { padding: 14px; border-radius: 14px; background: rgba(246, 241, 230, 0.7); border: 1px solid rgba(63, 91, 58, 0.12); }
 .act-cut { font-size: 30px; color: #2B4128; }
+/* Greener switches: indirect acts */
+.sw-board .sw-board-sub { margin: 14px 8px 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #B9C7B1; }
+.sw-row-ind { grid-template-columns: 40px minmax(0, 1fr) auto; }
+.sw-ind-go { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 99px; background: rgba(246, 241, 230, 0.12); color: #F6F1E6; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.sw-ind-go .icon { width: 14px; height: 14px; }
+.sw-bub-ind { outline: 3px dashed currentColor; outline-offset: 3px; }
+.sw-leg-ind { outline: 2px dashed rgba(43, 65, 40, 0.5); outline-offset: 2px; }
+.sw-big { display: block; font-size: 64px; line-height: 1; }
+.sw-big-label { margin: 8px 0 0; font-size: 15px; opacity: 0.9; max-width: 22ch; }
+.sw-act-box { margin-top: 16px; padding: 16px; border-radius: 16px; background: rgba(63, 91, 58, 0.07); display: flex; flex-direction: column; gap: 8px; }
+.sw-act-box .hb-mp-form .input { max-width: 260px; }
