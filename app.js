@@ -6017,18 +6017,6 @@
 
   // ==================== Account page ====================
 
-  // Account: the 7 Acts at a glance, one bar per act.
-  function actsTile() {
-    const { acts } = habitActs();
-    const made = acts.filter((a) => a.done).length;
-    const waiting = acts.filter((a) => !a.done && a.pending).length;
-    const bars = acts.map((a, i) => '<rect x="' + i * 6 + '" y="2" width="4" height="6" rx="2" fill="' + (a.done ? "#A3B58F" : a.pending ? "#D9A441" : "rgba(246,241,230,.22)") + '"/>').join("");
-    return (
-      '<a class="stat-tile acts-tile" href="#/habits"><span class="row-between"><span class="sm">7 Acts</span><svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true">' + bars + "</svg></span>" +
-      '<span class="display tnum stat-tile-num">' + made + "<small>/7</small></span>" +
-      '<span class="xs fw-700">done' + (waiting ? " · " + waiting + " waiting" : "") + " · See habits →</span></a>"
-    );
-  }
   function renderAccount() {
     const fp = footprint(survey);
     const hist = historyByDay();
@@ -6037,54 +6025,93 @@
     const friendCount = friends.rows.filter((f) => f.status === "accepted").length;
     const rank = friendCount ? rankInfo() : null;
     const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || "Your account";
+    const { acts } = habitActs();
+    const actsDone = acts.filter((a) => a.done).length;
     const m = membership || {};
-    let plan;
-    if (m.owner) plan = '<p class="fw-600">Owner account</p><p class="sm muted">Free, with full access.</p>';
-    else if (FREE_MODE && !isSupporter()) plan = '<p class="fw-600">Free account</p><p class="sm muted">Everything on CO2 Counter is free. You can support it below if you\'d like to.</p>';
-    else if (m.free && m.status !== "active") plan = '<p class="fw-600">Free access</p><p class="sm muted">You\'ve been given full access, free of charge.</p>';
+    const supporter = !m.owner && (isSupporter() || (!FREE_MODE && !m.free));
+    const firstAt = currentUser.created_at || (hist.length ? hist[hist.length - 1].completedAt : null);
+    const since = firstAt ? new Date(firstAt).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : "";
+    const pct = hist.length > 1 && Math.abs(change) >= 1 ? Math.round((Math.abs(change) / hist[hist.length - 1].totalYearly) * 100) : null;
+
+    // Your plan
+    let planTag, planText, planExtra = "";
+    if (m.owner) { planTag = "Owner"; planText = "Owner account: free, with full access."; }
+    else if (FREE_MODE && !isSupporter()) {
+      planTag = "Free";
+      planText = "Everything is free. If it's helped you, chip in £2 a year to cover running costs. No ads, and we never sell your data.";
+      if (!isNativeApp() && STRIPE_PAYMENT_LINK)
+        planExtra = '<a class="acc-support" href="' + esc(supportUrl()) + '">' + icon("heart") + 'Support for £2 a year</a><p class="acc-fine">Secure payment by Stripe. Cancel any time.</p>';
+    } else if (m.free && m.status !== "active") { planTag = "Free"; planText = "You've been given full access, free of charge."; }
     else {
       const until = m.until ? m.until.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
-      plan =
-        '<p class="fw-600">' + (FREE_MODE ? "Supporter · £2 a year" : "CO2 Counter membership · £2 a year") + '</p><p class="sm muted">' +
-        (m.status === "active" && until ? "Renews on " + esc(until) + "." : until ? "Access until " + esc(until) + "." : "Active.") +
-        "</p>" +
-        (STRIPE_PORTAL_URL && !isNativeApp()
-          ? '<a class="btn btn-outline btn-sm mt-3" href="' + esc(STRIPE_PORTAL_URL) + '" target="_blank" rel="noopener">Manage subscription</a>'
-          : "");
+      planTag = FREE_MODE ? "Supporter" : "Member";
+      planText = (FREE_MODE ? "Supporter · £2 a year. Thank you! " : "CO2 Counter membership · £2 a year. ") +
+        (m.status === "active" && until ? "Renews on " + esc(until) + "." : until ? "Access until " + esc(until) + "." : "Active.");
+      if (STRIPE_PORTAL_URL && !isNativeApp())
+        planExtra = '<a class="acc-support ghost" href="' + esc(STRIPE_PORTAL_URL) + '" target="_blank" rel="noopener">Manage subscription</a>';
     }
 
-    const tile = (label, value, sub, cls) =>
-      '<div class="stat-tile' + (cls ? " " + cls : "") + '"><span class="sm muted">' + label + '</span><span class="display tnum stat-tile-num">' + value + "</span>" + (sub ? '<span class="xs">' + sub + "</span>" : "") + "</div>";
+    const tiles =
+      '<div class="acc-tiles">' +
+      '<a class="dark" href="#/results"><b class="display tnum">' + (survey && survey.completedAt ? (fp.totalYearly / 1000).toFixed(1) + "<small> t</small>" : "–") + "</b>" +
+      '<span class="' + (pct != null ? (change < 0 ? "honey fw-700" : "clay-l fw-700") : "") + '">' + (pct != null ? (change < 0 ? "▼ " : "▲ ") + pct + "%" : "a year") + "</span></a>" +
+      '<a href="#/friends"><b class="display tnum">' + (rank ? ordinal(friends.board.findIndex((b) => b.is_self) + 1) : friendCount) + "</b><span>" +
+      (rank ? "of " + friends.board.length + " friends" : friendCount === 1 ? "friend" : "friends") + "</span></a>" +
+      '<a class="honey-bg" href="#/habits"><b class="display tnum">' + actsDone + "<small>/7</small></b><span>acts done</span></a></div>";
+    const me =
+      '<section class="glass acc-me rise" aria-label="Your profile"><div class="acc-me-top">' + frAv(currentUser.id, name, 64, true, "ringed") +
+      '<span class="min0 grow"><span class="display acc-name">' + esc(name) + '</span><span class="acc-sub">' + [ui.username ? "@" + esc(ui.username) : "", since ? "since " + esc(since) : ""].filter(Boolean).join(" · ") + "</span></span></div>" +
+      tiles + '<button type="button" class="acc-signout" data-action="sign-out">' + icon("logOut") + "Sign out</button></section>";
+    const LINKS = [
+      ["Retake survey", "#/", "M20 11A8 8 0 1 0 18 16.5M20 5v6h-6", "#3F5B3A", "#F6F1E6"],
+      ["View results", "#/results", HB_CHART, "rgba(63,91,58,.12)", "#3F5B3A"],
+      ["Friends", "#/friends", SW_ICONS.motivate, "rgba(127,163,174,.22)", "#2E5560"],
+      ["My Habits", "#/habits", "M5 12.5l4.5 4.5L19 7.5", "rgba(217,164,65,.22)", "#8A5F12"],
+    ];
+    const quick =
+      '<nav class="glass acc-quick" aria-label="Shortcuts"><div class="acc-qtitle">Shortcuts</div><ul>' +
+      LINKS.map(([l, h, d, bg, ink]) => '<li><a class="acc-qlink" href="' + h + '"><span class="acc-qicon" style="background:' + bg + ";color:" + ink + '">' + svgPath(d, 18) + "</span><span>" + l + "</span>" + icon("chevronRight") + "</a></li>").join("") +
+      "</ul></nav>";
+
+    const details = [["Name", name], ["Username", ui.username ? "@" + ui.username : "Not set"], ["Email", currentUser.email || ""]];
+    const profile =
+      '<section class="glass acc-box" aria-labelledby="acc-prof"><h2 id="acc-prof" class="display">Profile</h2><dl class="acc-dl">' +
+      details.map(([k, v]) => "<div><dt>" + k + "</dt><dd>" + esc(v) + "</dd></div>").join("") +
+      "<div><dt>Saved</dt><dd>" + (canSync() ? "Synced across your devices" : "On this device") + "</dd></div></dl>" +
+      '<p class="xs muted mt-2">Friends see your name and yearly total only, never your answers. <a href="#/friends">Change your name</a></p></section>';
+    const plan =
+      '<section class="acc-box acc-plan" aria-labelledby="acc-plan"><div class="row-between gap-3"><h2 id="acc-plan" class="display">Your plan</h2><span class="acc-tag">' + planTag + "</span></div>" +
+      '<p class="acc-plan-p">' + planText + "</p>" + planExtra + "</section>";
+
+    const subscribed = !m.owner && m.status === "active";
+    const del = !ui.confirmDelete
+      ? '<button type="button" class="acc-btn danger" data-action="delete-account">Delete my account</button>'
+      : "";
+    const confirm = ui.confirmDelete
+      ? '<div class="acc-confirm rise">' +
+        (subscribed
+          ? '<p class="sm"><span class="fw-600">Cancel your subscription first.</span> Deleting your account doesn\'t stop Stripe charging your card next year.' +
+            (STRIPE_PORTAL_URL && !isNativeApp() ? ' <a class="link-btn" href="' + esc(STRIPE_PORTAL_URL) + '" target="_blank" rel="noopener">Manage subscription</a>' : "") + "</p>"
+          : "") +
+        '<div class="acc-confirm-row"><input class="input" type="text" id="delete-confirm" autocomplete="off" placeholder="Type DELETE to confirm" aria-label="Type DELETE to confirm" />' +
+        '<button type="button" class="acc-btn solid-danger" data-action="confirm-delete">Delete permanently</button><button type="button" class="acc-btn" data-action="cancel-delete">Cancel</button></div>' +
+        (ui.deleteErr ? '<p class="xs red mt-2">' + esc(ui.deleteErr) + "</p>" : "") + "</div>"
+      : "";
+    const data =
+      '<section class="glass acc-box" aria-labelledby="acc-data"><h2 id="acc-data" class="display">Your data</h2>' +
+      '<div class="acc-row"><span class="acc-row-text">Clear what\'s saved on this device. Your account copy stays. This can\'t be undone.</span>' +
+      '<button type="button" class="acc-btn" data-action="clear-habits">Clear my plan</button><button type="button" class="acc-btn danger" data-action="clear-all">Clear everything</button></div>' +
+      '<div class="acc-delete"><div class="acc-row"><span class="acc-row-text"><b class="display">Delete account</b>Permanently deletes your account, survey answers and any support record.</span>' + del + "</div>" + confirm + "</div></section>";
+
     return (
-      '<div class="container account-v2">' +
-      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("user") + "</span>" +
-      '<div class="account-id"><span class="account-av display">' + esc(initials(name) || "?") + "</span><div class=\"min0\">" +
-      '<span class="eyebrow">Account</span><h1 class="cat-title display account-name">' + esc(name) + "</h1>" +
-      '<p class="cat-why">' + (ui.username ? "@" + esc(ui.username) + " · " : "") + esc(currentUser.email) + "</p></div></div>" +
-      '<button type="button" class="btn btn-outline acc-signout" data-action="sign-out">' + icon("logOut") + " Sign out</button></header>" +
-      '<div class="cat-grid"><div class="cat-col stack-5">' +
-      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Your saved data</h2><span class="muted">' +
-      (canSync() ? "Synced across your devices" : "Saved on this device") + '</span></div><div class="stat-tiles">' +
-      tile("Footprint", '<span data-countup="' + Math.round(fp.totalYearly) + '">0</span>', "kg CO₂e a year") +
-      tile("Surveys taken", Math.max(hist.length, survey.completedAt ? 1 : 0), hist.length > 1 && Math.abs(change) >= 1 ? '<b class="' + (change < 0 ? "green" : "clay") + '">' + (change < 0 ? "▼ " : "▲ ") + Math.round((Math.abs(change) / hist[hist.length - 1].totalYearly) * 100) + "% since your first</b>" : "") +
-      tile("Friends", friendCount, rank ? "You're " + rank.label : "") +
-      actsTile() +
-      '</div><div class="chip-row mt-5 acc-btns"><a class="btn btn-green" href="#/">Retake survey</a><a class="btn btn-outline" href="#/results">View results</a><a class="btn btn-outline" href="#/friends">Friends</a><a class="btn btn-outline" href="#/habits">My Habits</a></div></section>' +
-      '<section class="glass guide-card"><span class="eyebrow">' + (FREE_MODE ? "Your plan" : "Membership") + "</span><div class=\"mt-2\">" + plan + "</div>" +
-      (FREE_MODE && !m.owner && !isSupporter() && !isNativeApp() && STRIPE_PAYMENT_LINK
-        ? '<div class="mt-4"><a class="btn btn-green" href="' + esc(supportUrl()) + '">' + icon("heart") + ' Support for £2 a year</a><p class="xs muted mt-2">Secure payment by Stripe. Cancel any time. No ads, and we never sell your data.</p></div>'
-        : "") +
-      "</section>" +
+      '<div class="container account-v2 acc-page"><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
+      '<main class="acc-main"><h1 class="display acc-h1">Account</h1><div class="acc-row2">' + profile + plan + "</div>" +
       aboutYouCard() +
       (ui.isAdmin
-        ? '<section class="glass guide-card"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
+        ? '<section class="glass acc-box"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
           esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
         : "") +
-      "</div>" +
-      '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display side-title">Clear data on this device</h2><p class="sm muted">This can\'t be undone.</p>' +
-      '<div class="chip-row mt-3"><button type="button" class="btn btn-outline btn-sm" data-action="clear-habits">Clear habits</button>' +
-      '<button type="button" class="btn btn-outline btn-sm btn-danger" data-action="clear-all">Clear everything</button></div></section>' +
-      deleteAccountCard() + "</aside></div></div>"
+      data + "</main></div></div>"
     );
   }
 
