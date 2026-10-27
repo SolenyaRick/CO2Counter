@@ -37,8 +37,11 @@ canvas layout.
   before/after bars, milestones, new friends and a personal "next move",
   each with a Cheer button. The side column holds your profile, invite code
   (Act 7) and add or manage friends. Posts only use yearly totals.
-- `Glass2-Account.dc.html`: profile, saved data, plan and support, clearing data
-  and account deletion.
+- `Glass2-Account.dc.html`: account in the Friends style. A profile card
+  (footprint, rank among friends, 7 Acts) with sign out and shortcuts, then
+  "Your activity" as a personal feed (retake with before/after bars,
+  standings change, Act 5), then profile details, plan and support, and
+  clearing data or deleting the account.
 - `Glass2-Switches.dc.html`: greener switches. A switchboard of five toggles
   that animates your footprint down, an impact-against-effort bubble plot,
   then one numbered feature per switch (before/after panel, partner offer

@@ -178,7 +178,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
         <section style="padding: 24px; border-radius: 24px; background: #3F5B3A; color: #F6F1E6">
           <div style="display: flex; justify-content: space-between; align-items: baseline"><h3 class="serif" style="margin: 0; font-size: 20px; font-weight: 600">Your plan</h3><span style="font-size: 14px; color: #DCE3D3">{{planCount}}</span></div>
           <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: #DCE3D3">{{planHint}}</p>
-          <span aria-disabled="true" style="margin-top: 14px; display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 99px; border: 1.5px dashed rgba(232,200,138,.7); color: #E8C88A; font-weight: 700; font-size: 15px">Habit tracking coming soon</span>
+          <a href="Glass2-Habits.dc.html" style="margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 14px; background: #E8C88A; color: #2E2A22; font-weight: 800; font-size: 15px; text-decoration: none">Open My Habits <span aria-hidden="true">→</span></a>
         </section>
       </aside>
     </div>
@@ -335,7 +335,7 @@ class Component extends DCLogic {
       prev: () => this.choose(CATS[(i + n - 1) % n].key),
       next: () => this.choose(CATS[(i + 1) % n].key),
       planCount: plan.length === 1 ? '1 habit' : plan.length + ' habits',
-      planHint: plan.length ? 'Added: ' + plan.join(', ') + '.' : 'Add changes from any category. Habit tracking is coming soon, and your plan will be ready for it.'
+      planHint: plan.length ? 'Added: ' + plan.join(', ') + '.' : 'Add changes from any category. The 7 Acts are live in My Habits, and daily habit tracking is coming next.'
     };
   }
 }

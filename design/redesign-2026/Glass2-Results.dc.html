@@ -9,7 +9,7 @@
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..700,100&amp;family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
 <style>
 body{margin:0;background:#EFE9DC}
 /* phone layout */
@@ -47,7 +47,7 @@ footer[style]{flex-direction:column;gap:10px!important}
 .hbars.is-bars{display:flex!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B4128}
-.serif{font-family:Fraunces,Georgia,serif;font-variation-settings:'SOFT' 100}
+.serif{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
 .num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
 .tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 .tab{transition:background .2s,color .2s}
@@ -75,7 +75,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <span style="display: flex; align-items: center; gap: 10px">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
-        <span class="serif" style="font-weight: 600; font-size: 19px">CO2 Counter</span>
+        <span class="serif" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
       </span>
       <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <a href="Glass2-Survey.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
@@ -103,7 +103,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
           <span class="num" style="font-weight: 800; font-size: clamp(60px, 7.5vw, 108px); line-height: .95; letter-spacing: -0.045em; font-variant-numeric: tabular-nums">{{countLabel}}</span>
           <span style="font-size: 16px; color: #5C5649">kg CO₂e</span>
         </div>
-        <p class="serif" style="margin: 16px 0 0; font-size: 21px; line-height: 1.35; font-weight: 400; color: #4A453A">That’s <span style="color: #8A4424; font-weight: 600">25% above</span> the UK average on the things we can compare, and nearly three times the 1.5°C budget.</p>
+        <p class="serif" style="margin: 16px 0 0; font-size: 21px; line-height: 1.4; font-weight: 500; color: #4A453A">That’s <span style="color: #8A4424; font-weight: 600">25% above</span> the UK average on the things we can compare, and nearly three times the 1.5°C budget.</p>
       </div>
 
       <div style="flex: 1 1 420px; min-width: 0">
@@ -139,7 +139,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <section style="flex: 999 1 560px; min-width: 0; padding: 28px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
           <div>
-            <h2 class="serif" style="margin: 0; font-size: 26px; font-weight: 600">Where it comes from</h2>
+            <h2 class="serif" style="margin: 0; font-size: 26px; font-weight: 800">Where it comes from</h2>
             <p style="margin: 4px 0 0; font-size: 14px; color: #5C5649">Click a category to see how to improve it</p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center">
@@ -218,7 +218,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
         <section style="position: relative; overflow: hidden; padding: 26px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6">
           <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -40px; bottom: -46px; opacity: .08; transform: rotate(-10deg)" aria-hidden="true"><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg>
           <div style="position: relative; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #E8C88A">Your biggest opportunity</div>
-          <h3 class="serif" style="margin: 10px 0 8px; font-size: 26px; line-height: 1.15; font-weight: 600">Keep red meat to one or two days a week</h3>
+          <h3 class="serif" style="margin: 10px 0 8px; font-size: 26px; line-height: 1.15; font-weight: 800">Keep red meat to one or two days a week</h3>
           <div class="num" style="font-weight: 800; font-size: 38px">−1,066 <span style="font-family: Karla, sans-serif; font-size: 14px; font-weight: 500; color: #DCE3D3">kg a year</span></div>
           <a class="cta" href="Glass2-Category.dc.html" onClick="{{goMeals}}" style="margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-weight: 700; font-size: 15px; text-decoration: none">See how<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
         </section>

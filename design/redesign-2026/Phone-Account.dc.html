@@ -12,70 +12,60 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
 <style>
 body{margin:0;background:#EFE9DC}
+a{color:#3F5B3A}a:hover{color:#2B4128}
+.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.glass{background:rgba(255,252,245,.72);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.av{flex:none;border-radius:99px;display:grid;place-items:center;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:700;text-decoration:none;transition:transform .25s cubic-bezier(.3,1.5,.5,1),background .25s,color .25s,opacity .25s}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.95)}
+.btn:focus-visible,.qlink:focus-visible,input:focus-visible{outline:2px solid #D9A441;outline-offset:2px}
+.qlink{transition:background .25s}
+.qlink:hover{background:rgba(63,91,58,.08)}
+.qlink:hover .chev{transform:translateX(3px)}
+.chev{transition:transform .25s cubic-bezier(.3,1.5,.5,1)}
+.post{transition:box-shadow .3s}
+.post:hover{box-shadow:0 16px 34px rgba(46,42,34,.08)}
+.fld{box-sizing:border-box;height:44px;padding:0 14px;border-radius:14px;border:1.5px solid rgba(46,42,34,.14);background:#FFFCF5;font:600 16px Karla,system-ui,sans-serif;color:#2E2A22;min-width:0}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.rise{animation:rise .6s cubic-bezier(.2,.75,.2,1) both}
+.bar{transform-origin:left;animation:grow 1s cubic-bezier(.2,.85,.25,1) both}
 /* phone layout */
 @media (max-width: 640px){
 nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
 nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
 [style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
-header[style]{padding:22px!important;border-radius:24px!important}
-section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
-li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
-.qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
-h1{font-size:34px!important;line-height:1.08!important}
-h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
-h3[style*="font-size: 2"]{font-size:19px!important}
-[style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
-[style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
-p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
-[style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
-[style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
-[style*="grid-template-columns: 170px minmax(0, 1fr) 90px"]{grid-template-columns:104px minmax(0,1fr) 62px!important;gap:10px!important}
-[style*="grid-template-columns: 150px minmax(0, 1fr) 40px"]{grid-template-columns:120px minmax(0,1fr) 36px!important}
-[style*="grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto"]{grid-template-columns:1fr!important}
-[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]{grid-template-columns:44px minmax(0,1fr)!important}
-[style*="grid-template-columns: 52px minmax(0, 1fr) auto"]>button{grid-column:1 / -1}
-[style*="padding: 48px 24px"]{padding:10px 8px 40px!important}
-[style*="padding: 30px 34px"]{padding:20px 18px 24px!important}
-[style*="min-width: 260px"],[style*="min-width: 280px"]{min-width:0!important}
-[style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
-[style*="text-align: right"][style*="position: relative"]{text-align:left!important}
-header.card{padding:18px!important;gap:14px!important}
-header.card>svg{display:none}
-.who{flex-wrap:nowrap!important;gap:14px!important;min-width:0}
-.av{width:56px!important;height:56px!important;border-radius:18px!important;font-size:22px!important;flex:none}
-.who h1{font-size:26px!important;margin-top:2px!important}
-.who p{font-size:14px!important;margin-top:2px!important}
-.who [style*="text-transform: uppercase"]{font-size:12px!important}
-.so{position:absolute!important;top:14px!important;right:14px!important;min-height:36px!important;padding:0 12px!important;font-size:13px!important;border-radius:12px!important}
-.so svg{width:15px;height:15px}
-.accbtns{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
-.accbtns .btn{min-height:44px;font-size:14px;padding:0 10px}
+.layout{margin-top:16px!important;gap:12px!important}
+.side{display:contents!important}
+.layout>*,.side>*{flex:1 1 100%!important;width:100%;box-sizing:border-box}
+.me{order:1;padding:16px!important;border-radius:20px!important}
+.me .av{width:52px!important;height:52px!important;font-size:19px!important}
+.me .meName{font-size:20px!important}
+.quick{order:2;padding:6px!important;border-radius:20px!important}
+.quick ul{display:grid!important;grid-template-columns:1fr 1fr;gap:4px!important}
+.quick .qlink{padding:10px!important;gap:8px!important}
+.quick .qlink span[style*="width: 34px"]{width:30px!important;height:30px!important}
+.quick .chev{display:none}
+.quick .qtitle{display:none}
+.main{order:3;gap:10px!important}
+.post,.box{padding:16px!important;border-radius:20px!important}
+.post h2,.box h2{font-size:19px!important}
+.pcard{padding:12px!important;border-radius:14px!important}
+.big{font-size:26px!important}
+.row2{grid-template-columns:1fr!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
-a{color:#3F5B3A}a:hover{color:#2B4128}
-.hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
-.num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
-.card{padding:28px;border-radius:28px;background:rgba(255,252,245,.65);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
-.fld{box-sizing:border-box;min-height:52px;padding:0 16px;border-radius:14px;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);font:600 17px Karla,system-ui,sans-serif;color:#2E2A22}
-.btn{all:unset;box-sizing:border-box;min-height:48px;padding:0 18px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .25s,opacity .25s}
-.btn:active{transform:scale(.96)}
-.btn:focus-visible,.fld:focus-visible{outline:2px solid #3F5B3A;outline-offset:2px}
-.solid{background:#3F5B3A;color:#F6F1E6}
-.ghost{border:1.5px solid rgba(46,42,34,.2);color:#2E2A22}
-.danger{border:1.5px solid rgba(154,62,30,.45);color:#8A3A1C}
-@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
-.d1{animation-delay:.08s}.d2{animation-delay:.16s}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </helmet>
 <div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
-  <div style="position: absolute; left: -8%; top: -240px; width: 680px; height: 680px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
-  <div style="position: absolute; right: -8%; top: 460px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+  <div style="position: absolute; left: -10%; top: -260px; width: 720px; height: 720px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div style="position: absolute; right: -8%; top: 600px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .45; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
 
-  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+  <div style="position: relative; max-width: 1200px; margin: 0 auto; padding: 20px 32px 64px">
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <a href="Phone-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
@@ -90,85 +80,122 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <a href="Phone-Account.dc.html" aria-current="page" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: #3F5B3A; color: #F6F1E6; font-weight: 800; text-decoration: none">AG</a>
     </nav>
 
-    <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
-      <svg width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 46%; top: -40px; opacity: .07; transform: rotate(-8deg)" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"></path></svg>
-      <div class="who" style="position: relative; display: flex; align-items: center; gap: 22px; flex-wrap: wrap">
-        <span class="hd av" style="width: 88px; height: 88px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: grid; place-items: center; font-size: 34px; font-weight: 800">AG</span>
-        <div>
-          <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">Account</div>
-          <h1 class="hd" style="margin: 6px 0 0; font-size: 44px; line-height: 1.05; font-weight: 800">Alex Green</h1>
-          <p style="margin: 6px 0 0; font-size: 17px; color: #3A362D">@alexg · alex@example.com</p>
-        </div>
-      </div>
-      <button class="btn ghost so" onClick="{{signOut}}" style="position: relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>{{signOutLabel}}</button>
-    </header>
+    <div class="layout" style="margin-top: 28px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
 
-    <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
-      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-        <section class="card rise d1">
-          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
-            <h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Your saved data</h2>
-            <span style="font-size: 15px; color: #4A453A">Synced across your devices</span>
+      <aside class="side" style="flex: 0 0 290px; min-width: 0; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 20px">
+        <section class="me glass rise" aria-label="Your profile" style="padding: 22px; border-radius: 26px">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <span class="av" style="width: 64px; height: 64px; background: #3F5B3A; color: #F6F1E6; font-size: 24px; box-shadow: 0 0 0 3px #EFE9DC, 0 0 0 5px #A3B58F">AG</span>
+            <span style="min-width: 0; flex: 1">
+              <span class="hd meName" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.1">Alex Green</span>
+              <span style="display: block; margin-top: 2px; font-size: 14px; color: #5C5649">@alexg · since June 2026</span>
+            </span>
           </div>
-          <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px">
-            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Footprint</div><div class="num" style="font-size: 34px; font-weight: 800">{{count}}</div><div style="font-size: 13px; color: #4A453A">kg CO₂e a year</div></div>
-            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Surveys taken</div><div class="num" style="font-size: 34px; font-weight: 800">2</div><div style="font-size: 13px; font-weight: 700; color: #3F5B3A">▼ 9% since your first</div></div>
-            <div style="padding: 18px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)"><div style="font-size: 14px; color: #4A453A">Friends</div><div class="num" style="font-size: 34px; font-weight: 800">4</div><div style="font-size: 13px; color: #4A453A">You’re 3rd of 5</div></div>
-            <a class="actstile" href="Phone-Habits.dc.html" style="display: block; padding: 18px; border-radius: 18px; background: #2B3F28; color: #F6F1E6; text-decoration: none"><div style="display: flex; justify-content: space-between; align-items: center; gap: 8px"><span style="font-size: 14px; color: #C9D3BC">7 Acts</span><svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true"><rect x="0" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="6" y="2" width="4" height="6" rx="2" fill="#D9A441"></rect><rect x="12" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="18" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="24" y="2" width="4" height="6" rx="2" fill="#A3B58F"></rect><rect x="30" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect><rect x="36" y="2" width="4" height="6" rx="2" fill="rgba(246,241,230,.22)"></rect></svg></div><div class="num" style="font-size: 34px; font-weight: 800">1<span style="font-size: 18px; color: #A3B58F">/7</span></div><div style="font-size: 13px; color: #E8C88A; font-weight: 700">done · 1 waiting · See habits →</div></a>
+          <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+            <a href="Phone-Results.dc.html" style="padding: 10px; border-radius: 14px; background: #2B3F28; color: #F6F1E6; text-decoration: none"><div class="num" style="font-size: 20px; font-weight: 800">{{countT}}<span style="font-size: 12px; color: #C9D3BC"> t</span></div><div style="font-size: 12px; color: #E8C88A; font-weight: 700">▼ 9%</div></a>
+            <a href="Phone-Friends.dc.html" style="padding: 10px; border-radius: 14px; background: rgba(63,91,58,.08); color: #2E2A22; text-decoration: none"><div class="num" style="font-size: 20px; font-weight: 800">3rd</div><div style="font-size: 12px; color: #5C5649">of 5 friends</div></a>
+            <a href="Phone-Habits.dc.html" style="padding: 10px; border-radius: 14px; background: rgba(217,164,65,.14); color: #2E2A22; text-decoration: none"><div class="num" style="font-size: 20px; font-weight: 800">1<span style="font-size: 12px; color: #8A8273">/7</span></div><div style="font-size: 12px; color: #5C5649">acts done</div></a>
           </div>
-          <div class="accbtns" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px">
-            <a class="btn solid" href="Phone-SurveyDone.dc.html">Retake survey</a>
-            <a class="btn ghost" href="Phone-Results.dc.html">View results</a>
-            <a class="btn ghost" href="Phone-Friends.dc.html">Friends</a>
-            <a class="btn ghost" href="Phone-Habits.dc.html">My Habits</a>
-          </div>
+          <button class="btn" type="button" onClick="{{signOut}}" style="margin-top: 14px; width: 100%; height: 42px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.16); color: #2E2A22; font-size: 14px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"></path></svg>{{signOutLabel}}</button>
         </section>
 
-        <section class="card rise d2" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between">
-          <div style="flex: 1 1 360px; min-width: 0">
-            <h2 class="hd" style="margin: 0; font-size: 22px; font-weight: 800">Your plan: Free</h2>
-            <p style="margin: 6px 0 0; font-size: 16px; line-height: 1.55; color: #3A362D">Everything on CO2 Counter is free. If it’s helped you, you can chip in £2 a year to cover running costs. No ads, and we never sell your data.</p>
-          </div>
-          <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px">
-            <a class="btn solid" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>Support for £2 a year</a>
-            <span style="font-size: 13px; color: #5C5649">Secure payment by Stripe. Cancel any time.</span>
-          </div>
-        </section>
-      </div>
-
-      <aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
-        <section class="card">
-          <h2 class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Clear data on this device</h2>
-          <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #3A362D">This can’t be undone.</p>
-          <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px">
-            <button class="btn ghost" onClick="{{clearPlan}}">{{clearPlanLabel}}</button>
-            <button class="btn danger" onClick="{{clearAll}}">{{clearAllLabel}}</button>
-          </div>
-        </section>
-
-        <section class="card" style="background: rgba(184,101,61,.08); border-color: rgba(184,101,61,.25)">
-          <h2 class="hd" style="margin: 0; font-size: 20px; font-weight: 800; color: #8A3A1C">Delete account</h2>
-          <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #3A362D">Permanently delete your account and everything saved with it: your survey answers and any support record.</p>
-          <sc-if value="{{askDelete}}" hint-placeholder-val="{{false}}">
-            <button class="btn danger" onClick="{{startDelete}}" style="margin-top: 14px">Delete my account</button>
-          </sc-if>
-          <sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
-            <div class="rise" style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
-              <label style="font-size: 15px; font-weight: 600">Type <b>DELETE</b> to confirm
-                <input class="fld" type="text" value="{{typed}}" onChange="{{setTyped}}" autocomplete="off" style="margin-top: 6px; width: 100%">
-              </label>
-              <div style="display: flex; flex-wrap: wrap; gap: 10px">
-                <button class="btn" onClick="{{doDelete}}" aria-disabled="{{deleteDisabled}}" style="background: #9A3E1E; color: #FFF8F0; opacity: {{deleteAlpha}}">Delete permanently</button>
-                <button class="btn ghost" onClick="{{cancelDelete}}">Cancel</button>
-              </div>
-            </div>
-          </sc-if>
-          <sc-if value="{{deleted}}" hint-placeholder-val="{{false}}"><p class="rise" style="margin: 14px 0 0; font-size: 15px; font-weight: 700; color: #8A3A1C">In the real app this would delete your account now.</p></sc-if>
-        </section>
+        <nav class="quick glass" aria-label="Shortcuts" style="padding: 10px; border-radius: 26px">
+          <div class="qtitle" style="padding: 8px 10px 4px; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Shortcuts</div>
+          <ul style="list-style: none; margin: 0; padding: 0; display: grid; gap: 2px">
+            <sc-for list="{{links}}" as="l" hint-placeholder-count="4">
+              <li><a class="qlink" href="{{l.href}}" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 14px; color: #2E2A22; text-decoration: none">
+                <span style="flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: {{l.bg}}; color: {{l.ink}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{l.icon}}"></path></svg></span>
+                <span style="flex: 1; min-width: 0; font-size: 15px; font-weight: 700">{{l.label}}</span>
+                <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8273" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+              </a></li>
+            </sc-for>
+          </ul>
+        </nav>
       </aside>
+
+      <main class="main" style="flex: 1 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+          <h1 class="hd" style="margin: 0; font-size: 30px; font-weight: 800">Your activity</h1>
+          <span style="font-size: 13px; color: #8A8273">Only you see this</span>
+        </div>
+
+        <sc-for list="{{activity}}" as="p" hint-placeholder-count="3">
+          <article class="post glass rise" style="padding: 20px; border-radius: 26px; animation-delay: {{p.delay}}s">
+            <header style="display: flex; align-items: center; gap: 12px">
+              <span style="flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: {{p.iconBg}}; color: {{p.iconInk}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg></span>
+              <span style="flex: 1; min-width: 0; line-height: 1.3"><b class="hd" style="font-size: 16px">{{p.title}}</b><span style="display: block; font-size: 13px; color: #8A8273">{{p.when}}</span></span>
+              <span style="flex: none; padding: 4px 10px; border-radius: 99px; background: {{p.tagBg}}; color: {{p.tagInk}}; font-size: 12px; font-weight: 800">{{p.tag}}</span>
+            </header>
+            <sc-if value="{{p.isRetake}}" hint-placeholder-val="{{false}}">
+              <div class="pcard" style="margin-top: 14px; padding: 16px; border-radius: 18px; background: rgba(63,91,58,.08)">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+                  <span><span class="num big" style="font-size: 34px; font-weight: 800; color: #3F5B3A">▼9%</span> <span style="font-size: 14px; font-weight: 700; color: #3F5B3A">−667 kg a year</span></span>
+                  <a href="Phone-Results.dc.html" style="font-size: 14px; font-weight: 700; text-decoration: none">View results →</a>
+                </div>
+                <div style="margin-top: 12px; display: grid; grid-template-columns: 52px minmax(0, 1fr) 60px; gap: 6px 10px; align-items: center; font-size: 13px">
+                  <span style="color: #5C5649">June</span><span style="height: 10px; border-radius: 99px; background: rgba(46,42,34,.06)"><span class="bar" style="display: block; height: 100%; width: 74.1%; border-radius: 99px; background: rgba(46,42,34,.22)"></span></span><span class="num" style="text-align: right; font-weight: 700">7,413 kg</span>
+                  <span style="color: #5C5649">October</span><span style="height: 10px; border-radius: 99px; background: rgba(46,42,34,.06)"><span class="bar" style="display: block; height: 100%; width: 67.5%; border-radius: 99px; background: #3F5B3A; animation-delay: .25s"></span></span><span class="num" style="text-align: right; font-weight: 800">6,746 kg</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{p.hasText}}" hint-placeholder-val="{{true}}">
+              <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.55; color: #3A362D">{{p.text}}</p>
+            </sc-if>
+            <sc-if value="{{p.hasLink}}" hint-placeholder-val="{{true}}"><a href="{{p.href}}" style="display: inline-block; margin-top: 10px; font-size: 14px; font-weight: 700; text-decoration: none">{{p.link}} →</a></sc-if>
+          </article>
+        </sc-for>
+
+        <div class="row2" style="margin-top: 6px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px">
+          <section class="box glass" aria-labelledby="details" style="padding: 20px; border-radius: 26px">
+            <h2 id="details" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Profile</h2>
+            <dl style="margin: 12px 0 0; display: grid; gap: 10px">
+              <sc-for list="{{details}}" as="d" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(46,42,34,.08)">
+                  <dt style="flex: none; width: 108px; font-size: 13px; color: #8A8273">{{d.k}}</dt>
+                  <dd style="margin: 0; flex: 1; min-width: 0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere">{{d.v}}</dd>
+                </div>
+              </sc-for>
+            </dl>
+            <p style="margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: #5C5649">Friends see your name and yearly total only, never your answers. <a href="Phone-Friends.dc.html">Change your name</a></p>
+          </section>
+
+          <section class="box" aria-labelledby="plan" style="padding: 20px; border-radius: 26px; background: #2B3F28; color: #F6F1E6">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+              <h2 id="plan" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Your plan</h2>
+              <span style="padding: 3px 10px; border-radius: 99px; background: rgba(163,181,143,.25); color: #C9D3BC; font-size: 12px; font-weight: 800">Free</span>
+            </div>
+            <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.55; color: #C9D3BC">Everything is free. If it’s helped you, chip in £2 a year to cover running costs. No ads, and we never sell your data.</p>
+            <a class="btn" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00" style="margin-top: 14px; width: 100%; height: 46px; border-radius: 14px; background: #E8C88A; color: #2E2A22; font-size: 15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>Support for £2 a year</a>
+            <p style="margin: 8px 0 0; font-size: 12px; color: #A3B58F">Secure payment by Stripe. Cancel any time.</p>
+          </section>
+        </div>
+
+        <section class="box glass" aria-labelledby="data" style="padding: 20px; border-radius: 26px">
+          <h2 id="data" class="hd" style="margin: 0; font-size: 20px; font-weight: 800">Your data</h2>
+          <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+            <span style="flex: 1 1 260px; font-size: 14px; line-height: 1.5; color: #5C5649">Clear what’s saved on this device. Your account copy stays. This can’t be undone.</span>
+            <button class="btn" type="button" onClick="{{clearPlan}}" style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.16); color: #2E2A22; font-size: 14px">{{clearPlanLabel}}</button>
+            <button class="btn" type="button" onClick="{{clearAll}}" style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid rgba(154,62,30,.4); color: #8A3A1C; font-size: 14px">{{clearAllLabel}}</button>
+          </div>
+          <div style="margin-top: 16px; padding: 14px; border-radius: 18px; background: rgba(184,101,61,.08); border: 1px solid rgba(184,101,61,.22)">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+              <span style="flex: 1 1 260px; min-width: 0"><b class="hd" style="display: block; font-size: 16px; color: #8A3A1C">Delete account</b><span style="font-size: 14px; line-height: 1.5; color: #3A362D">Permanently deletes your account, survey answers and any support record.</span></span>
+              <sc-if value="{{askDelete}}" hint-placeholder-val="{{true}}"><button class="btn" type="button" onClick="{{startDelete}}" style="height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px solid rgba(154,62,30,.45); color: #8A3A1C; font-size: 14px">Delete my account</button></sc-if>
+            </div>
+            <sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
+              <div class="rise" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+                <input class="fld" type="text" value="{{typed}}" onChange="{{setTyped}}" autocomplete="off" placeholder="Type DELETE to confirm" aria-label="Type DELETE to confirm" style="flex: 1 1 200px">
+                <button class="btn" type="button" onClick="{{doDelete}}" aria-disabled="{{deleteDisabled}}" style="height: 44px; padding: 0 14px; border-radius: 12px; background: #9A3E1E; color: #FFF8F0; font-size: 14px; opacity: {{deleteAlpha}}">Delete permanently</button>
+                <button class="btn" type="button" onClick="{{cancelDelete}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.16); color: #2E2A22; font-size: 14px">Cancel</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{deleted}}" hint-placeholder-val="{{false}}"><p class="rise" style="margin: 10px 0 0; font-size: 14px; font-weight: 700; color: #8A3A1C">In the real app this would delete your account now.</p></sc-if>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
+    <footer style="margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(46,42,34,.1); display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; font-size: 14px; color: #5C5649">
       <span>Sample account shown for this design.</span>
       <span style="display: flex; gap: 20px"><a href="Phone-Intro.dc.html">How we calculate</a><a href="Phone-Intro.dc.html">Privacy</a><a href="Phone-Intro.dc.html">Terms</a></span>
     </footer>
@@ -179,31 +206,36 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, count: 0, stage: 'idle', typed: '', signedOut: false, planCleared: false, allArmed: false };
+    this.state = { scroll: 0, count: 6746, stage: 'idle', typed: '', signedOut: false, planCleared: false, allArmed: false };
   }
   componentDidMount() {
-    const target = 6746, dur = 1300, t0 = performance.now();
-    const tick = (t) => {
-      const k = Math.min(1, (t - t0) / dur);
-      this.setState({ count: Math.round(target * (1 - Math.pow(1 - k, 4))) });
-      if (k < 1) this.raf = requestAnimationFrame(tick);
-    };
-    this.raf = requestAnimationFrame(tick);
     this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
     window.addEventListener('scroll', this.onWin, { passive: true });
   }
   componentWillUnmount() {
-    cancelAnimationFrame(this.raf);
     window.removeEventListener('scroll', this.onWin);
   }
   renderVals() {
     const st = this.state;
-    const s = Math.min(st.scroll, 800);
+    const s = Math.min(st.scroll, 1200);
     const k = this.props.parallax ?? 1;
     const ok = st.typed.trim() === 'DELETE';
+    const ACT = [
+      { title: 'You retook the survey', when: '20 October 2026', tag: 'Retake', tagBg: 'rgba(63,91,58,.12)', tagInk: '#2B4128', icon: 'M20 11A8 8 0 1 0 18 16.5M20 5v6h-6', iconBg: '#3F5B3A', iconInk: '#F6F1E6', isRetake: true },
+      { title: 'You moved up to 3rd among friends', when: '1 October 2026', tag: 'Friends', tagBg: 'rgba(127,163,174,.22)', tagInk: '#2E5560', icon: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6', iconBg: 'rgba(127,163,174,.22)', iconInk: '#2E5560', text: 'Priya has since overtaken you. Cutting red meat would win it back.', link: 'See standings', href: 'Phone-Friends.dc.html' },
+      { title: 'Act 5 done: you measured your footprint', when: '12 June 2026', tag: '7 Acts', tagBg: 'rgba(217,164,65,.22)', tagInk: '#6B4A12', icon: 'M4 20V10M10 20V4M16 20v-7M2 20h20', iconBg: 'rgba(217,164,65,.22)', iconInk: '#8A5F12', text: 'Your first survey: 7,413 kg a year. Retake every few months to see how far you’ve come.', link: 'My Habits', href: 'Phone-Habits.dc.html' }
+    ];
     return {
-      pBlobA: (s * 0.5 * k).toFixed(1), pBlobB: (-s * 0.25 * k).toFixed(1),
-      count: st.count.toLocaleString('en-GB'),
+      pBlobA: (s * 0.3 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
+      countT: (st.count / 1000).toFixed(1),
+      activity: ACT.map((a, i) => ({ ...a, isRetake: !!a.isRetake, hasText: !!a.text, hasLink: !!a.link, delay: (0.05 + i * 0.07).toFixed(2) })),
+      links: [
+        ['Retake survey', 'Phone-SurveyDone.dc.html', 'M20 11A8 8 0 1 0 18 16.5M20 5v6h-6', '#3F5B3A', '#F6F1E6'],
+        ['View results', 'Phone-Results.dc.html', 'M4 20V10M10 20V4M16 20v-7M2 20h20', 'rgba(63,91,58,.12)', '#3F5B3A'],
+        ['Friends', 'Phone-Friends.dc.html', 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6', 'rgba(127,163,174,.22)', '#2E5560'],
+        ['My Habits', 'Phone-Habits.dc.html', 'M5 12.5l4.5 4.5L19 7.5', 'rgba(217,164,65,.22)', '#8A5F12']
+      ].map(([label, href, icon, bg, ink]) => ({ label, href, icon, bg, ink })),
+      details: [{ k: 'Name', v: 'Alex Green' }, { k: 'Username', v: '@alexg' }, { k: 'Email', v: 'alex@example.com' }],
       signOut: () => this.setState({ signedOut: true }), signOutLabel: st.signedOut ? 'Signed out' : 'Sign out',
       clearPlan: () => this.setState({ planCleared: true }), clearPlanLabel: st.planCleared ? 'Plan cleared' : 'Clear my plan',
       clearAll: () => this.setState({ allArmed: !st.allArmed }), clearAllLabel: st.allArmed ? 'Tap again to clear everything' : 'Clear everything',
