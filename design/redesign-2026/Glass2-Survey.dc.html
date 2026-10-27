@@ -18,8 +18,8 @@ nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
 nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
 [style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
-header[style]{padding:22px!important;border-radius:24px!important}
-section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+header[style]{padding:22px!important;border-radius:28px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:18px!important}
 li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
 .qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
 h1{font-size:34px!important;line-height:1.08!important}
@@ -27,7 +27,7 @@ h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
 h3[style*="font-size: 2"]{font-size:19px!important}
 [style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
 [style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
-p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+p[style*="font-size: 18px"],p[style*="font-size: 20px"]{font-size:17px!important}
 [style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
 [style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
@@ -42,12 +42,12 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="flex: 1 1 480px"],[style*="flex: 1 1 520px"],[style*="flex: 1 1 460px"],[style*="flex: 1 1 420px"]{flex-basis:100%!important}
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
 div[style*="minmax(170px, 1fr)"],div[style*="minmax(140px, 1fr)"]{grid-template-columns:1fr 1fr!important;gap:8px!important}
-.opt{min-height:0!important;padding:12px 14px!important;border-radius:14px!important}
+.opt{min-height:0!important;padding:12px 14px!important;border-radius:12px!important}
 .opt .hd{font-size:16px!important}
 .opt span:not(.hd){font-size:13px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
-a{color:#3F5B3A}a:hover{color:#2B4128}
+a{color:#3F5B3A}a:hover{color:#2B3F28}
 .hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
 .num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
 .ac{fill:#D9A441;stroke:none}
@@ -58,17 +58,27 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 .opt:hover{box-shadow:0 10px 24px rgba(46,42,34,.08)}
 .opt:active{transform:scale(.97)}
 .opt:focus-visible,.tab:focus-visible,.fld:focus-visible{outline:2px solid #3F5B3A;outline-offset:2px}
-.fld{box-sizing:border-box;min-height:52px;padding:0 16px;border-radius:14px;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);font:600 17px Karla,system-ui,sans-serif;color:#2E2A22}
-.q{padding:26px;border-radius:24px;background:rgba(255,252,245,.75);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px);display:grid;grid-template-columns:52px minmax(0,1fr);gap:18px}
-.qn{width:52px;height:52px;border-radius:16px;background:rgba(63,91,58,.12);color:#3F5B3A;display:grid;place-items:center;font-weight:800;font-size:24px}
+.fld{box-sizing:border-box;min-height:52px;padding:0 16px;border-radius:12px;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);font:600 17px Karla,system-ui,sans-serif;color:#2E2A22}
+.q{padding:26px;border-radius:28px;background:rgba(255,252,245,.75);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px);display:grid;grid-template-columns:52px minmax(0,1fr);gap:18px}
+.qn{width:52px;height:52px;border-radius:18px;background:rgba(63,91,58,.12);color:#3F5B3A;display:grid;place-items:center;font-weight:800;font-size:24px}
 .qt{margin:0;font-size:22px;font-weight:700;line-height:1.25}
 .qh{margin:4px 0 0;font-size:17px;line-height:1.55;color:#3A362D}
-.step-btn{all:unset;box-sizing:border-box;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;cursor:pointer;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);color:#2E2A22}
+.step-btn{all:unset;box-sizing:border-box;width:52px;height:52px;border-radius:12px;display:grid;place-items:center;cursor:pointer;border:1.5px solid rgba(46,42,34,.18);background:rgba(255,252,245,.95);color:#2E2A22}
 @keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .pop{animation:pop .4s cubic-bezier(.3,1.4,.5,1)}
 .rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
 .d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}.d4{animation-delay:.24s}.d5{animation-delay:.3s}
+/* phone tab bar */
+.tabbar{display:none}
+@media (max-width: 640px){
+.tabbar{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;gap:4px;padding:6px;border-radius:24px;background:rgba(255,252,245,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(46,42,34,.1);box-shadow:0 12px 30px rgba(46,42,34,.16)}
+.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:18px;color:#5C5649;font:700 11px Karla,system-ui,sans-serif;text-decoration:none}
+.tabbar a.on{background:#3F5B3A;color:#F6F1E6}
+nav[aria-label="Main"]>:nth-child(2){display:none!important}
+nav[aria-label="Main"] a[aria-label="Account"]{display:none!important}
+body{padding-bottom:88px}
+}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </helmet>
@@ -76,11 +86,11 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
   <div style="position: absolute; right: -10%; top: -220px; width: 660px; height: 660px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
   <div style="position: absolute; left: -8%; top: 560px; width: 520px; height: 520px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
 
-  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+  <div style="position: relative; max-width: 1160px; margin: 0 auto; padding: 20px 32px 64px">
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <span style="display: flex; align-items: center; gap: 10px">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
-        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+        <span class="hd" style="font-weight: 800; font-size: 18px">CO2 Counter</span>
       </span>
       <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <a href="Glass2-Survey.dc.html" aria-current="page" style="padding: 9px 18px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 15px; font-weight: 600; text-decoration: none">Survey</a>
@@ -112,9 +122,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
         <sc-if value="{{isMoney}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5H3Z"></path><path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg></sc-if>
       </div>
       <div style="position: relative; flex: 1 1 420px; min-width: 0">
-        <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">Step {{stepNo}} of 6</div>
-        <h1 class="hd" style="margin: 10px 0 0; font-size: 50px; line-height: 1.05; font-weight: 800">{{title}}</h1>
-        <p style="margin: 12px 0 0; max-width: 560px; font-size: 19px; line-height: 1.6; color: #3A362D">{{intro}}</p>
+        <div style="font-size: 14px; font-weight: 700; color: #3F5B3A">Step {{stepNo}} of 6</div>
+        <h1 class="hd" style="margin: 10px 0 0; font-size: 48px; line-height: 1.05; font-weight: 800">{{title}}</h1>
+        <p style="margin: 12px 0 0; max-width: 560px; font-size: 18px; line-height: 1.6; color: #3A362D">{{intro}}</p>
       </div>
       <div style="position: relative; display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
         <div style="text-align: right">
@@ -141,7 +151,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px">
               <sc-for list="{{diets}}" as="d" hint-placeholder-count="4">
                 <button class="opt" onClick="{{d.pick}}" aria-pressed="{{d.on}}" style="all: unset; box-sizing: border-box; padding: 16px; min-height: 96px; border-radius: 18px; background: {{d.bg}}; color: {{d.ink}}; border: 1.5px solid {{d.border}}; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; gap: 8px">
-                  <span class="hd" style="font-weight: 700; font-size: 19px">{{d.label}}</span>
+                  <span class="hd" style="font-weight: 700; font-size: 18px">{{d.label}}</span>
                   <span style="font-size: 15px; opacity: .85">{{d.desc}}</span>
                 </button>
               </sc-for>
@@ -156,7 +166,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
               <p class="qh">Pick a day, then choose what you ate.</p>
               <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px">
                 <sc-for list="{{mealDays}}" as="d" hint-placeholder-count="7">
-                  <button class="opt" onClick="{{d.pick}}" aria-pressed="{{d.on}}" aria-label="{{d.aria}}" style="all: unset; box-sizing: border-box; padding: 14px 8px; border-radius: 16px; background: {{d.bg}}; color: {{d.ink}}; border: 1.5px solid {{d.border}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+                  <button class="opt" onClick="{{d.pick}}" aria-pressed="{{d.on}}" aria-label="{{d.aria}}" style="all: unset; box-sizing: border-box; padding: 14px 8px; border-radius: 18px; background: {{d.bg}}; color: {{d.ink}}; border: 1.5px solid {{d.border}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
                     <span class="hd" style="font-size: 16px; font-weight: 700">{{d.short}}</span>
                     <span class="{{d.anim}}" style="width: 12px; height: 12px; border-radius: 99px; background: {{d.dot}}"></span>
                     <span style="font-size: 15px; font-weight: 600">{{d.value}}</span>
@@ -168,10 +178,10 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
                 <div class="hd" style="font-size: 17px; font-weight: 700; margin-bottom: 10px">{{mealDayName}}</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px">
                   <sc-for list="{{mealChips}}" as="m" hint-placeholder-count="7">
-                    <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 18px; border-radius: 14px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
+                    <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
                   </sc-for>
                 </div>
-                <sc-if value="{{mealTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 14px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{mealTip}}</p></sc-if>
+                <sc-if value="{{mealTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 12px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{mealTip}}</p></sc-if>
               </div>
             </div>
           </li>
@@ -183,7 +193,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <p class="qh">Each one counts as 1.78× a meal at home.</p>
             <div style="margin-top: 16px; max-width: 560px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
               <sc-for list="{{eatOut}}" as="e" hint-placeholder-count="5">
-                <button class="opt" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="all: unset; box-sizing: border-box; min-height: 60px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: {{e.bg}}; color: {{e.ink}}; border: 1.5px solid {{e.border}}"><span class="num" style="font-size: 21px; font-weight: 800">{{e.label}}</span><span style="font-size: 12px; opacity: .85">a week</span></button>
+                <button class="opt" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="all: unset; box-sizing: border-box; min-height: 60px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: {{e.bg}}; color: {{e.ink}}; border: 1.5px solid {{e.border}}"><span class="num" style="font-size: 20px; font-weight: 800">{{e.label}}</span><span style="font-size: 12px; opacity: .85">a week</span></button>
               </sc-for>
             </div>
           </div>
@@ -195,7 +205,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <p class="qh">Wasted food means wasted emissions.</p>
             <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
               <sc-for list="{{waste}}" as="w" hint-placeholder-count="4">
-                <button class="opt" onClick="{{w.pick}}" aria-pressed="{{w.on}}" style="all: unset; box-sizing: border-box; padding: 14px 16px; border-radius: 16px; background: {{w.bg}}; color: {{w.ink}}; border: 1.5px solid {{w.border}}; cursor: pointer"><span class="hd" style="display: block; font-size: 19px; font-weight: 700">{{w.label}}</span><span class="num" style="display: block; font-size: 14px; opacity: .85">{{w.range}}</span></button>
+                <button class="opt" onClick="{{w.pick}}" aria-pressed="{{w.on}}" style="all: unset; box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: {{w.bg}}; color: {{w.ink}}; border: 1.5px solid {{w.border}}; cursor: pointer"><span class="hd" style="display: block; font-size: 18px; font-weight: 700">{{w.label}}</span><span class="num" style="display: block; font-size: 14px; opacity: .85">{{w.range}}</span></button>
               </sc-for>
             </div>
           </div>
@@ -211,9 +221,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <h2 class="qt hd">How far is your commute, one way?</h2>
             <p class="qh">A rough figure is fine. We count there and back.</p>
             <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px">
-              <button class="step-btn opt" onClick="{{distLess}}" aria-label="Shorter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{distLess}}" aria-label="Shorter"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span style="min-width: 120px; text-align: center"><span class="num" style="font-size: 34px; font-weight: 800">{{distLabel}}</span> <span style="font-size: 16px; color: #4A453A">km</span></span>
-              <button class="step-btn opt" onClick="{{distMore}}" aria-label="Longer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{distMore}}" aria-label="Longer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
             </div>
           </div>
         </li>
@@ -224,7 +234,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <p class="qh">Pick a day, then how you travelled. Leave weekends as “Not travelling” if you didn’t commute.</p>
             <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px">
               <sc-for list="{{commuteDays}}" as="d" hint-placeholder-count="7">
-                <button class="opt" onClick="{{d.pick}}" aria-pressed="{{d.on}}" aria-label="{{d.aria}}" style="all: unset; box-sizing: border-box; padding: 14px 8px; border-radius: 16px; background: {{d.bg}}; color: {{d.ink}}; border: 1.5px solid {{d.border}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+                <button class="opt" onClick="{{d.pick}}" aria-pressed="{{d.on}}" aria-label="{{d.aria}}" style="all: unset; box-sizing: border-box; padding: 14px 8px; border-radius: 18px; background: {{d.bg}}; color: {{d.ink}}; border: 1.5px solid {{d.border}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
                   <span class="hd" style="font-size: 16px; font-weight: 700">{{d.short}}</span>
                   <span class="{{d.anim}}" style="width: 12px; height: 12px; border-radius: 99px; background: {{d.dot}}"></span>
                   <span style="font-size: 14px; font-weight: 600; line-height: 1.2">{{d.value}}</span>
@@ -236,10 +246,10 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
               <div class="hd" style="font-size: 17px; font-weight: 700; margin-bottom: 10px">{{commuteDayName}}</div>
               <div style="display: flex; flex-wrap: wrap; gap: 8px">
                 <sc-for list="{{modeChips}}" as="m" hint-placeholder-count="10">
-                  <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 16px; border-radius: 14px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
+                  <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
                 </sc-for>
               </div>
-              <sc-if value="{{commuteTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 14px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{commuteTip}}</p></sc-if>
+              <sc-if value="{{commuteTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 12px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{commuteTip}}</p></sc-if>
             </div>
           </div>
         </li>
@@ -268,9 +278,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <p class="qh">Trains or drives like London to Cornwall or Scotland. Flights come in the next step.</p>
             <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 10px">
               <sc-for list="{{journeys}}" as="j" hint-placeholder-count="1">
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-radius: 16px; background: rgba(63,91,58,.06)">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px; border-radius: 18px; background: rgba(63,91,58,.06)">
                   <input class="fld" type="text" value="{{j.from}}" onChange="{{j.setFrom}}" aria-label="From" placeholder="From" style="flex: 1 1 160px">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A453A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A453A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
                   <input class="fld" type="text" value="{{j.to}}" onChange="{{j.setTo}}" aria-label="To" placeholder="To" style="flex: 1 1 160px">
                   <select class="fld" value="{{j.mode}}" onChange="{{j.setMode}}" aria-label="How you travelled">
                     <sc-for list="{{travelModes}}" as="o" hint-placeholder-count="8"><option value="{{o.key}}">{{o.label}}</option></sc-for>
@@ -278,7 +288,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
                   <button class="step-btn opt" onClick="{{j.remove}}" aria-label="Remove journey"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
                 </div>
               </sc-for>
-              <button class="opt" onClick="{{addJourney}}" style="all: unset; box-sizing: border-box; align-self: flex-start; min-height: 48px; padding: 0 18px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; border: 1.5px dashed rgba(63,91,58,.5); color: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a journey</button>
+              <button class="opt" onClick="{{addJourney}}" style="all: unset; box-sizing: border-box; align-self: flex-start; min-height: 48px; padding: 0 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; border: 1.5px dashed rgba(63,91,58,.5); color: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a journey</button>
             </div>
           </div>
         </li>
@@ -297,7 +307,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
                 <div style="padding: 16px; border-radius: 18px; background: rgba(63,91,58,.06); display: flex; flex-direction: column; gap: 12px">
                   <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
                     <input class="fld" type="text" value="{{f.from}}" onChange="{{f.setFrom}}" aria-label="From airport" placeholder="From airport" style="flex: 1 1 200px">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z" transform="rotate(90 12 12)"></path></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 5c.5-2 2.5-2 3 0l.5 4 6.5 4v2l-6.5-2v4.5l2 1.5v1.5L12 19.5 8 20.5V19l2-1.5V13l-6.5 2v-2L10 9Z" transform="rotate(90 12 12)"></path></svg>
                     <input class="fld" type="text" value="{{f.to}}" onChange="{{f.setTo}}" aria-label="To airport" placeholder="To airport" style="flex: 1 1 200px">
                     <button class="step-btn opt" onClick="{{f.remove}}" aria-label="Remove flight"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
                   </div>
@@ -309,20 +319,20 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
                     </div>
                     <button class="opt" onClick="{{f.toggleReturn}}" aria-pressed="{{f.returnOn}}" style="all: unset; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; cursor: pointer; background: {{f.returnBg}}; color: {{f.returnInk}}; border: 1.5px solid {{f.returnBorder}}">Return trip</button>
                     <span style="display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">Times
-                      <button class="step-btn opt" onClick="{{f.less}}" aria-label="Fewer times" style="width: 44px; height: 44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                      <button class="step-btn opt" onClick="{{f.less}}" aria-label="Fewer times" style="width: 44px; height: 44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
                       <span class="num" style="min-width: 24px; text-align: center; font-size: 20px; font-weight: 800">{{f.trips}}</span>
-                      <button class="step-btn opt" onClick="{{f.more}}" aria-label="More times" style="width: 44px; height: 44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+                      <button class="step-btn opt" onClick="{{f.more}}" aria-label="More times" style="width: 44px; height: 44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
                     </span>
                   </div>
                 </div>
               </sc-for>
-              <sc-if value="{{noFlights}}" hint-placeholder-val="{{false}}"><p style="margin: 0; padding: 14px 16px; border-radius: 14px; background: rgba(63,91,58,.08); font-size: 16px; color: #3A362D">No flights this year. Nice. You can skip to the next step.</p></sc-if>
-              <button class="opt" onClick="{{addFlight}}" style="all: unset; box-sizing: border-box; align-self: flex-start; min-height: 48px; padding: 0 18px; border-radius: 14px; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; border: 1.5px dashed rgba(63,91,58,.5); color: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a flight</button>
+              <sc-if value="{{noFlights}}" hint-placeholder-val="{{false}}"><p style="margin: 0; padding: 14px 16px; border-radius: 12px; background: rgba(63,91,58,.08); font-size: 16px; color: #3A362D">No flights this year. Nice. You can skip to the next step.</p></sc-if>
+              <button class="opt" onClick="{{addFlight}}" style="all: unset; box-sizing: border-box; align-self: flex-start; min-height: 48px; padding: 0 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; border: 1.5px dashed rgba(63,91,58,.5); color: #3F5B3A"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Add a flight</button>
             </div>
           </div>
         </li>
         <li class="q rise d2" style="background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
-          <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
+          <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
           <div style="min-width: 0">
             <h2 class="qt hd">Good to know</h2>
             <p class="qh">Economy spreads a plane’s emissions over more people, so business and first class can double or triple your share. For trips under about 700 km, the train is often as fast door to door.</p>
@@ -362,7 +372,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <p class="qh">A 100% renewable tariff, not just a “green” name.</p>
             <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px">
               <sc-for list="{{greenOpts}}" as="g" hint-placeholder-count="3">
-                <button class="opt" onClick="{{g.pick}}" aria-pressed="{{g.on}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 22px; border-radius: 14px; display: inline-flex; align-items: center; font-size: 17px; font-weight: 700; cursor: pointer; background: {{g.bg}}; color: {{g.ink}}; border: 1.5px solid {{g.border}}">{{g.label}}</button>
+                <button class="opt" onClick="{{g.pick}}" aria-pressed="{{g.on}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 22px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 17px; font-weight: 700; cursor: pointer; background: {{g.bg}}; color: {{g.ink}}; border: 1.5px solid {{g.border}}">{{g.label}}</button>
               </sc-for>
             </div>
           </div>
@@ -373,9 +383,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <h2 class="qt hd">How many people live in your home?</h2>
             <p class="qh">We share the home’s energy between everyone who lives there.</p>
             <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px">
-              <button class="step-btn opt" onClick="{{houseLess}}" aria-label="Fewer people"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{houseLess}}" aria-label="Fewer people"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span class="num" style="min-width: 56px; text-align: center; font-size: 34px; font-weight: 800">{{household}}</span>
-              <button class="step-btn opt" onClick="{{houseMore}}" aria-label="More people"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{houseMore}}" aria-label="More people"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
               <span style="font-size: 16px; color: #4A453A">{{householdWord}}</span>
             </div>
           </div>
@@ -402,9 +412,9 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <h2 class="qt hd">How many dogs do you have?</h2>
             <p class="qh">Pet food, especially meat-based, adds up over a year.</p>
             <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px">
-              <button class="step-btn opt" onClick="{{dogLess}}" aria-label="Fewer dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{dogLess}}" aria-label="Fewer dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span class="num" style="min-width: 56px; text-align: center; font-size: 34px; font-weight: 800">{{dogs}}</span>
-              <button class="step-btn opt" onClick="{{dogMore}}" aria-label="More dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{dogMore}}" aria-label="More dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
             </div>
           </div>
         </li>
@@ -414,14 +424,14 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <h2 class="qt hd">And cats?</h2>
             <p class="qh">Put 0 if you don’t have any.</p>
             <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px">
-              <button class="step-btn opt" onClick="{{catLess}}" aria-label="Fewer cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{catLess}}" aria-label="Fewer cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span class="num" style="min-width: 56px; text-align: center; font-size: 34px; font-weight: 800">{{cats}}</span>
-              <button class="step-btn opt" onClick="{{catMore}}" aria-label="More cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+              <button class="step-btn opt" onClick="{{catMore}}" aria-label="More cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
             </div>
           </div>
         </li>
         <li class="q rise d3" style="background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
-          <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
+          <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
           <div style="min-width: 0">
             <h2 class="qt hd">Good to know</h2>
             <p class="qh">A medium dog’s food can emit as much as a small car over a year. You don’t need to change your pet, just what goes in the bowl.</p>
@@ -479,19 +489,20 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 
     <div style="margin-top: 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap">
       <sc-if value="{{isFirst}}" hint-placeholder-val="{{true}}">
-        <a href="Glass2-Results.dc.html" style="min-height: 52px; padding: 0 24px; border-radius: 16px; display: inline-flex; align-items: center; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">Back to results</a>
+        <a href="Glass2-Results.dc.html" style="min-height: 52px; padding: 0 24px; border-radius: 18px; display: inline-flex; align-items: center; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">Back to results</a>
       </sc-if>
       <sc-if value="{{notFirst}}" hint-placeholder-val="{{false}}">
-        <button class="opt" onClick="{{back}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 24px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Back: {{prevLabel}}</button>
+        <button class="opt" onClick="{{back}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 24px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Back: {{prevLabel}}</button>
       </sc-if>
       <sc-if value="{{notLast}}" hint-placeholder-val="{{true}}">
-        <button class="opt" onClick="{{next}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 26px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; cursor: pointer">Next: {{nextLabel}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        <button class="opt" onClick="{{next}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 26px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; cursor: pointer">Next: {{nextLabel}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
       </sc-if>
       <sc-if value="{{isLast}}" hint-placeholder-val="{{false}}">
-        <a href="Glass2-Results.dc.html" style="min-height: 52px; padding: 0 26px; border-radius: 16px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; text-decoration: none">See my results<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+        <a href="Glass2-Results.dc.html" style="min-height: 52px; padding: 0 26px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; text-decoration: none">See my results<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
       </sc-if>
     </div>
   </div>
+  <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"startStep":{"editor":"enum","options":["Meals","Commute","Flights","Home & water","Pets","Money"],"default":"Meals","section":"Preview"},"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":1420}}'>

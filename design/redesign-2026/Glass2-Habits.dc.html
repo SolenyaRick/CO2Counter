@@ -12,13 +12,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;600;700&amp;family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&amp;display=swap">
 <style>
 body{margin:0;background:#EFE9DC}
-a{color:#3F5B3A}a:hover{color:#2B4128}
+a{color:#3F5B3A}a:hover{color:#2B3F28}
 .hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
 .num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(217,164,65,.55)}50%{box-shadow:0 0 0 9px rgba(217,164,65,0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(127,163,174,.55)}50%{box-shadow:0 0 0 9px rgba(127,163,174,0)}}
 .rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
 .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
 .seg{animation:draw .9s cubic-bezier(.2,.8,.2,1) both}
@@ -46,10 +46,10 @@ h2[style*="font-size: 3"],h2[style*="font-size: 4"]{font-size:28px!important}
 .hero h1{font-size:36px!important}
 .lede{margin-top:10px!important;font-size:16px!important;line-height:1.5!important}
 .herochips{margin-top:14px!important;gap:8px!important}
-.herochips>*{min-height:0!important;padding:9px 12px!important;border-radius:14px!important;font-size:14px!important}
+.herochips>*{min-height:0!important;padding:9px 12px!important;border-radius:12px!important;font-size:14px!important}
 .herochips .num{font-size:19px!important}
 .herochips br{display:none}
-.ringwrap{flex:1 1 100%!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;padding:14px 18px!important;gap:22px!important;border-radius:22px!important}
+.ringwrap{flex:1 1 100%!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;padding:14px 18px!important;gap:22px!important;border-radius:18px!important}
 .ring{width:112px!important;height:112px!important}
 .ring text{display:none}
 .ringwrap .num[style*="font-size: 56px"]{font-size:32px!important}.ringwrap .num span{font-size:16px!important}
@@ -72,13 +72,13 @@ a.act{padding-right:46px!important}
 .aname{font-size:17px!important;line-height:1.2!important}
 .status{display:block!important;margin-top:3px!important;padding:0!important;background:none!important;font-size:13px!important;font-weight:600!important;line-height:1.35!important}
 .act .save,.act .chev{display:none!important}
-.ebox{margin-top:12px!important;padding:12px!important;border-radius:14px!important}
+.ebox{margin-top:12px!important;padding:12px!important;border-radius:12px!important}
 .ebox>div:first-child{gap:8px!important}
 .ebox>div:first-child>svg{display:none}
 .ebox>div:first-child>span{min-width:0!important;font-size:14px!important;line-height:1.45!important}
 .ebtns{margin-top:10px!important;gap:6px!important}
 .boxes{margin-top:12px!important;gap:8px!important}
-.boxes>div{flex-basis:100%!important;padding:12px!important;border-radius:14px!important}
+.boxes>div{flex-basis:100%!important;padding:12px!important;border-radius:12px!important}
 .boxes .hd{font-size:15px!important}
 .boxes p{font-size:13px!important;margin:2px 0 8px!important}
 .boxes input,.boxes button{height:44px!important;font-size:15px!important}
@@ -86,18 +86,28 @@ a.act{padding-right:46px!important}
 .ppl{gap:5px!important;flex-wrap:nowrap!important}
 .ppl>span{width:28px!important;height:28px!important;border-width:1.5px!important}
 .ppl svg{width:14px!important;height:14px!important}
-.chip{min-height:34px!important;padding:0 11px!important;font-size:13px!important;border-radius:10px!important}
+.chip{min-height:34px!important;padding:0 11px!important;font-size:13px!important;border-radius:12px!important}
 .how{display:none!important}
-.soon{margin-top:26px!important;padding:18px!important;border-radius:22px!important;gap:14px!important}
+.soon{margin-top:26px!important;padding:18px!important;border-radius:18px!important;gap:14px!important}
 .soon h2{font-size:24px!important;margin-top:8px!important}
 .dailyp{font-size:14px!important;margin-top:6px!important}
-.dailyl>div{padding:8px 10px!important;border-radius:14px!important}
+.dailyl>div{padding:8px 10px!important;border-radius:12px!important}
 .dailyl>div:nth-child(n+3){display:none!important}
 .dailyl .hd{font-size:14px!important}
 .dailyl [style*="width: 40px"]{width:30px!important;height:30px!important}
 .dailyl [style*="width: 14px"]{width:10px!important;height:10px!important}
 footer span[style]{flex-wrap:wrap;gap:6px 16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
+}
+/* phone tab bar */
+.tabbar{display:none}
+@media (max-width: 640px){
+.tabbar{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;gap:4px;padding:6px;border-radius:24px;background:rgba(255,252,245,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(46,42,34,.1);box-shadow:0 12px 30px rgba(46,42,34,.16)}
+.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:18px;color:#5C5649;font:700 11px Karla,system-ui,sans-serif;text-decoration:none}
+.tabbar a.on{background:#3F5B3A;color:#F6F1E6}
+nav[aria-label="Main"]>:nth-child(2){display:none!important}
+nav[aria-label="Main"] a[aria-label="Account"]{display:none!important}
+body{padding-bottom:88px}
 }
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -110,7 +120,7 @@ footer[style]{flex-direction:column;gap:10px!important}
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <a href="Glass2-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
-        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+        <span class="hd" style="font-weight: 800; font-size: 18px">CO2 Counter</span>
       </a>
       <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <a href="Glass2-SurveyDone.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
@@ -124,15 +134,15 @@ footer[style]{flex-direction:column;gap:10px!important}
     <header class="hero" style="margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
       <div style="flex: 1 1 520px; min-width: 0">
         <div class="rise" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #3F5B3A; font-size: 14px; font-weight: 800">My Habits · The 7 Acts</div>
-        <h1 class="hd rise d1" style="margin: 18px 0 0; font-size: 68px; line-height: .98; font-weight: 800">Seven acts.<br><span style="color: #3F5B3A">{{doneCount}} done,</span> {{leftCount}} to go.</h1>
+        <h1 class="hd rise d1" style="margin: 18px 0 0; font-size: 64px; line-height: .98; font-weight: 800">Seven acts.<br><span style="color: #3F5B3A">{{doneCount}} done,</span> {{leftCount}} to go.</h1>
         <p class="rise d2 lede" style="margin: 20px 0 0; max-width: 520px; font-size: 20px; line-height: 1.6; color: #3A362D">Real Zero’s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" style="font-weight: 700">7 Acts</a> for individuals: one-off changes that cut the most. Acts 1 to 5 tick themselves from your latest survey.</p>
         <div class="rise d3 herochips" style="margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px">
-          <span style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 16px; background: #2B3F28; color: #F6F1E6"><span class="num" style="font-size: 24px; font-weight: 800; color: #E8C88A">−{{toSave}}</span><span style="font-size: 14px; line-height: 1.3; color: #C9D3BC">kg a year still to save <br>in acts 1 to 4</span></span>
-          <a class="btn" href="Glass2-Switches.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 54px; padding: 0 20px; border-radius: 16px; background: rgba(63,91,58,.12); color: #2B4128; font-weight: 800; font-size: 16px; text-decoration: none">See your switches<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+          <span style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 18px; background: #2B3F28; color: #F6F1E6"><span class="num" style="font-size: 24px; font-weight: 800; color: #E8C88A">−{{toSave}}</span><span style="font-size: 14px; line-height: 1.3; color: #C9D3BC">kg a year still to save <br>in acts 1 to 4</span></span>
+          <a class="btn" href="Glass2-Switches.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 54px; padding: 0 20px; border-radius: 18px; background: rgba(63,91,58,.12); color: #2B3F28; font-weight: 800; font-size: 16px; text-decoration: none">See your switches<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
         </div>
       </div>
 
-      <div class="ringwrap rise d2" style="flex: 0 1 380px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px; border-radius: 32px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(24px)">
+      <div class="ringwrap rise d2" style="flex: 0 1 380px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <div style="position: relative">
           <svg class="ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="{{ringLabel}}">
             <sc-for list="{{segs}}" as="s" hint-placeholder-count="7">
@@ -149,14 +159,14 @@ footer[style]{flex-direction:column;gap:10px!important}
         </div>
         <div class="legend" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: 14px; font-weight: 700; color: #3A362D">
           <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #3F5B3A"></span><b class="num">{{doneCount}}</b> done</span>
-          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #D9A441"></span><b class="num">{{waitCount}}</b> waiting</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: #7FA3AE"></span><b class="num">{{waitCount}}</b> waiting</span>
           <span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 99px; background: rgba(46,42,34,.14)"></span><b class="num">{{todoCount}}</b> to do</span>
         </div>
       </div>
     </header>
 
     <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
-      <section class="group" aria-label="{{g.title}}" style="margin-top: 40px; padding: 32px; border-radius: 36px; background: rgba(255,252,245,.5); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+      <section class="group" aria-label="{{g.title}}" style="margin-top: 40px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.5); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <div class="ghead" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between">
           <h2 class="hd" style="margin: 0; font-size: 32px; line-height: 1.05; font-weight: 800">{{g.title}}</h2>
           <span style="font-size: 16px; color: #5C5649">{{g.note}}</span>
@@ -166,14 +176,14 @@ footer[style]{flex-direction:column;gap:10px!important}
           <sc-for list="{{g.acts}}" as="a" hint-placeholder-count="3">
             <li style="position: relative">
               <sc-if value="{{a.isLink}}" hint-placeholder-val="{{true}}">
-                <a class="act" href="{{a.href}}" style="display: flex; align-items: center; gap: 18px; padding: 22px 24px; border-radius: 26px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}; color: #2E2A22; text-decoration: none">
+                <a class="act" href="{{a.href}}" style="display: flex; align-items: center; gap: 18px; padding: 22px 24px; border-radius: 28px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}; color: #2E2A22; text-decoration: none">
                   <span class="node num {{a.nodeCls}}" style="position: absolute; left: -76px; top: 50%; margin-top: -29px; width: 58px; height: 58px; border-radius: 99px; display: grid; place-items: center; background: {{a.nodeBg}}; color: {{a.nodeInk}}; font-size: 22px; font-weight: 800; box-shadow: 0 0 0 6px #EFE9DC">
                     <sc-if value="{{a.done}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
                     <sc-if value="{{a.showNum}}" hint-placeholder-val="{{true}}">{{a.n}}</sc-if>
                   </span>
-                  <span class="tile" style="flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
+                  <span class="tile" style="flex: none; width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
                   <span style="flex: 1; min-width: 0">
-                    <span class="eyeb" style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Act {{a.n}}</span>
+                    <span class="eyeb" style="display: block; font-size: 13px; font-weight: 800; color: #8A8273">Act {{a.n}}</span>
                     <span class="hd aname" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}</span>
                     <span class="what" style="display: block; margin-top: 2px; font-size: 16px; color: #5C5649">{{a.what}}</span>
                     <span class="status" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 11px; border-radius: 99px; background: {{a.statusBg}}; color: {{a.statusInk}}; font-size: 14px; font-weight: 700">{{a.sub}}</span>
@@ -183,15 +193,15 @@ footer[style]{flex-direction:column;gap:10px!important}
                 </a>
               </sc-if>
               <sc-if value="{{a.isBox}}" hint-placeholder-val="{{false}}">
-                <div class="act" style="padding: 22px 24px; border-radius: 26px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}">
+                <div class="act" style="padding: 22px 24px; border-radius: 28px; background: {{a.cardBg}}; border: 1.5px solid {{a.border}}">
                   <span class="node num {{a.nodeCls}}" style="position: absolute; left: -76px; top: 22px; width: 58px; height: 58px; border-radius: 99px; display: grid; place-items: center; background: {{a.nodeBg}}; color: {{a.nodeInk}}; font-size: 22px; font-weight: 800; box-shadow: 0 0 0 6px #EFE9DC">
-                    <sc-if value="{{a.pending}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path class="clock" d="M12 12V7"></path></svg></sc-if>
+                    <sc-if value="{{a.pending}}" hint-placeholder-val="{{false}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path class="clock" d="M12 12V7"></path></svg></sc-if>
                     <sc-if value="{{a.showNum}}" hint-placeholder-val="{{true}}">{{a.n}}</sc-if>
                   </span>
                   <div style="display: flex; align-items: center; gap: 18px">
-                    <span class="tile" style="flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
+                    <span class="tile" style="flex: none; width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
                     <span style="flex: 1; min-width: 0">
-                      <span class="eyeb" style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Act {{a.n}}</span>
+                      <span class="eyeb" style="display: block; font-size: 13px; font-weight: 800; color: #8A8273">Act {{a.n}}</span>
                       <span class="hd aname" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}</span>
                       <span class="what" style="display: block; margin-top: 2px; font-size: 16px; color: #5C5649">{{a.what}}</span>
                       <span class="status" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 11px; border-radius: 99px; background: {{a.statusBg}}; color: {{a.statusInk}}; font-size: 14px; font-weight: 700">{{a.sub}}</span>
@@ -199,30 +209,30 @@ footer[style]{flex-direction:column;gap:10px!important}
                   </div>
 
                   <sc-if value="{{a.isEnergy}}" hint-placeholder-val="{{false}}">
-                    <div class="ebox" style="margin-top: 18px; padding: 18px; border-radius: 20px; background: rgba(217,164,65,.12); border: 1px dashed rgba(217,164,65,.6)">
+                    <div class="ebox" style="margin-top: 18px; padding: 18px; border-radius: 18px; background: rgba(127,163,174,.12); border: 1px dashed rgba(127,163,174,.6)">
                       <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A5F12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6"></path></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E5560" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6"></path></svg>
                         <span style="flex: 1; min-width: 200px; font-size: 16px; line-height: 1.5; color: #3A362D">You asked the bill payer to switch. This ticks as soon as they tap <b>“Yes, we’ve switched”</b> in their message.</span>
                       </div>
                       <div class="ebtns" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px">
-                        <sc-for list="{{a.emailApps}}" as="e" hint-placeholder-count="3"><a class="chip" href="#" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.1); color: #2B4128; font-size: 14px; font-weight: 700; text-decoration: none">{{e}}</a></sc-for>
+                        <sc-for list="{{a.emailApps}}" as="e" hint-placeholder-count="3"><a class="chip" href="#" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.1); color: #2B3F28; font-size: 14px; font-weight: 700; text-decoration: none">{{e}}</a></sc-for>
                       </div>
                     </div>
                   </sc-if>
 
                   <sc-if value="{{a.isMp}}" hint-placeholder-val="{{false}}">
                     <div class="boxes" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
-                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 20px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
+                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 18px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
                         <div class="hd" style="font-size: 17px; font-weight: 800">Find your MP</div>
                         <p style="margin: 4px 0 12px; font-size: 15px; color: #5C5649">We look it up on Parliament’s own records.</p>
                         <form onSubmit="{{a.findMp}}" style="display: flex; gap: 8px">
-                          <input aria-label="Your postcode" placeholder="Your postcode" maxlength="10" style="flex: 1; min-width: 0; height: 50px; box-sizing: border-box; padding: 0 16px; border-radius: 14px; border: 1.5px solid rgba(46,42,34,.16); background: #FFFCF5; font: 600 17px Karla, sans-serif; color: #2E2A22; text-transform: uppercase">
-                          <button class="btn" type="submit" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; height: 50px; padding: 0 18px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 16px">Find my MP</button>
+                          <input aria-label="Your postcode" placeholder="Your postcode" maxlength="10" style="flex: 1; min-width: 0; height: 50px; box-sizing: border-box; padding: 0 16px; border-radius: 12px; border: 1.5px solid rgba(46,42,34,.16); background: #FFFCF5; font: 600 17px Karla, sans-serif; color: #2E2A22; text-transform: uppercase">
+                          <button class="btn" type="submit" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; height: 50px; padding: 0 18px; border-radius: 12px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 16px">Find my MP</button>
                         </form>
-                        <sc-if value="{{a.mpFound}}" hint-placeholder-val="{{false}}"><p style="margin: 12px 0 0; font-size: 15px; color: #2B4128; font-weight: 700">Found your MP. Your letter is ready to edit and send.</p></sc-if>
+                        <sc-if value="{{a.mpFound}}" hint-placeholder-val="{{false}}"><p style="margin: 12px 0 0; font-size: 15px; color: #2B3F28; font-weight: 700">Found your MP. Your letter is ready to edit and send.</p></sc-if>
                       </div>
-                      <div class="how" style="flex: 1 1 260px; min-width: 0; padding: 18px; border-radius: 20px; background: #6F4E63; color: #F6F1E6">
-                        <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #E3D3DC">How it ticks</div>
+                      <div class="how" style="flex: 1 1 260px; min-width: 0; padding: 18px; border-radius: 18px; background: #6F4E63; color: #F6F1E6">
+                        <div style="font-size: 13px; font-weight: 800; color: #E3D3DC">How it ticks</div>
                         <ol style="margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 15px; line-height: 1.45">
                           <li style="display: flex; gap: 10px"><b class="num" style="color: #E8C88A">1</b>Write your letter here, or in Gmail or Outlook</li>
                           <li style="display: flex; gap: 10px"><b class="num" style="color: #E8C88A">2</b>We’re copied in, so your MP doesn’t see us</li>
@@ -234,8 +244,8 @@ footer[style]{flex-direction:column;gap:10px!important}
 
                   <sc-if value="{{a.isInvite}}" hint-placeholder-val="{{false}}">
                     <div class="boxes" style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
-                      <div style="flex: 1 1 280px; min-width: 0; padding: 18px; border-radius: 20px; background: #2B3F28; color: #F6F1E6">
-                        <div style="font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #C9D3BC">People you’ve invited</div>
+                      <div style="flex: 1 1 280px; min-width: 0; padding: 18px; border-radius: 18px; background: #2B3F28; color: #F6F1E6">
+                        <div style="font-size: 13px; font-weight: 800; color: #C9D3BC">People you’ve invited</div>
                         <div class="ppl" style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap" role="img" aria-label="{{a.inviteLabel}}">
                           <sc-for list="{{a.people}}" as="p" hint-placeholder-count="7">
                             <span style="width: 38px; height: 38px; border-radius: 99px; display: grid; place-items: center; background: {{p.bg}}; color: {{p.ink}}; border: 2px {{p.line}} {{p.edge}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{p.icon}}"></path></svg></span>
@@ -243,13 +253,13 @@ footer[style]{flex-direction:column;gap:10px!important}
                         </div>
                         <p style="margin: 12px 0 0; font-size: 15px; color: #C9D3BC">{{a.inviteText}}</p>
                       </div>
-                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 20px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
+                      <div style="flex: 1 1 320px; min-width: 0; padding: 18px; border-radius: 18px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.08)">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap">
-                          <span><span style="display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8A8273">Your invite code</span><span class="num" style="font-size: 30px; font-weight: 800; letter-spacing: .08em">{{a.code}}</span></span>
-                          <button class="btn" type="button" onClick="{{a.copy}}" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 14px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg>{{a.copyLabel}}</button>
+                          <span><span style="display: block; font-size: 13px; font-weight: 800; color: #8A8273">Your invite code</span><span class="num" style="font-size: 30px; font-weight: 800; letter-spacing: .08em">{{a.code}}</span></span>
+                          <button class="btn" type="button" onClick="{{a.copy}}" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 12px; background: #3F5B3A; color: #F6F1E6; font-weight: 800; font-size: 15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"></path></svg>{{a.copyLabel}}</button>
                         </div>
                         <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px">
-                          <sc-for list="{{a.shares}}" as="s" hint-placeholder-count="6"><a class="chip" href="{{s.href}}" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(63,91,58,.08); border: 1px solid rgba(46,42,34,.08); color: #2B4128; font-size: 14px; font-weight: 700; text-decoration: none">{{s.label}}</a></sc-for>
+                          <sc-for list="{{a.shares}}" as="s" hint-placeholder-count="6"><a class="chip" href="{{s.href}}" style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 12px; background: rgba(63,91,58,.08); border: 1px solid rgba(46,42,34,.08); color: #2B3F28; font-size: 14px; font-weight: 700; text-decoration: none">{{s.label}}</a></sc-for>
                         </div>
                       </div>
                     </div>
@@ -262,7 +272,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       </section>
     </sc-for>
 
-    <section class="soon" aria-labelledby="daily" style="margin-top: 40px; padding: 36px; border-radius: 36px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; position: relative; overflow: hidden">
+    <section class="soon" aria-labelledby="daily" style="margin-top: 40px; padding: 36px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; position: relative; overflow: hidden">
       <div style="flex: 1 1 380px; min-width: 0; position: relative">
         <span style="display: inline-block; padding: 4px 12px; border-radius: 99px; background: rgba(232,200,138,.2); color: #E8C88A; font-size: 13px; font-weight: 800">Coming soon</span>
         <h2 id="daily" class="hd" style="margin: 14px 0 0; font-size: 38px; line-height: 1.05; font-weight: 800">Daily habits</h2>
@@ -286,6 +296,7 @@ footer[style]{flex-direction:column;gap:10px!important}
       <span style="display: flex; gap: 20px"><a href="Glass2-About.dc.html">About</a><a href="Glass2-Switches.dc.html">Greener switches</a><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a></span>
     </footer>
   </div>
+  <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":2900}}'>
@@ -330,8 +341,8 @@ class Component extends DCLogic {
       { n: 7, name: 'Motivate seven other people', what: 'to do their 7 Acts', icon: I.people, status: 'todo', sub: '2 of 7 people you invited have taken the survey', box: 'invite' }
     ];
     const LOOK = {
-      done: { c: '#3F5B3A', ink: '#F6F1E6', card: 'rgba(63,91,58,.08)', border: 'rgba(63,91,58,.3)', sBg: 'rgba(63,91,58,.14)', sInk: '#2B4128', tile: '#3F5B3A', tileInk: '#F6F1E6', cls: '' },
-      wait: { c: '#D9A441', ink: '#2E2A22', card: '#FFFCF5', border: 'rgba(217,164,65,.55)', sBg: 'rgba(217,164,65,.2)', sInk: '#6B4A12', tile: 'rgba(217,164,65,.22)', tileInk: '#8A5F12', cls: 'wait' },
+      done: { c: '#3F5B3A', ink: '#F6F1E6', card: 'rgba(63,91,58,.08)', border: 'rgba(63,91,58,.3)', sBg: 'rgba(63,91,58,.14)', sInk: '#2B3F28', tile: '#3F5B3A', tileInk: '#F6F1E6', cls: '' },
+      wait: { c: '#7FA3AE', ink: '#14262B', card: '#FFFCF5', border: 'rgba(127,163,174,.6)', sBg: 'rgba(127,163,174,.2)', sInk: '#2E5560', tile: 'rgba(127,163,174,.22)', tileInk: '#2E5560', cls: 'wait' },
       todo: { c: 'rgba(46,42,34,.14)', ink: '#2E2A22', card: 'rgba(255,252,245,.9)', border: 'rgba(46,42,34,.08)', sBg: 'rgba(46,42,34,.06)', sInk: '#4A453A', tile: 'rgba(63,91,58,.1)', tileInk: '#3F5B3A', cls: '' }
     };
     const invited = 2, joined = 3;

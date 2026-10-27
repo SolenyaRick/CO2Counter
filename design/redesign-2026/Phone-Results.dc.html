@@ -19,8 +19,8 @@ nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
 nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
 [style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
-header[style]{padding:22px!important;border-radius:24px!important}
-section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+header[style]{padding:22px!important;border-radius:28px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:18px!important}
 li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
 .qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
 h1{font-size:34px!important;line-height:1.08!important}
@@ -28,7 +28,7 @@ h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
 h3[style*="font-size: 2"]{font-size:19px!important}
 [style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
 [style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
-p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+p[style*="font-size: 18px"],p[style*="font-size: 20px"]{font-size:17px!important}
 [style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
 [style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
@@ -46,7 +46,7 @@ footer[style]{flex-direction:column;gap:10px!important}
 .vchart.is-bars{display:none!important}
 .hbars.is-bars{display:flex!important}
 }
-a{color:#3F5B3A}a:hover{color:#2B4128}
+a{color:#3F5B3A}a:hover{color:#2B3F28}
 .serif{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
 .num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
 .tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
@@ -64,6 +64,16 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 .cta:hover{filter:brightness(.96)}.cta:active{transform:scale(.97)}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .rise{animation:rise .8s cubic-bezier(.2,.75,.2,1) both}
+/* phone tab bar */
+.tabbar{display:none}
+@media (max-width: 640px){
+.tabbar{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;gap:4px;padding:6px;border-radius:24px;background:rgba(255,252,245,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(46,42,34,.1);box-shadow:0 12px 30px rgba(46,42,34,.16)}
+.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:18px;color:#5C5649;font:700 11px Karla,system-ui,sans-serif;text-decoration:none}
+.tabbar a.on{background:#3F5B3A;color:#F6F1E6}
+nav[aria-label="Main"]>:nth-child(2){display:none!important}
+nav[aria-label="Main"] a[aria-label="Account"]{display:none!important}
+body{padding-bottom:88px}
+}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </helmet>
@@ -71,11 +81,11 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
   <div style="position: absolute; left: -8%; top: -240px; width: 700px; height: 700px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
   <div style="position: absolute; right: -8%; top: 460px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
 
-  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+  <div style="position: relative; max-width: 1160px; margin: 0 auto; padding: 20px 32px 64px">
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <span style="display: flex; align-items: center; gap: 10px">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
-        <span class="serif" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+        <span class="serif" style="font-weight: 800; font-size: 18px">CO2 Counter</span>
       </span>
       <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <a href="Phone-Survey.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
@@ -103,7 +113,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
           <span class="num" style="font-weight: 800; font-size: clamp(60px, 7.5vw, 108px); line-height: .95; letter-spacing: -0.045em; font-variant-numeric: tabular-nums">{{countLabel}}</span>
           <span style="font-size: 16px; color: #5C5649">kg CO₂e</span>
         </div>
-        <p class="serif" style="margin: 16px 0 0; font-size: 21px; line-height: 1.4; font-weight: 500; color: #4A453A">That’s <span style="color: #8A4424; font-weight: 600">25% above</span> the UK average on the things we can compare, and nearly three times the 1.5°C budget.</p>
+        <p class="serif" style="margin: 16px 0 0; font-size: 20px; line-height: 1.4; font-weight: 500; color: #4A453A">That’s <span style="color: #8A4424; font-weight: 600">25% above</span> the UK average on the things we can compare, and nearly three times the 1.5°C budget.</p>
       </div>
 
       <div style="flex: 1 1 420px; min-width: 0">
@@ -145,8 +155,8 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
           <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center">
           <button class="pill" onClick="{{toggleUk}}" aria-pressed="{{ukOnAttr}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 16px 0 10px; border-radius: 99px; display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1.5px solid rgba(46,42,34,.14); background: rgba(255,252,245,.8)"><span style="position: relative; width: 38px; height: 22px; border-radius: 99px; background: {{ukTrack}}; transition: background .3s"><span style="position: absolute; top: 3px; left: {{ukKnob}}px; width: 16px; height: 16px; border-radius: 99px; background: #FFFCF5; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s cubic-bezier(.3,1.4,.5,1)"></span></span>UK average</button>
           <div role="group" aria-label="Chart type" style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(46,42,34,.06)">
-            <button class="pill" onClick="{{showPie}}" aria-pressed="{{pieOn}}" style="all: unset; box-sizing: border-box; min-height: 40px; padding: 0 16px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: {{pieBg}}; color: {{pieInk}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle></svg>Donut</button>
-            <button class="pill" onClick="{{showBars}}" aria-pressed="{{barsOn}}" style="all: unset; box-sizing: border-box; min-height: 40px; padding: 0 16px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: {{barsBg}}; color: {{barsInk}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h6"></path></svg>Bars</button>
+            <button class="pill" onClick="{{showPie}}" aria-pressed="{{pieOn}}" style="all: unset; box-sizing: border-box; min-height: 40px; padding: 0 16px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: {{pieBg}}; color: {{pieInk}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle></svg>Donut</button>
+            <button class="pill" onClick="{{showBars}}" aria-pressed="{{barsOn}}" style="all: unset; box-sizing: border-box; min-height: 40px; padding: 0 16px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: {{barsBg}}; color: {{barsInk}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h6"></path></svg>Bars</button>
           </div>
           </div>
         </div>
@@ -182,7 +192,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
             <ol style="list-style: none; margin: 0; padding: 0; position: absolute; left: 11%; right: 1%; top: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px">
               <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
                 <li style="position: relative">
-                  <a class="bush" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="position: absolute; inset: 0; display: block; color: #2E2A22; text-decoration: none; border-radius: 14px">
+                  <a class="bush" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="position: absolute; inset: 0; display: block; color: #2E2A22; text-decoration: none; border-radius: 12px">
                     <span class="num" style="position: absolute; left: {{c.youLeft}}%; width: {{c.youW}}%; bottom: {{c.labelBottom}}%; text-align: center; font-size: 15px; font-weight: 800; white-space: nowrap; opacity: {{c.bushS}}; transition: opacity .4s {{c.bushDelay}}, left .5s, width .5s">{{c.valueLabel}}</span>
                     <span class="num" style="position: absolute; left: {{c.ukLeft}}%; width: {{c.ukW}}%; bottom: {{c.ukLabelBottom}}%; text-align: center; font-size: 13px; font-weight: 800; color: #6B4A12; white-space: nowrap; opacity: {{c.ukAlpha}}; transition: opacity .5s .3s">{{c.ukLabel}}</span>
                     <span style="position: absolute; left: {{c.youLeft}}%; bottom: 16.7%; width: {{c.youW}}%; height: {{c.bushH}}%; border-radius: 14px 14px 4px 4px; background: {{c.color}}; transform: scaleY({{c.bushS}}); transform-origin: 50% 100%; transition: transform 1s cubic-bezier(.34,1.35,.5,1) {{c.bushDelay}}, left .5s cubic-bezier(.3,1.2,.5,1), width .5s cubic-bezier(.3,1.2,.5,1)"></span>
@@ -197,7 +207,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
         </div>
         <ol class="hbars {{chartMode}}" style="list-style: none; margin: 20px 0 0; padding: 0; flex-direction: column; gap: 6px">
           <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
-            <li><a href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="display: block; padding: 10px 6px; border-radius: 14px; color: #2E2A22; text-decoration: none">
+            <li><a href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="display: block; padding: 10px 6px; border-radius: 12px; color: #2E2A22; text-decoration: none">
               <span style="display: flex; align-items: center; gap: 10px">
                 <span style="width: 12px; height: 12px; border-radius: 4px; flex: none; background: {{c.color}}"></span>
                 <span style="flex: 1; font-weight: 700; font-size: 16px">{{c.label}}</span>
@@ -217,10 +227,10 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
         <section style="position: relative; overflow: hidden; padding: 26px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6">
           <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -40px; bottom: -46px; opacity: .08; transform: rotate(-10deg)" aria-hidden="true"><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg>
-          <div style="position: relative; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #E8C88A">Your biggest opportunity</div>
+          <div style="position: relative; font-size: 13px; font-weight: 700; color: #E8C88A">Your biggest opportunity</div>
           <h3 class="serif" style="margin: 10px 0 8px; font-size: 26px; line-height: 1.15; font-weight: 800">Keep red meat to one or two days a week</h3>
           <div class="num" style="font-weight: 800; font-size: 38px">−1,066 <span style="font-family: Karla, sans-serif; font-size: 14px; font-weight: 500; color: #DCE3D3">kg a year</span></div>
-          <a class="cta" href="Phone-Category.dc.html" onClick="{{goMeals}}" style="margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-weight: 700; font-size: 15px; text-decoration: none">See how<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+          <a class="cta" href="Phone-Category.dc.html" onClick="{{goMeals}}" style="margin-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-weight: 700; font-size: 15px; text-decoration: none">See how<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
         </section>
         <section style="padding: 24px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
           <h3 class="serif" style="margin: 0; font-size: 20px; font-weight: 600">Biggest three</h3>
@@ -232,12 +242,12 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
     <section style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
       <svg width="240" height="240" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 24%; top: -50px; opacity: .07; transform: rotate(-10deg)" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>
       <div style="position: relative; flex: 1 1 460px; min-width: 0">
-        <div style="font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #3F5B3A">Support CO2 Counter</div>
+        <div style="font-size: 13px; font-weight: 700; letter-spacing: .1em; color: #3F5B3A">Support CO2 Counter</div>
         <h2 class="num" style="margin: 8px 0 0; font-size: 32px; line-height: 1.15; font-weight: 800">Free for everyone, kept going by supporters</h2>
         <p style="margin: 10px 0 0; max-width: 620px; font-size: 17px; line-height: 1.6; color: #3A362D">CO2 Counter has no ads and never sells your data. If it’s helped you, you can chip in £2 a year to cover running costs and new features. Cancel any time.</p>
       </div>
       <div style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px">
-        <a class="cta" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00" style="min-height: 52px; padding: 0 26px; border-radius: 99px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>Support for £2 a year</a>
+        <a class="cta" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00" style="min-height: 52px; padding: 0 26px; border-radius: 99px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg>Support for £2 a year</a>
         <span style="font-size: 13px; color: #5C5649">Secure payment by Stripe. Optional: everything stays free either way.</span>
       </div>
     </section>
@@ -247,6 +257,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <span style="display: flex; gap: 20px"><a href="Phone-Results.dc.html">How we calculate</a><a href="Phone-Results.dc.html">Privacy</a><a href="Phone-Results.dc.html">Terms</a></span>
     </footer>
   </div>
+  <nav class="tabbar" aria-label="App"><a href="Phone-SurveyDone.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Phone-Results.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Phone-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Phone-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Phone-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"autoplay":{"editor":"boolean","default":true,"section":"Motion"},"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":390,"height":844}}'>

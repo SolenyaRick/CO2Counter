@@ -60,6 +60,14 @@ move to their own swipeable row, type and padding shrink, and multi-column
 grids collapse). `Phone-*.dc.html` are the same pages shown at 390 px on the
 canvas, linked to each other.
 
+Shared style rules (applied to every Glass v2 page): three corner radii
+(12px small, 18px medium, 28px large, plus pills), one 1,160px page width,
+moss `#3F5B3A` with deep green `#2B3F28`, 20px glass blur, 1.9px icon
+strokes (2.2px for small arrows), headlines at 64px on public pages and
+48px on app pages, spaced capitals only on small labels, honey for actions
+and sky `#7FA3AE` for "waiting". On phones a bottom tab bar (Survey,
+Results, Friends, Habits, Account) replaces the top links.
+
 Palette: oat `#EFE9DC`, moss `#3F5B3A`, sage `#8FA58A`, honey `#D9A441`,
 clay `#B8653D`. Type: Bricolage Grotesque (headings and numbers), Karla (body).
 Habits are shown as "coming soon".

@@ -18,8 +18,8 @@ nav[aria-label="Main"]{gap:10px!important}
 nav[aria-label="Main"]>:nth-child(2){order:3;flex:1 1 100%;overflow-x:auto;justify-content:space-between;scrollbar-width:none}
 nav[aria-label="Main"]>:nth-child(2) a,nav[aria-label="Main"]>:nth-child(2)>span{padding:8px 12px!important;font-size:14px!important;white-space:nowrap}
 [style*="padding: 20px 32px"]{padding:14px 16px 40px!important}
-header[style]{padding:22px!important;border-radius:24px!important}
-section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:22px!important}
+header[style]{padding:22px!important;border-radius:28px!important}
+section[style*="padding: 2"],section[style*="padding: 3"],section[style*="padding: 40px"],aside[style*="padding: 2"],.card{padding:20px!important;border-radius:18px!important}
 li.q{padding:18px!important;grid-template-columns:40px minmax(0,1fr)!important;gap:12px!important}
 .qn{width:40px!important;height:40px!important;font-size:19px!important;border-radius:12px!important}
 h1{font-size:34px!important;line-height:1.08!important}
@@ -27,7 +27,7 @@ h2[style*="font-size: 2"],h2[style*="font-size: 3"]{font-size:23px!important}
 h3[style*="font-size: 2"]{font-size:19px!important}
 [style*="font-size: 50px"],[style*="font-size: 52px"],[style*="font-size: 54px"],[style*="font-size: 56px"],[style*="font-size: 60px"],[style*="font-size: 64px"],[style*="clamp(56px"],[style*="clamp(60px"]{font-size:40px!important}
 [style*="font-size: 44px"],[style*="font-size: 42px"],[style*="font-size: 40px"]{font-size:32px!important}
-p[style*="font-size: 19px"],p[style*="font-size: 20px"]{font-size:17px!important}
+p[style*="font-size: 18px"],p[style*="font-size: 20px"]{font-size:17px!important}
 [style*="grid-template-columns: repeat(3, minmax(0, 1fr))"],[style*="grid-template-columns: repeat(4, minmax(0, 1fr))"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],section[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"]{grid-template-columns:1fr!important}
 [style*="minmax(120px, 190px)"]{grid-template-columns:36px 84px minmax(0,1fr) 62px!important;gap:10px!important}
@@ -43,14 +43,14 @@ ul[style*="grid-template-columns: repeat(2, minmax(0, 1fr))"],ol[style*="grid-te
 [style*="text-align: right"][style*="position: relative"]{text-align:left!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
-a{color:#3F5B3A}a:hover{color:#2B4128}
+a{color:#3F5B3A}a:hover{color:#2B3F28}
 .hd{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
 .num{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
 .card{padding:30px;border-radius:28px;background:rgba(255,252,245,.65);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
 .tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
 .tab{transition:background .2s,color .2s}
 .tab:hover{background:rgba(255,252,245,.8)}
-.btn{all:unset;box-sizing:border-box;min-height:52px;padding:0 22px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .25s,color .25s}
+.btn{all:unset;box-sizing:border-box;min-height:52px;padding:0 22px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .2s cubic-bezier(.3,1.6,.5,1),background .25s,color .25s}
 .btn:active{transform:scale(.96)}
 .btn:focus-visible,.tab:focus-visible{outline:2px solid #3F5B3A;outline-offset:2px}
 .bar{transition:width 1.3s cubic-bezier(.2,.85,.25,1)}
@@ -61,6 +61,17 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
 .d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}.d4{animation-delay:.24s}
 .drive{transition:left 2s cubic-bezier(.45,0,.2,1)}
 .ring{transition:stroke-dasharray 1.4s cubic-bezier(.2,.8,.2,1)}
+.flat{padding:0;background:none;border:0}
+/* phone tab bar */
+.tabbar{display:none}
+@media (max-width: 640px){
+.tabbar{display:flex;position:fixed;left:12px;right:12px;bottom:12px;z-index:60;gap:4px;padding:6px;border-radius:24px;background:rgba(255,252,245,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(46,42,34,.1);box-shadow:0 12px 30px rgba(46,42,34,.16)}
+.tabbar a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 7px;border-radius:18px;color:#5C5649;font:700 11px Karla,system-ui,sans-serif;text-decoration:none}
+.tabbar a.on{background:#3F5B3A;color:#F6F1E6}
+nav[aria-label="Main"]>:nth-child(2){display:none!important}
+nav[aria-label="Main"] a[aria-label="Account"]{display:none!important}
+body{padding-bottom:88px}
+}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </helmet>
@@ -68,11 +79,11 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
   <div style="position: absolute; right: -10%; top: -220px; width: 660px; height: 660px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
   <div style="position: absolute; left: -8%; top: 640px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
 
-  <div style="position: relative; max-width: 1120px; margin: 0 auto; padding: 20px 32px 64px">
+  <div style="position: relative; max-width: 1160px; margin: 0 auto; padding: 20px 32px 64px">
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
       <a href="Glass2-Intro.dc.html" style="display: flex; align-items: center; gap: 10px; color: #2E2A22; text-decoration: none">
         <svg width="32" height="32" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"></rect><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>
-        <span class="hd" style="font-weight: 800; font-size: 19px">CO2 Counter</span>
+        <span class="hd" style="font-weight: 800; font-size: 18px">CO2 Counter</span>
       </a>
       <span style="display: flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(255,252,245,.55); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <a href="Glass2-SurveyDone.dc.html" style="padding: 9px 18px; border-radius: 99px; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">Survey</a>
@@ -98,7 +109,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       </div>
       <div style="position: relative; flex: 1 1 480px; min-width: 0">
         <span style="display: inline-block; padding: 5px 12px; border-radius: 99px; background: #3F5B3A; color: #F6F1E6; font-size: 13px; font-weight: 700">{{g.tag}}</span>
-        <h1 class="hd" style="margin: 14px 0 0; font-size: 52px; line-height: 1.04; font-weight: 800">{{g.title}}</h1>
+        <h1 class="hd" style="margin: 14px 0 0; font-size: 48px; line-height: 1.04; font-weight: 800">{{g.title}}</h1>
         <p style="margin: 14px 0 0; max-width: 600px; font-size: 20px; line-height: 1.6; color: #3A362D">{{g.lede}}</p>
       </div>
       <div style="position: relative; display: flex; flex-direction: column; align-items: flex-end; gap: 14px">
@@ -114,7 +125,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
     <section class="card rise d1" style="margin-top: 20px">
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
         <div>
-          <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">Side by side</div>
+          <div style="font-size: 14px; font-weight: 700; color: #3F5B3A">Side by side</div>
           <h2 class="hd" style="margin: 6px 0 0; font-size: 28px; font-weight: 800">{{g.vsTitle}}</h2>
         </div>
         <div class="num" style="padding: 10px 18px; border-radius: 18px; background: rgba(217,164,65,.2); color: #5A3E0E; font-size: 26px; font-weight: 800">{{g.headline}}</div>
@@ -122,8 +133,8 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <ul style="list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
         <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
           <li style="display: grid; grid-template-columns: 48px minmax(120px, 190px) minmax(0, 1fr) 110px; gap: 16px; align-items: center">
-            <span style="width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: {{r.tile}}; color: {{r.ink}}">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg>
+            <span style="width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: {{r.tile}}; color: {{r.ink}}">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg>
             </span>
             <span style="font-weight: 700; font-size: 17px">{{r.label}}</span>
             <span style="height: 22px; border-radius: 99px; background: rgba(46,42,34,.06); overflow: hidden"><span class="bar" style="display: block; height: 22px; width: {{r.w}}%; border-radius: 99px; background: {{r.color}}; transition-delay: {{r.delay}}"></span></span>
@@ -134,11 +145,11 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <p style="margin: 18px 0 0; font-size: 14px; color: #5C5649">{{g.vsSource}}</p>
     </section>
 
-    <section class="card rise d2" style="margin-top: 20px">
-      <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3F5B3A">What that looks like</div>
+    <section class="rise d2 flat" style="margin-top: 40px">
+      <div style="font-size: 14px; font-weight: 700; color: #3F5B3A">What that looks like</div>
       <h2 class="hd" style="margin: 6px 0 0; font-size: 28px; font-weight: 800">{{g.eqTitle}}</h2>
       <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px">
-        <div style="grid-column: span 2; min-width: 0; padding: 22px; border-radius: 22px; background: rgba(63,91,58,.08)">
+        <div style="grid-column: span 2; min-width: 0; padding: 22px; border-radius: 18px; background: rgba(63,91,58,.08)">
           <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><span style="font-weight: 700; font-size: 17px">Trees needed to soak it up</span><span class="num" style="font-size: 26px; font-weight: 800; color: #3F5B3A">{{eq.trees}}</span></div>
           <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px">
             <sc-for list="{{treeIcons}}" as="ti" hint-placeholder-count="18">
@@ -147,22 +158,22 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
           </div>
           <p style="margin: 10px 0 0; font-size: 14px; color: #4A453A">A mature tree absorbs about 20 kg of CO₂ a year.</p>
         </div>
-        <div style="padding: 22px; border-radius: 22px; background: rgba(217,164,65,.14)">
+        <div style="padding: 22px; border-radius: 18px; background: rgba(217,164,65,.14)">
           <div style="font-weight: 700; font-size: 17px">Share of the 1.5°C budget</div>
           <div style="margin-top: 10px; display: flex; align-items: center; gap: 16px">
             <svg width="96" height="96" viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="16" fill="none" stroke="rgba(46,42,34,.08)" stroke-width="7"></circle><circle class="ring" cx="21" cy="21" r="16" fill="none" stroke="#D9A441" stroke-width="7" stroke-linecap="round" pathLength="100" stroke-dasharray="{{eq.ring}}" transform="rotate(-90 21 21)"></circle></svg>
             <div><div class="num" style="font-size: 34px; font-weight: 800">{{eq.budget}}</div><div style="font-size: 14px; color: #4A453A">of one person’s yearly 2.5 t</div></div>
           </div>
         </div>
-        <div style="grid-column: span 2; min-width: 0; padding: 22px; border-radius: 22px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)">
+        <div style="grid-column: span 2; min-width: 0; padding: 22px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)">
           <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px"><span style="font-weight: 700; font-size: 17px">The same as driving</span><span class="num" style="font-size: 26px; font-weight: 800">{{eq.km}} km</span></div>
           <div style="position: relative; margin-top: 18px; height: 34px; border-radius: 99px; background: #5C5649">
             <span style="position: absolute; left: 16px; right: 16px; top: 16px; border-top: 2px dashed rgba(246,241,230,.6)"></span>
-            <span class="drive" style="position: absolute; top: 5px; left: {{eq.carLeft}}%; width: 40px; height: 24px; border-radius: 8px; background: #E8C88A; display: grid; place-items: center"><svg width="22" height="16" viewBox="0 0 24 18" fill="none" stroke="#2E2A22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12V9l2.5-5h15L22 9v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z"></path><circle cx="6.5" cy="14" r="2"></circle><circle cx="17.5" cy="14" r="2"></circle></svg></span>
+            <span class="drive" style="position: absolute; top: 5px; left: {{eq.carLeft}}%; width: 40px; height: 24px; border-radius: 12px; background: #E8C88A; display: grid; place-items: center"><svg width="22" height="16" viewBox="0 0 24 18" fill="none" stroke="#2E2A22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12V9l2.5-5h15L22 9v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z"></path><circle cx="6.5" cy="14" r="2"></circle><circle cx="17.5" cy="14" r="2"></circle></svg></span>
           </div>
           <p style="margin: 10px 0 0; font-size: 14px; color: #4A453A">{{eq.driveNote}}</p>
         </div>
-        <div style="padding: 22px; border-radius: 22px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)">
+        <div style="padding: 22px; border-radius: 18px; background: rgba(255,252,245,.8); border: 1px solid rgba(46,42,34,.08)">
           <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-weight: 700; font-size: 17px">New phones</span><span class="num" style="font-size: 26px; font-weight: 800">{{eq.phones}}</span></div>
           <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px">
             <sc-for list="{{phoneIcons}}" as="pi" hint-placeholder-count="6">
@@ -175,14 +186,14 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
     </section>
 
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
-      <section class="card rise d3" style="flex: 999 1 560px; min-width: 0">
+      <section class="rise d3 flat" style="flex: 999 1 560px; min-width: 0">
         <h2 class="hd" style="margin: 0; font-size: 28px; font-weight: 800">How to do it</h2>
         <ol style="list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px">
           <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
-            <li style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 18px; padding: 20px; border-radius: 20px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.07)">
-              <span class="num" style="width: 52px; height: 52px; border-radius: 16px; background: {{s.badge}}; color: {{s.badgeInk}}; display: grid; place-items: center; font-weight: 800; font-size: 24px">{{s.n}}</span>
+            <li style="display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 18px; padding: 20px; border-radius: 18px; background: rgba(255,252,245,.85); border: 1px solid rgba(46,42,34,.07)">
+              <span class="num" style="width: 52px; height: 52px; border-radius: 18px; background: {{s.badge}}; color: {{s.badgeInk}}; display: grid; place-items: center; font-weight: 800; font-size: 24px">{{s.n}}</span>
               <div>
-                <h3 class="hd" style="margin: 0; font-size: 21px; font-weight: 700; line-height: 1.25">{{s.title}}</h3>
+                <h3 class="hd" style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1.25">{{s.title}}</h3>
                 <p style="margin: 6px 0 0; font-size: 17px; line-height: 1.6; color: #3A362D">{{s.body}}</p>
               </div>
             </li>
@@ -191,14 +202,14 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       </section>
       <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
         <section class="card" style="background: rgba(217,164,65,.16); border-color: rgba(217,164,65,.35)">
-          <div style="font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6B4A12">Good to know</div>
+          <div style="font-size: 14px; font-weight: 700; color: #6B4A12">Good to know</div>
           <p class="hd" style="margin: 10px 0 0; font-size: 20px; line-height: 1.4; font-weight: 600">{{g.fact}}</p>
         </section>
         <section class="card">
           <h2 class="hd" style="margin: 0; font-size: 20px; font-weight: 800">More ways to cut {{g.short}}</h2>
           <ul style="list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px">
             <sc-for list="{{others}}" as="o" hint-placeholder-count="2">
-              <li><a href="Glass2-Category.dc.html" onClick="{{toCategory}}" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(63,91,58,.07); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">{{o}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a></li>
+              <li><a href="Glass2-Category.dc.html" onClick="{{toCategory}}" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: rgba(63,91,58,.07); color: #2E2A22; font-weight: 700; font-size: 16px; text-decoration: none">{{o}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a></li>
             </sc-for>
           </ul>
         </section>
@@ -210,6 +221,7 @@ a{color:#3F5B3A}a:hover{color:#2B4128}
       <button class="btn" onClick="{{next}}" style="background: #3F5B3A; color: #F6F1E6">Next guide: {{nextLabel}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
     </div>
   </div>
+  <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"parallax":{"editor":"range","min":0,"max":2,"step":0.1,"default":1,"section":"Motion"},"$preview":{"width":1440,"height":2050}}'>
