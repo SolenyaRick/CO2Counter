@@ -1320,9 +1320,13 @@
   const spinner = '<div class="center-pad"><div class="spinner"></div></div>';
 
   function setNav(path) {
-    document.querySelectorAll("#nav a, #nav-avatar").forEach((a) => {
-      a.classList.toggle("active", a.getAttribute("data-route") === path);
+    document.querySelectorAll("#nav a, #nav-avatar, #tabbar a").forEach((a) => {
+      const on = a.getAttribute("data-route") === path;
+      a.classList.toggle("active", on);
+      if (a.closest("#tabbar")) on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
     });
+    const tabAcc = document.querySelector('#tabbar a[data-route="/account"] span');
+    if (tabAcc) tabAcc.textContent = currentUser ? "Account" : "Sign in";
     const av = document.getElementById("nav-avatar");
     if (av) {
       const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || currentUser?.email || "";
@@ -1437,7 +1441,7 @@
         '<a class="btn btn-outline btn-block" href="#/results">See results ' + icon("arrowRight") + "</a>") +
       "</section>" +
       '<p class="sm muted done-note">Either way, your current results stay in your history, and you can cancel before you finish.</p>' +
-      '<div class="cat-grid"><section class="glass guide-card cat-col"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
+      '<div class="cat-grid"><section class="guide-card flat cat-col"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
       '<h2 class="display">Your last answers</h2><span class="muted">Change just one step</span></div><div class="answer-tiles">' +
       STEPS.map((st, i) => {
         const lines = answerSummary(st.key, survey);
@@ -1581,7 +1585,7 @@
       INTRO_STEPS.map(
         ([ic, t, b, soon], i) =>
           '<li class="glass mission-step" style="--i:' + i + '"><span class="mission-dot display">' + (i + 1) + '</span><span class="mission-icon">' + icon(ic) + "</span>" +
-          '<h3 class="display">' + t + "</h3><p>" + b + "</p>" + (soon ? '<span class="nav-soon">Coming soon</span>' : "") + "</li>"
+          '<h3 class="display">' + t + "</h3><p>" + b + "</p>" + (soon ? '<span class="nav-soon">Daily habits soon</span>' : "") + "</li>"
       ).join("") +
       "</ol></section>" +
       '<section class="intro-split"><div><h2 class="display">What we look at</h2><p>Six parts of everyday life, including one most calculators miss: where your money sits.</p><ul class="intro-chips">' +
@@ -2726,8 +2730,8 @@
       (tip.saving > 0.5 ? '<p class="xs muted mt-3">Realistic: ' + esc(tip.realisticLabel || tip.title) + ".</p>" : "") +
       "</section>" +
       (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
-      '<section class="cat-plan"><h3 class="display">Build the habit</h3><p class="sm">Habit tracking is coming soon, so you can tick these off week by week.</p>' +
-      '<span class="soon-pill">Coming soon</span></section></aside></div>' +
+      '<section class="cat-plan"><h3 class="display">Build the habit</h3><p class="sm">The 7 Acts are live in My Habits, and daily habit tracking is coming next.</p>' +
+      '<a class="plan-go" href="#/habits">Open My Habits ' + icon("arrowRight") + "</a></section></aside></div>" +
       '<div class="cat-steps"><a class="cat-step" href="#/explainer/' + prev.key + '">' + icon("chevronLeft") +
       '<span><small>Previous</small><b>' + esc(prev.label) + "</b></span></a>" +
       '<a class="cat-step next" href="#/explainer/' + next.key + '"><span><small>Next</small><b>' + esc(next.label) + "</b></span>" + icon("chevronRight") + "</a></div></div>";
@@ -2992,7 +2996,7 @@
         .join("") +
       '</ul><p class="xs muted mt-3">' + esc(g.source) + "</p></section>" +
       (eqKg > 0.5
-        ? '<section class="glass guide-card rise" style="animation-delay:.12s"><span class="eyebrow">What that looks like</span><h2 class="display">' +
+        ? '<section class="guide-card flat rise" style="animation-delay:.12s"><span class="eyebrow">What that looks like</span><h2 class="display">' +
           (g.eqFlights ? "What your " + kgFmt(eqKg) + " kg of flying a year looks like" : "What −" + kgFmt(eqKg) + " kg a year looks like") + "</h2>" +
           '<div class="eq-grid">' +
           '<div class="eq"><div class="row-between"><span>Trees needed to soak it up</span><b class="display tnum">' + kgFmt(eq.trees) + '</b></div><div class="eq-icons green-dark">' + repeat(eq.trees, "tree", 18) + '</div><p class="xs muted">A mature tree absorbs about 20 kg of CO₂ a year.</p></div>' +
@@ -3001,7 +3005,7 @@
           '<div class="eq"><div class="row-between"><span>New phones</span><b class="display tnum">' + kgFmt(eq.phones) + '</b></div><div class="eq-icons">' + repeat(eq.phones, "phone", 8) + '</div><p class="xs muted">Making and charging one phone for a year: about 61 kg.</p></div>' +
           "</div></section>"
         : "") +
-      '<div class="cat-grid"><section class="glass guide-card cat-col"><h2 class="display">How to do it</h2><ol class="howto">' +
+      '<div class="cat-grid"><section class="guide-card flat cat-col"><h2 class="display">How to do it</h2><ol class="howto">' +
       g.steps.map((st, i) => '<li><span class="num-badge display">' + (i + 1) + '</span><div><h3 class="display">' + esc(st[0]) + "</h3><p>" + esc(st[1]) + "</p></div></li>").join("") +
       "</ol></section>" +
       '<aside class="cat-aside">' + (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
@@ -3684,7 +3688,7 @@
     // Seven ring segments with small gaps, starting at the top.
     const R = 96, C = 120, gap = 9;
     const pt = (deg) => { const r = ((deg - 90) * Math.PI) / 180; return [C + R * Math.cos(r), C + R * Math.sin(r)]; };
-    const COL = { done: "#3F5B3A", wait: "#D9A441", todo: "transparent" };
+    const COL = { done: "#3F5B3A", wait: "#7FA3AE", todo: "transparent" };
     const segs = acts.map((a, i) => {
       const a0 = i * (360 / 7) + gap / 2, a1 = (i + 1) * (360 / 7) - gap / 2;
       const [x0, y0] = pt(a0), [x1, y1] = pt(a1), [tx, ty] = pt((i + 0.5) * (360 / 7));
@@ -3694,7 +3698,7 @@
       return {
         path: '<path d="' + d + '" fill="none" stroke="rgba(46,42,34,.08)" stroke-width="22" stroke-linecap="round"/>' +
           '<path class="' + (animate ? "hb-seg" : "") + '" d="' + d + '" fill="none" stroke="' + COL[st] + '" stroke-width="22" stroke-linecap="round" style="--len:' + len + ";stroke-dasharray:" + len + ";animation-delay:" + (0.3 + i * 0.12).toFixed(2) + 's"/>',
-        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#8A8273" : st === "wait" ? "#2E2A22" : "#F6F1E6") + '">' + a.n + "</text>",
+        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#8A8273" : st === "wait" ? "#14262B" : "#F6F1E6") + '">' + a.n + "</text>",
       };
     });
     const ring =
@@ -4541,7 +4545,7 @@
     motivate: "M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .7 3.5 2.8 3.5 6",
   };
   const svgPath = (d, size, extra) =>
-    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (extra || "") + '><path d="' + d + '"></path></svg>';
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (extra || "") + '><path d="' + d + '"></path></svg>';
   const leafMark = (size) =>
     '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>';
   const TONES = { leaf: ["#3F5B3A", "#F6F1E6"], amber: ["#E8C88A", "#2E2A22"], plum: ["#6F4E63", "#F6F1E6"], sky: ["#7FA3AE", "#14262B"] };
@@ -5712,7 +5716,7 @@
     return (
       '<div class="container friends-v2 fr-page">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + invite + manage + groupFormsHtml() + "</aside>" +
-      '<main class="fr-feed">' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
   }
 
