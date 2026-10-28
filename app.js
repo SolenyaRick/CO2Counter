@@ -5313,7 +5313,7 @@
         sb.rpc("my_cheers").then((x) => x, () => ({ error: true })),
       ]);
       friends.feedReady = !!(feed && !feed.error && Array.isArray(feed.data));
-      friends.feed = friends.feedReady ? feed.data : [];
+      friends.feed = friends.feedReady ? feed.data.filter((x) => x && x.post_key && x.at && !isNaN(new Date(x.at))) : [];
       friends.cheersGot = (cheers && !cheers.error && Number(cheers.data)) || 0;
       await loadGroups();
       const list = rows || [];
