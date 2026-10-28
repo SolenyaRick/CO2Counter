@@ -28,7 +28,10 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "26 October 2026";
+  const LEGAL_UPDATED = "28 October 2026";
+  // Bump when the privacy policy changes in a way people should be told
+  // about: signed-in accounts on an older version see a one-time notice.
+  const PRIVACY_VERSION = "2026-10-28";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -5803,6 +5806,17 @@
             "<p>We don't sell your data, show adverts, or use tracking or analytics cookies.</p>",
         ],
         [
+          "Anonymised data",
+          "<p>When you create an account, you agree that we can use anonymised data from CO2 Counter. This is what it means:</p>" +
+            ul([
+              "<strong>What it is</strong>: totals and averages worked out across many people, such as the average footprint in a group, a role or an area of life, or how many people made a switch. It never includes your name, email, username or answers on their own, and it can't be traced back to you.",
+              "<strong>How we use it</strong>: to improve CO2 Counter, to show overall figures in the app, and to publish or share summaries, for example with charities, researchers or health organisations working on climate and health.",
+              "<strong>The legal basis</strong>: our legitimate interests in improving the service and helping people cut emissions. Once data is truly anonymised it is no longer personal data. You can object at any time by emailing " + contactLink() + ".",
+              "<strong>Research is separate</strong>: sharing <em>your own</em> survey answers (without your name, email or username) with research partners only happens if you tick the optional research box, at sign-up or on your Account page. You can untick it at any time.",
+            ]) +
+            "<p>We record which version of this policy you agreed to and when, so we can show what you were told.</p>",
+        ],
+        [
           "Who we share it with",
           "<p>Only the providers that run the service for us:</p>" +
             ul([
@@ -6315,11 +6329,12 @@
         ? passwordField("auth-password", "Password (at least " + MIN_PASSWORD + " characters)", "new-password") +
           passwordField("auth-password2", "Retype password", "new-password", true)
         : passwordField("auth-password", "Password", "current-password")) +
+      (signup
+        ? '<label class="auth-check"><input type="checkbox" id="auth-agree"' + (ui.authAgree ? " checked" : "") + ' /><span>I agree to the <a class="link-btn" href="/terms/" target="_blank" rel="noopener">Terms</a> and have read the <a class="link-btn" href="/privacy/" target="_blank" rel="noopener">Privacy policy</a>, including how we use anonymised totals.</span></label>' +
+          '<label class="auth-check optional"><input type="checkbox" id="auth-research"' + (ui.authResearch ? " checked" : "") + ' /><span><b>Optional:</b> share my survey answers for research, without my name, email or username. You can change this any time on your Account page.</span></label>'
+        : "") +
       authNotes() +
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
-      (signup
-        ? '<p class="xs muted center">By creating an account you agree to our <a class="link-btn" href="/terms/">Terms</a> and <a class="link-btn" href="/privacy/">Privacy policy</a>.</p>'
-        : "") +
       '<div class="chip-row auth-links">' +
       (signup
         ? '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Have an account? Sign in</button>'
@@ -6394,7 +6409,18 @@
           ui.authErr = problem;
           return render();
         }
-        const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: authRedirectUrl(), data: { username } } });
+        ui.authAgree = document.getElementById("auth-agree").checked;
+        ui.authResearch = document.getElementById("auth-research").checked;
+        if (!ui.authAgree) {
+          ui.authErr = "Please tick the box to agree to the Terms and Privacy policy.";
+          return render();
+        }
+        // Saved to the profile by the sign-up trigger: which policy they
+        // agreed to (and when), and their research choice.
+        const { data, error } = await sb.auth.signUp({
+          email, password,
+          options: { emailRedirectTo: authRedirectUrl(), data: { username, privacy_version: PRIVACY_VERSION, research_opt_in: ui.authResearch } },
+        });
         // The database refuses a username someone has just taken.
         if (error && /database error saving new user|duplicate key|unique constraint|username/i.test(error.message || "")) {
           ui.authErr = "That username was just taken. Please choose another.";
@@ -6476,7 +6502,30 @@
 
   // Accounts made before usernames existed are asked to pick one. If the
   // username was given at sign-up but never reached the profile, save it.
+  // Accounts that agreed to an older privacy policy (or signed up before we
+  // recorded it) see a one-time notice; OK records the new version.
+  async function checkPrivacyVersion() {
+    ui.privacyNotice = false;
+    if (!currentUser || !sb) return;
+    try {
+      const { data, error } = await sb.from("profiles").select("privacy_version").eq("id", currentUser.id).maybeSingle();
+      if (error || !data) return; // not set up in the database yet
+      if (data.privacy_version === PRIVACY_VERSION) return;
+      // Agreed at sign-up but the trigger didn't save it: save it now.
+      if ((currentUser.user_metadata || {}).privacy_version === PRIVACY_VERSION) return acceptPrivacy(true);
+      ui.privacyNotice = true;
+    } catch (e) {}
+  }
+  async function acceptPrivacy(quiet) {
+    ui.privacyNotice = false;
+    if (!quiet) render();
+    try {
+      await sb.from("profiles").update({ privacy_version: PRIVACY_VERSION, privacy_accepted_at: new Date().toISOString() }).eq("id", currentUser.id);
+    } catch (e) {}
+  }
+
   async function ensureUsername() {
+    checkPrivacyVersion().then(() => ui.privacyNotice && render());
     ui.needUsername = false;
     if (!currentUser || !sb) return;
     try {
@@ -6748,6 +6797,11 @@
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
     setNav(parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
+    if (ui.privacyNotice && currentUser && html !== spinner && path !== "/privacy") {
+      html =
+        '<div class="flash privacy-note" role="status">' + icon("info") + "<span>We've updated our privacy policy, including how we use anonymised totals. " +
+        '<a class="link-btn" href="/privacy/">Read it</a></span><button type="button" class="btn btn-green btn-sm" data-action="accept-privacy">OK</button></div>' + html;
+    }
     if (ui.flash && html !== spinner) {
       html =
         '<div class="flash" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
@@ -7307,6 +7361,7 @@
         render();
       }
     },
+    "accept-privacy": () => acceptPrivacy(),
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
       render();

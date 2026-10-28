@@ -4782,3 +4782,8 @@ a.fr-story-av:hover { transform: translateY(-3px); }
   .sw-offers::-webkit-scrollbar { display: none; }
   .sw-offers > * { flex: 0 0 76%; scroll-snap-align: start; padding: 14px; gap: 8px; border-radius: 18px; }
 }
+.auth-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: #3A362D; cursor: pointer; }
+.auth-check input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: #3F5B3A; }
+.auth-check.optional { color: #5C5649; font-size: 13px; }
+.privacy-note { align-items: center; }
+.privacy-note .btn { flex: none; }

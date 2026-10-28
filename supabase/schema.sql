@@ -2230,3 +2230,39 @@ as $$
 $$;
 revoke all on function public.my_cheers() from public;
 grant execute on function public.my_cheers() to authenticated;
+
+-- ---------- Privacy policy acceptance (October 2026) ----------
+-- Sign-up asks people to agree to the Terms and Privacy policy (with a
+-- separate, optional research box). The app sends both as sign-up metadata
+-- and the trigger below saves them, with the time, to the profile.
+-- Existing accounts record their acceptance from the one-time notice.
+
+alter table public.profiles add column if not exists privacy_version text;
+alter table public.profiles add column if not exists privacy_accepted_at timestamptz;
+alter table public.profiles add column if not exists research_opt_in boolean not null default false;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  wanted text := nullif(trim(new.raw_user_meta_data ->> 'username'), '');
+  agreed text := nullif(left(trim(new.raw_user_meta_data ->> 'privacy_version'), 20), '');
+begin
+  insert into public.profiles (id, display_name, username, privacy_version, privacy_accepted_at, research_opt_in)
+  values (
+    new.id, coalesce(wanted, ''), wanted, agreed,
+    case when agreed is not null then now() end,
+    coalesce(new.raw_user_meta_data ->> 'research_opt_in', '') = 'true'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
