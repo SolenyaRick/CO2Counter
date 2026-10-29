@@ -4821,7 +4821,7 @@
       others
         .map(
           (a, i) =>
-            '<section class="sw-feat' + ((areas.length + i) % 2 ? " flip" : "") + (currentUser ? " sw-feat-slim" : "") + '" id="switch-' + a.key + '"><div class="sw-feat-in">' +
+            '<section class="sw-feat' + ((areas.length + i) % 2 ? " flip" : "") + '" id="switch-' + a.key + '"><div class="sw-feat-in">' +
             '<div class="sw-panel" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 260, ' class="sw-panel-bg"') +
             '<div class="sw-panel-top"><span class="display tnum sw-no">Act ' + ACT_NO[a.key] + '</span><span class="sw-drop"><b class="display">Indirect</b><span>impact</span></span></div>' +
             '<div><b class="display tnum sw-big">' + esc(a.big) + '</b><p class="sw-big-label">' + esc(a.bigLabel) + "</p></div></div>" +

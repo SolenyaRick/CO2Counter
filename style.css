@@ -4832,6 +4832,6 @@ span.todo-guide { cursor: pointer; }
   .sw-vs { margin-top: 6px; gap: 6px 10px; }
   .sw-vs b { font-size: 16px; }
   .sw-vs-track { height: 12px; }
-  .sw-feat-slim .sw-panel { display: none; }
   .sw-feat .sw-fact { font-size: 15px; line-height: 1.5; }
 }
+@media (max-width: 640px) { .sw-big { font-size: 34px; } .sw-big-label { margin-top: 2px; font-size: 13px; } }
