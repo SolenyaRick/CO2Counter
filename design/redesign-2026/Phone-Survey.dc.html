@@ -69,6 +69,15 @@ a{color:#3F5B3A}a:hover{color:#2B3F28}
 .pop{animation:pop .4s cubic-bezier(.3,1.4,.5,1)}
 .rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
 .d1{animation-delay:.06s}.d2{animation-delay:.12s}.d3{animation-delay:.18s}.d4{animation-delay:.24s}.d5{animation-delay:.3s}
+@keyframes riseup{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes popin2{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+@keyframes fillup{from{transform:translateY(26px)}to{transform:none}}
+.riseup{transform-origin:50% 100%;animation:riseup .7s cubic-bezier(.3,1.4,.5,1) both}
+.grow{transform-origin:0 50%;animation:growx .8s .2s cubic-bezier(.2,.8,.2,1) both}
+.popin{animation:popin2 .45s cubic-bezier(.3,1.6,.5,1) both}
+.fillup{animation:fillup .9s .3s cubic-bezier(.2,.8,.2,1) both}
+.mbar{transition:width .3s}
 /* phone tab bar */
 .tabbar{display:none}
 @media (max-width: 640px){
@@ -131,6 +140,16 @@ body{padding-bottom:88px}
           <div class="num" style="font-weight: 800; font-size: {{statSize}}px; line-height: 1; max-width: 340px; overflow-wrap: anywhere">{{statValue}}</div>
           <div style="margin-top: 4px; font-size: 16px; color: #4A453A">{{statLabel}}</div>
         </div>
+        <sc-if value="{{hasWeek}}" hint-placeholder-val="{{true}}">
+          <figure class="weekstrip" style="margin: 0; display: flex; flex-direction: column; gap: 6px">
+            <div role="img" aria-label="{{weekAria}}" style="height: 84px; display: flex; align-items: flex-end; gap: 6px">
+              <sc-for list="{{weekBars}}" as="wb" hint-placeholder-count="7">
+                <span style="display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end"><span class="riseup" style="width: 16px; height: {{wb.h}}%; min-height: 4px; border-radius: 6px 6px 3px 3px; background: {{wb.c}}; animation-delay: {{wb.delay}}"></span><span style="font-size: 11px; font-weight: 700; color: #5C5649">{{wb.d}}</span></span>
+              </sc-for>
+            </div>
+            <figcaption style="font-size: 12px; color: #5C5649; text-align: center">This week</figcaption>
+          </figure>
+        </sc-if>
         <figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px">
           <svg width="96" height="96" viewBox="0 0 42 42" role="img" aria-label="Step {{stepNo}} of 6">
             <circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>
@@ -171,6 +190,7 @@ body{padding-bottom:88px}
                     <span class="{{d.anim}}" style="width: 12px; height: 12px; border-radius: 99px; background: {{d.dot}}"></span>
                     <span style="font-size: 15px; font-weight: 600">{{d.value}}</span>
                     <span class="num" style="font-size: 13px; opacity: .85">{{d.kg}} kg</span>
+                    <span aria-hidden="true" style="width: 80%; height: 6px; border-radius: 99px; background: rgba(127,127,127,.2); overflow: hidden"><span class="grow" style="display: block; height: 100%; width: {{d.barW}}%; border-radius: 99px; background: currentColor; opacity: .6"></span></span>
                   </button>
                 </sc-for>
               </div>
@@ -178,7 +198,7 @@ body{padding-bottom:88px}
                 <div class="hd" style="font-size: 17px; font-weight: 700; margin-bottom: 10px">{{mealDayName}}</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px">
                   <sc-for list="{{mealChips}}" as="m" hint-placeholder-count="7">
-                    <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
+                    <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 18px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="mbar" aria-hidden="true" style="display: inline-block; width: {{m.barW}}px; height: 6px; border-radius: 99px; background: currentColor; opacity: .5"></span><span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
                   </sc-for>
                 </div>
                 <sc-if value="{{mealTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 12px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{mealTip}}</p></sc-if>
@@ -193,7 +213,7 @@ body{padding-bottom:88px}
             <p class="qh">Each one counts as 1.78× a meal at home.</p>
             <div style="margin-top: 16px; max-width: 560px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px">
               <sc-for list="{{eatOut}}" as="e" hint-placeholder-count="5">
-                <button class="opt" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="all: unset; box-sizing: border-box; min-height: 60px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: {{e.bg}}; color: {{e.ink}}; border: 1.5px solid {{e.border}}"><span class="num" style="font-size: 20px; font-weight: 800">{{e.label}}</span><span style="font-size: 12px; opacity: .85">a week</span></button>
+                <button class="opt" onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="all: unset; box-sizing: border-box; min-height: 60px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: {{e.bg}}; color: {{e.ink}}; border: 1.5px solid {{e.border}}"><span class="num" style="font-size: 20px; font-weight: 800">{{e.label}}</span><span style="font-size: 12px; opacity: .85">a week</span><span aria-hidden="true" style="margin-top: 4px; display: flex; gap: 2px; height: 6px"><sc-for list="{{e.dots}}" as="dd" hint-placeholder-count="2"><span style="width: 6px; height: 6px; border-radius: 99px; background: currentColor; opacity: .6"></span></sc-for></span></button>
               </sc-for>
             </div>
           </div>
@@ -205,7 +225,7 @@ body{padding-bottom:88px}
             <p class="qh">Wasted food means wasted emissions.</p>
             <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px">
               <sc-for list="{{waste}}" as="w" hint-placeholder-count="4">
-                <button class="opt" onClick="{{w.pick}}" aria-pressed="{{w.on}}" style="all: unset; box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: {{w.bg}}; color: {{w.ink}}; border: 1.5px solid {{w.border}}; cursor: pointer"><span class="hd" style="display: block; font-size: 18px; font-weight: 700">{{w.label}}</span><span class="num" style="display: block; font-size: 14px; opacity: .85">{{w.range}}</span></button>
+                <button class="opt" onClick="{{w.pick}}" aria-pressed="{{w.on}}" style="all: unset; box-sizing: border-box; padding: 14px 16px; border-radius: 18px; background: {{w.bg}}; color: {{w.ink}}; border: 1.5px solid {{w.border}}; cursor: pointer"><span class="hd" style="display: block; font-size: 18px; font-weight: 700">{{w.label}}</span><span class="num" style="display: block; font-size: 14px; opacity: .85">{{w.range}}</span><span aria-hidden="true" style="margin-top: 10px; display: flex; align-items: flex-end; gap: 8px"><svg width="22" height="26" viewBox="0 0 22 26"><path d="M3 6h16l-1.6 18H4.6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M1.5 6h19M8 3h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><clipPath id="bin{{w.key}}"><path d="M3 6h16l-1.6 18H4.6Z"></path></clipPath><rect class="fillup" clip-path="url(#bin{{w.key}})" x="0" y="{{w.fillY}}" width="22" height="26" fill="currentColor" opacity=".45"></rect></svg><span style="flex: 1; height: 6px; border-radius: 99px; background: rgba(127,127,127,.2); overflow: hidden"><span class="grow" style="display: block; height: 100%; width: {{w.barW}}%; border-radius: 99px; background: currentColor; opacity: .6"></span></span></span></button>
               </sc-for>
             </div>
           </div>
@@ -239,6 +259,7 @@ body{padding-bottom:88px}
                   <span class="{{d.anim}}" style="width: 12px; height: 12px; border-radius: 99px; background: {{d.dot}}"></span>
                   <span style="font-size: 14px; font-weight: 600; line-height: 1.2">{{d.value}}</span>
                   <span class="num" style="font-size: 13px; opacity: .85">{{d.kg}}</span>
+                    <span aria-hidden="true" style="width: 80%; height: 6px; border-radius: 99px; background: rgba(127,127,127,.2); overflow: hidden"><span class="grow" style="display: block; height: 100%; width: {{d.barW}}%; border-radius: 99px; background: currentColor; opacity: .6"></span></span>
                 </button>
               </sc-for>
             </div>
@@ -246,7 +267,7 @@ body{padding-bottom:88px}
               <div class="hd" style="font-size: 17px; font-weight: 700; margin-bottom: 10px">{{commuteDayName}}</div>
               <div style="display: flex; flex-wrap: wrap; gap: 8px">
                 <sc-for list="{{modeChips}}" as="m" hint-placeholder-count="10">
-                  <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
+                  <button class="opt" onClick="{{m.pick}}" aria-pressed="{{m.on}}" style="all: unset; box-sizing: border-box; min-height: 48px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; cursor: pointer; background: {{m.bg}}; color: {{m.ink}}; border: 1.5px solid {{m.border}}">{{m.label}}<span class="mbar" aria-hidden="true" style="display: inline-block; width: {{m.barW}}px; height: 6px; border-radius: 99px; background: currentColor; opacity: .5"></span><span class="num" style="font-size: 13px; font-weight: 600; opacity: .8">{{m.kg}}</span></button>
                 </sc-for>
               </div>
               <sc-if value="{{commuteTipOn}}" hint-placeholder-val="{{true}}"><p class="rise" style="margin: 14px 0 0; padding: 12px 16px; border-radius: 12px; background: rgba(217,164,65,.18); font-size: 16px; line-height: 1.5; color: #3A362D">{{commuteTip}}</p></sc-if>
@@ -314,7 +335,7 @@ body{padding-bottom:88px}
                   <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center">
                     <div role="group" aria-label="Cabin class" style="display: flex; flex-wrap: wrap; gap: 6px">
                       <sc-for list="{{f.cabins}}" as="c" hint-placeholder-count="4">
-                        <button class="opt" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="all: unset; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; cursor: pointer; background: {{c.bg}}; color: {{c.ink}}; border: 1.5px solid {{c.border}}">{{c.label}}</button>
+                        <button class="opt" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="all: unset; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; cursor: pointer; background: {{c.bg}}; color: {{c.ink}}; border: 1.5px solid {{c.border}}">{{c.label}}<span aria-hidden="true" style="margin-left: 8px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; opacity: .8"><span style="display: inline-block; width: {{c.barW}}px; height: 6px; border-radius: 99px; background: currentColor; opacity: .55"></span>{{c.mult}}</span></button>
                       </sc-for>
                     </div>
                     <button class="opt" onClick="{{f.toggleReturn}}" aria-pressed="{{f.returnOn}}" style="all: unset; box-sizing: border-box; min-height: 44px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; cursor: pointer; background: {{f.returnBg}}; color: {{f.returnInk}}; border: 1.5px solid {{f.returnBorder}}">Return trip</button>
@@ -415,6 +436,9 @@ body{padding-bottom:88px}
               <button class="step-btn opt" onClick="{{dogLess}}" aria-label="Fewer dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span class="num" style="min-width: 56px; text-align: center; font-size: 34px; font-weight: 800">{{dogs}}</span>
               <button class="step-btn opt" onClick="{{dogMore}}" aria-label="More dogs"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+            
+              <span aria-hidden="true" style="margin-left: 12px; display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 260px"><sc-for list="{{dogsIcons}}" as="pi" hint-placeholder-count="1"><svg class="popin" width="30" height="30" viewBox="0 0 20 20" style="animation-delay: {{pi.delay}}"><path d="M5 10V6l3 2h4l3-2v4c0 4-2.5 7-5 7s-5-3-5-7ZM8 12h.01M12 12h.01M9.5 14.5h1" fill="rgba(63,91,58,.14)" stroke="#3F5B3A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-for></span>
+              <span class="num" style="margin-left: auto; padding: 6px 12px; border-radius: 99px; background: rgba(63,91,58,.1); font-size: 15px; font-weight: 800; color: #2B3F28">{{dogsKg}} kg a year</span>
             </div>
           </div>
         </li>
@@ -427,6 +451,9 @@ body{padding-bottom:88px}
               <button class="step-btn opt" onClick="{{catLess}}" aria-label="Fewer cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
               <span class="num" style="min-width: 56px; text-align: center; font-size: 34px; font-weight: 800">{{cats}}</span>
               <button class="step-btn opt" onClick="{{catMore}}" aria-label="More cats"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M12 5v14"></path></svg></button>
+            
+              <span aria-hidden="true" style="margin-left: 12px; display: inline-flex; flex-wrap: wrap; gap: 4px; max-width: 260px"><sc-for list="{{catsIcons}}" as="pi" hint-placeholder-count="1"><svg class="popin" width="30" height="30" viewBox="0 0 20 20" style="animation-delay: {{pi.delay}}"><path d="M5 9V4l4 3h2l4-3v5c0 4.5-2.5 8-5 8s-5-3.5-5-8ZM8 11h.01M12 11h.01M9 14h2" fill="rgba(63,91,58,.14)" stroke="#3F5B3A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-for></span>
+              <span class="num" style="margin-left: auto; padding: 6px 12px; border-radius: 99px; background: rgba(63,91,58,.1); font-size: 15px; font-weight: 800; color: #2B3F28">{{catsKg}} kg a year</span>
             </div>
           </div>
         </li>
@@ -592,13 +619,13 @@ class Component extends DCLogic {
     const diets = DIETS.map((d) => ({ ...d, ...pick(st.diet === d.key), pick: () => this.setState(d.meal ? { diet: d.key, week: week.map(() => d.meal) } : { diet: d.key }) }));
     const mealDays = week.map((m, j) => ({
       ...pick(st.mealDay === j), short: names[j].slice(0, 3), value: mk[m].label, kg: mk[m].f.toFixed(2), aria: names[j] + ': ' + mk[m].label,
-      anim: st.mealDay === j ? 'pop' : '', dot: dot(mk[m].f, 8, 3, 2), pick: () => this.setState({ mealDay: j })
+      anim: st.mealDay === j ? 'pop' : '', dot: dot(mk[m].f, 8, 3, 2), barW: Math.max(4, (mk[m].f / 23.25) * 100).toFixed(1), pick: () => this.setState({ mealDay: j })
     }));
     const curMeal = week[st.mealDay];
-    const mealChips = MEALS.map((m) => ({ ...m, ...pick(curMeal === m.key, true), kg: m.f.toFixed(2) + ' kg', pick: () => { const w = week.slice(); w[st.mealDay] = m.key; this.setState({ week: w }); } }));
+    const mealChips = MEALS.map((m) => ({ ...m, ...pick(curMeal === m.key, true), kg: m.f.toFixed(2) + ' kg', barW: Math.round(6 + (m.f / 23.25) * 56), pick: () => { const w = week.slice(); w[st.mealDay] = m.key; this.setState({ week: w }); } }));
     const curF = mk[curMeal].f;
-    const eatOut = ['0', '1', '2', '3', '4+'].map((label, j) => ({ label, ...pick(st.eatOut === j), pick: () => this.setState({ eatOut: j }) }));
-    const waste = [['low', 'Low', '0–3%'], ['some', 'Some', '3–10%'], ['high', 'High', '10–25%'], ['severe', 'Severe', '25%+']].map(([key, label, range]) => ({ label, range, ...pick(st.waste === key), pick: () => this.setState({ waste: key }) }));
+    const eatOut = ['0', '1', '2', '3', '4+'].map((label, j) => ({ label, dots: Array.from({ length: j }, () => ({})), ...pick(st.eatOut === j), pick: () => this.setState({ eatOut: j }) }));
+    const waste = [['low', 'Low', '0–3%', 1.5], ['some', 'Some', '3–10%', 6.5], ['high', 'High', '10–25%', 17.5], ['severe', 'Severe', '25%+', 30]].map(([key, label, range, mid]) => ({ key, label, range, barW: ((mid / 30) * 100).toFixed(0), fillY: (24 - (mid / 30) * 18).toFixed(1), ...pick(st.waste === key), pick: () => this.setState({ waste: key }) }));
     const perDay = st.diet === 'meat';
 
     // Commute
@@ -614,12 +641,12 @@ class Component extends DCLogic {
     const commuteDays = st.commute.map((m, j) => ({
       ...pick(st.commuteDay === j), short: names[j].slice(0, 3), value: m ? ck[m].label : 'Not travelling',
       kg: m ? perDayKg(m).toFixed(2) + ' kg' : '—', aria: names[j] + ': ' + (m ? ck[m].label : 'not travelling'),
-      anim: st.commuteDay === j ? 'pop' : '', dot: m ? dot(perDayKg(m), 1, 0.5, 0.01) : 'rgba(46,42,34,.2)',
+      anim: st.commuteDay === j ? 'pop' : '', dot: m ? dot(perDayKg(m), 1, 0.5, 0.01) : 'rgba(46,42,34,.2)', barW: m ? Math.max(4, (ck[m].f / 0.21411) * 100).toFixed(1) : 0,
       pick: () => this.setState({ commuteDay: j })
     }));
     const curMode = st.commute[st.commuteDay];
     const modeChips = [{ key: '', label: 'Not travelling', f: 0 }].concat(MODES).map((m) => ({
-      label: m.label, ...pick(curMode === m.key, true), kg: m.key && m.f > 0 ? perDayKg(m.key).toFixed(2) + ' kg' : '',
+      label: m.label, ...pick(curMode === m.key, true), kg: m.key && m.f > 0 ? perDayKg(m.key).toFixed(2) + ' kg' : '', barW: Math.round(m.f > 0 ? 6 + (m.f / 0.21411) * 50 : 0),
       pick: () => { const c = st.commute.slice(); c[st.commuteDay] = m.key; this.setState({ commute: c }); }
     }));
     const carDays = st.commute.filter((m) => m === 'car_petrol' || m === 'car_diesel').length;
@@ -630,12 +657,13 @@ class Component extends DCLogic {
     });
 
     // Flights
-    const CABINS = [['economy', 'Economy'], ['premium', 'Premium'], ['business', 'Business'], ['first', 'First']];
+    // Long-haul cabin multipliers from the DESNZ conversion factors
+    const CABINS = [['economy', 'Economy', 1], ['premium', 'Premium', 1.6], ['business', 'Business', 2.9], ['first', 'First', 4]];
     const flights = st.flights.map((f, n) => {
       const upd = (patch) => { const fs = st.flights.slice(); fs[n] = { ...fs[n], ...patch }; this.setState({ flights: fs }); };
       return {
         ...f,
-        cabins: CABINS.map(([key, label]) => ({ label, ...pick(f.cabin === key, true), pick: () => upd({ cabin: key }) })),
+        cabins: CABINS.map(([key, label, x]) => ({ label, mult: '×' + x, barW: Math.round(x * 9), ...pick(f.cabin === key, true), pick: () => upd({ cabin: key }) })),
         returnOn: f.ret ? 'true' : 'false', returnBg: f.ret ? '#2E2A22' : off, returnInk: f.ret ? '#F6F1E6' : '#2E2A22', returnBorder: f.ret ? '#2E2A22' : line,
         toggleReturn: () => upd({ ret: !f.ret }),
         less: () => upd({ trips: Math.max(1, f.trips - 1) }), more: () => upd({ trips: f.trips + 1 }),
@@ -675,6 +703,11 @@ class Component extends DCLogic {
       back: () => this.go(Math.max(0, i - 1)), next: () => this.go(Math.min(5, i + 1)),
 
       diets, mealDays, mealChips, eatOut, waste, perDay,
+      hasWeek: i === 0 || i === 1,
+      weekBars: i === 0
+        ? week.map((m, j) => ({ d: names[j].slice(0, 1), h: Math.max(5, (mk[m].f / 23.25) * 100).toFixed(1), c: mk[m].f > 8 ? '#B8653D' : mk[m].f > 3 ? '#D9A441' : '#6E8B5E', delay: (0.2 + j * 0.06).toFixed(2) + 's' }))
+        : st.commute.map((m, j) => ({ d: names[j].slice(0, 1), h: m ? Math.max(5, (perDayKg(m) / Math.max(0.01, perDayKg('car_diesel'))) * 100).toFixed(1) : 0, c: m && ck[m].f > 0.1 ? '#B8653D' : '#6E8B5E', delay: (0.2 + j * 0.06).toFixed(2) + 's' })),
+      weekAria: i === 0 ? 'Main meal emissions for each day of the week' : 'Commute emissions for each day of the week',
       mealDayName: names[st.mealDay],
       mealTipOn: curF > 3,
       mealTip: curF > 3 ? 'Swapping this ' + mk[curMeal].label.toLowerCase() + ' meal for chicken each week would save about ' + fmt((curF - 2.73) * 52) + ' kg CO₂e a year.' : '',
@@ -701,6 +734,9 @@ class Component extends DCLogic {
       water: st.water, setWater: num('water'),
 
       dogs: st.dogs, cats: st.cats,
+      dogsIcons: Array.from({ length: Math.min(st.dogs, 8) }, (_, q) => ({ delay: (q * 0.06).toFixed(2) + 's' })),
+      catsIcons: Array.from({ length: Math.min(st.cats, 8) }, (_, q) => ({ delay: (q * 0.06).toFixed(2) + 's' })),
+      dogsKg: fmt(st.dogs * 770), catsKg: fmt(st.cats * 310),
       dogLess: () => this.setState({ dogs: Math.max(0, st.dogs - 1) }), dogMore: () => this.setState({ dogs: st.dogs + 1 }),
       catLess: () => this.setState({ cats: Math.max(0, st.cats - 1) }), catMore: () => this.setState({ cats: st.cats + 1 }),
 
