@@ -4821,7 +4821,8 @@ span.todo-guide { cursor: pointer; }
 .guide-lede p { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #C9D3BC; }
 /* Greener switches on phones: compact act panels, no bubble chart (the switchboard above shows the same savings) */
 @media (max-width: 640px) {
-  .sw-page .sw-sec { display: none; }
+  .sw-page .sw-sec .sw-sec-head, .sw-page .sw-sec .sw-plot { display: none; }
+  .sw-page .sw-sec { margin-top: 20px; }
   .sw-panel { flex-basis: 100%; padding: 16px 18px; border-radius: 18px; gap: 10px; }
   .sw-panel-bg { display: none; }
   .sw-panel-top { align-items: center; }
