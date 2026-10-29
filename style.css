@@ -4819,3 +4819,20 @@ span.todo-guide { cursor: pointer; }
 .guide-lede { margin-top: 16px; padding: 16px 18px; border-radius: 18px; background: #2B3F28; color: #F6F1E6; }
 .guide-lede h3 { margin: 0; font-size: 20px; font-weight: 800; color: #F6F1E6; }
 .guide-lede p { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #C9D3BC; }
+/* Greener switches on phones: compact act panels, no bubble chart (the switchboard above shows the same savings) */
+@media (max-width: 640px) {
+  .sw-page .sw-sec .sw-sec-head, .sw-page .sw-sec .sw-plot { display: none; }
+  .sw-page .sw-sec { margin-top: 20px; }
+  .sw-panel { flex-basis: 100%; padding: 16px 18px; border-radius: 18px; gap: 10px; }
+  .sw-panel-bg { display: none; }
+  .sw-panel-top { align-items: center; }
+  .sw-no { font-size: 30px; }
+  .sw-drop { padding: 6px 10px; border-radius: 12px; display: flex; align-items: baseline; gap: 6px; }
+  .sw-drop b { font-size: 22px; }
+  .sw-drop span { margin-top: 0; font-size: 12px; }
+  .sw-vs { margin-top: 6px; gap: 6px 10px; }
+  .sw-vs b { font-size: 16px; }
+  .sw-vs-track { height: 12px; }
+  .sw-feat .sw-fact { font-size: 15px; line-height: 1.5; }
+}
+@media (max-width: 640px) { .sw-big { font-size: 34px; } .sw-big-label { margin-top: 2px; font-size: 13px; } }

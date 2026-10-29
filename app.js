@@ -1328,6 +1328,12 @@
       a.classList.toggle("active", on);
       if (a.closest("#tabbar")) on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
     });
+    // Once the survey's done, its tab is for updating it.
+    const surveyLabel = survey && survey.completedAt ? "Update" : "Survey";
+    const navSurvey = document.querySelector('#nav a[data-route="/"]');
+    if (navSurvey && navSurvey.textContent !== surveyLabel) navSurvey.textContent = surveyLabel;
+    const tabSurvey = document.querySelector('#tabbar a[data-route="/"] span');
+    if (tabSurvey) tabSurvey.textContent = surveyLabel;
     const tabAcc = document.querySelector('#tabbar a[data-route="/account"] span');
     if (tabAcc) tabAcc.textContent = currentUser ? "Account" : "Sign in";
     const av = document.getElementById("nav-avatar");
@@ -1401,51 +1407,24 @@
 
   // Shown on the Survey tab once a survey is complete. Small edits happen
   // from "Edit my answers" on the Results page instead.
+  // The Survey tab once it's done: update it, or change one step.
   function renderSurveyDone() {
     const when = Date.parse(survey.completedAt);
     const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
     const now = footprint(survey).totalYearly;
-    const hist = historyByDay();
-    const latest = hist[0];
-    const first = hist[hist.length - 1];
-    const change = hist.length > 1 ? latest.totalYearly - first.totalYearly : 0;
-    const choice = (cls, badge, ic, title, body, btn) =>
-      '<div class="choice ' + cls + ' rise">' + (badge ? '<span class="choice-badge">' + badge + "</span>" : "") + '<span class="choice-icon">' + icon(ic) + "</span>" +
-      '<h2 class="display">' + title + "</h2><p>" + body + "</p>" + btn + "</div>";
-    const historyHtml = hist.length
-      ? '<ol class="timeline-v2">' +
-        [latest].concat(hist.length > 1 ? [first] : [])
-          .map(
-            (h, i) =>
-              '<li class="' + (i === 0 ? "now" : "") + '"><span class="tl-dot"></span><div><p class="xs muted">' + esc(longDate(Date.parse(h.completedAt))) +
-              (i === 0 ? " · latest" : " · first survey") + '</p><p class="display tnum tl-kg">' + kgFmt(h.totalYearly) + " kg</p>" +
-              (i === 0 && hist.length > 1 && Math.abs(change) >= 1
-                ? '<p class="sm fw-700 ' + (change < 0 ? "green" : "clay") + '">' + (change < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(change)) + " kg (" +
-                  Math.round((Math.abs(change) / first.totalYearly) * 100) + "%) since your first</p>"
-                : "") + "</div></li>"
-          )
-          .join("") +
-        "</ol>" + (hist.length > 2 ? '<p class="xs muted mt-2">' + hist.length + " surveys in total.</p>" : "")
-      : '<p class="sm muted mt-3">Your surveys will show here, so you can see how far you\'ve come.</p>';
     return (
       '<div class="container done-v2">' +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("clipboard") + "</span>" +
       '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
-      '<h1 class="cat-title display">You\'ve completed your survey</h1><p class="cat-why">' +
-      (isNaN(when) ? "" : "You finished it on <strong>" + esc(longDate(when)) + "</strong>. ") +
-      "Has anything changed since? A quick update starts from your last answers, so you only change what's different.</p></div></div>" +
-      '<div class="cat-figs"><div class="muted">Your last result</div><div class="cat-kg display tnum" data-countup="' + Math.round(now) + '">0</div><div class="muted">kg CO₂e a year</div></div></header>' +
-      '<section class="choices">' +
-      choice("lead", "Recommended", "pencil", "Quick update", "Start from your last answers and change only what's different. Takes a couple of minutes.",
-        '<button type="button" class="btn btn-honey btn-block" data-action="whats-changed">Anything changed?</button>') +
-      choice("glass", "", "refresh", "Start from scratch", "A fresh survey with blank answers, if a lot has changed.",
-        '<button type="button" class="btn btn-outline btn-block" data-action="new-survey">Start a new survey</button>') +
-      choice("glass", "", "chart", "View my results", "Nothing's changed? Jump back to your breakdown and next steps.",
-        '<a class="btn btn-outline btn-block" href="#/results">See results ' + icon("arrowRight") + "</a>") +
-      "</section>" +
-      '<p class="sm muted done-note">Either way, your current results stay in your history, and you can cancel before you finish.</p>' +
-      '<div class="cat-grid"><section class="guide-card flat cat-col"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
-      '<h2 class="display">Your last answers</h2><span class="muted">Change just one step</span></div><div class="answer-tiles">' +
+      '<h1 class="cat-title display">Update your answers</h1><p class="cat-why">' +
+      (isNaN(when) ? "" : "Last done on <strong>" + esc(longDate(when)) + "</strong>. ") +
+      "Start from your last answers and change only what's different. Your old result stays in your history.</p>" +
+      '<div class="chip-row mt-4"><button type="button" class="btn btn-honey" data-action="whats-changed">Update my answers ' + icon("arrowRight") + "</button>" +
+      '<button type="button" class="link-btn" data-action="new-survey">Start from scratch</button></div></div></div>' +
+      '<div class="cat-figs"><div class="muted">Your last result</div><div class="cat-kg display tnum" data-countup="' + Math.round(now) + '">0</div><div class="muted">kg CO₂e a year</div>' +
+      '<a class="link-btn mt-2" href="#/results">See results</a></div></header>' +
+      '<section class="guide-card flat"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
+      '<h2 class="display">Or change one step</h2><span class="muted">Tap the one that\'s different</span></div><div class="answer-tiles">' +
       STEPS.map((st, i) => {
         const lines = answerSummary(st.key, survey);
         return (
@@ -1456,9 +1435,7 @@
           '<span class="answer-change">Change</span></button>'
         );
       }).join("") +
-      "</div></section>" +
-      '<aside class="cat-aside"><section class="glass cat-drop"><h2 class="display">Your history</h2>' + historyHtml +
-      '<p class="xs muted mt-3">Updating every few months shows how far you\'ve come, and counts towards Most improved on the Friends page.</p></section></aside></div></div>'
+      "</div></section></div>"
     );
   }
 
@@ -4649,7 +4626,7 @@
       { key: "energy", short: "Energy", effort: "One-off · a few minutes", ex: 8, save: saving("energy"), verb: "Switch to", panel: "#D9A441", panelInk: "#2E2A22", dropInk: "#2B4128",
         done: energyDone,
         doneTitle: "You're on a green tariff",
-        askHtml: base.mine && asksBillPayer(s) ? energyAskBox() : "",
+        askHtml: base.mine && asksBillPayer(s) ? '<p class="sm mt-3">Someone else chooses your supplier, so your switch is asking them.</p>' + habitsBtn("Ask them from My Habits") : "",
         fact: base.mine && asksBillPayer(s)
           ? "Someone else chooses your supplier, so the switch is asking them. A renewable tariff would cut your home's electricity emissions by {{green_cut}}."
           : energyDone
@@ -4697,6 +4674,7 @@
   // acts 6 and 7 work through other people. Their effect can't honestly be
   // put in kg, so they sit on the chart as medium impact, low effort.
   const ACT_NO = { banking: 1, energy: 2, meals: 3, commute: 4, flights: 4, mobilise: 6, motivate: 7 };
+  const habitsBtn = (label) => '<a class="btn btn-green mt-4" href="#/habits">' + label + " " + icon("arrowRight") + "</a>";
   function indirectActs(base, typicalSave) {
     const info = base.mine ? ui.actsInfo : null;
     const ticked = base.mine ? actsTicked() : {};
@@ -4705,13 +4683,12 @@
     const motDone = base.mine && !!info && !!((info.verified && info.verified.motivate) || friends >= 7);
     const url = encodeURIComponent(inviteLink());
     const text = encodeURIComponent(shareText() + " " + inviteLink());
-    const mp = info ? mpFinderHtml(info) : null;
     return [
       {
         key: "mobilise", short: "Your MP", title: mpDone ? "You've written to your MP" : "Write to your MP", effort: "One-off · one letter", ex: 32, ey: 52,
         panel: "#6F4E63", panelInk: "#F6F1E6", done: mpDone, big: "650", bigLabel: "MPs vote on the UK's climate laws",
         fact: "Your switches cut your own footprint. The rules everyone lives by cut everyone's, and MPs make them. A letter in your own words is one of the most direct ways to show that climate matters to voters where you live.",
-        action: mpDone ? "" : mp ? '<div class="sw-act-box">' + mp.finder + mp.letter + "</div>" : '<a class="btn btn-green mt-4" href="#/acts/mobilise">Write to your MP ' + icon("arrowRight") + "</a>",
+        action: mpDone ? "" : currentUser ? habitsBtn("Write to your MP in My Habits") : '<a class="btn btn-green mt-4" href="#/acts/mobilise">Write to your MP ' + icon("arrowRight") + "</a>",
         page: "#/acts/mobilise", status: mpDone ? "Done" : info && ticked.mpSent ? "Waiting for our copy" : "Not yet",
       },
       {
@@ -4722,9 +4699,9 @@
           (info && info.cut != null ? " So far, the people you invited have cut " + kgFmt(info.cut) + " kg a year between them." : ""),
         action: motDone
           ? ""
-          : '<div class="sw-act-box">' + (info ? '<p class="sm"><b>' + friends + " of 7</b> people you invited have taken the survey.</p>" : "") +
-            inviteCodeHtml() +
-            shareButtonsHtml(url, text) + "</div>",
+          : currentUser
+            ? (info ? '<p class="sm mt-3"><b>' + friends + " of 7</b> people you invited have taken the survey.</p>" : "") + habitsBtn("Invite people from My Habits")
+            : '<div class="sw-act-box">' + shareButtonsHtml(url, text) + "</div>",
         page: "#/acts/motivate", status: motDone ? "Done" : info ? friends + " of 7" : "Not yet",
       },
     ];
@@ -4793,7 +4770,7 @@
         .join("");
     const plot =
       '<section class="sw-sec"><div class="sw-sec-head"><div><span class="sw-kicker">Where to start</span><h2 class="display">Impact against effort</h2></div>' +
-      "<p>Bigger bubbles save more. Start top left, where the saving is big and the effort is small. The outlined bubbles work through other people, so they have no kg figure. Tap a bubble to jump to it.</p></div>" +
+      "<p>Start top left: big saving, little effort. Tap a bubble to jump to it.</p></div>" +
       '<div class="sw-plot"><span class="sw-ytitle">KG SAVED A YEAR ↑</span><div class="sw-area"><div class="sw-quick"></div><div class="sw-vmid"></div><div class="sw-hmid"></div>' +
       ticks.map((f) => '<div class="sw-tick' + (f ? "" : " zero") + '" style="bottom:' + f * 100 + '%"><span class="tnum">' + kgFmt(maxSave * f) + "</span></div>").join("") +
       '<span class="sw-q" style="left:12px;top:12px;color:#2B4128">★ Quick wins</span><span class="sw-q" style="right:4px;top:calc(50% - 26px)">Big, but a habit</span>' +
@@ -4839,7 +4816,7 @@
       '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches · the 7 Acts</span>' +
       '<h1 class="display rise d1">The 7 Acts.<br><span>Up to ' + kgFmt(total) + " kg</span> a year, and more through others.</h1>" +
       '<p class="rise d2">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>, worked out ' + (base.mine ? "for your footprint" : "for a typical UK footprint") +
-      ": switches that cut your own emissions (Acts 1 to 4), and two that reach further through other people (Acts 6 and 7). Act 5, measuring your footprint, is what CO2 Counter does. Flip a switch to see what it saves.</p></div>" + board + "</header>" +
+      ". Flip a switch to see what each one saves.</p></div>" + board + "</header>" +
       plot + feats +
       others
         .map(
@@ -7861,6 +7838,10 @@
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
     await loadHistory();
+    // Coming back with a finished survey: start on your plan (or your results
+    // when signed out), not on the survey you've already done.
+    const bareHome = (location.pathname === "/" || /\/index\.html$/.test(location.pathname)) && /^#?$/.test(location.hash);
+    if (bareHome && !fromEmail && !fromCheckout && survey && survey.completedAt) history.replaceState(null, "", location.pathname + (currentUser ? "#/habits" : "#/results"));
     render();
     if (fromCheckout && FREE_MODE) {
       ui.flash = "Thank you for supporting CO2 Counter! It really helps keep it running.";
