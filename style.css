@@ -4836,3 +4836,14 @@ span.todo-guide { cursor: pointer; }
   .sw-feat .sw-fact { font-size: 15px; line-height: 1.5; }
 }
 @media (max-width: 640px) { .sw-big { font-size: 34px; } .sw-big-label { margin-top: 2px; font-size: 13px; } }
+/* Intro: one Start button. On phones it sticks above the tab bar. */
+.intro-sticky { display: none; }
+.res-note summary { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; list-style: none; font-weight: 600; }
+.res-note summary::-webkit-details-marker { display: none; }
+.res-note summary .icon { width: 14px; height: 14px; }
+.res-note[open] summary { margin-bottom: 4px; }
+@media (max-width: 640px) {
+  .intro-hero .intro-cta { display: none; }
+  .intro-sticky { display: flex; position: sticky; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 20; margin: 24px 0 0; }
+  .intro-sticky .intro-cta { width: 100%; justify-content: center; min-height: 52px; box-shadow: 0 12px 30px rgba(46, 42, 34, 0.22); }
+}

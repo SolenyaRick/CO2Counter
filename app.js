@@ -1546,7 +1546,6 @@
       ["Do I need an account?", "You can take the whole survey as a guest. To see your full results, create a free account: it also keeps your answers safe across your devices."],
       ["How accurate is it?", "It's an estimate using typical lifecycle emission factors. It's built to show your biggest levers clearly, not to be a precise audit."],
       ["How is it free?", 'Supporters chip in £2 a year, and some partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="/about/">About us</a> · <a href="/greener-switches/">Greener switches</a>'],
-      ["What do I need to have to hand?", "Nothing essential. An energy bill helps with the home step, and a rough idea of your savings and pension helps with money, but ballpark answers are fine."],
     ];
     return (
       '<div class="container intro-v2">' +
@@ -1582,7 +1581,7 @@
       '<section class="intro-faq"><h2 class="display">Questions people ask</h2>' +
       faq.map(([q, a]) => '<details class="glass faq"><summary><span>' + q + "</span>" + icon("chevronDown") + "</summary><p>" + a + "</p></details>").join("") +
       "</section>" +
-      '<section class="intro-final"><div><h2 class="display">Ready? Six short steps.</h2><p>Meals, commute, flights, home, pets and money.</p></div>' + cta("Start the survey") + "</section></div>"
+      '<div class="intro-sticky">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + "</div></div>"
     );
   }
 
@@ -2549,8 +2548,8 @@
       '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
       '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(now) + "</b></span></div>" +
       '<p class="sm muted mt-2">' + realisticLine + "</p>" +
-      '<p class="xs muted mt-1">*The UK average leaves out banking and pensions, as there\'s no UK figure for them. On the same basis you\'re at ' +
-      (cmp.mine / 1000).toFixed(1) + " t.</p></div></section>";
+      '<details class="res-note xs muted mt-1"><summary>' + icon("info") + "About the UK average</summary>It leaves out banking and pensions, as there's no UK figure for them. On the same basis you're at " +
+      (cmp.mine / 1000).toFixed(1) + " t.</details></div></section>";
 
     html +=
       '<div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
@@ -2635,7 +2634,7 @@
     }
     html +=
       '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
-      saveCard() + supportCard() +
+      saveCard() + (historyByDay().length >= 2 ? supportCard() : "") +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. Figures last updated ' +
       esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>';
     return html;
@@ -4940,7 +4939,6 @@
     const beliefs = [
       ["01", "Count it honestly.", "Real UK factors, shown openly. No guilt, and no inflated numbers to scare you into acting."],
       ["02", "Make the next step obvious.", "A number alone changes nothing. We point to the few changes that matter most for you."],
-      ["03", "Stay on your side.", "Nobody pays to be ranked higher. Suggestions are picked for the climate, not for a fee."],
     ];
     const principles = [
       ["Climate first", "We recommend what cuts the most carbon, even when there's nothing in it for us.", "rgba(63,91,58,.14)", "#3F5B3A", "M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7"],
@@ -4960,8 +4958,7 @@
       '<h1 class="display rise d1">Your footprint, counted honestly. <span>Then made smaller.</span></h1>' +
       '<p class="rise d2">CO2 Counter is a free, six-step survey that works out your yearly carbon footprint from official UK data, then shows you the changes that cut it the most.</p>' +
       '<ul class="ab-promises rise d3" aria-label="Our promises">' + ["Free for everyone", "Independent", "Official UK data", "Kept going by supporters"].map((t) => "<li><span>" + tick + "</span>" + t + "</li>").join("") + "</ul></header>" +
-      '<section class="ab-sec" aria-labelledby="ab-beliefs"><h2 id="ab-beliefs" class="ab-kicker">What we believe</h2><ol class="ab-beliefs">' +
-      beliefs.map(([n, t, b]) => '<li class="ab-belief"><span class="display tnum ab-bno">' + n + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></li>").join("") + "</ol></section>" +
+
       '<section class="ab-sec" aria-labelledby="ab-sources"><div class="ab-src-head"><div><div class="ab-kicker">Where the numbers come from</div><h2 id="ab-sources" class="display ab-h2">Official data in. <span>Your estimate out.</span></h2></div>' +
       '<div class="ab-note">' + svgPath("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 11v6M12 7.5v.01", 22) + "<p><strong>It's an estimate, not a meter reading.</strong> The factors are UK averages, so your real footprint will differ a little. It's accurate enough to show where your biggest savings are.</p></div></div>" +
       '<div class="ab-diagram"><div class="ab-dia-desk"><svg width="1000" height="470" viewBox="0 0 1000 470" aria-hidden="true" class="ab-lines">' +
@@ -4989,7 +4986,9 @@
       "<p>CO2 Counter isn't owned or funded by any energy company, bank or other business. It's free for everyone, and people who find it useful can support it for £2 a year.</p>" +
       '<a href="mailto:' + esc(CONTACT_EMAIL) + '" class="ab-mail">' + svgPath("M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM3 7l9 6 9-6", 18) + esc(CONTACT_EMAIL) + "</a></div>" +
       '<div class="ab-stats">' + stats.map(([big, t, bg, ink]) => '<div class="ab-stat" style="background:' + bg + ";color:" + ink + '"><span class="display tnum">' + big + "</span><span>" + t + "</span></div>").join("") + "</div></section>" +
-      '<section class="ab-sec" aria-labelledby="ab-principles"><div class="ab-kicker">How we choose partners</div><h2 id="ab-principles" class="display ab-h2">The climate comes first. <span>Every time.</span></h2><div class="ab-principles">' +
+      '<section class="ab-sec" aria-labelledby="ab-principles"><div class="ab-kicker">What we believe</div><h2 id="ab-principles" class="display ab-h2">The climate comes first. <span>Every time.</span></h2>' +
+      '<ol class="ab-beliefs">' + beliefs.map(([n, t, b]) => '<li class="ab-belief"><span class="display tnum ab-bno">' + n + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></li>").join("") + "</ol>" +
+      '<div class="ab-principles">' +
       principles.map(([t, b, bg, ink, d]) => '<div class="ab-pcard"><span class="ab-pic" style="background:' + bg + ";color:" + ink + '">' + svgPath(d, 26) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
       '</div><p class="ab-see"><a class="link-btn" href="/greener-switches/">See all our greener switches</a></p></section>' +
       '<section class="ab-sec ab-aff" aria-labelledby="ab-aff"><div class="ab-aff-text"><div class="ab-kicker">Affiliate links</div><h2 id="ab-aff" class="display">If we ever earn from a link, you\'ll see this tag.</h2>' +
@@ -5251,7 +5250,7 @@
       );
     };
     html += actsAnalyticsHtml(analytics.acts);
-    html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step) or on the Account page.", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
+    html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step).", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
     html +=
       '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
       " opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
@@ -5576,7 +5575,7 @@
         return { ...base, verb: e.is_self ? "took your first survey" : "took their first survey", tag: ["New", "sky"],
           body: '<p class="fr-ptext">' + (e.is_self ? "Your" : "Their") + " first footprint: <b>" + tonnes(e.after_total) + " t</b> a year.</p>" };
       return { ...base, name: e.display_name, verb: "is now your friend", tag: ["Friends", "sky"], social: true,
-        body: '<p class="fr-ptext">You can see each other\'s yearly totals now, never your answers.</p>' };
+        body: "" };
     });
     const extra = [monthlyPost(), nextMovePost()].filter(Boolean);
     return [...extra.filter((p) => p.pin), ...[...posts, ...extra.filter((p) => !p.pin)].sort((a, b) => b.at - a.at)];
@@ -5651,7 +5650,7 @@
       '<div class="fr-me-stats"><div class="dark"><b class="display tnum">' + (meBoard ? tonnes(meBoard.total_yearly) + "<small> t</small>" : "–") + "</b>" + (pctTxt || '<span class="fr-small">a year</span>') + "</div>" +
       '<div><b class="display tnum">' + accepted.length + '</b><span class="fr-small">' + (accepted.length === 1 ? "friend" : "friends") + "</span></div>" +
       '<div class="cheers"><b class="display tnum">' + (friends.cheersGot || 0) + '</b><span class="fr-small">cheers</span></div></div>' +
-      "<p class=\"xs muted fr-me-note\">Friends only ever see each other's yearly totals, never your answers.</p></section>";
+      "</section>";
 
     // Bring someone in (act 7)
     const invite =
@@ -5669,7 +5668,7 @@
       '<section class="glass fr-box fr-manage" aria-labelledby="fr-add-h"><h2 id="fr-add-h" class="display">Add a friend</h2>' +
       '<form id="friend-form" class="fr-addform"><input class="input" type="text" id="friend-email" placeholder="Username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send</button></form>' +
       (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark fw-700" : "red") + '">' + esc(friends.msg) + "</p>" : "") +
-      '<p class="xs muted mt-2">They need a CO2 Counter account. Usernames aren\'t case-sensitive.</p>' +
+      '<p class="xs muted mt-2">They need a CO2 Counter account. Friends see each other\'s yearly totals, never answers.</p>' +
       (outgoing.length
         ? '<div class="fr-label">Waiting for a reply</div>' + outgoing.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 32, false, "dashed") + '<span class="grow fw-700 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost" data-action="friend-remove" data-id="' + f.id + '">Cancel</button></div>').join("")
         : "") +
@@ -6090,7 +6089,7 @@
       '<section class="glass acc-box" aria-labelledby="acc-prof"><h2 id="acc-prof" class="display">Profile</h2><dl class="acc-dl">' +
       details.map(([k, v]) => "<div><dt>" + k + "</dt><dd>" + esc(v) + "</dd></div>").join("") +
       "<div><dt>Saved</dt><dd>" + (canSync() ? "Synced across your devices" : "On this device") + "</dd></div></dl>" +
-      '<p class="xs muted mt-2">Friends see your name and yearly total only, never your answers. <a href="#/friends">Change your name</a></p></section>';
+      '<p class="xs mt-2"><a href="#/friends">Change the name friends see</a></p></section>';
     const plan =
       '<section class="acc-box acc-plan" aria-labelledby="acc-plan"><div class="row-between gap-3"><h2 id="acc-plan" class="display">Your plan</h2><span class="acc-tag">' + planTag + "</span></div>" +
       '<p class="acc-plan-p">' + planText + "</p>" + planExtra + "</section>";
@@ -6147,10 +6146,10 @@
     const a = ui.aboutYou || {};
     if (a.loading || a.failed) return "";
     return (
-      '<section class="glass guide-card"><span class="eyebrow">About you · optional</span><h2 class="display mt-2">Help us understand who uses CO2 Counter</h2>' +
-      '<form id="about-you-form" class="stack-3 mt-3"><label class="xs fw-700" for="about-role">What best describes your work?</label>' +
-      '<select class="input q-select" id="about-role"><option value="">Prefer not to say</option>' + ROLES.map(([k, l]) => '<option value="' + k + '"' + (a.role === k ? " selected" : "") + ">" + l + "</option>").join("") + "</select>" +
-      '<p class="xs muted">Only used for anonymous totals, like the average footprint of nurses. Never shown to anyone with your name.</p>' +
+      // What you do is asked once, in the survey's Money step; this card is
+      // just the research choice.
+      '<section class="glass guide-card"><span class="eyebrow">Research · optional</span>' +
+      '<form id="about-you-form" class="stack-3 mt-2">' +
       '<label class="check-label research-consent"><input type="checkbox" id="about-research"' + (a.research_opt_in ? " checked" : "") + " /> <span><b>Share my answers for research.</b> Your survey answers and footprint, without your name, email or username, may be shared with research and health partners studying how people can cut emissions. You can turn this off at any time.</span></label>" +
       '<div class="row-between gap-3" style="flex-wrap:wrap"><button type="submit" class="btn btn-green">Save</button>' +
       (ui.aboutMsg ? '<span class="xs ' + (ui.aboutMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.aboutMsg.text) + "</span>" : "") + "</div></form></section>"
@@ -7741,13 +7740,12 @@
     }
     if (e.target.id === "about-you-form") {
       e.preventDefault();
-      const role = document.getElementById("about-role").value || null;
       const research = document.getElementById("about-research").checked;
-      const patch = { role, research_opt_in: research };
+      const patch = { research_opt_in: research };
       if (research && !ui.aboutYou.research_opt_in) patch.research_opted_at = new Date().toISOString();
       const { error } = await sb.from("profiles").update(patch).eq("id", currentUser.id);
       ui.aboutMsg = error ? { ok: false, text: "Couldn't save. Please try again." } : { ok: true, text: "Saved." };
-      if (!error) ui.aboutYou = { ...ui.aboutYou, role, research_opt_in: research };
+      if (!error) ui.aboutYou = { ...ui.aboutYou, research_opt_in: research };
       render();
       return;
     }
