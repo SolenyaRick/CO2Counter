@@ -2996,7 +2996,8 @@
     const rowColour = (i, n) => (n <= 2 ? (i === 0 ? colours[0] : colours[4]) : colours[Math.min(4, Math.round((i / (n - 1)) * 4))]);
     const budgetPct = (eqKg / D.BUDGET_YEARLY) * 100;
     const repeat = (n, ic, cap) => Array.from({ length: Math.min(n, cap) }, () => icon(ic)).join("") + (n > cap ? '<span class="xs muted">+' + (n - cap) + "</span>" : "");
-    let html = "";
+    // The guide's own headline and intro, which know what you've already done.
+    let html = '<div class="guide-lede"><h3 class="display">' + esc(g.title) + "</h3><p>" + esc(g.lede) + "</p></div>";
     if (withChart)
       html += panel(
         esc(g.vsTitle),
@@ -3783,7 +3784,7 @@
     else body = "";
     // The biggest step carries the guide: comparison (unless the step has
     // its own), what the saving looks like, and how to do it.
-    if (index === guideIndex(cat) && !sectionNA(cat, s)) body += guideSheet(cat, !s.dynamicKey);
+    if (index === guideIndex(cat) && !sectionNA(cat, s)) body += guideSheet(cat, !s.dynamicKey || cat === "banking");
 
     modalRoot.innerHTML = glyphify(fillTokens(
       '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +

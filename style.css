@@ -4816,3 +4816,6 @@ a.fr-story-av:hover { transform: translateY(-3px); }
 .guide-done { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 18px; background: rgba(63, 91, 58, 0.08); }
 .guide-done .sm { flex: 1 1 220px; }
 span.todo-guide { cursor: pointer; }
+.guide-lede { margin-top: 16px; padding: 16px 18px; border-radius: 18px; background: #2B3F28; color: #F6F1E6; }
+.guide-lede h3 { margin: 0; font-size: 20px; font-weight: 800; color: #F6F1E6; }
+.guide-lede p { margin: 6px 0 0; font-size: 15px; line-height: 1.55; color: #C9D3BC; }
