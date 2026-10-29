@@ -4879,3 +4879,5 @@ span.todo-guide { cursor: pointer; }
   .hb-badge { right: -5px; bottom: -5px; width: 15px; height: 15px; border-width: 1.5px; }
   .hb-node .hb-badge .icon { width: 9px; height: 9px; }
 }
+/* Keep anything scrolled into view (links, focus, form fields) clear of the phone tab bar */
+@media (max-width: 640px) { html { scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); scroll-padding-top: 70px; } }
