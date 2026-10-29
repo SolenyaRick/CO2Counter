@@ -4369,7 +4369,7 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .hb-ringwrap { flex: 0 1 380px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px; border-radius: 28px; }
 .hb-ring-box { position: relative; }
 .hb-ring { display: block; max-width: 100%; height: auto; }
-.hb-ring text { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 12px; font-weight: 800; }
+.hb-ring text { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 17px; font-weight: 800; }
 @keyframes hb-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
 .hb-seg { animation: hb-draw 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .hb-ring-mid { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
@@ -4461,9 +4461,8 @@ a.hb-card:hover > .icon { transform: translateX(4px); }
   .hb-tosave b { font-size: 18px; }
   .hb-tosave br { display: none; }
   .hb-ringwrap { flex: 1 1 100%; flex-direction: row; justify-content: center; padding: 14px 18px; gap: 22px; border-radius: 18px; }
-  .hb-ring { width: 112px; height: 112px; }
-  .hb-ring text { display: none; }
-  .hb-ring-mid b { font-size: 32px; } .hb-ring-mid small { font-size: 16px; } .hb-ring-mid span { font-size: 11px; }
+  .hb-ring { width: 168px; height: 168px; }
+  .hb-ring-mid b { font-size: 30px; } .hb-ring-mid small { font-size: 14px; } .hb-ring-mid span { font-size: 11px; }
   .hb-legend { flex-direction: column; align-items: flex-start; gap: 8px; font-size: 15px; font-weight: 600; }
   .hb-legend b { font-size: 18px; }
   .hb-group { margin-top: 26px; padding: 0; border: 0; background: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; border-radius: 0; }
@@ -4846,4 +4845,37 @@ span.todo-guide { cursor: pointer; }
   .intro-hero .intro-cta { display: none; }
   .intro-sticky { display: flex; position: sticky; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 20; margin: 24px 0 0; }
   .intro-sticky .intro-cta { width: 100%; justify-content: center; min-height: 52px; box-shadow: 0 12px 30px rgba(46, 42, 34, 0.22); }
+}
+
+/* My Habits ring: numbered segments, and a key saying which act is which */
+.hb-ring-mid b { font-size: 48px; }
+.hb-ring-mid small { font-size: 20px; color: #8A8273; }
+.hb-ring-mid span { display: block; margin-top: 2px; }
+.hb-key { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.hb-key a { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 12px; color: #2E2A22; text-decoration: none; font-size: 14px; }
+.hb-key a:hover { background: rgba(63, 91, 58, 0.08); color: #2E2A22; }
+.hb-key-n { flex: none; width: 24px; height: 24px; border-radius: 99px; display: grid; place-items: center; font-size: 13px; font-weight: 800; background: rgba(46, 42, 34, 0.1); color: #4A453A; }
+.hb-key .done .hb-key-n { background: #3F5B3A; color: #F6F1E6; }
+.hb-key .wait .hb-key-n { background: #7FA3AE; color: #14262B; }
+.hb-key-name { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hb-key-st { flex: none; display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: #8A8273; }
+.hb-key .done .hb-key-st { color: #3F5B3A; }
+.hb-key .wait .hb-key-st { color: #2E5560; }
+.hb-key-st .icon { width: 13px; height: 13px; }
+/* Act circles keep their number; done and waiting add a badge */
+.hb-node { position: absolute; }
+.hb-tick .hb-node { position: relative; }
+.hb-badge { position: absolute; right: -4px; bottom: -4px; width: 24px; height: 24px; border-radius: 99px; display: grid; place-items: center; background: #F6F1E6; border: 2px solid currentColor; }
+.hb-node.done .hb-badge { color: #3F5B3A; border-color: #3F5B3A; }
+.hb-node.wait .hb-badge { color: #2E5560; border-color: #7FA3AE; }
+.hb-node .hb-badge .icon { width: 13px; height: 13px; stroke-width: 3; }
+@media (max-width: 640px) {
+  .hb-ringwrap { gap: 14px; align-items: center; }
+  .hb-key { grid-template-columns: 1fr; gap: 0; flex: 1; min-width: 0; }
+  .hb-key a { padding: 3px 4px; font-size: 13px; gap: 6px; }
+  .hb-key-n { width: 20px; height: 20px; font-size: 11px; }
+  .hb-key-st { font-size: 0; }
+  .hb-key-st .icon { width: 14px; height: 14px; }
+  .hb-badge { right: -5px; bottom: -5px; width: 15px; height: 15px; border-width: 1.5px; }
+  .hb-node .hb-badge .icon { width: 9px; height: 9px; }
 }

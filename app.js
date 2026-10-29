@@ -3632,7 +3632,8 @@
 
     // The number on the timeline: a tick when done, a clock while someone
     // else confirms it, otherwise the act's number.
-    const node = (a) => '<span class="hb-node num ' + state(a) + '" aria-hidden="true">' + (a.done ? icon("check") : a.pending ? icon("clock") : a.n) + "</span>";
+    // The act's number always shows; done and waiting add a small badge.
+    const node = (a) => '<span class="hb-node num ' + state(a) + '" aria-hidden="true">' + a.n + (a.done ? '<span class="hb-badge">' + icon("check") + "</span>" : a.pending ? '<span class="hb-badge">' + icon("clock") + "</span>" : "") + "</span>";
     const tile = (a) => '<span class="hb-tile" aria-hidden="true">' + svgPath(a.icon, 26) + "</span>";
     const body = (a) =>
       '<span class="min0 hb-body"><span class="hb-eyeb">Act ' + a.n + '</span><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-what">' + esc(a.what) + '</span><span class="hb-sub">' + esc(a.sub) + "</span></span>";
@@ -3660,18 +3661,19 @@
       return '<div class="hb-light">' + a.extra + "</div>";
     };
     const row = (a) => {
+      const id = ' id="hb-act-' + a.n + '"';
       const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
       const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
       const cls = "hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
       if (page && !a.manual && (a.done || !a.extra))
-        return '<li class="hb-item"><a class="hb-row ' + cls + '" href="' + page + '">' + node(a) + tile(a) + body(a) + icon("chevronRight") + "</a></li>";
+        return '<li class="hb-item"' + id + '><a class="hb-row ' + cls + '" href="' + page + '">' + node(a) + tile(a) + body(a) + icon("chevronRight") + "</a></li>";
       if (a.manual)
-        return '<li class="hb-item"><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button><div class=\"" + cls + ' hb-boxed">' +
+        return '<li class="hb-item"' + id + '><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button><div class=\"" + cls + ' hb-boxed">' +
           '<div class="hb-row">' + tile(a) + body(a) + "</div>" + (a.extra && !a.done ? '<div class="hb-light">' + a.extra + "</div>" : "") + pageLink + "</div></li>";
       if (a.extra || (a.verifiedTick && !a.cat && !a.href))
-        return '<li class="hb-item"><div class="' + cls + ' hb-boxed">' + node(a) + '<div class="hb-row">' + tile(a) + body(a) + "</div>" +
+        return '<li class="hb-item"' + id + '><div class="' + cls + ' hb-boxed">' + node(a) + '<div class="hb-row">' + tile(a) + body(a) + "</div>" +
           (a.extra && (!a.done || a.keepExtra) ? extraHtml(a) : "") + pageLink + "</div></li>";
-      return '<li class="hb-item"><a class="hb-row ' + cls + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + tile(a) + body(a) + save(a) +
+      return '<li class="hb-item"' + id + '><a class="hb-row ' + cls + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + tile(a) + body(a) + save(a) +
         '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
     };
     const group = (title, note, list) =>
@@ -3679,7 +3681,7 @@
       '<ol class="hb-list"><span class="hb-rail" aria-hidden="true"></span>' + list.map(row).join("") + "</ol></section>";
 
     // Seven ring segments with small gaps, starting at the top.
-    const R = 96, C = 120, gap = 9;
+    const R = 94, C = 120, gap = 5;
     const pt = (deg) => { const r = ((deg - 90) * Math.PI) / 180; return [C + R * Math.cos(r), C + R * Math.sin(r)]; };
     const COL = { done: "#3F5B3A", wait: "#7FA3AE", todo: "transparent" };
     const segs = acts.map((a, i) => {
@@ -3689,17 +3691,22 @@
       const len = Math.ceil((R * Math.PI * (a1 - a0)) / 180);
       const st = state(a);
       return {
-        path: '<path d="' + d + '" fill="none" stroke="rgba(46,42,34,.08)" stroke-width="22" stroke-linecap="round"/>' +
-          '<path class="' + (animate ? "hb-seg" : "") + '" d="' + d + '" fill="none" stroke="' + COL[st] + '" stroke-width="22" stroke-linecap="round" style="--len:' + len + ";stroke-dasharray:" + len + ";animation-delay:" + (0.3 + i * 0.12).toFixed(2) + 's"/>',
-        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#8A8273" : st === "wait" ? "#14262B" : "#F6F1E6") + '">' + a.n + "</text>",
+        path: '<path d="' + d + '" fill="none" stroke="rgba(46,42,34,.1)" stroke-width="30"/>' +
+          '<path class="' + (animate ? "hb-seg" : "") + '" d="' + d + '" fill="none" stroke="' + COL[st] + '" stroke-width="30" style="--len:' + len + ";stroke-dasharray:" + len + ";animation-delay:" + (0.3 + i * 0.12).toFixed(2) + 's"/>',
+        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#5C5649" : st === "wait" ? "#14262B" : "#F6F1E6") + '">' + a.n + "</text>",
       };
     });
     const ring =
       '<div class="glass hb-ringwrap' + (animate ? " rise d2" : "") + '"><div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
       segs.map((s) => s.path).join("") + segs.map((s) => s.label).join("") + "</svg>" +
-      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small>/7</small></b><span>acts done</span></div></div></div>' +
-      '<div class="hb-legend"><span><i class="done"></i><b class="tnum">' + made + "</b> done</span><span><i class=\"wait\"></i><b class=\"tnum\">" + waiting + "</b> waiting</span>" +
-      '<span><i></i><b class="tnum">' + (7 - made - waiting) + "</b> to do</span></div></div>";
+      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small> of 7</small></b><span>done' + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>" +
+      // Which act is which, with its state, so the ring reads at a glance.
+      '<ol class="hb-key">' +
+      acts.map((a) => {
+        const st = state(a);
+        return '<li class="' + st + '"><a href="#hb-act-' + a.n + '" data-action="fr-jump"><span class="hb-key-n num">' + a.n + "</span><span class=\"hb-key-name\">" + ACT_SHORT[a.n] + '</span><span class="hb-key-st">' + (st === "done" ? icon("check") + "Done" : st === "wait" ? icon("clock") + "Waiting" : "To do") + "</span></a></li>";
+      }).join("") +
+      "</ol></div>";
 
     const DAILY = [
       ["Meat-free lunch", SW_ICONS.meals, "gg-gg--"],
@@ -3728,6 +3735,7 @@
       '<p class="xs muted hb-credit">The 7 Acts are by <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">Real Zero</a>.</p></div>'
     );
   }
+  const ACT_SHORT = { 1: "Money", 2: "Energy", 3: "Food", 4: "Travel", 5: "Measure", 6: "Your MP", 7: "Invite 7" };
   const HB_TRAIN = "M6 4h12a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2ZM4 11h16M8 21l2-3M16 21l-2-3M8.5 14.5v.01M15.5 14.5v.01";
   const HB_CHART = "M4 20V10M10 20V4M16 20v-7M2 20h20";
   const HB_VOTE = "M4 13h16v7H4zM8 13V5h8v8M10.5 8.5l1.5 1.5 3-3";
