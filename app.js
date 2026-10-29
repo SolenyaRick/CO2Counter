@@ -2476,6 +2476,24 @@
     );
   }
 
+  // Results end in action: the three changes that would cut the most, each
+  // opening its step (with the guide) on the category page.
+  function movesHtml(tips) {
+    const top = tips.filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
+    if (!top.length) return "";
+    return (
+      '<section class="glass moves" aria-labelledby="moves-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2>' +
+      '<span class="sm muted">−' + kgFmt(top.reduce((t, x) => t + x.t.saving, 0)) + " kg a year between them</span></div><ol>" +
+      top.map((x, i) =>
+        '<li><a class="move" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
+        '<span class="move-n display">' + (i + 1) + '</span><span class="move-ic cat-badge">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + "</span>" +
+        '<span class="min0 grow"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + "</span></span>" +
+        '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg a year</span></span>' + icon("chevronRight") + "</a></li>"
+      ).join("") +
+      "</ol></section>"
+    );
+  }
+
   function renderResults() {
     const fp = footprint(survey);
     const tips = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) }));
@@ -2576,11 +2594,11 @@
       (lead
         ? '<section class="res-opp"><span class="eyebrow">Your biggest opportunity</span><h3 class="display">' + esc(lead.t.title) + "</h3>" +
           (lead.t.saving > 0.5 ? '<p class="res-opp-kg display tnum">−' + kgFmt(lead.t.saving) + " <small>kg a year</small></p>" : "") +
-          '<a class="btn btn-honey btn-block" href="' + catHref(lead.b.key) + '">See how ' + icon("arrowRight") + "</a></section>"
+          '<a class="btn btn-honey btn-block" href="' + catHref(lead.b.key) + '" data-action="open-move" data-cat="' + lead.b.key + '">See how ' + icon("arrowRight") + "</a></section>"
         : "") +
       '<section class="glass res-three"><h3 class="display">Biggest three</h3><p class="sm">' +
       top3.map((b) => esc(b.label)).join(", ").replace(/, ([^,]*)$/, " and $1") + " make up <b>" + top3Pct + "%</b> of your footprint. Start there for the biggest difference.</p></section>" +
-      "</aside></div>";
+      "</aside></div>" + (ui.exampleMode ? "" : movesHtml(tips));
 
     const hist = ui.exampleMode ? [] : historyByDay();
     if (hist.length) {
@@ -2639,8 +2657,7 @@
       return html + '<div class="center mt-6"><button type="button" class="btn btn-green" data-action="start-survey">Start your own survey ' + icon("arrowRight") + "</button></div></div>";
     }
     html +=
-      '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button>" +
-      '<a class="btn btn-green" href="' + catHref(lead ? lead.b.key : fp.biggest.key) + '">' + icon("arrowRight") + " Show my top opportunity</a></div>" +
+      '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
       saveCard() + supportCard() +
       '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. Figures last updated ' +
       esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>';
@@ -2718,7 +2735,7 @@
             '<span class="num-badge' + (k === 0 && !done && !na ? " lead" : "") + '">' + (done ? icon("check") : k + 1) + "</span>" +
             '<div class="min0"><h3 class="todo-title display">' + esc(s.heading) + (tag ? " " + tag : "") + "</h3>" +
             '<p class="todo-body">' + esc(s.body) + "</p>" + sectionTeaser(s) +
-            (k === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "") + "</div>" +
+            (i === guideIndex(cat) && !na && !done ? '<span class="todo-guide">Step-by-step guide inside ' + icon("arrowRight") + "</span>" : "") + "</div>" +
             '<span class="todo-more">' + icon("chevronRight") + "</span></li>"
           );
         })
@@ -2954,17 +2971,22 @@
     };
   }
 
-  function renderGuide(cat) {
-    const ex = D.EXPLAINERS[cat];
-    if (!ex) {
-      location.replace("#/results");
-      return "";
-    }
+  // The step-by-step guide, shown inside a category's pop-up for its biggest
+  // step (the separate guide page used to repeat the same steps).
+  function guideIndex(cat) {
+    const ex = D.EXPLAINERS[cat] || {};
+    const diet = cat === "meals" && survey ? D.DIET_EXPLAINERS[dietType(survey)] : null;
+    const secs = (diet && diet.sections) || ex.sections || [];
+    const want = { flights: "trainComparison", banking: "switchAccount" }[cat];
+    if (want) return Math.max(0, secs.findIndex((x) => x.dynamicKey === want));
+    // Otherwise the first step that's shown and applies to them.
+    const i = secs.findIndex((x) => !(diet && sectionDone(cat, x)) && !sectionHidden(cat, x) && !sectionNA(cat, x));
+    return Math.max(0, i);
+  }
+  function guideSheet(cat, withChart) {
     const fp = footprint(survey);
     const g = guideSpec(cat);
-    const idx = Math.max(0, fp.breakdown.findIndex((b) => b.key === cat));
-    const item = fp.breakdown[idx] || { yearly: 0 };
-    const next = fp.breakdown[(idx + 1) % fp.breakdown.length];
+    const item = fp.breakdown.find((b) => b.key === cat) || { yearly: 0 };
     const shownSave = g.saveOverride != null ? g.saveOverride : g.save;
     const eqKg = g.eqFlights ? item.yearly : shownSave > 0.5 ? shownSave : item.yearly;
     const eq = equivalents(eqKg);
@@ -2972,54 +2994,46 @@
     const val = (v) => (v < 10 && v > 0 ? v.toFixed(2) : kgFmt(v));
     const colours = ["#B8653D", "#D9A441", "#A3B58F", "#6E8B5E", "#3F5B3A"];
     const rowColour = (i, n) => (n <= 2 ? (i === 0 ? colours[0] : colours[4]) : colours[Math.min(4, Math.round((i / (n - 1)) * 4))]);
-    const diet = cat === "meals" ? D.DIET_EXPLAINERS[dietType(survey)] : null;
-    const others = ((diet && diet.sections) || ex.sections).map((x) => x.heading).filter((h) => h !== g.title).slice(0, 3);
     const budgetPct = (eqKg / D.BUDGET_YEARLY) * 100;
     const repeat = (n, ic, cap) => Array.from({ length: Math.min(n, cap) }, () => icon(ic)).join("") + (n > cap ? '<span class="xs muted">+' + (n - cap) + "</span>" : "");
-    return (
-      '<div class="container guide-v2">' + resultTabs(fp, cat) +
-      '<p class="crumbs"><a href="#/results">Overview</a> › <a href="#/explainer/' + cat + '">' + esc(ex.title) + "</a> › <span>Guide</span></p>" +
-      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
-      '<div class="cat-hero-main"><span class="tag done-tag">Your biggest step here</span><h1 class="cat-title display">' + esc(g.title) + '</h1><p class="cat-why">' + esc(g.lede) + "</p></div>" +
-      '<div class="cat-hero-side"><div class="cat-figs"><div class="muted">' + esc(g.saveLabel) + "</div>" +
-      (shownSave >= 0.5
-        ? '<div class="cat-kg display tnum green-dark">−' + kgFmt(shownSave) + '</div><div class="muted">kg CO₂e a year</div>'
-        : '<div class="cat-kg display green-dark">' + icon("check") + '</div><div class="muted">You\'re already doing this</div>') +
-      "</div></div></header>" +
-      '<section class="glass guide-card rise" style="animation-delay:.06s"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:flex-end"><div><span class="eyebrow">Side by side</span>' +
-      '<h2 class="display">' + esc(g.vsTitle) + "</h2></div>" + (g.headline ? '<span class="display guide-headline">' + esc(g.headline) + "</span>" : "") + "</div>" +
-      '<ul class="vs-list">' +
-      g.rows
-        .map(
-          (r, i) =>
-            '<li><span class="vs-icon" style="color:' + rowColour(i, g.rows.length) + '">' + r[2] + '</span><span class="vs-label">' + esc(r[0]) + "</span>" +
-            '<span class="vs-track"><span style="width:' + Math.max(r[1] > 0 ? 1.5 : 0.6, (r[1] / max) * 100).toFixed(1) + "%;background:" + rowColour(i, g.rows.length) + ";animation-delay:" + (i * 0.12).toFixed(2) + 's"></span></span>' +
-            '<span class="vs-val"><b class="display tnum">' + val(r[1]) + "</b> " + g.unit + "</span></li>"
-        )
-        .join("") +
-      '</ul><p class="xs muted mt-3">' + esc(g.source) + "</p></section>" +
-      (eqKg > 0.5
-        ? '<section class="guide-card flat rise" style="animation-delay:.12s"><span class="eyebrow">What that looks like</span><h2 class="display">' +
-          (g.eqFlights ? "What your " + kgFmt(eqKg) + " kg of flying a year looks like" : "What −" + kgFmt(eqKg) + " kg a year looks like") + "</h2>" +
-          '<div class="eq-grid">' +
+    // The guide's own headline and intro, which know what you've already done.
+    let html = '<div class="guide-lede"><h3 class="display">' + esc(g.title) + "</h3><p>" + esc(g.lede) + "</p></div>";
+    if (withChart)
+      html += panel(
+        esc(g.vsTitle),
+        '<ul class="vs-list">' +
+          g.rows
+            .map(
+              (r, i) =>
+                '<li><span class="vs-icon" style="color:' + rowColour(i, g.rows.length) + '">' + r[2] + '</span><span class="vs-label">' + esc(r[0]) + "</span>" +
+                '<span class="vs-track"><span style="width:' + Math.max(r[1] > 0 ? 1.5 : 0.6, (r[1] / max) * 100).toFixed(1) + "%;background:" + rowColour(i, g.rows.length) + ";animation-delay:" + (i * 0.12).toFixed(2) + 's"></span></span>' +
+                '<span class="vs-val"><b class="display tnum">' + val(r[1]) + "</b> " + g.unit + "</span></li>"
+            )
+            .join("") +
+          '</ul><p class="xs muted mt-2">' + esc(g.source) + "</p>",
+        g.headline ? chipBig(esc(g.headline)) : ""
+      );
+    if (eqKg > 0.5)
+      html += panel(
+        g.eqFlights ? "What your " + kgFmt(eqKg) + " kg of flying a year looks like" : "What −" + kgFmt(eqKg) + " kg a year looks like",
+        '<div class="eq-grid">' +
           '<div class="eq"><div class="row-between"><span>Trees needed to soak it up</span><b class="display tnum">' + kgFmt(eq.trees) + '</b></div><div class="eq-icons green-dark">' + repeat(eq.trees, "tree", 18) + '</div><p class="xs muted">A mature tree absorbs about 20 kg of CO₂ a year.</p></div>' +
           '<div class="eq"><div class="row-between"><span>Share of the 1.5°C budget</span><b class="display tnum">' + (budgetPct < 1 ? budgetPct.toFixed(1) : Math.round(budgetPct)) + '%</b></div><div class="eq-bar"><span style="width:' + Math.min(100, budgetPct).toFixed(1) + '%"></span></div><p class="xs muted">Of one person\'s yearly {{budget_t}} t.</p></div>' +
           '<div class="eq"><div class="row-between"><span>The same as driving</span><b class="display tnum">' + kgFmt(eq.drivingKm) + ' km</b></div><p class="xs muted">In a petrol car. London to Edinburgh is about 650 km.</p></div>' +
           '<div class="eq"><div class="row-between"><span>New phones</span><b class="display tnum">' + kgFmt(eq.phones) + '</b></div><div class="eq-icons">' + repeat(eq.phones, "phone", 8) + '</div><p class="xs muted">Making and charging one phone for a year: about 61 kg.</p></div>' +
-          "</div></section>"
-        : "") +
-      '<div class="cat-grid"><section class="guide-card flat cat-col"><h2 class="display">How to do it</h2><ol class="howto">' +
-      g.steps.map((st, i) => '<li><span class="num-badge display">' + (i + 1) + '</span><div><h3 class="display">' + esc(st[0]) + "</h3><p>" + esc(st[1]) + "</p></div></li>").join("") +
-      "</ol></section>" +
-      '<aside class="cat-aside">' + (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
-      (others.length
-        ? '<section class="glass cat-drop"><h3 class="display">More ways to cut it</h3><ul class="more-ways">' +
-          others.map((h) => '<li><a href="#/explainer/' + cat + '">' + esc(h) + icon("chevronRight") + "</a></li>").join("") + "</ul></section>"
-        : "") +
-      "</aside></div>" +
-      '<div class="cat-steps"><a class="cat-step" href="#/explainer/' + cat + '">' + icon("chevronLeft") + "<span><small>Back to</small><b>" + esc(ex.title) + "</b></span></a>" +
-      '<a class="cat-step next" href="#/guide/' + next.key + '"><span><small>Next guide</small><b>' + esc(next.label) + "</b></span>" + icon("chevronRight") + "</a></div></div>"
+          "</div>"
+      );
+    html += panel(
+      "How to do it",
+      '<ol class="howto">' + g.steps.map((st, i) => '<li><span class="num-badge display">' + (i + 1) + '</span><div><h3 class="display">' + esc(st[0]) + "</h3><p>" + esc(st[1]) + "</p></div></li>").join("") + "</ol>",
+      shownSave >= 0.5 ? chipBig("−" + kgFmt(shownSave) + " kg a year") : chipBig("Already doing this")
     );
+    const step = Math.max(0, STEPS.findIndex((x) => x.key === (cat === "water" ? "energy" : cat)));
+    html +=
+      '<div class="guide-done"><span class="sm">Done it? Update your answers and your results and My Habits catch up.</span>' +
+      '<button type="button" class="btn btn-green btn-sm" data-action="update-step" data-step="' + step + '">Update my answers</button>' +
+      '<a class="btn btn-outline btn-sm" href="#/habits" data-action="close-and-go">My Habits</a></div>';
+    return '<div class="guide-in-sheet">' + html + "</div>";
   }
 
   // ---------- banking league tables ----------
@@ -3767,7 +3781,10 @@
     else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
     else if (s.dynamicKey === "greenTariff") body = greenTariffSheet();
     else if (s.dynamicKey === "cheeseDairy") body = cheeseSheet();
-    else body = pos === 0 ? '<a class="todo-guide" href="#/guide/' + cat + '" data-action="go">Step-by-step guide, with comparisons ' + icon("arrowRight") + "</a>" : "";
+    else body = "";
+    // The biggest step carries the guide: comparison (unless the step has
+    // its own), what the saving looks like, and how to do it.
+    if (index === guideIndex(cat) && !sectionNA(cat, s)) body += guideSheet(cat, !s.dynamicKey || cat === "banking");
 
     modalRoot.innerHTML = glyphify(fillTokens(
       '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
@@ -6789,7 +6806,12 @@
       html = ui.isAdmin ? renderInputs() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to change the figures.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
-    else if (parts[0] === "guide" && parts[1]) html = full ? renderGuide(parts[1]) : renderLocked();
+    else if (parts[0] === "guide" && parts[1]) {
+      // Old guide links open the category with the guide's pop-up.
+      if (D.EXPLAINERS[parts[1]]) ui.openSheet = { cat: parts[1], index: guideIndex(parts[1]) };
+      location.replace("#/explainer/" + parts[1]);
+      return;
+    }
     else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
     else if (parts[0] === "acts" && parts[1]) html = renderActPage(parts[1]);
     else if (path === "/confirm/energy") html = renderConfirmEnergy();
@@ -6812,6 +6834,13 @@
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
+    // A link straight to one step (a "biggest move" on Results, or an old
+    // guide link) opens its pop-up once the category page is drawn.
+    if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
+      const o = ui.openSheet;
+      ui.openSheet = null;
+      setTimeout(() => openSectionDialog(o.cat, o.index), 30);
+    }
     if (path === "/switches" && app.querySelector(".sw-board")) startSwitchDemo();
     if (path === "/switches" && ui.jumpSwitch) {
       const card = document.getElementById("switch-" + ui.jumpSwitch);
@@ -7085,6 +7114,29 @@
       }
       lsSet("co2_chart_mode", ui.chartMode);
       render();
+    },
+    "open-move": (el, e) => {
+      e.preventDefault();
+      const cat = el.dataset.cat;
+      ui.openSheet = { cat, index: guideIndex(cat) };
+      if (currentPath() === "/explainer/" + cat) render();
+      else location.hash = "#/explainer/" + cat;
+    },
+    "update-step": (el) => {
+      const step = Number(el.dataset.step) || 0;
+      closeModal();
+      actions["whats-changed"]();
+      ui.reviewing = false;
+      ui.fromReview = true;
+      ui.step = step;
+      location.hash = "#/";
+      render();
+      window.scrollTo(0, 0);
+    },
+    "close-and-go": (el, e) => {
+      e.preventDefault();
+      closeModal();
+      location.hash = el.getAttribute("href");
     },
     "top-opportunity": () => {
       ui.selectedCategory = null;
