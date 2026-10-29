@@ -4881,3 +4881,7 @@ span.todo-guide { cursor: pointer; }
 }
 /* Keep anything scrolled into view (links, focus, form fields) clear of the phone tab bar */
 @media (max-width: 640px) { html { scroll-padding-bottom: calc(100px + env(safe-area-inset-bottom)); scroll-padding-top: 70px; } }
+@media (max-width: 380px) {
+  .hb-ringwrap { flex-direction: column; }
+  .hb-key { width: 100%; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+}
