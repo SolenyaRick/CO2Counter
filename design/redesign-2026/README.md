@@ -12,10 +12,12 @@ canvas layout.
 - `Glass2-Intro.dc.html`: intro / landing page. Mission as a five-step flow
   (survey, analyse, find where to improve, learn the best ways, build habits),
   what we look at, why it matters, trust and privacy, FAQ and "Start the survey".
-- `Glass2-Results.dc.html`: results overview. Count-up total, "path down"
-  bar (now / realistic / all the way), donut that converts into a bar chart
-  with an optional UK average comparison (horizontal bars on phones),
-  biggest opportunity and the supporters card.
+- `Glass2-Results.dc.html`: results overview. A dark hero with the
+  count-up total, "above UK average" and "× 1.5°C budget" chips and the
+  animated now / realistic / all the way bar; then the donut that turns
+  into bars (with UK average) beside the biggest opportunity, three animated
+  comparisons (trees, km driven, × budget) and a "since your first survey"
+  trend line; then a slim supporters strip. Horizontal bars on phones.
 - `Glass2-Category.dc.html`: one page per category (tabs), with a share-of-
   footprint pie, UK average, three ranked to-dos with "Add to plan", and
   what the category could drop to.
