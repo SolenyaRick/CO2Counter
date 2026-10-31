@@ -5419,13 +5419,21 @@
     );
   }
 
+  // The 6-character code from whatever was pasted: the code itself, the
+  // invite link, or the whole "Join my group..." message.
+  function groupCodeFrom(text) {
+    const t = String(text || "").trim();
+    const m = t.match(/join=([A-Za-z0-9]{6})(?![A-Za-z0-9])/) || t.match(/\bcode\s*:?\s*([A-Za-z0-9]{6})\b/i) || t.match(/^([A-Za-z0-9]{6})$/);
+    return m ? m[1].toUpperCase() : null;
+  }
+
   function groupFormsHtml() {
     const invite = (location.hash.split("?")[1] || "").match(/(?:^|&)join=([A-Za-z0-9]{6})/);
     return (
       '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
       '<form id="group-create-form" class="stack-2"><input class="input" id="group-name" maxlength="60" minlength="2" required placeholder="e.g. Ward 7, Year 10 science" aria-label="Group name" /><button type="submit" class="btn btn-green btn-block">Create group</button></form></section>' +
       '<section class="glass cat-drop"><h2 class="display side-title">Join a group</h2>' + (invite ? '<p class="sm mb-3 green-dark fw-600">You\'ve been invited to a group. Press Join to accept.</p>' : '<p class="sm muted mb-3">Enter the 6-character code someone shared with you.</p>') +
-      '<form id="group-join-form" class="stack-2"><input class="input tnum" id="group-code" maxlength="6" required placeholder="e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-outline btn-block">Join</button></form>' +
+      '<form id="group-join-form" class="stack-2"><input class="input tnum" id="group-code" maxlength="300" required placeholder="Code or invite link, e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-outline btn-block">Join</button></form>' +
       '<p class="xs muted mt-2">Group members see your display name and yearly total.</p></section>'
     );
   }
@@ -7572,6 +7580,11 @@
     const t = e.target;
     if (PASSWORD_IDS.includes(t.id)) return updatePasswordMatch();
     if (t.id === "auth-username" || t.id === "choose-username") return checkUsername(t);
+    if (t.id === "group-code") {
+      const code = groupCodeFrom(t.value);
+      if (code && t.value !== code) t.value = code;
+      return;
+    }
     if (t.id === "airport-search") {
       ui.airportQuery = t.value;
       const list = document.getElementById("airport-list");
@@ -7670,7 +7683,8 @@
     }
     if (e.target.id === "group-join-form") {
       e.preventDefault();
-      const code = document.getElementById("group-code").value;
+      const typed = document.getElementById("group-code").value;
+      const code = groupCodeFrom(typed) || typed.trim().toUpperCase();
       await groupAction(async () => {
         const r = await sb.rpc("join_group", { p_code: code });
         if (!r.error && r.data) ui.groupSel = r.data;
