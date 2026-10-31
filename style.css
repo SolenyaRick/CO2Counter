@@ -4885,3 +4885,4 @@ span.todo-guide { cursor: pointer; }
   .hb-ringwrap { flex-direction: column; }
   .hb-key { width: 100%; grid-template-columns: 1fr 1fr; gap: 0 8px; }
 }
+@media (max-width: 640px) { .sw-feat { scroll-margin-top: 0; } }
