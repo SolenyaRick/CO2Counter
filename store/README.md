@@ -7,7 +7,8 @@ App Store Connect and the Google Play Console.
   (iPhone 6.1"/6.3", 1206×2622), `screenshots/ipad`
   (iPad 13", 2064×2752), `screenshots/android` (phone, 1080×1920). All use the
   example profile, so no real person's data appears.
-- Graphics: `graphics/play-feature-1024x500.png` (Play feature graphic) and
+- Graphics: `graphics/ios-header-5244x2950.png` and `graphics/ios-header-3840x1646.png`
+  (App Store header and search results artwork), `graphics/play-feature-1024x500.png` (Play feature graphic) and
   `graphics/play-icon-512.png` (Play icon). The iOS icon is already in the Xcode
   project.
 
