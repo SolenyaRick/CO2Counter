@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "28 October 2026";
+  const LEGAL_UPDATED = "1 November 2026";
   // Bump when the privacy policy changes in a way people should be told
   // about: signed-in accounts on an older version see a one-time notice.
   const PRIVACY_VERSION = "2026-10-28";
@@ -5852,7 +5852,7 @@
             contactLink() +
             `. If you're unhappy with how we've handled your data, you can complain to the Information Commissioner's Office (<a class="link-btn" href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a>).</p>`,
         ],
-        ["Children", "<p>CO2 Counter is intended for people aged 16 and over.</p>"],
+        ["Children", "<p>CO2 Counter is intended for people aged 13 and over. You must be 13 or over to create an account.</p>"],
         ["Changes", "<p>If we change this policy, we'll update this page and the date above. Significant changes will be highlighted on the site.</p>"],
       ]
     );
@@ -5869,7 +5869,7 @@
         ],
         [
           "Your account",
-          "<p>You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
+          "<p>You must be 13 or over to create an account. You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
         ],
         [
           "Free use and optional support",
