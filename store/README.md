@@ -3,7 +3,7 @@
 Everything needed to list CO2 Counter in both stores. Copy the text below into
 App Store Connect and the Google Play Console.
 
-- Screenshots: `screenshots/ios` (iPhone 6.9", 1320×2868), `screenshots/iphone-6.3`
+- Screenshots (upload in this order: 01, 02, 04, 03, 05, 06, so the first three shown in search are results, moves and habits): `screenshots/ios` (iPhone 6.9", 1320×2868), `screenshots/iphone-6.3`
   (iPhone 6.1"/6.3", 1206×2622), `screenshots/ipad`
   (iPad 13", 2064×2752), `screenshots/android` (phone, 1080×1920). All use the
   example profile, so no real person's data appears.
@@ -21,7 +21,7 @@ App name shown on the phone: **CO2 Counter**.
 | Name | CO2 Counter |
 | iOS subtitle (30) | Measure and cut your footprint |
 | iOS promotional text (170) | Find out your yearly carbon footprint in five minutes, then take the seven actions that cut it most. |
-| iOS keywords (100) | carbon,footprint,climate,CO2,calculator,emissions,sustainability,eco,green,net zero,NHS,habits,diet |
+| iOS keywords (100) | carbon,climate,calculator,emissions,eco,green,net zero,sustainable,NHS,habits,tracker,environment |
 | Play short description (80) | Your yearly carbon footprint in five minutes, and the changes that cut it most. |
 | Category | Lifestyle (secondary: Education) |
 | Age rating | 4+ (Apple) / Everyone (Google): no objectionable content |
@@ -90,3 +90,6 @@ Data is encrypted in transit, and people can delete their account and data in th
    UKHACC pilot group could be those testers.
 5. Create the demo account above, then fill in the listings with this text,
    the screenshots and the privacy answers.
+
+Keywords tip: Apple already indexes every word in the name and subtitle, so the
+keyword field leaves out "CO2", "counter" and "footprint" to save space.
