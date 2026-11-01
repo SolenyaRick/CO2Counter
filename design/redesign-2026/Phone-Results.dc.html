@@ -110,6 +110,23 @@ a{color:#3F5B3A}a:hover{color:#2B3F28}
 .trend{transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
 .trend:hover{transform:translateY(-3px);box-shadow:0 18px 34px rgba(46,42,34,.1)}
 .rise{animation:rise .8s cubic-bezier(.2,.75,.2,1) both}
+/* modern restyle */
+.reveal,.reveal[data-sec]{opacity:0;transform:translateY(28px) scale(.985);transition:opacity .8s cubic-bezier(.2,.8,.2,1),transform .8s cubic-bezier(.2,.8,.2,1),filter .45s ease}
+.reveal.in,.reveal.in[data-sec]{opacity:1;transform:none}
+.reveal .pi{opacity:0}
+.reveal.in .pi{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
+@keyframes blobmove{0%,100%{translate:0 0}50%{translate:40px 30px}}
+.blob{animation:blobmove 18s ease-in-out infinite}.blob.b2{animation-duration:22s;animation-direction:reverse}
+@keyframes gfill{from{stroke-dasharray:0 100}}
+.reveal.in .gArc{animation:gfill 1.4s .3s cubic-bezier(.2,.8,.2,1) both}
+.reveal.in .gBud{animation:gfill 1s 1.2s cubic-bezier(.2,.8,.2,1) both}
+.tab:hover{background:rgba(255,253,248,.9)!important}
+.eq>div{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.eq>div:hover{transform:translateY(-3px);box-shadow:0 16px 30px -12px rgba(46,42,34,.22)}
+.leg{border-radius:12px;padding:0 8px;margin:0 -8px;transition:background .2s}
+.leg:hover{background:rgba(63,91,58,.06)}
+.chartcard,.moves,.support,.hero{transition:box-shadow .3s}
+@media (max-width: 640px){.heroL{gap:16px!important}.gauge{width:104px!important;height:104px!important}.gauge svg{width:104px;height:104px}.gauge b{font-size:24px!important}.lgbar{display:none!important}}
 /* scroll guidance */
 html{scroll-behavior:smooth}
 [data-sec]{transition:opacity .45s ease,filter .45s ease;scroll-margin-top:24px}
@@ -144,8 +161,8 @@ body{padding-bottom:88px}
 </style>
 </helmet>
 <div style="position: relative; min-height: 100vh; overflow: hidden; background: #EFE9DC; color: #2E2A22; font-family: Karla, system-ui, sans-serif">
-  <div style="position: absolute; left: -8%; top: -240px; width: 700px; height: 700px; border-radius: 99px; background: #B7C4A4; opacity: .7; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
-  <div style="position: absolute; right: -8%; top: 460px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .5; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
+  <div class="blob" style="position: absolute; left: -8%; top: -240px; width: 700px; height: 700px; border-radius: 99px; background: #B7C4A4; opacity: .45; filter: blur(110px); transform: translate3d(0,{{pBlobA}}px,0)"></div>
+  <div class="blob b2" style="position: absolute; right: -8%; top: 460px; width: 560px; height: 560px; border-radius: 99px; background: #E8C88A; opacity: .3; filter: blur(120px); transform: translate3d(0,{{pBlobB}}px,0)"></div>
 
   <div style="position: relative; max-width: 1160px; margin: 0 auto; padding: 20px 32px 64px">
     <nav aria-label="Main" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between">
@@ -165,58 +182,67 @@ body{padding-bottom:88px}
       </span>
     </nav>
 
-    <div class="tabs" role="navigation" aria-label="Result sections" style="margin-top: 28px; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; border-bottom: 1px solid rgba(46,42,34,.12)">
-      <a class="tab" href="Phone-Results.dc.html" aria-current="page" style="flex: none; padding: 12px 16px; border-bottom: 2px solid #3F5B3A; margin-bottom: -1px; color: #2E2A22; font-size: 15px; font-weight: 700; text-decoration: none">Overview</a>
+    <div class="tabs" role="navigation" aria-label="Result sections" style="margin-top: 24px; display: flex; gap: 4px; overflow-x: auto; padding: 4px; width: fit-content; max-width: 100%; box-sizing: border-box; border-radius: 99px; background: rgba(46,42,34,.05)">
+      <a class="tab" href="Phone-Results.dc.html" aria-current="page" style="flex: none; padding: 9px 16px; border-radius: 99px; background: #2B3F28; color: #F6F1E6; font-size: 14px; font-weight: 700; text-decoration: none">Overview</a>
       <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
-        <a class="tab" href="Phone-Category.dc.html" onClick="{{c.go}}" style="flex: none; padding: 12px 16px; border-radius: 10px 10px 0 0; color: #5C5649; font-size: 15px; font-weight: 500; text-decoration: none">{{c.short}}</a>
+        <a class="tab" href="Phone-Category.dc.html" onClick="{{c.go}}" style="flex: none; padding: 9px 16px; border-radius: 99px; color: #4A453A; font-size: 14px; font-weight: 600; text-decoration: none">{{c.short}}</a>
       </sc-for>
     </div>
 
-    <section class="hero rise" id="sec-footprint" data-sec="footprint" data-land aria-label="Your footprint" style="filter: {{op.footprint}}; position: relative; overflow: hidden; margin-top: 24px; padding: 32px 36px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 28px 48px; align-items: center">
-      <svg class="drift" width="420" height="420" viewBox="0 0 100 100" aria-hidden="true" style="position: absolute; right: -90px; top: -120px; opacity: .07"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#F6F1E6"></path></svg>
+    <section class="hero reveal {{rv.footprint}}" id="sec-footprint" data-sec="footprint" data-land aria-label="Your footprint" style="filter: {{op.footprint}}; position: relative; overflow: hidden; margin-top: 24px; padding: 32px 36px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18); color: #2E2A22; display: flex; flex-wrap: wrap; gap: 28px 48px; align-items: center">
       <svg class="spin" width="300" height="300" viewBox="0 0 100 100" aria-hidden="true" style="position: absolute; left: 34%; bottom: -190px; opacity: .12"><circle cx="50" cy="50" r="46" fill="none" stroke="#E8C88A" stroke-width=".6" stroke-dasharray="2 4"></circle><circle cx="50" cy="50" r="34" fill="none" stroke="#A3B58F" stroke-width=".6" stroke-dasharray="1 5"></circle></svg>
-      <div style="position: relative; flex: 1 1 360px; min-width: 0">
-        <div style="font-size: 15px; font-weight: 700; color: #C9D3BC">Your footprint this year</div>
+      <div class="heroL" style="position: relative; flex: 1 1 440px; min-width: 0; display: flex; align-items: center; gap: 26px">
+        <figure class="gauge" style="flex: none; margin: 0; position: relative; width: 140px; height: 140px">
+          <svg width="140" height="140" viewBox="0 0 140 140" role="img" aria-label="Your footprint is {{budgetX}} times one person’s 1.5°C budget">
+            <circle cx="70" cy="70" r="58" fill="none" stroke="rgba(46,42,34,.06)" stroke-width="14"></circle>
+            <circle class="gArc" cx="70" cy="70" r="58" fill="none" stroke="url(#gGrad)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100 100" transform="rotate(-90 70 70)"></circle>
+            <circle class="gBud" cx="70" cy="70" r="58" fill="none" stroke="#3F5B3A" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="37 100" transform="rotate(-90 70 70)"></circle>
+            <defs><linearGradient id="gGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E8C88A"></stop><stop offset="1" stop-color="#B8653D"></stop></linearGradient></defs>
+          </svg>
+          <figcaption style="position: absolute; inset: 0; display: grid; place-items: center; text-align: center"><span><b class="num" style="display: block; font-size: 30px; line-height: 1">{{budgetX}}×</b><span style="font-size: 11px; font-weight: 700; color: #5C5649">1.5°C budget</span></span></figcaption>
+        </figure>
+        <div style="min-width: 0">
+        <div style="font-size: 15px; font-weight: 700; color: #5C5649">Your footprint this year</div>
         <div style="margin-top: 4px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
-          <span class="num bignum" style="font-weight: 800; font-size: 96px; line-height: .95; letter-spacing: -0.045em">{{countLabel}}</span>
-          <span style="font-size: 16px; color: #C9D3BC">kg CO₂e</span>
+          <span class="num bignum" style="font-weight: 800; font-size: 84px; line-height: .95; letter-spacing: -0.045em">{{countLabel}}</span>
+          <span style="font-size: 16px; color: #5C5649">kg CO₂e</span>
         </div>
         <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px">
-          <span class="chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: rgba(184,101,61,.25); color: #F2C3A6; font-size: 14px; font-weight: 700"><span aria-hidden="true">▲</span>25% above UK average*</span>
-          <span class="chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: rgba(232,200,138,.18); color: #E8C88A; font-size: 14px; font-weight: 700; animation-delay: .15s">{{budgetX}}× your 1.5°C budget</span>
+          <span class="chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: rgba(184,101,61,.12); color: #8C4A2A; font-size: 14px; font-weight: 700"><span aria-hidden="true">▲</span>25% above UK average*</span>
+        </div>
         </div>
       </div>
 
       <div style="position: relative; flex: 1 1 440px; min-width: 0">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
-          <span style="font-size: 15px; font-weight: 700; color: #C9D3BC">With realistic changes</span>
-          <span style="padding: 4px 12px; border-radius: 99px; background: rgba(163,181,143,.22); color: #C9E0B8; font-size: 14px; font-weight: 700; opacity: {{chipAlpha}}; transition: opacity .6s">−3,210 kg · 48% less</span>
+          <span style="font-size: 15px; font-weight: 700; color: #5C5649">With realistic changes</span>
+          <span style="padding: 4px 12px; border-radius: 99px; background: rgba(63,91,58,.1); color: #2B3F28; font-size: 14px; font-weight: 700; opacity: {{chipAlpha}}; transition: opacity .6s">−3,210 kg · 48% less</span>
         </div>
         <div style="margin-top: 4px; display: flex; align-items: baseline; gap: 10px">
-          <span class="num" style="font-size: 48px; font-weight: 800; line-height: 1; color: #C9E0B8">{{pathLabel}}</span>
-          <span style="font-size: 15px; color: #C9D3BC">kg a year</span>
+          <span class="num" style="font-size: 48px; font-weight: 800; line-height: 1; color: #3F5B3A">{{pathLabel}}</span>
+          <span style="font-size: 15px; color: #5C5649">kg a year</span>
         </div>
         <div style="position: relative; margin-top: 40px; height: 24px">
-          <span style="position: absolute; left: 31.25%; top: -30px; transform: translateX(-50%); font-size: 12px; color: #E8C88A; font-weight: 700; white-space: nowrap">1.5°C · 2.5 t</span>
-          <span style="position: absolute; left: 48.2%; top: 32px; transform: translateX(-50%); font-size: 12px; color: #C9D3BC; font-weight: 700; white-space: nowrap">UK avg · 3.9 t*</span>
-          <div style="position: absolute; inset: 0; border-radius: 99px; background: rgba(246,241,230,.1)"></div>
-          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ghostNowW}}%; border-radius: 99px; border: 1.5px dashed rgba(242,195,166,.8); background: repeating-linear-gradient(135deg, rgba(184,101,61,.35) 0 6px, transparent 6px 12px); opacity: {{ghostNowA}}; transition: opacity .6s"></div>
-          <div class="glow" style="position: absolute; left: 0; top: 0; bottom: 0; width: {{solidW}}%; border-radius: 99px; background: linear-gradient(90deg, #6E8B5E, #A3B58F); transition: width 1.1s cubic-bezier(.34,1.4,.5,1)"></div>
-          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ghostAllW}}%; border-radius: 99px; border: 1.5px dashed #E8C88A; background: repeating-linear-gradient(135deg, rgba(232,200,138,.35) 0 6px, transparent 6px 12px); opacity: {{ghostAllA}}; transform: scaleX({{ghostAllS}}); transform-origin: 0 50%; transition: opacity .7s, transform .9s cubic-bezier(.34,1.4,.5,1)"></div>
-          <span style="position: absolute; left: 31.25%; top: -8px; bottom: -8px; width: 2px; background: #E8C88A"></span>
-          <span style="position: absolute; left: 48.2%; top: -8px; bottom: -8px; width: 2px; background: #C9D3BC"></span>
+          <span style="position: absolute; left: 31.25%; top: -30px; transform: translateX(-50%); font-size: 12px; color: #8A5F12; font-weight: 700; white-space: nowrap">1.5°C · 2.5 t</span>
+          <span style="position: absolute; left: 48.2%; top: 32px; transform: translateX(-50%); font-size: 12px; color: #5C5649; font-weight: 700; white-space: nowrap">UK avg · 3.9 t*</span>
+          <div style="position: absolute; inset: 0; border-radius: 99px; background: rgba(46,42,34,.06)"></div>
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ghostNowW}}%; border-radius: 99px; border: 1.5px dashed rgba(184,101,61,.6); background: repeating-linear-gradient(135deg, rgba(184,101,61,.16) 0 6px, transparent 6px 12px); opacity: {{ghostNowA}}; transition: opacity .6s"></div>
+          <div class="glow" style="position: absolute; left: 0; top: 0; bottom: 0; width: {{solidW}}%; border-radius: 99px; background: linear-gradient(90deg, #3F5B3A, #6E8B5E); transition: width 1.1s cubic-bezier(.34,1.4,.5,1)"></div>
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ghostAllW}}%; border-radius: 99px; border: 1.5px dashed #D9A441; background: repeating-linear-gradient(135deg, rgba(217,164,65,.3) 0 6px, transparent 6px 12px); opacity: {{ghostAllA}}; transform: scaleX({{ghostAllS}}); transform-origin: 0 50%; transition: opacity .7s, transform .9s cubic-bezier(.34,1.4,.5,1)"></div>
+          <span style="position: absolute; left: 31.25%; top: -8px; bottom: -8px; width: 2px; background: #D9A441"></span>
+          <span style="position: absolute; left: 48.2%; top: -8px; bottom: -8px; width: 2px; background: #8A8273"></span>
         </div>
-        <div style="margin-top: 38px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: #C9D3BC">
-          <span style="display: inline-flex; align-items: center; gap: 8px; opacity: {{ghostNowA}}; transition: opacity .6s"><span style="width: 20px; height: 10px; border-radius: 99px; border: 1.5px dashed rgba(242,195,166,.9)"></span>Now <b class="num" style="color: #F6F1E6">6,746</b></span>
-          <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 20px; height: 10px; border-radius: 99px; background: #A3B58F"></span>Realistic <b class="num" style="color: #F6F1E6">3,536</b></span>
-          <span style="display: inline-flex; align-items: center; gap: 8px; opacity: {{ghostAllA}}; transition: opacity .7s"><span style="width: 20px; height: 10px; border-radius: 99px; border: 1.5px dashed #E8C88A"></span>All the way <b class="num" style="color: #F6F1E6">1,654</b></span>
+        <div style="margin-top: 38px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: #5C5649">
+          <span style="display: inline-flex; align-items: center; gap: 8px; opacity: {{ghostNowA}}; transition: opacity .6s"><span style="width: 20px; height: 10px; border-radius: 99px; border: 1.5px dashed rgba(184,101,61,.7)"></span>Now <b class="num" style="color: #2E2A22">6,746</b></span>
+          <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 20px; height: 10px; border-radius: 99px; background: #A3B58F"></span>Realistic <b class="num" style="color: #2E2A22">3,536</b></span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; opacity: {{ghostAllA}}; transition: opacity .7s"><span style="width: 20px; height: 10px; border-radius: 99px; border: 1.5px dashed #D9A441"></span>All the way <b class="num" style="color: #2E2A22">1,654</b></span>
         </div>
         <p style="margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: #A3B58F">*The UK average leaves out banking and pensions (no UK figure). On the same basis you’re at 4.8 t.</p>
       </div>
     </section>
 
-    <div class="row" id="sec-breakdown" data-sec="breakdown" style="filter: {{op.breakdown}}; margin-top: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
-      <section class="chartcard rise" style="flex: 999 1 600px; min-width: 0; padding: 26px 28px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); animation-delay: .1s">
+    <div class="row reveal {{rv.breakdown}}" id="sec-breakdown" data-sec="breakdown" style="filter: {{op.breakdown}}; margin-top: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+      <section class="chartcard pi" style="flex: 999 1 600px; min-width: 0; padding: 26px 28px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18); animation-delay: .1s">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
           <div>
             <h2 class="serif" style="margin: 0; font-size: 26px; font-weight: 800">Where it comes from</h2>
@@ -246,7 +272,8 @@ body{padding-bottom:88px}
               <li><a class="leg" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="display: flex; align-items: center; gap: 10px; min-height: 36px; color: #2E2A22; text-decoration: none; font-size: 15px">
                 <span style="width: 12px; height: 12px; border-radius: 4px; flex: none; background: {{c.color}}"></span>
                 <span class="bname" style="flex: 1; font-weight: 600">{{c.label}}</span>
-                <span style="color: #5C5649; font-variant-numeric: tabular-nums">{{c.share}}</span>
+                <span class="lgbar" aria-hidden="true" style="width: 70px; height: 6px; border-radius: 99px; background: rgba(46,42,34,.06); overflow: hidden"><span style="display: block; height: 100%; width: {{c.shareW}}%; border-radius: 99px; background: {{c.color}}; transform: scaleX({{c.legS}}); transform-origin: 0 50%; transition: transform .9s cubic-bezier(.2,.8,.2,1) {{c.legDelay}}"></span></span>
+                <span style="min-width: 34px; text-align: right; color: #5C5649; font-variant-numeric: tabular-nums">{{c.share}}</span>
               </a></li>
             </sc-for>
           </ul>
@@ -294,7 +321,7 @@ body{padding-bottom:88px}
       </section>
 
       <aside class="side" style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
-        <a class="opp rise" href="Phone-Category.dc.html" onClick="{{goBank}}" style="position: relative; overflow: hidden; display: block; padding: 24px; border-radius: 28px; background: #E8C88A; color: #2E2A22; text-decoration: none; animation-delay: .2s">
+        <a class="opp pi" href="Phone-Category.dc.html" onClick="{{goBank}}" style="position: relative; overflow: hidden; display: block; padding: 24px; border-radius: 28px; background: #E8C88A; color: #2E2A22; text-decoration: none; animation-delay: .2s">
           <svg class="bowl" width="130" height="130" viewBox="0 0 24 24" fill="none" stroke="#2E2A22" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position: absolute; right: -10px; bottom: -14px; opacity: .14"><path d="M3 9.5 12 4l9 5.5H3ZM5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18"></path></svg>
           <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px">
             <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: #2B3F28; color: #F6F1E6; font-size: 13px; font-weight: 800"><span class="ping" aria-hidden="true"></span>Up next</span>
@@ -306,16 +333,16 @@ body{padding-bottom:88px}
             <span class="go" style="flex: none; width: 46px; height: 46px; border-radius: 99px; display: grid; place-items: center; background: #2B3F28; color: #F6F1E6"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
           </div>
         </a>
-        <div class="eq rise" role="list" aria-label="What your footprint is like" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; animation-delay: .3s">
+        <div class="eq pi" role="list" aria-label="What your footprint is like" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; animation-delay: .3s">
           <sc-for list="{{eq}}" as="e" hint-placeholder-count="3">
-            <div role="listitem" style="padding: 14px 12px; border-radius: 18px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+            <div role="listitem" style="padding: 14px 12px; border-radius: 18px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18)">
               <span class="{{e.anim}}" style="width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: {{e.bg}}; color: {{e.ink}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{e.icon}}"></path></svg></span>
               <div class="num" style="margin-top: 10px; font-size: 22px; font-weight: 800; line-height: 1">{{e.value}}</div>
               <div style="margin-top: 4px; font-size: 12px; line-height: 1.35; color: #5C5649">{{e.label}}</div>
             </div>
           </sc-for>
         </div>
-        <a class="trend rise" href="Phone-SurveyDone.dc.html" style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 18px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); color: #2E2A22; text-decoration: none; animation-delay: .4s">
+        <a class="trend pi" href="Phone-SurveyDone.dc.html" style="flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 18px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18); color: #2E2A22; text-decoration: none; animation-delay: .4s">
           <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
             <span style="font-size: 14px; font-weight: 800">Since your first survey</span>
             <span style="padding: 3px 10px; border-radius: 99px; background: rgba(63,91,58,.12); color: #2B3F28; font-size: 13px; font-weight: 800">▼ 9%</span>
@@ -337,14 +364,14 @@ body{padding-bottom:88px}
       </aside>
     </div>
 
-    <section class="moves" id="sec-moves" data-sec="moves" aria-labelledby="moves-h" style="filter: {{op.moves}}; margin-top: 16px; padding: 24px 26px; border-radius: 28px; background: rgba(255,252,245,.72); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+    <section class="moves reveal {{rv.moves}}" id="sec-moves" data-sec="moves" aria-labelledby="moves-h" style="filter: {{op.moves}}; margin-top: 16px; padding: 24px 26px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18)">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap">
         <h2 id="moves-h" class="serif" style="margin: 0; font-size: 26px; font-weight: 800">Your 3 biggest moves</h2>
         <span style="font-size: 14px; color: #5C5649"><b class="num" style="color: #2B3F28">−2,597</b> kg a year between them</span>
       </div>
       <ol style="list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px" class="movelist">
         <sc-for list="{{moves}}" as="mv" hint-placeholder-count="3">
-          <li><a class="move" href="Phone-Category.dc.html" onClick="{{mv.go}}" style="height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 20px; background: {{mv.bg}}; border: 1.5px solid {{mv.border}}; color: #2E2A22; text-decoration: none">
+          <li class="pi" style="animation-delay: {{mv.delay}}"><a class="move" href="Phone-Category.dc.html" onClick="{{mv.go}}" style="height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 20px; background: {{mv.bg}}; border: 1.5px solid {{mv.border}}; color: #2E2A22; text-decoration: none">
             <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
               <span style="display: inline-flex; align-items: center; gap: 10px"><span class="num" style="width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: {{mv.nBg}}; color: {{mv.nInk}}; font-size: 16px; font-weight: 800">{{mv.n}}</span><span style="width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(63,91,58,.1); color: #3F5B3A"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{mv.icon}}"></path></svg></span></span>
               <span style="font-size: 12px; font-weight: 800; color: {{mv.tagInk}}">{{mv.tag}}</span>
@@ -356,7 +383,7 @@ body{padding-bottom:88px}
       </ol>
     </section>
 
-    <section class="support rise" style="margin-top: 16px; padding: 16px 18px 16px 22px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; animation-delay: .5s">
+    <section class="support reveal {{rv.moves}}" style="margin-top: 16px; padding: 16px 18px 16px 22px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18); display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; animation-delay: .5s">
       <span class="beat" style="flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(184,101,61,.14); color: #B8653D"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg></span>
       <span style="flex: 1 1 320px; min-width: 0"><b class="serif" style="display: block; font-size: 18px; font-weight: 800">Free for everyone, kept going by supporters</b><span style="font-size: 14px; color: #5C5649">No ads, never sells your data. Chip in £2 a year if it’s helped you.</span></span>
       <a class="cta" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00" style="min-height: 46px; padding: 0 20px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 15px; text-decoration: none">Support for £2 a year</a>
@@ -384,7 +411,7 @@ body{padding-bottom:88px}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, count: 0, ready: false, phase: 0, shown: 0, mode: 'pie', chartTouched: false, ukOn: false, focus: 'footprint', past: false };
+    this.state = { scroll: 0, count: 0, ready: false, phase: 0, shown: 0, mode: 'pie', chartTouched: false, ukOn: false, focus: 'footprint', past: false, rv: { footprint: true } };
   }
   componentDidMount() {
     this.countTo('count', 0, 6746, 1500);
@@ -405,9 +432,14 @@ class Component extends DCLogic {
       let cur = null;
       document.querySelectorAll('[data-sec]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.top <= mid && r.bottom >= mid) cur = el.getAttribute('data-sec'); });
       const past = (window.scrollY || 0) > 160;
+      const rv = { ...this.state.rv };
+      let grew = false;
+      document.querySelectorAll('[data-sec]').forEach((el) => { const k = el.getAttribute('data-sec'); if (!rv[k] && el.getBoundingClientRect().top < window.innerHeight * 0.92) { rv[k] = true; grew = true; } });
+      if (grew) this.setState({ rv });
       if (cur !== this.state.focus || past !== this.state.past) this.setState({ focus: cur, past });
     };
     window.addEventListener('scroll', this.onFocus, { passive: true });
+    this.revealT = setTimeout(this.onFocus, 60);
     // Land on the key area: always on phones and tablets, on laptops only if it starts below the fold
     this.landT = setTimeout(() => {
       const el = document.querySelector('[data-land]');
@@ -425,6 +457,7 @@ class Component extends DCLogic {
     window.removeEventListener('scroll', this.onWin);
     window.removeEventListener('scroll', this.onFocus);
     clearTimeout(this.landT);
+    clearTimeout(this.revealT);
   }
   countTo(key, from, to, dur) {
     const t0 = performance.now();
@@ -477,10 +510,11 @@ class Component extends DCLogic {
       hUkW: c.uk ? (c.uk / 2314) * 100 : 0,
       ukText: c.uk ? 'UK ' + fmt(c.uk) : 'No UK figure',
       ukRowH: this.state.ukOn ? 18 : 0, ukGap: this.state.ukOn ? 5 : 0,
+      shareW: ((c.v / 2314) * 100).toFixed(1), legS: ready && !bars ? 1 : 0, legDelay: (0.5 + i * 0.07).toFixed(2) + 's',
       go: remember(c.key)
     }));
     let acc = 0;
-    const gap = 0.6;
+    const gap = 1.1;
     const segs = raw.map((c, i) => {
       const len = (c.v / total) * 100;
       const out = {
@@ -518,7 +552,7 @@ class Component extends DCLogic {
       chipAlpha: ph >= 2 ? 1 : 0,
       cats, segs, chartMode: bars ? 'is-bars' : 'is-pie',
       shape: bars ? line : pie,
-      strokeW: bars ? 2 : 46,
+      strokeW: bars ? 2 : 30,
       ukLegend: ukOn ? 1 : 0, ukOnAttr: ukOn ? 'true' : 'false', ukTrack: ukOn ? '#3F5B3A' : 'rgba(46,42,34,.22)', ukKnob: ukOn ? 19 : 3,
       toggleUk: () => this.setState({ ukOn: !ukOn, mode: 'bars', chartTouched: true }),
       grid: [0, 500, 1000, 1500, 2000, 2500].map((g) => ({ label: g.toLocaleString('en-GB'), top: (83.3 - (g / 2500) * 77.3).toFixed(2) })),
@@ -533,6 +567,7 @@ class Component extends DCLogic {
       budgetX: (Math.max(this.state.count, 1) / 2500).toFixed(1),
       oppLabel: fmt(Math.round(1175 * this.state.count / 6746)),
       goBank: remember('bank'),
+      rv: ['footprint', 'breakdown', 'moves'].reduce((o, k) => { o[k] = (this.state.rv || {})[k] ? 'in' : ''; return o; }, {}),
       op: ['footprint', 'breakdown', 'moves'].reduce((o, id) => { o[id] = !this.state.past || this.state.focus === id || !this.state.focus ? 'none' : 'opacity(.45) saturate(.6)'; return o; }, {}),
       nextY: this.state.past && this.state.focus !== 'moves' ? 0 : 120, nextOp: this.state.past && this.state.focus !== 'moves' ? 1 : 0,
       nextPe: this.state.past && this.state.focus !== 'moves' ? 'auto' : 'none', nextHidden: this.state.past && this.state.focus !== 'moves' ? 'false' : 'true', nextTab: this.state.past && this.state.focus !== 'moves' ? '0' : '-1',
@@ -547,7 +582,7 @@ class Component extends DCLogic {
       ].map((m, i) => ({ ...m, n: i + 1, kg: fmt(m.kg), w: ((m.kg / 1175) * 100).toFixed(1), go: remember(m.key),
         tag: i === 0 ? 'Start here' : 'Then', tagInk: i === 0 ? '#8A5F12' : '#8A8273',
         bg: i === 0 ? '#FFF7E6' : 'rgba(255,252,245,.9)', border: i === 0 ? '#E8C88A' : 'rgba(46,42,34,.08)',
-        nBg: i === 0 ? '#2B3F28' : 'rgba(63,91,58,.12)', nInk: i === 0 ? '#F6F1E6' : '#3F5B3A' })),
+        nBg: i === 0 ? '#2B3F28' : 'rgba(63,91,58,.12)', nInk: i === 0 ? '#F6F1E6' : '#3F5B3A', delay: (0.15 + i * 0.12).toFixed(2) + 's' })),
       eq: [
         { value: fmt(Math.round(this.state.count / 20)), label: 'trees to soak it up for a year', icon: 'M12 21v-5M7 16h10l-2.5-4H16l-4-8-4 8h1.5Z', bg: 'rgba(63,91,58,.12)', ink: '#3F5B3A', anim: 'sway' },
         { value: fmt(Math.round(this.state.count / 0.17625)), label: 'km driven in a petrol car', icon: 'M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1ZM3.5 12h17M7 16.5v1.5M17 16.5v1.5', bg: 'rgba(184,101,61,.14)', ink: '#8C4A2A', anim: 'drive' },
