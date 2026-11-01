@@ -89,3 +89,10 @@ Earlier directions kept for reference: Living Atmosphere (`Main`, `Meals`,
 (`Puff-*`), Canopy with Mol (`Canopy-*`), Night Grove with Wisp (`Grove-*`),
 Topographic (`Topo-*`), Glass Bento (`Bento-*`, `Laptop-Glass`) and Earthy
 Glass (`Earth-*`).
+
+Next steps and scroll guidance (Results and My Habits): an "Up next" card
+for the single biggest move (Results also lists your 3 biggest moves), a
+sticky next-step bar that appears once you scroll past the top, the section
+under the reading line stays bright while others fade back, a side rail of
+sections on laptop and tablet, and on load the page scrolls to its key area
+on phones and tablets (laptops only when it starts below the fold).

@@ -44,7 +44,7 @@ h1{font-size:40px!important;line-height:1.02!important}
 h2[style*="font-size: 3"],h2[style*="font-size: 4"]{font-size:28px!important}
 .hero{margin-top:22px!important;gap:16px!important}
 .hero h1{font-size:36px!important}
-.lede{margin-top:10px!important;font-size:16px!important;line-height:1.5!important}
+.lede{display:none!important}
 .herochips{margin-top:14px!important;gap:8px!important}
 .herochips>*{min-height:0!important;padding:9px 12px!important;border-radius:12px!important;font-size:14px!important}
 .herochips .num{font-size:19px!important}
@@ -99,6 +99,25 @@ a.act{padding-right:46px!important}
 footer span[style]{flex-wrap:wrap;gap:6px 16px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
+/* scroll guidance */
+html{scroll-behavior:smooth}
+[data-sec]{transition:opacity .45s ease,filter .45s ease;scroll-margin-top:24px}
+.nextbar{position:fixed;left:50%;bottom:24px;z-index:55;display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px;border-radius:99px;background:#2B3F28;color:#F6F1E6;box-shadow:0 18px 40px rgba(46,42,34,.28);text-decoration:none;transition:transform .5s cubic-bezier(.3,1.3,.5,1),opacity .35s;max-width:calc(100vw - 32px);box-sizing:border-box}
+.nextbar .nb-go{flex:none;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;background:#E8C88A;color:#2E2A22;font-weight:800;font-size:14px}
+.nextbar:hover .nb-go{background:#F0D59E}
+.secrail{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:14px;list-style:none;margin:0;padding:12px 10px;border-radius:99px;background:rgba(255,252,245,.7);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.secrail a{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-decoration:none}
+.secrail .rl{font-size:12px;font-weight:700;color:#2E2A22;opacity:0;transform:translateX(6px);transition:opacity .25s,transform .25s;white-space:nowrap;position:absolute;right:34px;padding:4px 10px;border-radius:99px;background:#FFFCF5;box-shadow:0 6px 16px rgba(46,42,34,.12)}
+.secrail a:hover .rl,.secrail a:focus-visible .rl{opacity:1;transform:none}
+.secrail .rd{width:10px;height:10px;border-radius:99px;transition:height .3s cubic-bezier(.3,1.4,.5,1),background .3s}
+@media (max-width: 1023px){.secrail{display:none}}
+@media (max-width: 640px){.nextbar{bottom:96px;left:16px;right:16px;transform:none!important;padding:8px 8px 8px 14px;gap:10px}.nextbar .nb-t{font-size:14px!important}.nextbar .nb-k{display:none}}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(43,63,40,.6)}100%{box-shadow:0 0 0 8px rgba(43,63,40,0)}}
+.ping{display:inline-block;width:8px;height:8px;border-radius:99px;background:#2B3F28;animation:ping 1.6s ease-out infinite}
+.upnext{transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.upnext:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(46,42,34,.14)}
+.upnext-pill{display:inline-block;vertical-align:middle;margin-left:6px;padding:3px 9px;border-radius:99px;background:#E8C88A;color:#2E2A22;font:800 12px Karla,system-ui,sans-serif;letter-spacing:0}
+@media (max-width: 640px){.upnext{padding:12px!important;gap:12px!important}.upnext .hd{font-size:17px!important}.upnext>span:first-child{width:42px!important;height:42px!important}}
 /* phone tab bar */
 .tabbar{display:none}
 @media (max-width: 640px){
@@ -131,15 +150,17 @@ body{padding-bottom:88px}
       <a href="Glass2-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
     </nav>
 
-    <header class="hero" style="margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
+    <header class="hero" id="sec-overview" data-sec="overview" data-land style="filter: {{op.overview}}; margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center; justify-content: space-between">
       <div style="flex: 1 1 520px; min-width: 0">
         <div class="rise" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #3F5B3A; font-size: 14px; font-weight: 800">My Habits · The 7 Acts</div>
         <h1 class="hd rise d1" style="margin: 18px 0 0; font-size: 64px; line-height: .98; font-weight: 800">Seven acts.<br><span style="color: #3F5B3A">{{doneCount}} done,</span> {{leftCount}} to go.</h1>
         <p class="rise d2 lede" style="margin: 20px 0 0; max-width: 520px; font-size: 20px; line-height: 1.6; color: #3A362D">Real Zero’s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" style="font-weight: 700">7 Acts</a> for individuals: one-off changes that cut the most. Acts 1 to 5 tick themselves from your latest survey.</p>
-        <div class="rise d3 herochips" style="margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px">
-          <span style="display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 18px; background: #2B3F28; color: #F6F1E6"><span class="num" style="font-size: 24px; font-weight: 800; color: #E8C88A">−{{toSave}}</span><span style="font-size: 14px; line-height: 1.3; color: #C9D3BC">kg a year still to save <br>in acts 1 to 4</span></span>
-          <a class="btn" href="Glass2-Switches.dc.html" style="display: inline-flex; align-items: center; gap: 8px; min-height: 54px; padding: 0 20px; border-radius: 18px; background: rgba(63,91,58,.12); color: #2B3F28; font-weight: 800; font-size: 16px; text-decoration: none">See your switches<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
-        </div>
+        <a class="upnext rise d3" href="Glass2-Switches.dc.html#meals" style="margin-top: 24px; max-width: 560px; display: flex; align-items: center; gap: 16px; padding: 16px 16px 16px 18px; border-radius: 22px; background: #E8C88A; color: #2E2A22; text-decoration: none">
+          <span style="flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: #2B3F28; color: #F6F1E6"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7"></path></svg></span>
+          <span style="flex: 1; min-width: 0"><span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #6B4A12"><span class="ping" aria-hidden="true"></span>UP NEXT · ACT 3</span><span class="hd" style="display: block; font-size: 20px; font-weight: 800; line-height: 1.2">More plant-based food</span><span style="font-size: 14px; font-weight: 600">Could save <b class="num">1,066 kg</b> a year · biggest left</span></span>
+          <span class="go" style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border-radius: 99px; background: #2B3F28; color: #F6F1E6; font-weight: 800; font-size: 15px">Start<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+        </a>
+        <p class="rise d3" style="margin: 12px 0 0; font-size: 14px; color: #5C5649"><b class="num" style="color: #2B3F28">−{{toSave}} kg</b> a year still to save in acts 1 to 4 · <a href="Glass2-Switches.dc.html" style="font-weight: 700">See all switches</a></p>
       </div>
 
       <div class="ringwrap rise d2" style="flex: 0 1 380px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 28px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
@@ -166,7 +187,7 @@ body{padding-bottom:88px}
     </header>
 
     <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
-      <section class="group" aria-label="{{g.title}}" style="margin-top: 40px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.5); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+      <section class="group" id="sec-{{g.key}}" data-sec="{{g.key}}" aria-label="{{g.title}}" style="filter: {{g.op}}; margin-top: 40px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.5); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <div class="ghead" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between">
           <h2 class="hd" style="margin: 0; font-size: 32px; line-height: 1.05; font-weight: 800">{{g.title}}</h2>
           <span style="font-size: 16px; color: #5C5649">{{g.note}}</span>
@@ -184,7 +205,7 @@ body{padding-bottom:88px}
                   <span class="tile" style="flex: none; width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: {{a.tile}}; color: {{a.tileInk}}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></span>
                   <span style="flex: 1; min-width: 0">
                     <span class="eyeb" style="display: block; font-size: 13px; font-weight: 800; color: #8A8273">Act {{a.n}}</span>
-                    <span class="hd aname" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}</span>
+                    <span class="hd aname" style="display: block; font-size: 22px; font-weight: 800; line-height: 1.15">{{a.name}}<sc-if value="{{a.upnext}}" hint-placeholder-val="{{false}}"> <span class="upnext-pill">Up next</span></sc-if></span>
                     <span class="what" style="display: block; margin-top: 2px; font-size: 16px; color: #5C5649">{{a.what}}</span>
                     <span class="status" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 11px; border-radius: 99px; background: {{a.statusBg}}; color: {{a.statusInk}}; font-size: 14px; font-weight: 700">{{a.sub}}</span>
                   </span>
@@ -272,7 +293,7 @@ body{padding-bottom:88px}
       </section>
     </sc-for>
 
-    <section class="soon" aria-labelledby="daily" style="margin-top: 40px; padding: 36px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; position: relative; overflow: hidden">
+    <section class="soon" id="sec-daily" data-sec="daily" aria-labelledby="daily" style="filter: {{op.daily}}; margin-top: 40px; padding: 36px; border-radius: 28px; background: #2B3F28; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 32px; align-items: center; position: relative; overflow: hidden">
       <div style="flex: 1 1 380px; min-width: 0; position: relative">
         <span style="display: inline-block; padding: 4px 12px; border-radius: 99px; background: rgba(232,200,138,.2); color: #E8C88A; font-size: 13px; font-weight: 800">Coming soon</span>
         <h2 id="daily" class="hd" style="margin: 14px 0 0; font-size: 38px; line-height: 1.05; font-weight: 800">Daily habits</h2>
@@ -296,6 +317,16 @@ body{padding-bottom:88px}
       <span style="display: flex; gap: 20px"><a href="Glass2-About.dc.html">About</a><a href="Glass2-Switches.dc.html">Greener switches</a><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a></span>
     </footer>
   </div>
+  <a class="nextbar" href="Glass2-Switches.dc.html#meals" aria-hidden="{{nextHidden}}" tabindex="{{nextTab}}" style="transform: translate(-50%, {{nextY}}px); opacity: {{nextOp}}; pointer-events: {{nextPe}}">
+    <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 800; color: #E8C88A">UP NEXT · ACT 3</span><span class="nb-t" style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">More plant-based food</span></span>
+    <span class="nb-k num" style="font-size: 15px; font-weight: 800; color: #C9E0B8; white-space: nowrap">−1,066 kg</span>
+    <span class="nb-go">Start<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+  </a>
+  <ol class="secrail" aria-label="On this page">
+    <sc-for list="{{secs}}" as="r" hint-placeholder-count="5">
+      <li><a href="#{{r.id}}" aria-current="{{r.cur}}"><span class="rl">{{r.label}}</span><span class="rd" style="height: {{r.h}}px; background: {{r.c}}"></span></a></li>
+    </sc-for>
+  </ol>
   <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
@@ -303,15 +334,35 @@ body{padding-bottom:88px}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, copied: false, mpFound: false };
+    this.state = { scroll: 0, copied: false, mpFound: false, focus: 'overview', past: false };
   }
   componentDidMount() {
     this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
     window.addEventListener('scroll', this.onWin, { passive: true });
+    // Scroll guidance: brighten the section under the reading line, show the sticky next step once past the top
+    this.onFocus = () => {
+      const mid = window.innerHeight * 0.45;
+      let cur = null;
+      document.querySelectorAll('[data-sec]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.top <= mid && r.bottom >= mid) cur = el.getAttribute('data-sec'); });
+      const past = (window.scrollY || 0) > 160;
+      if (cur !== this.state.focus || past !== this.state.past) this.setState({ focus: cur, past });
+    };
+    window.addEventListener('scroll', this.onFocus, { passive: true });
+    // Land on the key area: always on phones and tablets, on laptops only if it starts below the fold
+    this.landT = setTimeout(() => {
+      const el = document.querySelector('[data-land]');
+      if (el) {
+        const w = window.innerWidth, r = el.getBoundingClientRect(), off = w <= 640 ? 12 : 24;
+        if ((w < 1024 || r.top > window.innerHeight * 0.5) && Math.abs(r.top - off) > 8) window.scrollTo({ top: (window.scrollY || 0) + r.top - off, behavior: 'smooth' });
+      }
+      this.onFocus();
+    }, 450);
   }
   componentWillUnmount() {
     window.removeEventListener('scroll', this.onWin);
+    window.removeEventListener('scroll', this.onFocus);
     clearTimeout(this.t);
+    clearTimeout(this.landT);
   }
   renderVals() {
     const st = this.state;
@@ -367,9 +418,9 @@ class Component extends DCLogic {
       return {
         ...a, ...extras, done: a.status === 'done', pending: a.status === 'wait', showNum: a.status === 'todo',
         isLink: !a.box, isBox: !!a.box, isEnergy: a.box === 'energy', isMp: a.box === 'mp', isInvite: a.box === 'invite',
-        hasSave: !!a.save, save: a.save ? fmt(a.save) : '',
+        hasSave: !!a.save, save: a.save ? fmt(a.save) : '', upnext: a.n === 3,
         nodeBg: L.c, nodeInk: a.status === 'todo' ? '#4A453A' : L.ink, nodeCls: L.cls,
-        cardBg: L.card, border: L.border, statusBg: L.sBg, statusInk: L.sInk, tile: L.tile, tileInk: L.tileInk
+        cardBg: a.n === 3 ? '#FFF7E6' : L.card, border: a.n === 3 ? '#E8C88A' : L.border, statusBg: L.sBg, statusInk: L.sInk, tile: L.tile, tileInk: L.tileInk
       };
     };
     // Seven ring segments with small gaps, starting at the top
@@ -387,6 +438,8 @@ class Component extends DCLogic {
       };
     });
     const doneCount = acts.filter((a) => a.status === 'done').length;
+    const dim = (key) => (!st.past || !st.focus || st.focus === key ? 'none' : 'opacity(.45) saturate(.6)');
+    const showNext = st.past && st.focus !== 'overview' && st.focus !== 'switch';
     const off = 'rgba(246,241,230,.12)';
     return {
       pBlobA: (s * 0.3 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
@@ -394,10 +447,16 @@ class Component extends DCLogic {
       ringLabel: doneCount + ' of 7 acts done, 1 waiting for confirmation',
       segs,
       groups: [
-        { title: 'Switch the big things', note: 'Acts 1 to 4 · they tick from your survey', acts: acts.slice(0, 4).map(view) },
-        { title: 'Keep measuring', note: 'Act 5', acts: acts.slice(4, 5).map(view) },
-        { title: 'Use your voice', note: 'Acts 6 and 7 · verified, never ticked by hand', acts: acts.slice(5).map(view) }
-      ],
+        { key: 'switch', title: 'Switch the big things', note: 'Acts 1 to 4 · they tick from your survey', acts: acts.slice(0, 4).map(view) },
+        { key: 'measure', title: 'Keep measuring', note: 'Act 5', acts: acts.slice(4, 5).map(view) },
+        { key: 'voice', title: 'Use your voice', note: 'Acts 6 and 7 · verified, never ticked by hand', acts: acts.slice(5).map(view) }
+      ].map((g) => ({ ...g, op: dim(g.key) })),
+      op: { overview: dim('overview'), daily: dim('daily') },
+      nextY: showNext ? 0 : 120, nextOp: showNext ? 1 : 0, nextPe: showNext ? 'auto' : 'none', nextHidden: showNext ? 'false' : 'true', nextTab: showNext ? '0' : '-1',
+      secs: [['sec-overview', 'overview', 'Overview'], ['sec-switch', 'switch', 'Switch the big things'], ['sec-measure', 'measure', 'Keep measuring'], ['sec-voice', 'voice', 'Use your voice'], ['sec-daily', 'daily', 'Daily habits']].map(([id, key, label]) => {
+        const on = (st.focus || 'overview') === key;
+        return { id, label, cur: on ? 'true' : 'false', h: on ? 26 : 10, c: on ? '#3F5B3A' : 'rgba(46,42,34,.22)' };
+      }),
       daily: [
         { label: 'Meat-free lunch', icon: I.food, week: ['#A3B58F', '#A3B58F', off, '#A3B58F', '#A3B58F', off, off] },
         { label: 'Shorter shower', icon: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z', week: ['#A3B58F', '#A3B58F', '#A3B58F', off, off, off, off] },
