@@ -163,7 +163,10 @@ export async function handler(req: Request): Promise<Response> {
       const html = htmlFor(message + "\n\nOnce we've switched, tap the button to let " + name + " know. No account needed.", { label: "Yes, we've switched", href: link }) +
         '<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#777">' + escHtml(footer.replace(/^\s*--\s*/, "")) + "</p>";
       await sendEmail({ to: [to], reply_to: user.email, subject, text, html }, name);
-      await sendCopy(user.email, to, subject, text, html);
+      // Their copy leaves out the "we've switched" link: it's for the bill
+      // payer to tap, and fewer links also reads less like bulk mail.
+      const foot = '<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#777">' + escHtml(footer.replace(/^\s*--\s*/, "")) + "</p>";
+      await sendCopy(user.email, to, subject, message + footer, htmlFor(message) + foot);
       await db("letters_sent", { method: "POST", body: JSON.stringify({ user_id: user.id, kind: "energy" }) });
       return json({ ok: true });
     }
