@@ -3,7 +3,8 @@
 Everything needed to list CO2 Counter in both stores. Copy the text below into
 App Store Connect and the Google Play Console.
 
-- Screenshots: `screenshots/ios` (iPhone 6.9", 1320×2868), `screenshots/ipad`
+- Screenshots: `screenshots/ios` (iPhone 6.9", 1320×2868), `screenshots/iphone-6.3`
+  (iPhone 6.1"/6.3", 1206×2622), `screenshots/ipad`
   (iPad 13", 2064×2752), `screenshots/android` (phone, 1080×1920). All use the
   example profile, so no real person's data appears.
 - Graphics: `graphics/play-feature-1024x500.png` (Play feature graphic) and
