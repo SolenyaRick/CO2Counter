@@ -80,6 +80,21 @@ a{color:#3F5B3A}a:hover{color:#2B3F28}
 .rise{animation:rise .7s cubic-bezier(.2,.75,.2,1) both}
 .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}
 .flat{padding:0;background:none;border:0}
+/* scroll guidance */
+html{scroll-behavior:smooth}
+[data-sec]{transition:opacity .45s ease,filter .45s ease;scroll-margin-top:24px}
+.nextbar{position:fixed;left:50%;bottom:24px;z-index:55;display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px;border-radius:99px;background:#2B3F28;color:#F6F1E6;box-shadow:0 18px 40px rgba(46,42,34,.28);text-decoration:none;transition:transform .5s cubic-bezier(.3,1.3,.5,1),opacity .35s;max-width:calc(100vw - 32px);box-sizing:border-box}
+.nextbar .nb-go{flex:none;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;background:#E8C88A;color:#2E2A22;font-weight:800;font-size:14px}
+.nextbar:hover .nb-go{background:#F0D59E}
+.secrail{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:14px;list-style:none;margin:0;padding:12px 10px;border-radius:99px;background:rgba(255,252,245,.7);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.secrail a{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-decoration:none}
+.secrail .rl{font-size:12px;font-weight:700;color:#2E2A22;opacity:0;transform:translateX(6px);transition:opacity .25s,transform .25s;white-space:nowrap;position:absolute;right:34px;padding:4px 10px;border-radius:99px;background:#FFFCF5;box-shadow:0 6px 16px rgba(46,42,34,.12)}
+.secrail a:hover .rl,.secrail a:focus-visible .rl{opacity:1;transform:none}
+.secrail .rd{width:10px;height:10px;border-radius:99px;transition:height .3s cubic-bezier(.3,1.4,.5,1),background .3s}
+@media (max-width: 1023px){.secrail{display:none}}
+@media (max-width: 640px){.nextbar{bottom:96px;left:16px;right:16px;transform:none!important;padding:8px 8px 8px 14px;gap:10px}.nextbar .nb-t{font-size:14px!important}.nextbar .nb-k{display:none}}
+@keyframes ping2{0%{box-shadow:0 0 0 0 rgba(232,200,138,.9)}100%{box-shadow:0 0 0 8px rgba(232,200,138,0)}}
+.nb-ping{display:inline-block;width:7px;height:7px;border-radius:99px;background:#E8C88A;margin-right:6px;vertical-align:middle;animation:ping2 1.6s ease-out infinite}
 /* phone tab bar */
 .tabbar{display:none}
 @media (max-width: 640px){
@@ -112,7 +127,7 @@ body{padding-bottom:88px}
       <a href="Glass2-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
     </nav>
 
-    <header class="card rise" style="position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between">
+    <header id="sec-hero" data-sec="hero" data-land class="card rise" style="filter: {{op.hero}}; position: relative; overflow: hidden; margin-top: 28px; padding: 32px; display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between">
       <svg width="320" height="320" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 44%; top: -40px; opacity: .07; transform: rotate(-8deg)" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4V3h6v1M9 12l2 2 4-4"></path></svg>
       <div style="position: relative; flex: 1 1 460px; min-width: 0; display: flex; gap: 20px; align-items: flex-start">
         <span class="pop" style="flex: none; width: 64px; height: 64px; border-radius: 18px; background: #3F5B3A; display: grid; place-items: center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
@@ -128,7 +143,7 @@ body{padding-bottom:88px}
       </div>
     </header>
 
-    <section style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
+    <section id="sec-choices" data-sec="choices" style="filter: {{op.choices}}; margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px">
       <div class="choice rise d1" style="padding: 26px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: flex; flex-direction: column; gap: 12px">
         <span style="align-self: flex-start; padding: 4px 10px; border-radius: 99px; background: #E8C88A; color: #2E2A22; font-size: 12px; font-weight: 800">Recommended</span>
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F6F1E6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"></path><path d="M13.5 7.5l3 3"></path></svg>
@@ -152,7 +167,7 @@ body{padding-bottom:88px}
     <p style="margin: 12px 4px 0; font-size: 15px; color: #4A453A">Either way, your current results stay in your history, and you can cancel before you finish.</p>
 
     <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
-      <section class="flat" style="flex: 999 1 560px; min-width: 0">
+      <section id="sec-answers" data-sec="answers" class="flat" style="filter: {{op.answers}}; flex: 999 1 560px; min-width: 0">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
           <h2 class="hd" style="margin: 0; font-size: 26px; font-weight: 800">Your last answers</h2>
           <span style="font-size: 15px; color: #4A453A">Change just one step</span>
@@ -172,7 +187,7 @@ body{padding-bottom:88px}
         </div>
       </section>
 
-      <aside class="card" style="flex: 1 1 300px; min-width: 0">
+      <aside id="sec-history" data-sec="history" class="card" style="filter: {{op.history}}; flex: 1 1 300px; min-width: 0">
         <h2 class="hd" style="margin: 0; font-size: 22px; font-weight: 800">Your history</h2>
         <ol style="list-style: none; margin: 18px 0 0; padding: 0; position: relative">
           <span style="position: absolute; left: 11px; top: 12px; bottom: 12px; width: 2px; background: rgba(63,91,58,.2)"></span>
@@ -194,6 +209,15 @@ body{padding-bottom:88px}
       <span style="display: flex; gap: 20px"><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a><a href="Glass2-Intro.dc.html">Terms</a></span>
     </footer>
   </div>
+  <a class="nextbar" href="Glass2-Survey.dc.html" aria-hidden="{{nextHidden}}" tabindex="{{nextTab}}" style="transform: translate(-50%, {{nextY}}px); opacity: {{nextOp}}; pointer-events: {{nextPe}}">
+    <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 800; color: #E8C88A"><span class="nb-ping" aria-hidden="true"></span>RECOMMENDED</span><span class="nb-t" style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Quick update from your last answers</span></span>
+    <span class="nb-go">Anything changed?<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+  </a>
+  <ol class="secrail" aria-label="On this page">
+    <sc-for list="{{secs}}" as="r" hint-placeholder-count="4">
+      <li><a href="#{{r.id}}" aria-current="{{r.cur}}"><span class="rl">{{r.label}}</span><span class="rd" style="height: {{r.h}}px; background: {{r.c}}"></span></a></li>
+    </sc-for>
+  </ol>
   <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
@@ -201,9 +225,27 @@ body{padding-bottom:88px}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, count: 0 };
+    this.state = { focus: 'hero', past: false, scroll: 0, count: 0 };
   }
   componentDidMount() {
+    // Scroll guidance: brighten the section under the reading line, show the sticky next step once past the top
+    this.onFocus = () => {
+      const mid = window.innerHeight * 0.45;
+      let cur = null;
+      document.querySelectorAll('[data-sec]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.top <= mid && r.bottom >= mid) cur = el.getAttribute('data-sec'); });
+      const past = (window.scrollY || 0) > 160;
+      if (cur !== this.state.focus || past !== this.state.past) this.setState({ focus: cur, past });
+    };
+    window.addEventListener('scroll', this.onFocus, { passive: true });
+    // Land on the key area: always on phones and tablets, on laptops only if it starts below the fold
+    this.landT = setTimeout(() => {
+      const el = document.querySelector('[data-land]');
+      if (el) {
+        const w = window.innerWidth, r = el.getBoundingClientRect(), off = w <= 640 ? 12 : 24;
+        if ((w < 1024 || r.top > window.innerHeight * 0.5) && Math.abs(r.top - off) > 8) window.scrollTo({ top: (window.scrollY || 0) + r.top - off, behavior: 'smooth' });
+      }
+      this.onFocus();
+    }, 450);
     const target = 6746, dur = 1300, t0 = performance.now();
     const tick = (t) => {
       const k = Math.min(1, (t - t0) / dur);
@@ -215,6 +257,8 @@ class Component extends DCLogic {
     window.addEventListener('scroll', this.onWin, { passive: true });
   }
   componentWillUnmount() {
+    window.removeEventListener('scroll', this.onFocus);
+    clearTimeout(this.landT);
     cancelAnimationFrame(this.raf);
     window.removeEventListener('scroll', this.onWin);
   }
@@ -230,7 +274,12 @@ class Component extends DCLogic {
       { label: 'Money', kg: '1,931', line1: 'Barclays · £5,000 in savings', line2: 'Pension with Nest' }
     ];
     const names = ['Meals', 'Commute', 'Flights', 'Home & water', 'Pets', 'Money'];
+    const dim = (key) => (!this.state.past || !this.state.focus || this.state.focus === key ? 'none' : 'opacity(.45) saturate(.6)');
+    const showNext = this.state.past && this.state.focus !== 'hero' && this.state.focus !== 'choices';
     return {
+      op: ['hero', 'choices', 'answers', 'history'].reduce((o, k) => { o[k] = dim(k); return o; }, {}),
+      nextY: showNext ? 0 : 120, nextOp: showNext ? 1 : 0, nextPe: showNext ? 'auto' : 'none', nextHidden: showNext ? 'false' : 'true', nextTab: showNext ? '0' : '-1',
+      secs: [['hero', 'Your survey'], ['choices', 'What next'], ['answers', 'Last answers'], ['history', 'History']].map(([key, label]) => { const on = (this.state.focus || 'hero') === key; return { id: 'sec-' + key, label, cur: on ? 'true' : 'false', h: on ? 26 : 10, c: on ? '#3F5B3A' : 'rgba(46,42,34,.22)' }; }),
       pBlobA: (s * 0.45 * k).toFixed(1), pBlobB: (-s * 0.2 * k).toFixed(1),
       countLabel: this.state.count.toLocaleString('en-GB'),
       steps: STEPS.map((x, i) => ({ ...x, n: i + 1, go: () => { try { localStorage.setItem('co2-survey-step', names[i]); } catch (e) {} } }))

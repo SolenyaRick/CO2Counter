@@ -78,6 +78,21 @@ a{color:#3F5B3A}a:hover{color:#2B3F28}
 .popin{animation:popin2 .45s cubic-bezier(.3,1.6,.5,1) both}
 .fillup{animation:fillup .9s .3s cubic-bezier(.2,.8,.2,1) both}
 .mbar{transition:width .3s}
+/* scroll guidance */
+html{scroll-behavior:smooth}
+[data-sec]{transition:opacity .45s ease,filter .45s ease;scroll-margin-top:24px}
+.nextbar{position:fixed;left:50%;bottom:24px;z-index:55;display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px;border-radius:99px;background:#2B3F28;color:#F6F1E6;box-shadow:0 18px 40px rgba(46,42,34,.28);text-decoration:none;transition:transform .5s cubic-bezier(.3,1.3,.5,1),opacity .35s;max-width:calc(100vw - 32px);box-sizing:border-box}
+.nextbar .nb-go{flex:none;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;background:#E8C88A;color:#2E2A22;font-weight:800;font-size:14px}
+.nextbar:hover .nb-go{background:#F0D59E}
+.secrail{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:14px;list-style:none;margin:0;padding:12px 10px;border-radius:99px;background:rgba(255,252,245,.7);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.secrail a{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-decoration:none}
+.secrail .rl{font-size:12px;font-weight:700;color:#2E2A22;opacity:0;transform:translateX(6px);transition:opacity .25s,transform .25s;white-space:nowrap;position:absolute;right:34px;padding:4px 10px;border-radius:99px;background:#FFFCF5;box-shadow:0 6px 16px rgba(46,42,34,.12)}
+.secrail a:hover .rl,.secrail a:focus-visible .rl{opacity:1;transform:none}
+.secrail .rd{width:10px;height:10px;border-radius:99px;transition:height .3s cubic-bezier(.3,1.4,.5,1),background .3s}
+@media (max-width: 1023px){.secrail{display:none}}
+@media (max-width: 640px){.nextbar{bottom:96px;left:16px;right:16px;transform:none!important;padding:8px 8px 8px 14px;gap:10px}.nextbar .nb-t{font-size:14px!important}.nextbar .nb-k{display:none}}
+@keyframes ping2{0%{box-shadow:0 0 0 0 rgba(232,200,138,.9)}100%{box-shadow:0 0 0 8px rgba(232,200,138,0)}}
+.nb-ping{display:inline-block;width:7px;height:7px;border-radius:99px;background:#E8C88A;margin-right:6px;vertical-align:middle;animation:ping2 1.6s ease-out infinite}
 /* phone tab bar */
 .tabbar{display:none}
 @media (max-width: 640px){
@@ -121,7 +136,7 @@ body{padding-bottom:88px}
       </sc-for>
     </div>
 
-    <header class="rise" style="position: relative; overflow: hidden; margin-top: 22px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between">
+    <header id="sec-hero" data-sec="hero" data-land class="rise" style="filter: {{op.hero}}; position: relative; overflow: hidden; margin-top: 22px; padding: 32px; border-radius: 28px; background: rgba(255,252,245,.6); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px); display: flex; flex-wrap: wrap; gap: 28px; align-items: center; justify-content: space-between">
       <div aria-hidden="true" style="position: absolute; left: 44%; top: -40px; width: 340px; height: 340px; opacity: .07; transform: rotate(-8deg); pointer-events: none">
         <sc-if value="{{isMeals}}" hint-placeholder-val="{{true}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18a9 9 0 0 1-18 0Z"></path><path d="M9 3.5c-1 1.2 1 2.3 0 3.5M13 3.5c-1 1.2 1 2.3 0 3.5"></path></svg></sc-if>
         <sc-if value="{{isCommute}}" hint-placeholder-val="{{false}}"><svg width="340" height="340" viewBox="0 0 24 24" fill="none" stroke="#3F5B3A" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 15.5v-3.5l2.5-5.5h12l2.5 5.5v3.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1Z"></path><path d="M3.5 12h17"></path><circle cx="7.5" cy="16.5" r="2"></circle><circle cx="16.5" cy="16.5" r="2"></circle></svg></sc-if>
@@ -162,7 +177,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isMeals}}" hint-placeholder-val="{{true}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">What’s your overall diet?</h2>
@@ -178,7 +193,7 @@ body{padding-bottom:88px}
           </div>
         </li>
         <sc-if value="{{perDay}}" hint-placeholder-val="{{true}}">
-          <li class="q rise d2">
+          <li data-sec="q2" style="filter: {{op.q2}}" class="q rise d2">
             <span class="qn num">2</span>
             <div style="min-width: 0">
               <h2 class="qt hd">What was each day’s main meal?</h2>
@@ -206,7 +221,7 @@ body{padding-bottom:88px}
             </div>
           </li>
         </sc-if>
-        <li class="q rise d3">
+        <li data-sec="q3" style="filter: {{op.q3}}" class="q rise d3">
           <span class="qn num">{{qEat}}</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How often do you eat out or get a takeaway?</h2>
@@ -218,7 +233,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d4">
+        <li data-sec="q4" style="filter: {{op.q4}}" class="q rise d4">
           <span class="qn num">{{qWaste}}</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How much food do you throw away?</h2>
@@ -235,7 +250,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isCommute}}" hint-placeholder-val="{{false}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How far is your commute, one way?</h2>
@@ -247,7 +262,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d2">
+        <li data-sec="q2" style="filter: {{op.q2}}" class="q rise d2">
           <span class="qn num">2</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How did you get there each day?</h2>
@@ -274,7 +289,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d3">
+        <li data-sec="q3" style="filter: {{op.q3}}" class="q rise d3">
           <span class="qn num">3</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Any other regular travel each week? <span style="font-weight: 500; font-size: 16px; color: #4A453A">Optional</span></h2>
@@ -292,7 +307,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d4">
+        <li data-sec="q4" style="filter: {{op.q4}}" class="q rise d4">
           <span class="qn num">4</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Long journeys by land this year? <span style="font-weight: 500; font-size: 16px; color: #4A453A">Optional</span></h2>
@@ -318,7 +333,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isFlights}}" hint-placeholder-val="{{false}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Which flights did you take in the last 12 months?</h2>
@@ -352,7 +367,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d2" style="background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
+        <li data-sec="q2" class="q rise d2" style="filter: {{op.q2}}; background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
           <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
           <div style="min-width: 0">
             <h2 class="qt hd">Good to know</h2>
@@ -364,7 +379,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isHome}}" hint-placeholder-val="{{false}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How much electricity does your home use a month?</h2>
@@ -375,7 +390,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d2">
+        <li data-sec="q2" style="filter: {{op.q2}}" class="q rise d2">
           <span class="qn num">2</span>
           <div style="min-width: 0">
             <h2 class="qt hd">And gas?</h2>
@@ -386,7 +401,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d3">
+        <li data-sec="q3" style="filter: {{op.q3}}" class="q rise d3">
           <span class="qn num">3</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Are you on a green electricity tariff?</h2>
@@ -398,7 +413,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d4">
+        <li data-sec="q4" style="filter: {{op.q4}}" class="q rise d4">
           <span class="qn num">4</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How many people live in your home?</h2>
@@ -411,7 +426,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d5">
+        <li data-sec="q5" style="filter: {{op.q5}}" class="q rise d5">
           <span class="qn num">5</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How much water do you use?</h2>
@@ -427,7 +442,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isPets}}" hint-placeholder-val="{{false}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">How many dogs do you have?</h2>
@@ -442,7 +457,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d2">
+        <li data-sec="q2" style="filter: {{op.q2}}" class="q rise d2">
           <span class="qn num">2</span>
           <div style="min-width: 0">
             <h2 class="qt hd">And cats?</h2>
@@ -457,7 +472,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d3" style="background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
+        <li data-sec="q3" class="q rise d3" style="filter: {{op.q3}}; background: rgba(217,164,65,.14); border-color: rgba(217,164,65,.35)">
           <span class="qn num" style="background: rgba(217,164,65,.3); color: #6B4A12"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg></span>
           <div style="min-width: 0">
             <h2 class="qt hd">Good to know</h2>
@@ -469,7 +484,7 @@ body{padding-bottom:88px}
 
     <sc-if value="{{isMoney}}" hint-placeholder-val="{{false}}">
       <ol style="list-style: none; margin: 20px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px">
-        <li class="q rise d1">
+        <li data-sec="q1" style="filter: {{op.q1}}" class="q rise d1">
           <span class="qn num" style="background: #3F5B3A; color: #F6F1E6">1</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Who do you bank with?</h2>
@@ -479,7 +494,7 @@ body{padding-bottom:88px}
             </select>
           </div>
         </li>
-        <li class="q rise d2">
+        <li data-sec="q2" style="filter: {{op.q2}}" class="q rise d2">
           <span class="qn num">2</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Roughly how much do you keep in savings and current accounts?</h2>
@@ -490,7 +505,7 @@ body{padding-bottom:88px}
             </div>
           </div>
         </li>
-        <li class="q rise d3">
+        <li data-sec="q3" style="filter: {{op.q3}}" class="q rise d3">
           <span class="qn num">3</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Who runs your workplace pension?</h2>
@@ -500,7 +515,7 @@ body{padding-bottom:88px}
             </select>
           </div>
         </li>
-        <li class="q rise d4">
+        <li data-sec="q4" style="filter: {{op.q4}}" class="q rise d4">
           <span class="qn num">4</span>
           <div style="min-width: 0">
             <h2 class="qt hd">Roughly how big is your pension pot?</h2>
@@ -522,13 +537,17 @@ body{padding-bottom:88px}
         <button class="opt" onClick="{{back}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 24px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; border: 1.5px solid rgba(46,42,34,.2); color: #2E2A22; font-weight: 700; font-size: 16px; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>Back: {{prevLabel}}</button>
       </sc-if>
       <sc-if value="{{notLast}}" hint-placeholder-val="{{true}}">
-        <button class="opt" onClick="{{next}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 26px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; cursor: pointer">Next: {{nextLabel}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        <button class="opt" onClick="{{next}}" style="all: unset; box-sizing: border-box; min-height: 52px; padding: 0 26px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; cursor: pointer">{{nbTitle}}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
       </sc-if>
       <sc-if value="{{isLast}}" hint-placeholder-val="{{false}}">
         <a href="Glass2-Results.dc.html" style="min-height: 52px; padding: 0 26px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 16px; text-decoration: none">See my results<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
       </sc-if>
     </div>
   </div>
+  <a class="nextbar" href="#" onClick="{{next}}" aria-hidden="{{nextHidden}}" tabindex="{{nextTab}}" style="transform: translate(-50%, {{nextY}}px); opacity: {{nextOp}}; pointer-events: {{nextPe}}">
+    <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 800; color: #E8C88A"><span class="nb-ping" aria-hidden="true"></span>STEP {{stepNo}} OF 6</span><span class="nb-t" style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Next: {{nextLabel}}</span></span>
+    <span class="nb-go">Next<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+  </a>
   <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html" class="on" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
@@ -538,7 +557,7 @@ class Component extends DCLogic {
     super(props);
     const names = ['Meals', 'Commute', 'Flights', 'Home & water', 'Pets', 'Money'];
     const start = Math.max(0, names.indexOf(props.startStep || 'Meals'));
-    this.state = {
+    this.state = { focus: 'hero', past: false,
       scroll: 0, ready: false, step: start, visited: [start],
       diet: 'meat', mealDay: 1, eatOut: 1, waste: 'some',
       week: ['chicken', 'beef', 'veggie', 'chicken', 'fish', 'pork', 'veggie'],
@@ -552,6 +571,24 @@ class Component extends DCLogic {
     };
   }
   componentDidMount() {
+    // Scroll guidance: brighten the section under the reading line, show the sticky next step once past the top
+    this.onFocus = () => {
+      const mid = window.innerHeight * 0.45;
+      let cur = null;
+      document.querySelectorAll('[data-sec]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.top <= mid && r.bottom >= mid) cur = el.getAttribute('data-sec'); });
+      const past = (window.scrollY || 0) > 160;
+      if (cur !== this.state.focus || past !== this.state.past) this.setState({ focus: cur, past });
+    };
+    window.addEventListener('scroll', this.onFocus, { passive: true });
+    // Land on the key area: always on phones and tablets, on laptops only if it starts below the fold
+    this.landT = setTimeout(() => {
+      const el = document.querySelector('[data-land]');
+      if (el) {
+        const w = window.innerWidth, r = el.getBoundingClientRect(), off = w <= 640 ? 12 : 24;
+        if ((w < 1024 || r.top > window.innerHeight * 0.5) && Math.abs(r.top - off) > 8) window.scrollTo({ top: (window.scrollY || 0) + r.top - off, behavior: 'smooth' });
+      }
+      this.onFocus();
+    }, 450);
     this.readyTimer = setTimeout(() => this.setState({ ready: true }), 200);
     try {
       const names = ['Meals', 'Commute', 'Flights', 'Home & water', 'Pets', 'Money'];
@@ -562,6 +599,8 @@ class Component extends DCLogic {
     window.addEventListener('scroll', this.onWin, { passive: true });
   }
   componentWillUnmount() {
+    window.removeEventListener('scroll', this.onFocus);
+    clearTimeout(this.landT);
     clearTimeout(this.readyTimer);
     window.removeEventListener('scroll', this.onWin);
   }
@@ -689,7 +728,12 @@ class Component extends DCLogic {
     const banks = ['Triodos', 'The Co-operative Bank', 'Nationwide', 'Virgin Money', 'Starling', 'Metro Bank', 'Lloyds', 'Halifax', 'Monzo', 'NatWest', 'RBS', 'Santander', 'Chase', 'HSBC', 'First Direct', 'Barclays', 'Other'];
     const providers = ['Aegon', 'Aon', 'Aviva', 'Fidelity', 'Legal & General', 'Nest', 'NOW: Pensions', 'The People’s Pension', 'Royal London', 'Smart Pension', 'Standard Life', 'TPT Retirement Solutions', 'USS (universities)', 'Other / not sure', 'No workplace pension'];
 
+    const dim = (key) => (!this.state.past || !this.state.focus || this.state.focus === key ? 'none' : 'opacity(.45) saturate(.6)');
+    const showNext = this.state.past && this.state.focus !== 'hero';
     return {
+      nbTitle: i < 5 ? 'Next: ' + STEPS[i + 1].label : 'See your results',
+      op: ['hero', 'q1', 'q2', 'q3', 'q4', 'q5'].reduce((o, k) => { o[k] = dim(k); return o; }, {}),
+      nextY: showNext ? 0 : 120, nextOp: showNext ? 1 : 0, nextPe: showNext ? 'auto' : 'none', nextHidden: showNext ? 'false' : 'true', nextTab: showNext ? '0' : '-1',
       pBlobA: (s * 0.45 * k).toFixed(1),
       pBlobB: (-s * 0.2 * k).toFixed(1),
       tabs,

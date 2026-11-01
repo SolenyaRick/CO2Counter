@@ -90,7 +90,7 @@ Earlier directions kept for reference: Living Atmosphere (`Main`, `Meals`,
 Topographic (`Topo-*`), Glass Bento (`Bento-*`, `Laptop-Glass`) and Earthy
 Glass (`Earth-*`).
 
-Next steps and scroll guidance (Results and My Habits): an "Up next" card
+Next steps and scroll guidance (every page): an "Up next" card
 for the single biggest move (Results also lists your 3 biggest moves), a
 sticky next-step bar that appears once you scroll past the top, the section
 under the reading line stays bright while others fade back, a side rail of

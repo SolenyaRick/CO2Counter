@@ -82,6 +82,21 @@ h2[style*="font-size: 3"],h2[style*="font-size: 4"]{font-size:28px!important}
 .bigno{font-size:52px!important}
 footer[style]{flex-direction:column;gap:10px!important}
 }
+/* scroll guidance */
+html{scroll-behavior:smooth}
+[data-sec]{transition:opacity .45s ease,filter .45s ease;scroll-margin-top:24px}
+.nextbar{position:fixed;left:50%;bottom:24px;z-index:55;display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px;border-radius:99px;background:#2B3F28;color:#F6F1E6;box-shadow:0 18px 40px rgba(46,42,34,.28);text-decoration:none;transition:transform .5s cubic-bezier(.3,1.3,.5,1),opacity .35s;max-width:calc(100vw - 32px);box-sizing:border-box}
+.nextbar .nb-go{flex:none;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;border-radius:99px;background:#E8C88A;color:#2E2A22;font-weight:800;font-size:14px}
+.nextbar:hover .nb-go{background:#F0D59E}
+.secrail{position:fixed;right:22px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:14px;list-style:none;margin:0;padding:12px 10px;border-radius:99px;background:rgba(255,252,245,.7);border:1px solid rgba(46,42,34,.08);backdrop-filter:blur(20px)}
+.secrail a{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-decoration:none}
+.secrail .rl{font-size:12px;font-weight:700;color:#2E2A22;opacity:0;transform:translateX(6px);transition:opacity .25s,transform .25s;white-space:nowrap;position:absolute;right:34px;padding:4px 10px;border-radius:99px;background:#FFFCF5;box-shadow:0 6px 16px rgba(46,42,34,.12)}
+.secrail a:hover .rl,.secrail a:focus-visible .rl{opacity:1;transform:none}
+.secrail .rd{width:10px;height:10px;border-radius:99px;transition:height .3s cubic-bezier(.3,1.4,.5,1),background .3s}
+@media (max-width: 1023px){.secrail{display:none}}
+@media (max-width: 640px){.nextbar{bottom:96px;left:16px;right:16px;transform:none!important;padding:8px 8px 8px 14px;gap:10px}.nextbar .nb-t{font-size:14px!important}.nextbar .nb-k{display:none}}
+@keyframes ping2{0%{box-shadow:0 0 0 0 rgba(232,200,138,.9)}100%{box-shadow:0 0 0 8px rgba(232,200,138,0)}}
+.nb-ping{display:inline-block;width:7px;height:7px;border-radius:99px;background:#E8C88A;margin-right:6px;vertical-align:middle;animation:ping2 1.6s ease-out infinite}
 /* phone tab bar */
 .tabbar{display:none}
 @media (max-width: 640px){
@@ -114,7 +129,7 @@ body{padding-bottom:88px}
       <a href="Glass2-Account.dc.html" aria-label="Account" class="hd" style="width: 44px; height: 44px; border-radius: 99px; display: grid; place-items: center; background: rgba(63,91,58,.14); color: #3F5B3A; font-weight: 800; text-decoration: none">AG</a>
     </nav>
 
-    <header class="hero" style="margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center">
+    <header id="sec-hero" data-sec="hero" data-land class="hero" style="filter: {{op.hero}}; margin-top: 48px; display: flex; flex-wrap: wrap; gap: 40px; align-items: center">
       <div style="flex: 1 1 420px; min-width: 0">
         <div class="rise" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; background: rgba(63,91,58,.12); color: #3F5B3A; font-size: 14px; font-weight: 800">Greener switches</div>
         <h1 class="hd rise d1" style="margin: 18px 0 0; font-size: 64px; line-height: .98; font-weight: 800">Five switches.<br><span style="color: #3F5B3A">Up to 2,890 kg</span> a year.</h1>
@@ -150,7 +165,7 @@ body{padding-bottom:88px}
       </div>
     </header>
 
-    <section style="margin-top: 56px">
+    <section id="sec-plot" data-sec="plot" style="filter: {{op.plot}}; margin-top: 56px">
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
         <div>
           <div style="font-size: 14px; font-weight: 800; color: #3F5B3A">Where to start</div>
@@ -198,7 +213,7 @@ body{padding-bottom:88px}
     </section>
 
     <sc-for list="{{areas}}" as="a" hint-placeholder-count="5">
-      <section id="{{a.key}}" class="feat" style="margin-top: 28px; padding: 36px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
+      <section id="{{a.key}}" data-sec="{{a.key}}" class="feat" style="filter: {{a.op}}; margin-top: 28px; padding: 36px; border-radius: 28px; background: rgba(255,252,245,.65); border: 1px solid rgba(46,42,34,.08); backdrop-filter: blur(20px)">
         <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: stretch; flex-direction: {{a.dir}}">
           <div style="flex: 1 1 320px; min-width: 0; border-radius: 28px; background: {{a.panel}}; color: {{a.panelInk}}; padding: 28px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; position: relative; overflow: hidden">
             <svg width="260" height="260" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=".8" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: -50px; bottom: -50px; opacity: .14" aria-hidden="true"><path d="{{a.icon}}"></path></svg>
@@ -245,7 +260,7 @@ body{padding-bottom:88px}
       </section>
     </sc-for>
 
-    <section style="margin-top: 28px; padding: 36px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+    <section id="sec-band" data-sec="band" style="filter: {{op.band}}; margin-top: 28px; padding: 36px; border-radius: 28px; background: #3F5B3A; color: #F6F1E6; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
       <div style="flex: 1 1 420px; min-width: 0">
         <h2 class="hd" style="margin: 0; font-size: 34px; line-height: 1.1; font-weight: 800">Independent, always</h2>
         <p style="margin: 10px 0 0; font-size: 17px; line-height: 1.6; color: #DCE3D3">Climate first, even when it pays us nothing. Partners never touch your figures. <a href="Glass2-About.dc.html" style="color: #E8C88A; font-weight: 700">How we choose</a></p>
@@ -258,6 +273,16 @@ body{padding-bottom:88px}
       <span style="display: flex; gap: 20px"><a href="Glass2-About.dc.html">About</a><a href="Glass2-Switches.dc.html">Greener switches</a><a href="Glass2-Intro.dc.html">How we calculate</a><a href="Glass2-Intro.dc.html">Privacy</a></span>
     </footer>
   </div>
+  <a class="nextbar" href="#banking" aria-hidden="{{nextHidden}}" tabindex="{{nextTab}}" style="transform: translate(-50%, {{nextY}}px); opacity: {{nextOp}}; pointer-events: {{nextPe}}">
+    <span style="display: flex; flex-direction: column; min-width: 0"><span style="font-size: 11px; font-weight: 800; color: #E8C88A"><span class="nb-ping" aria-hidden="true"></span>UP NEXT · BIGGEST SAVING</span><span class="nb-t" style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Move to a greener bank</span></span>
+    <span class="nb-k num" style="font-size: 15px; font-weight: 800; color: #C9E0B8; white-space: nowrap">−1,029 kg</span>
+    <span class="nb-go">See banks<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+  </a>
+  <ol class="secrail" aria-label="On this page">
+    <sc-for list="{{secs}}" as="r" hint-placeholder-count="8">
+      <li><a href="#{{r.id}}" aria-current="{{r.cur}}"><span class="rl">{{r.label}}</span><span class="rd" style="height: {{r.h}}px; background: {{r.c}}"></span></a></li>
+    </sc-for>
+  </ol>
   <nav class="tabbar" aria-label="App"><a href="Glass2-SurveyDone.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"></path></svg>Survey</a><a href="Glass2-Results.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"></path></svg>Results</a><a href="Glass2-Friends.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"></path></svg>Friends</a><a href="Glass2-Habits.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"></path></svg>Habits</a><a href="Glass2-Account.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"></path></svg>Account</a></nav>
 </div>
 </x-dc>
@@ -265,14 +290,34 @@ body{padding-bottom:88px}
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { scroll: 0, on: [false, false, false, false, false], touched: false, shownFoot: 6746 };
+    this.state = { focus: 'hero', past: false, scroll: 0, on: [false, false, false, false, false], touched: false, shownFoot: 6746 };
   }
   componentDidMount() {
+    // Scroll guidance: brighten the section under the reading line, show the sticky next step once past the top
+    this.onFocus = () => {
+      const mid = window.innerHeight * 0.45;
+      let cur = null;
+      document.querySelectorAll('[data-sec]').forEach((el) => { const r = el.getBoundingClientRect(); if (r.top <= mid && r.bottom >= mid) cur = el.getAttribute('data-sec'); });
+      const past = (window.scrollY || 0) > 160;
+      if (cur !== this.state.focus || past !== this.state.past) this.setState({ focus: cur, past });
+    };
+    window.addEventListener('scroll', this.onFocus, { passive: true });
+    // Land on the key area: always on phones and tablets, on laptops only if it starts below the fold
+    this.landT = setTimeout(() => {
+      const el = document.querySelector('[data-land]');
+      if (el) {
+        const w = window.innerWidth, r = el.getBoundingClientRect(), off = w <= 640 ? 12 : 24;
+        if ((w < 1024 || r.top > window.innerHeight * 0.5) && Math.abs(r.top - off) > 8) window.scrollTo({ top: (window.scrollY || 0) + r.top - off, behavior: 'smooth' });
+      }
+      this.onFocus();
+    }, 450);
     this.timers = [0, 1, 2, 3, 4].map((i) => setTimeout(() => { if (!this.state.touched) this.flip(i, true); }, 700 + i * 450));
     this.onWin = () => this.setState({ scroll: window.scrollY || 0 });
     window.addEventListener('scroll', this.onWin, { passive: true });
   }
   componentWillUnmount() {
+    window.removeEventListener('scroll', this.onFocus);
+    clearTimeout(this.landT);
     this.timers.forEach(clearTimeout);
     cancelAnimationFrame(this.raf);
     window.removeEventListener('scroll', this.onWin);
@@ -352,7 +397,12 @@ class Component extends DCLogic {
     const A = this.areas();
     const saved = 6746 - st.shownFoot;
     const allOn = st.on.every(Boolean);
+        const dim = (key) => (!this.state.past || !this.state.focus || this.state.focus === key ? 'none' : 'opacity(.45) saturate(.6)');
+    const showNext = this.state.past && this.state.focus !== 'hero' && this.state.focus !== 'banking';
     return {
+      op: ['hero', 'plot', 'band', 'banking', 'energy', 'meals', 'flights', 'commute'].reduce((o, k) => { o[k] = dim(k); return o; }, {}),
+      nextY: showNext ? 0 : 120, nextOp: showNext ? 1 : 0, nextPe: showNext ? 'auto' : 'none', nextHidden: showNext ? 'false' : 'true', nextTab: showNext ? '0' : '-1',
+      secs: [['hero', 'Switchboard'], ['plot', 'Where to start'], ['banking', 'Bank'], ['energy', 'Energy'], ['meals', 'Food'], ['flights', 'Flights'], ['commute', 'Commute'], ['band', 'Independent']].map(([key, label]) => { const on = (this.state.focus || 'hero') === key; return { id: (['banking', 'energy', 'meals', 'flights', 'commute'].indexOf(key) >= 0 ? key : 'sec-' + key), label, cur: on ? 'true' : 'false', h: on ? 26 : 10, c: on ? '#3F5B3A' : 'rgba(46,42,34,.22)' }; }),
       pBlobA: (s * 0.3 * k).toFixed(1), pBlobB: (-s * 0.15 * k).toFixed(1),
       board: A.map((a, i) => ({
         ...a, saveLabel: fmt(a.save), on: st.on[i] ? 'true' : 'false', aria: a.title + ', saves ' + fmt(a.save) + ' kg a year',
@@ -369,7 +419,7 @@ class Component extends DCLogic {
       bubbles: A.map((a, i) => {
         const size = Math.round(40 + Math.sqrt(a.save / 1066) * 48);
         const left = a.key === 'meals';
-        return {
+    return {
           key: a.key, short: a.short, icon: a.icon, icon_s: Math.round(size * 0.36), saveLabel: fmt(a.save), when: a.effort.split(' · ')[1],
           aria: a.short + ': saves ' + fmt(a.save) + ' kg a year, ' + a.effort,
           x: a.ex, y: (a.save / 1250) * 100, size, half: size / 2, delay: (0.2 + i * 0.12).toFixed(2),
@@ -378,7 +428,7 @@ class Component extends DCLogic {
         };
       }),
       areas: A.map((a, i) => ({
-        ...a, no: '0' + (i + 1), saveLabel: fmt(a.save), dir: i % 2 ? 'row-reverse' : 'row',
+        ...a, op: dim(a.key), no: '0' + (i + 1), saveLabel: fmt(a.save), dir: i % 2 ? 'row-reverse' : 'row',
         afterW: (parseFloat(a.after.replace(/,/g, '')) / parseFloat(a.before.replace(/,/g, ''))) * 100,
         items: a.items.map(([label, url, tone, tags, note]) => ({
           label, url, tags, note, domain: domain(url), mono: mono(label), bg: TONE[tone][0], ink: TONE[tone][1],
