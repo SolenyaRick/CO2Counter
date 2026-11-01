@@ -26,7 +26,7 @@ App name shown on the phone: **CO2 Counter**.
 | iOS keywords (100) | carbon,climate,calculator,emissions,eco,green,net zero,sustainable,NHS,habits,tracker,environment |
 | Play short description (80) | Your yearly carbon footprint in five minutes, and the changes that cut it most. |
 | Category | Lifestyle (secondary: Education) |
-| Age rating | 4+ (Apple) / Everyone (Google): no objectionable content |
+| Age rating | 13+ (Apple, override) / answer the Google questionnaire the same way |
 | Price | Free, no in-app purchases, no ads |
 | Support URL | https://co2counter.co.uk/about/ |
 | Marketing URL | https://co2counter.co.uk |
@@ -53,15 +53,25 @@ Free, with no ads. We never sell your data, and friends only ever see each other
 No tracking: nothing is shared with advertisers or data brokers, and the app
 uses no tracking or analytics SDKs.
 
-| Data | Collected | Linked to the person | Why |
-| --- | --- | --- | --- |
-| Email address | Yes, with an account | Yes | Account sign-in |
-| Name (display name, username) | Yes, with an account | Yes | Shown to friends; app functionality |
-| User content (survey answers, footprint) | Yes, with an account | Yes | App functionality; saved across devices |
-| User ID | Yes, with an account | Yes | App functionality |
-| Product interaction (which partner links were opened) | Yes, signed in only | Yes | Analytics (totals only) |
-| Optional: occupation (role) | Yes, if given | Yes | Analytics (anonymous totals by role) |
-| Postcode for the MP letter | Used in real time, not stored | n/a | Finding the MP; not "collected" under either store's definition |
+| Data (Apple type) | Collected | Linked to the person | Tracking | Purposes |
+| --- | --- | --- | --- | --- |
+| Name (display name) | Yes, with an account | Yes | No | App functionality |
+| Email address | Yes, with an account | Yes | No | App functionality |
+| Other financial info (bank and pension provider, from the survey) | Yes, with an account | Yes | No | App functionality, analytics, other purposes (research, opt-in only) |
+| Other user content (survey answers, footprint, habits, group names) | Yes, with an account | Yes | No | App functionality, analytics, other purposes (research, opt-in only) |
+| User ID (account ID, username) | Yes, with an account | Yes | No | App functionality |
+| Product interaction (which partner links were opened) | Yes, signed in only | Yes | No | Analytics (totals only) |
+| Other data (optional occupation) | Yes, if given | Yes | No | Analytics (anonymous totals by role) |
+
+Not collected (leave unticked): physical address and emails or messages (letters
+are sent but only the date is kept; MP copies are deleted), payment info and
+purchases (the app hides £2 support), location (the MP postcode lookup isn't
+stored), contacts (friends are added by username), diagnostics, search and
+browsing history, health, sensitive info, device ID, advertising data.
+
+Age rating: override to **13+** (the terms and privacy policy set 13 as the
+minimum age). Content answers: everything None/No, except Health or Wellness
+Topics = Yes and Contests = Infrequent.
 
 Data is encrypted in transit, and people can delete their account and data in the app
 (Account → Delete account). Without an account, answers stay on the device.
