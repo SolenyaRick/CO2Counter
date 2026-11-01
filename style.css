@@ -4886,3 +4886,19 @@ span.todo-guide { cursor: pointer; }
   .hb-key { width: 100%; grid-template-columns: 1fr 1fr; gap: 0 8px; }
 }
 @media (max-width: 640px) { .sw-feat { scroll-margin-top: 0; } }
+
+/* Feed stacks: one pile per person, tap to fan out */
+.fr-stack { display: flex; flex-direction: column; gap: 14px; }
+.fr-stack.closed { gap: 20px; }
+.fr-pile { position: relative; }
+.fr-pile > .fr-post { position: relative; z-index: 2; }
+.fr-pile::before, .fr-pile::after { content: ""; position: absolute; left: 16px; right: 16px; bottom: -8px; height: 48px; border-radius: 0 0 24px 24px; background: rgba(255, 252, 245, 0.62); border: 1px solid var(--glass-border); border-top: 0; z-index: 1; box-shadow: 0 6px 14px rgba(46, 42, 34, 0.05); }
+.fr-pile::after { left: 32px; right: 32px; bottom: -15px; z-index: 0; opacity: 0.7; }
+.fr-pile[data-n="1"]::after { display: none; }
+.fr-stack-btn { align-self: center; border: 1px solid var(--glass-border); background: rgba(255, 252, 245, 0.7); color: #3F5B3A; font: inherit; font-size: 13px; font-weight: 700; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+.fr-stack-btn:hover { background: #fffcf5; }
+.fr-older { align-self: center; }
+@media (max-width: 640px) {
+  .fr-pile::before, .fr-pile::after { border-radius: 0 0 16px 16px; left: 12px; right: 12px; }
+  .fr-pile::after { left: 24px; right: 24px; }
+}

@@ -73,9 +73,13 @@ const fromFor = (name: string) => {
   return who ? '"' + who + ' via CO2 Counter" <' + addr + ">" : base;
 };
 const escHtml = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+// Links to the suppliers we suggest (and our own site) become clickable.
+// Only these hosts, so a message can't be used to send anyone else's link.
+const LINK_HOSTS = /https:\/\/(?:www\.)?(?:goodenergy\.co\.uk|ecotricity\.co\.uk|octopus\.energy|co2counter\.co\.uk)(?:\/[^\s<"]*)?/g;
+const linkify = (html: string) => html.replace(LINK_HOSTS, (u) => '<a href="' + u + '" style="color:#3F5B3A;font-weight:bold">' + u.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "") + "</a>");
 const htmlFor = (text: string, button?: { label: string; href: string }) =>
   '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#222">' +
-  text.split(/\n{2,}/).map((p) => "<p>" + escHtml(p).replace(/\n/g, "<br>") + "</p>").join("") +
+  text.split(/\n{2,}/).map((p) => "<p>" + linkify(escHtml(p)).replace(/\n/g, "<br>") + "</p>").join("") +
   (button ? '<p><a href="' + escHtml(button.href) + '" style="display:inline-block;padding:10px 18px;background:#3F5B3A;color:#ffffff;text-decoration:none;border-radius:8px">' + escHtml(button.label) + "</a></p>" : "") +
   "</div>";
 
@@ -86,6 +90,23 @@ async function sendEmail(mail: Record<string, unknown>, name = "") {
     body: JSON.stringify({ from: fromFor(name), ...mail }),
   });
   if (!res.ok) throw new Error("resend " + res.status + " " + (await res.text()));
+}
+
+// The writer's copy goes separately, from plain "CO2 Counter". CC'ing them on
+// mail whose From line shows their own name from another domain looks like
+// impersonation to Outlook and Gmail, so their copy landed in junk.
+async function sendCopy(userEmail: string, sentTo: string, subject: string, text: string, html: string) {
+  const note = "Here's a copy of the message CO2 Counter sent for you to " + sentTo + ". Replies will come straight to you.";
+  try {
+    await sendEmail({
+      to: [userEmail], subject: "Your copy: " + subject,
+      text: note + "\n\n----------\n\n" + text,
+      html: '<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555;background:#f3efe4;padding:10px 14px;border-radius:8px">' + escHtml(note) + "</p>" + html,
+    });
+  } catch (e) {
+    // The letter itself went; a missing copy shouldn't report a failure.
+    console.error("copy failed", e);
+  }
 }
 
 export async function handler(req: Request): Promise<Response> {
@@ -116,11 +137,13 @@ export async function handler(req: Request): Promise<Response> {
       const mp = await findMp(postcode);
       if (!mp) return json({ error: "We couldn't find an MP for that postcode." }, 400);
       const letter = message + "\n\n" + name + "\n" + address + "\n" + postcode + footer;
+      const mpSubject = "Climate action: a letter from a constituent";
       await sendEmail({
-        to: [mp.email], cc: [user.email], reply_to: user.email,
-        subject: "Climate action: a letter from a constituent",
+        to: [mp.email], reply_to: user.email,
+        subject: mpSubject,
         text: letter, html: htmlFor(letter),
       }, name);
+      await sendCopy(user.email, mp.name, mpSubject, letter, htmlFor(letter));
       await db("letters_sent", { method: "POST", body: JSON.stringify({ user_id: user.id, kind: "mp" }) });
       // Sent through us, so Act 6 is verified.
       await db("act_verifications", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ user_id: user.id, act: "mobilise" }) });
@@ -135,13 +158,12 @@ export async function handler(req: Request): Promise<Response> {
       const token = await energyToken(user.id);
       const link = SITE + "#/confirm/energy?t=" + token;
       const first = name.split(/\s+/)[0];
-      await sendEmail({
-        to: [to], cc: [user.email], reply_to: user.email,
-        subject: first + ": could we switch to renewable electricity?",
-        text: message + "\n\nOnce we've switched, please tap this link to let " + name + " know (no account needed):\n" + link + footer,
-        html: htmlFor(message + "\n\nOnce we've switched, tap the button to let " + name + " know. No account needed.", { label: "Yes, we've switched", href: link }) +
-          '<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#777">' + escHtml(footer.replace(/^\s*--\s*/, "")) + "</p>",
-      }, name);
+      const subject = first + ": could we switch to renewable electricity?";
+      const text = message + "\n\nOnce we've switched, please tap this link to let " + name + " know (no account needed):\n" + link + footer;
+      const html = htmlFor(message + "\n\nOnce we've switched, tap the button to let " + name + " know. No account needed.", { label: "Yes, we've switched", href: link }) +
+        '<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#777">' + escHtml(footer.replace(/^\s*--\s*/, "")) + "</p>";
+      await sendEmail({ to: [to], reply_to: user.email, subject, text, html }, name);
+      await sendCopy(user.email, to, subject, text, html);
       await db("letters_sent", { method: "POST", body: JSON.stringify({ user_id: user.id, kind: "energy" }) });
       return json({ ok: true });
     }
