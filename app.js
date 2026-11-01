@@ -1545,7 +1545,7 @@
     const faq = [
       ["Do I need an account?", "You can take the whole survey as a guest. To see your full results, create a free account: it also keeps your answers safe across your devices."],
       ["How accurate is it?", "It's an estimate using typical lifecycle emission factors. It's built to show your biggest levers clearly, not to be a precise audit."],
-      ["How is it free?", 'Supporters chip in £2 a year, and some partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="/about/">About us</a> · <a href="/greener-switches/">Greener switches</a>'],
+      ["How is it free?", (isNativeApp() ? "It's free, with no ads. Some" : "Supporters chip in £2 a year, and some") + ' partner links (marked "Affiliate") may earn us a small commission at no cost to you. Partners never change your figures. <a href="/about/">About us</a> · <a href="/greener-switches/">Greener switches</a>'],
     ];
     return (
       '<div class="container intro-v2">' +
@@ -1575,7 +1575,9 @@
       [
         ["chart", "Built on official figures", 'We use UK government emission factors and published data from sources like DESNZ, Defra, Ofgem and the ONS. <a href="/how-we-calculate/">How we calculate</a>'],
         ["shield", "Your data stays yours", "No ads, and we never sell your data. Answers stay on your device until you choose to create an account."],
-        ["heart", "Free, kept going by supporters", "Everything is free. If it helps you, you can chip in £2 a year to cover running costs."],
+        isNativeApp()
+          ? ["heart", "Free, with no ads", "Everything in CO2 Counter is free. No ads, and we never sell your data."]
+          : ["heart", "Free, kept going by supporters", "Everything is free. If it helps you, you can chip in £2 a year to cover running costs."],
       ].map(([ic, t, b]) => '<div class="glass intro-card"><span class="cat-badge">' + icon(ic) + '</span><h3 class="display">' + t + "</h3><p>" + b + "</p></div>").join("") +
       "</section>" +
       '<section class="intro-faq"><h2 class="display">Questions people ask</h2>' +
@@ -4957,7 +4959,7 @@
     ];
     const stats = [
       ["£0", "To use, for everyone. No paywall, no premium tier.", "#3F5B3A", "#F6F1E6"],
-      ["£2", "A year, if you'd like to support it. Entirely optional.", "#E8C88A", "#2E2A22"],
+      ...(isNativeApp() ? [] : [["£2", "A year, if you'd like to support it. Entirely optional.", "#E8C88A", "#2E2A22"]]),
       [String(paidCount), (paidCount === 1 ? "Affiliate link" : "Affiliate links") + " on the site today.", "rgba(255,252,245,.75)", "#2E2A22"],
     ];
     const tick = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EFE9DC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="ab-tick" d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
@@ -4966,7 +4968,7 @@
       '<header class="ab-hero"><span class="ab-pill rise">About CO2 Counter</span>' +
       '<h1 class="display rise d1">Your footprint, counted honestly. <span>Then made smaller.</span></h1>' +
       '<p class="rise d2">CO2 Counter is a free, six-step survey that works out your yearly carbon footprint from official UK data, then shows you the changes that cut it the most.</p>' +
-      '<ul class="ab-promises rise d3" aria-label="Our promises">' + ["Free for everyone", "Independent", "Official UK data", "Kept going by supporters"].map((t) => "<li><span>" + tick + "</span>" + t + "</li>").join("") + "</ul></header>" +
+      '<ul class="ab-promises rise d3" aria-label="Our promises">' + ["Free for everyone", "Independent", "Official UK data", isNativeApp() ? "No ads" : "Kept going by supporters"].map((t) => "<li><span>" + tick + "</span>" + t + "</li>").join("") + "</ul></header>" +
 
       '<section class="ab-sec" aria-labelledby="ab-sources"><div class="ab-src-head"><div><div class="ab-kicker">Where the numbers come from</div><h2 id="ab-sources" class="display ab-h2">Official data in. <span>Your estimate out.</span></h2></div>' +
       '<div class="ab-note">' + svgPath("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 11v6M12 7.5v.01", 22) + "<p><strong>It's an estimate, not a meter reading.</strong> The factors are UK averages, so your real footprint will differ a little. It's accurate enough to show where your biggest savings are.</p></div></div>" +
@@ -4992,7 +4994,7 @@
       '<div class="display tnum ab-res-n">' + totalT + '<span> t</span> <small>CO₂e a year</small></div></a></div></div></section>' +
       '<section class="ab-sec ab-who" aria-labelledby="ab-who"><div class="ab-founder"><div class="ab-kicker">Who runs it</div><h2 id="ab-who" class="display">One independent project, answerable only to the people using it.</h2>' +
       '<div class="ab-person"><span class="display ab-initials" aria-hidden="true">' + esc(initials(OPERATOR_NAME)) + '</span><div><div class="display ab-name">' + esc(OPERATOR_NAME) + '</div><div class="muted">Runs CO2 Counter, UK</div></div></div>' +
-      "<p>CO2 Counter isn't owned or funded by any energy company, bank or other business. It's free for everyone, and people who find it useful can support it for £2 a year.</p>" +
+      "<p>CO2 Counter isn't owned or funded by any energy company, bank or other business. It's free for everyone" + (isNativeApp() ? "." : ", and people who find it useful can support it for £2 a year.") + "</p>" +
       '<a href="mailto:' + esc(CONTACT_EMAIL) + '" class="ab-mail">' + svgPath("M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM3 7l9 6 9-6", 18) + esc(CONTACT_EMAIL) + "</a></div>" +
       '<div class="ab-stats">' + stats.map(([big, t, bg, ink]) => '<div class="ab-stat" style="background:' + bg + ";color:" + ink + '"><span class="display tnum">' + big + "</span><span>" + t + "</span></div>").join("") + "</div></section>" +
       '<section class="ab-sec" aria-labelledby="ab-principles"><div class="ab-kicker">What we believe</div><h2 id="ab-principles" class="display ab-h2">The climate comes first. <span>Every time.</span></h2>' +
@@ -6066,7 +6068,7 @@
     if (m.owner) { planTag = "Owner"; planText = "Owner account: free, with full access."; }
     else if (FREE_MODE && !isSupporter()) {
       planTag = "Free";
-      planText = "Everything is free. If it's helped you, chip in £2 a year to cover running costs. No ads, and we never sell your data.";
+      planText = isNativeApp() ? "Everything is free. No ads, and we never sell your data." : "Everything is free. If it's helped you, chip in £2 a year to cover running costs. No ads, and we never sell your data.";
       if (!isNativeApp() && STRIPE_PAYMENT_LINK)
         planExtra = '<a class="acc-support" href="' + esc(supportUrl()) + '">' + icon("heart") + 'Support for £2 a year</a><p class="acc-fine">Secure payment by Stripe. Cancel any time.</p>';
     } else if (m.free && m.status !== "active") { planTag = "Free"; planText = "You've been given full access, free of charge."; }

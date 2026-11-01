@@ -361,3 +361,24 @@ and `apple-mobile-web-app-*` meta tags in `index.html` are already in place
 so content clears the notch/Dynamic Island and home indicator, and so
 "Add to Home Screen" from Safari (a separate, App-Store-free path to a
 home-screen icon - see `manifest.json`) looks reasonable too.
+
+## Android app (Capacitor)
+
+The `android/` folder is the same Capacitor wrapper for Android, made with
+`npx cap add android`. Icons and splash screens use the Leaf Ledger icon on the
+app's cream background. You need [Android Studio](https://developer.android.com/studio)
+to build it:
+
+1. `npm install`
+2. `npm run open:android` (copies the web app into `www/`, syncs it into
+   `android/`, and opens Android Studio).
+3. Build → Generate Signed Bundle / APK → Android App Bundle. Create an upload
+   key when asked and back it up: you need the same key for every update.
+4. Upload the `.aab` in the Google Play Console.
+
+As with iOS, re-run `npm run sync:android` after changing the web app.
+In both apps the optional £2 support is hidden (store payment rules); the
+website still offers it.
+
+Store listings, screenshots, privacy answers and review notes: see
+[`store/README.md`](store/README.md).

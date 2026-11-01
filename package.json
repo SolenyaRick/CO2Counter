@@ -1,14 +1,17 @@
 {
   "name": "co2-tracker",
   "version": "1.0.0",
-  "description": "CO2 Counter (Prototype 2) - static web app wrapped for iOS via Capacitor",
+  "description": "CO2 Counter - static web app wrapped for iOS and Android via Capacitor",
   "private": true,
   "scripts": {
     "build:web": "sh scripts/sync-web.sh",
     "sync:ios": "npm run build:web && cap sync ios",
-    "open:ios": "npm run sync:ios && cap open ios"
+    "open:ios": "npm run sync:ios && cap open ios",
+    "sync:android": "npm run build:web && cap sync android",
+    "open:android": "npm run sync:android && cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.4.2",
     "@capacitor/ios": "^8.4.2",
