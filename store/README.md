@@ -8,7 +8,8 @@ App Store Connect and the Google Play Console.
   (iPad 13", 2064×2752), `screenshots/android` (phone, 1080×1920). All use the
   example profile, so no real person's data appears.
 - Graphics: `graphics/ios-header-5244x2950.png` and `graphics/ios-header-3840x1646.png`
-  (App Store header and search results artwork), `graphics/play-feature-1024x500.png` (Play feature graphic) and
+  (App Store header), `graphics/ios-search-3840x2560.png` and `graphics/ios-search-1920x1280.png`
+  (App Store search results), `graphics/play-feature-1024x500.png` (Play feature graphic) and
   `graphics/play-icon-512.png` (Play icon). The iOS icon is already in the Xcode
   project.
 
@@ -30,6 +31,7 @@ App name shown on the phone: **CO2 Counter**.
 | Support URL | https://co2counter.co.uk/about/ |
 | Marketing URL | https://co2counter.co.uk |
 | Privacy policy URL | https://co2counter.co.uk/privacy/ |
+| Copyright | 2026 Jack Brown |
 | Contact email | CO2counter@outlook.com |
 
 ### Description (both stores)
