@@ -64,11 +64,26 @@ async function energyToken(userId: string) {
   return (await db("energy_asks?select=token&user_id=eq." + userId))[0].token;
 }
 
-async function sendEmail(mail: Record<string, unknown>) {
+// Mail that looks personal lands in the inbox more often: the sender's own
+// name in the From line, and a plain HTML version alongside the text.
+const fromFor = (name: string) => {
+  const base = env("LETTERS_FROM") || "CO2 Counter <letters@co2counter.co.uk>";
+  const addr = (base.match(/<([^>]+)>/) || [, base])[1];
+  const who = name.replace(/["<>\\\r\n]/g, "").slice(0, 60);
+  return who ? '"' + who + ' via CO2 Counter" <' + addr + ">" : base;
+};
+const escHtml = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const htmlFor = (text: string, button?: { label: string; href: string }) =>
+  '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#222">' +
+  text.split(/\n{2,}/).map((p) => "<p>" + escHtml(p).replace(/\n/g, "<br>") + "</p>").join("") +
+  (button ? '<p><a href="' + escHtml(button.href) + '" style="display:inline-block;padding:10px 18px;background:#3F5B3A;color:#ffffff;text-decoration:none;border-radius:8px">' + escHtml(button.label) + "</a></p>" : "") +
+  "</div>";
+
+async function sendEmail(mail: Record<string, unknown>, name = "") {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: "Bearer " + env("RESEND_API_KEY"), "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env("LETTERS_FROM") || "CO2 Counter <letters@co2counter.co.uk>", ...mail }),
+    body: JSON.stringify({ from: fromFor(name), ...mail }),
   });
   if (!res.ok) throw new Error("resend " + res.status + " " + (await res.text()));
 }
@@ -100,11 +115,12 @@ export async function handler(req: Request): Promise<Response> {
       if (await sentSince(user.id, "mp", 7 * 86400000)) return json({ error: "You've already sent a letter to your MP this week." }, 429);
       const mp = await findMp(postcode);
       if (!mp) return json({ error: "We couldn't find an MP for that postcode." }, 400);
+      const letter = message + "\n\n" + name + "\n" + address + "\n" + postcode + footer;
       await sendEmail({
         to: [mp.email], cc: [user.email], reply_to: user.email,
         subject: "Climate action: a letter from a constituent",
-        text: message + "\n\n" + name + "\n" + address + "\n" + postcode + footer,
-      });
+        text: letter, html: htmlFor(letter),
+      }, name);
       await db("letters_sent", { method: "POST", body: JSON.stringify({ user_id: user.id, kind: "mp" }) });
       // Sent through us, so Act 6 is verified.
       await db("act_verifications", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates" }, body: JSON.stringify({ user_id: user.id, act: "mobilise" }) });
@@ -118,11 +134,14 @@ export async function handler(req: Request): Promise<Response> {
       if ((await sentSince(user.id, "energy", 86400000)) >= 3) return json({ error: "You've sent three of these today. Try again tomorrow." }, 429);
       const token = await energyToken(user.id);
       const link = SITE + "#/confirm/energy?t=" + token;
+      const first = name.split(/\s+/)[0];
       await sendEmail({
         to: [to], cc: [user.email], reply_to: user.email,
-        subject: "Could we switch to a renewable electricity tariff?",
+        subject: first + ": could we switch to renewable electricity?",
         text: message + "\n\nOnce we've switched, please tap this link to let " + name + " know (no account needed):\n" + link + footer,
-      });
+        html: htmlFor(message + "\n\nOnce we've switched, tap the button to let " + name + " know. No account needed.", { label: "Yes, we've switched", href: link }) +
+          '<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#777">' + escHtml(footer.replace(/^\s*--\s*/, "")) + "</p>",
+      }, name);
       await db("letters_sent", { method: "POST", body: JSON.stringify({ user_id: user.id, kind: "energy" }) });
       return json({ ok: true });
     }

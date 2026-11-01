@@ -1,9 +1,12 @@
 {
   "appId": "com.solenyarick.co2tracker",
-  "appName": "CO2 Tracker",
+  "appName": "CO2 Counter",
   "webDir": "www",
-  "backgroundColor": "#f4f6f5",
+  "backgroundColor": "#EFE9DC",
   "ios": {
     "contentInset": "automatic"
+  },
+  "android": {
+    "backgroundColor": "#EFE9DC"
   }
 }
