@@ -4031,19 +4031,9 @@
     const t = energyAskText();
     const asked = actsTicked().energyAsked;
     const st = ui.letterState || {};
-    // Signed in: send it from the app (the private link is added for them).
-    const form = !currentUser
-      ? ""
-      : st.energySentTo
-        ? '<p class="sm green-dark fw-700 mt-2">' + icon("check") + " Sent to " + esc(st.energySentTo) + ". You'll get a copy.</p>" +
-          '<p class="xs muted">New senders sometimes land in junk. If they can\'t see it, ask them to check junk and mark it "Not junk", or send it from your own email below.</p>'
-        : '<form id="energy-send-form" class="letter-form mt-2">' +
-          '<div class="letter-two"><label class="xs fw-700">Their email<input class="input" id="es-to" type="email" autocomplete="off" maxlength="200" placeholder="landlord@example.com" value="' + esc(ui.esTo || "") + '" /></label>' +
-          '<label class="xs fw-700">Your name<input class="input" id="es-name" autocomplete="name" maxlength="80" value="' + esc(ui.esName || ui.userName || "") + '" /></label></div>' +
-          '<label class="xs fw-700">Your message<textarea class="input" id="es-message" rows="7">' + esc(ui.esDraft || energyAskText(true).body) + "</textarea></label>" +
-          '<button type="submit" class="btn btn-green btn-sm"' + (st.sending ? " disabled" : "") + ">" + (st.sending ? "Sending…" : "Send it") + "</button>" +
-          (st.error ? '<p class="xs red" role="status">' + esc(st.error) + "</p>" : "") +
-          '<p class="xs muted">Sent from CO2 Counter\'s address in your name, with a link for them to confirm once you\'ve switched. You get a copy and replies go to you. Sending from your own email (below) is the surest way to reach their inbox.</p></form>';
+    // Sent from their own email for now: it reaches the inbox far more
+    // reliably than mail from our domain. The private link in the message
+    // still verifies the act when the bill payer taps it.
     const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
     return (
       '<div class="ask-box"><p class="sm">' +
@@ -4051,13 +4041,12 @@
         ? "You've asked. " + (ui.energyToken ? "When they tap the link in your message to say you've switched, this act is verified." : "Send it again any time.")
         : "Someone else chooses your supplier, so your switch is asking them. Here's a message ready to send, with your home's numbers in it" + (ui.energyToken ? ", and a link for them to tap once you've switched." : ".")) +
       "</p>" +
-      form + (currentUser ? '<p class="xs fw-700 mt-3">Or send it yourself</p>' : "") +
-      '<div class="hb-share mt-2"><a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
+      '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
       webmailButtons({ subject: t.subject, body: t.body }, "energy-asked") +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
-      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app, Gmail or Outlook opens with the message ready, and you add who it\'s to.</p></div>'
+      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app, Gmail or Outlook opens with the message ready, and you add who it\'s to. Sending from your own email means it lands in their inbox, not junk.</p></div>'
     );
   }
 
