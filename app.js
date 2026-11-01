@@ -5471,7 +5471,7 @@
 
   function mostImprovedHtml() {
     const rows = (friends.progress || [])
-      .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0)
+      .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0 && Math.round(Number(p.latest_total) - Number(p.first_total)) !== 0)
       .map((p) => ({ ...p, change: Number(p.latest_total) - Number(p.first_total), pct: (Number(p.latest_total) - Number(p.first_total)) / Number(p.first_total) }))
       .sort((a, b) => a.pct - b.pct);
     if (!rows.length) {
@@ -5551,7 +5551,7 @@
     return {
       at: end, tag: ["Monthly", "green"], name: "CO2 Counter", verb: "monthly standings", av: '<span class="fr-av" style="width:44px;height:44px;font-size:15px;background:#3F5B3A;color:#F6F1E6" aria-hidden="true">CO</span>',
       body: '<div class="fr-pcard dark"><div class="fr-pcard-top"><span class="fr-eyeb">Your circle in ' + esc(month) + "</span>" +
-        (both.length ? '<span><b class="display tnum fr-big honey">' + (net <= 0 ? "−" : "+") + kgFmt(Math.abs(net)) + '</b> <span class="fr-small">kg a year, net</span></span>' : "") +
+        (both.length && Math.round(net) !== 0 ? '<span><b class="display tnum fr-big honey">' + (net <= 0 ? "−" : "+") + kgFmt(Math.abs(net)) + '</b> <span class="fr-small">kg a year, net</span></span>' : "") +
         '</div><ol class="fr-moves">' + rows + '</ol><p class="fr-small mt-2">' + retakes + (retakes === 1 ? " retake" : " retakes") + " last month</p></div>",
       link: ["Full standings", "#fr-standings"],
     };
@@ -5576,6 +5576,8 @@
     const posts = (friends.feed || []).map((e) => {
       const who = e.is_self ? "You" : e.display_name;
       const base = { key: e.post_key, uid: e.user_id, kind: e.kind, at: new Date(e.at), name: who, av: frAv(e.user_id, e.display_name, 44, e.is_self), when: frWhen(e.at), social: !e.is_self, mine: e.is_self, cheers: e.cheers || 0, cheered: !!e.cheered, cheerers: e.cheerers || [] };
+      // A retake that changed nothing isn't news.
+      if (e.kind === "retake" && Math.round(Number(e.after_total) - Number(e.before_total)) === 0) return null;
       if (e.kind === "retake") {
         const before = Number(e.before_total), after = Number(e.after_total), up = after > before;
         const pct = before > 0 ? Math.round((Math.abs(after - before) / before) * 100) : 0;
@@ -5597,7 +5599,7 @@
         body: "" };
     });
     const extra = [monthlyPost(), nextMovePost()].filter(Boolean);
-    return [...extra.filter((p) => p.pin), ...[...posts, ...extra.filter((p) => !p.pin)].sort((a, b) => b.at - a.at)];
+    return [...extra.filter((p) => p.pin), ...[...posts.filter(Boolean), ...extra.filter((p) => !p.pin)].sort((a, b) => b.at - a.at)];
   }
   function postHtml(p, i) {
     p = { cheers: 0, cheered: false, cheerers: [], ...p };
@@ -5650,7 +5652,7 @@
       rows = friends.board.map((b, i) => ({ id: b.user_id, self: b.is_self, name: nameOf(b), w: (Number(b.total_yearly) / maxT) * 100, val: tonnes(b.total_yearly) + " t", cls: "", first: i === 0 }));
     } else {
       rows = (friends.progress || [])
-        .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0)
+        .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0 && Math.round(Number(p.latest_total) - Number(p.first_total)) !== 0)
         .map((p) => ({ p, pct: (Number(p.latest_total) - Number(p.first_total)) / Number(p.first_total) }))
         .sort((a, b) => a.pct - b.pct)
         .map(({ p, pct }) => ({ id: p.user_id, self: p.is_self, name: nameOf(p), w: Math.min(100, Math.abs(pct) * 400), val: (pct < 0 ? "▼" : pct > 0 ? "▲" : "") + Math.abs(Math.round(pct * 100)) + "%", cls: pct < 0 ? "down" : pct > 0 ? "up" : "" }));
@@ -5681,7 +5683,7 @@
     const meBoard = friends.board.find((b) => b.is_self);
     const myProg = (friends.progress || []).find((p) => p.is_self && p.surveys >= 2 && Number(p.first_total) > 0);
     const myPct = myProg ? Math.round(((Number(myProg.latest_total) - Number(myProg.first_total)) / Number(myProg.first_total)) * 100) : null;
-    const pctTxt = myPct == null ? "" : '<span class="fr-pct ' + (myPct <= 0 ? "down" : "up") + '">' + (myPct <= 0 ? "▼ " : "▲ ") + Math.abs(myPct) + "%</span>";
+    const pctTxt = myPct == null || myPct === 0 ? "" : '<span class="fr-pct ' + (myPct <= 0 ? "down" : "up") + '">' + (myPct <= 0 ? "▼ " : "▲ ") + Math.abs(myPct) + "%</span>";
     actsTicked();
     const info = ui.actsInfo;
     const done7 = info ? Math.min(7, info.finished || 0) : 0;
