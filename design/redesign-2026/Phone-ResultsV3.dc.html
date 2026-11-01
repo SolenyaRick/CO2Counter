@@ -25,6 +25,16 @@ a{color:#E8C88A}
 .rise{animation:rise .8s cubic-bezier(.2,.75,.2,1) both}
 .d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}
 .seg{transform-origin:0 50%;animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+.morph{transition:width 1.1s cubic-bezier(.65,0,.35,1)}
+.mk{position:absolute;top:-8px;bottom:-8px;transition:opacity .5s .7s}
+.mkline{position:absolute;left:-1px;top:0;bottom:0;width:2px;border-radius:2px}
+.ls{display:none}
+.mklab{position:absolute;left:0;transform:translateX(-50%);font-size:12px;font-weight:800;white-space:nowrap}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fadein{display:inline-block;animation:fadein .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes barup{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.bar{transform-origin:50% 100%;animation:barup 1s cubic-bezier(.3,1.3,.5,1) both}
+.col{transition:background .2s}.col:hover{background:rgba(246,241,230,.05)}
 .tile{animation:tile .7s cubic-bezier(.2,.8,.2,1) both;transition:transform .3s cubic-bezier(.2,.8,.2,1),filter .3s}
 .tile:hover{transform:translateY(-4px) scale(1.01);filter:brightness(1.08)}
 .glow{animation:glow 16s ease-in-out infinite}
@@ -45,6 +55,8 @@ a{color:#E8C88A}
 .tm .rest{grid-column:1 / -1}
 }
 @media (max-width: 640px){
+.lf{display:none}.ls{display:inline}
+.bars{padding-left:34px!important;height:300px!important}.bars ol{left:38px!important;gap:4px!important}.bars .num{font-size:11px!important}.mklab{font-size:10px!important}
 [style*="padding: 20px 32px"]{padding:14px 16px 100px!important}
 nav[aria-label="Main"]>:nth-child(2),nav[aria-label="Main"] a[aria-label="Account"]{display:none!important}
 .big{font-size:76px!important}
@@ -86,19 +98,35 @@ nav[aria-label="Main"]>:nth-child(2),nav[aria-label="Main"] a[aria-label="Accoun
         <span class="num big" style="font-size: 132px; font-weight: 800; line-height: .9">{{countLabel}}</span>
         <span style="font-size: 20px; color: #C9D3BC">kg CO₂e</span>
       </div>
-      <p class="rise d2" style="margin: 14px auto 0; max-width: 560px; font-size: 18px; line-height: 1.5; color: #C9D3BC"><b style="color: #F2B48E">25% above</b> the UK average* and <b style="color: #E8C88A">2.7×</b> one person’s 1.5°C budget.</p>
+      <p class="rise d2 swap" style="margin: 14px auto 0; max-width: 600px; min-height: 54px; font-size: 18px; line-height: 1.5; color: #C9D3BC">
+        <sc-if value="{{isBreak}}" hint-placeholder-val="{{true}}"><span class="fadein"><b style="color: #F2B48E">25% above</b> the UK average* and <b style="color: #E8C88A">2.7×</b> one person’s 1.5°C budget.</span></sc-if>
+        <sc-if value="{{isCompare}}" hint-placeholder-val="{{false}}"><span class="fadein">Realistic changes take you to <b style="color: #C9E0B8">3,536 kg</b>: below the UK average, but still <b style="color: #E8C88A">1.4×</b> the 1.5°C budget.</span></sc-if>
+      </p>
 
-      <!-- whole year as one strip -->
-      <div class="rise d3" style="margin: 34px auto 0; max-width: 980px; text-align: left">
-        <div role="img" aria-label="Your footprint split by category" style="display: flex; gap: 4px; height: 56px">
-          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
-            <a class="seg" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="flex: {{c.v}} 1 0; min-width: 6px; border-radius: 14px; background: {{c.color}}; animation-delay: {{c.delay}}; display: flex; align-items: flex-end; padding: 0 10px 8px; box-sizing: border-box; color: #16211A; text-decoration: none; overflow: hidden">
-              <span class="num" style="font-size: 14px; font-weight: 800; white-space: nowrap; opacity: {{c.labelOp}}">{{c.share}}</span>
-            </a>
-          </sc-for>
+      <!-- whole year as one strip, which morphs into the comparison -->
+      <div class="rise d3" style="margin: 26px auto 0; max-width: 980px; text-align: left">
+        <div style="display: flex; justify-content: center; margin-bottom: 46px">
+          <div role="group" aria-label="Strip view" style="display: inline-flex; gap: 4px; padding: 4px; border-radius: 99px; background: rgba(246,241,230,.06); border: 1px solid rgba(246,241,230,.1)">
+            <button type="button" onClick="{{showBreak}}" aria-pressed="{{breakOn}}" style="all: unset; cursor: pointer; padding: 8px 16px; border-radius: 99px; font-size: 14px; font-weight: 800; background: {{breakBg}}; color: {{breakInk}}; transition: background .3s, color .3s">Breakdown</button>
+            <button type="button" onClick="{{showCompare}}" aria-pressed="{{compareOn}}" style="all: unset; cursor: pointer; padding: 8px 16px; border-radius: 99px; font-size: 14px; font-weight: 800; background: {{compareBg}}; color: {{compareInk}}; transition: background .3s, color .3s">vs 1.5°C</button>
+          </div>
         </div>
-        <div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #C9D3BC">
-          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{c.color}}"></span>{{c.short}}</span></sc-for>
+        <div style="position: relative; height: 56px">
+          <span aria-hidden="true" style="position: absolute; inset: -6px -6px; border-radius: 18px; border: 1.5px dashed rgba(242,180,142,.55); opacity: {{ghostOp}}; transition: opacity .6s .4s"></span>
+          <span aria-hidden="true" class="num" style="position: absolute; right: 0; top: -30px; font-size: 13px; font-weight: 800; color: #F2B48E; opacity: {{ghostOp}}; transition: opacity .6s .5s">Now 6,746</span>
+          <div role="img" aria-label="{{stripAria}}" style="position: relative; display: flex; gap: 4px; height: 100%">
+            <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+              <a class="seg morph" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="width: {{c.w}}%; flex: none; min-width: 6px; border-radius: 14px; background: {{c.color}}; animation-delay: {{c.delay}}; display: flex; align-items: flex-end; padding: 0 10px 8px; box-sizing: border-box; color: #16211A; text-decoration: none; overflow: hidden">
+                <span class="num" style="font-size: 14px; font-weight: 800; white-space: nowrap; opacity: {{c.labelOp}}; transition: opacity .4s">{{c.share}}</span>
+              </a>
+            </sc-for>
+          </div>
+          <span aria-hidden="true" class="mk" style="left: 37.06%; opacity: {{markOp}}"><span class="mkline" style="background: #E8C88A"></span><span class="mklab" style="top: -30px; color: #E8C88A"><span class="lf">1.5°C budget · 2.5 t</span><span class="ls">1.5°C</span></span></span>
+          <span aria-hidden="true" class="mk" style="left: 57.81%; opacity: {{markOp}}"><span class="mkline" style="background: #C9D3BC"></span><span class="mklab" style="top: -30px; color: #C9D3BC"><span class="lf">UK avg · 3.9 t*</span><span class="ls">UK</span></span></span>
+          <span aria-hidden="true" class="num" style="position: absolute; left: 52.4%; top: 64px; transform: translateX(-100%); padding-right: 8px; font-size: 14px; font-weight: 800; color: #C9E0B8; white-space: nowrap; opacity: {{markOp}}; transition: opacity .5s .8s">Realistic 3,536</span>
+        </div>
+        <div style="margin-top: 40px; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: #C9D3BC">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7"><span style="display: inline-flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{c.color}}"></span>{{c.short}} <b class="num" style="color: #F6F1E6">{{c.legendKg}}</b></span></sc-for>
         </div>
       </div>
     </section>
@@ -107,30 +135,33 @@ nav[aria-label="Main"]>:nth-child(2),nav[aria-label="Main"] a[aria-label="Accoun
     <section class="card sec rise d4" aria-labelledby="where" style="margin-top: 48px; padding: 28px">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
         <h2 id="where" class="hd" style="margin: 0; font-size: 30px; font-weight: 800">Where it comes from</h2>
-        <span style="font-size: 14px; color: #A3B58F">Bigger tile, bigger slice · tap to improve it</span>
+        <span style="font-size: 14px; color: #A3B58F">Tap a bar to improve it</span>
       </div>
-      <div class="tm" style="margin-top: 20px; height: 380px; display: grid; grid-template-columns: 34fr 29fr 37fr; gap: 8px">
-        <sc-for list="{{bigTiles}}" as="t" hint-placeholder-count="2">
-          <a class="tile" href="Phone-Category.dc.html" onClick="{{t.go}}" aria-label="{{t.aria}}" style="position: relative; overflow: hidden; border-radius: 22px; background: {{t.color}}; color: #16211A; text-decoration: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; animation-delay: {{t.delay}}">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#16211A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position: absolute; right: -16px; bottom: -16px; opacity: .16"><path d="{{t.icon}}"></path></svg>
-            <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg>{{t.label}}</span>
-            <span><span class="num" style="display: block; font-size: 44px; font-weight: 800; line-height: 1">{{t.share}}</span><span class="num" style="font-size: 15px; font-weight: 700; opacity: .75">{{t.kg}} kg a year</span></span>
-          </a>
+      <div style="margin-top: 14px; display: flex; justify-content: flex-end">
+        <button type="button" onClick="{{toggleUk}}" aria-pressed="{{ukAttr}}" style="all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 99px; border: 1px solid rgba(246,241,230,.14); font-size: 14px; font-weight: 800"><span style="position: relative; width: 38px; height: 22px; border-radius: 99px; background: {{ukTrack}}; transition: background .3s"><span style="position: absolute; top: 3px; left: {{ukKnob}}px; width: 16px; height: 16px; border-radius: 99px; background: #F6F1E6; transition: left .3s cubic-bezier(.3,1.4,.5,1)"></span></span>Compare with UK average</button>
+      </div>
+      <div class="bars" style="position: relative; margin-top: 16px; height: 340px; padding-left: 48px">
+        <sc-for list="{{grid}}" as="gl" hint-placeholder-count="6">
+          <span aria-hidden="true" style="position: absolute; left: 48px; right: 0; bottom: calc(52px + {{gl.y}}% * 2.88 / 3.4); border-top: 1px dashed rgba(246,241,230,.09)"><span class="num" style="position: absolute; right: calc(100% + 10px); top: -9px; font-size: 12px; color: #8A9A84">{{gl.label}}</span></span>
         </sc-for>
-        <div class="rest" style="display: grid; grid-template-rows: 59fr 41fr; gap: 8px; min-height: 0">
-          <a class="tile" href="Phone-Category.dc.html" onClick="{{home.go}}" aria-label="{{home.aria}}" style="position: relative; overflow: hidden; border-radius: 22px; background: {{home.color}}; color: #16211A; text-decoration: none; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; animation-delay: .3s">
-            <span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{home.icon}}"></path></svg>{{home.label}}</span>
-            <span><span class="num" style="display: block; font-size: 36px; font-weight: 800; line-height: 1">{{home.share}}</span><span class="num" style="font-size: 14px; font-weight: 700; opacity: .75">{{home.kg}} kg</span></span>
-          </a>
-          <div style="display: grid; grid-template-columns: 6fr 5fr 4fr 2fr; gap: 8px; min-height: 0">
-            <sc-for list="{{smallTiles}}" as="t" hint-placeholder-count="4">
-              <a class="tile" href="Phone-Category.dc.html" onClick="{{t.go}}" aria-label="{{t.aria}}" title="{{t.label}} · {{t.kg}} kg" style="border-radius: 18px; background: {{t.color}}; color: #16211A; text-decoration: none; padding: 12px 10px; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; overflow: hidden; animation-delay: {{t.delay}}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg>
-                <span class="num" style="font-size: 16px; font-weight: 800; white-space: nowrap">{{t.share}}</span>
+        <ol style="list-style: none; margin: 0; padding: 0; position: absolute; left: 56px; right: 0; top: 0; bottom: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+            <li style="position: relative; min-width: 0">
+              <a class="col" href="Phone-Category.dc.html" onClick="{{c.go}}" aria-label="{{c.aria}}" style="position: absolute; inset: 0; display: block; color: #F6F1E6; text-decoration: none; border-radius: 14px">
+                <span style="position: absolute; left: {{c.youL}}%; width: {{c.youW}}%; bottom: 52px; height: {{c.barH}}%; transition: left .5s, width .5s">
+                  <span class="num" style="position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); text-align: center; font-size: 14px; font-weight: 800; white-space: nowrap">{{c.kg}}</span>
+                  <span class="bar" style="position: absolute; inset: 0; border-radius: 12px 12px 4px 4px; background: {{c.color}}; animation-delay: {{c.barDelay}}"></span>
+                </span>
+                <span style="position: absolute; left: 56%; width: 36%; bottom: 52px; height: {{c.ukH}}%; opacity: {{c.ukOp}}; transition: opacity .4s">
+                  <span class="num" style="position: absolute; left: -10px; right: -10px; bottom: calc(100% + 6px); text-align: center; font-size: 12px; font-weight: 800; color: #E8C88A; white-space: nowrap">{{c.ukLabel}}</span>
+                  <span style="position: absolute; inset: 0; box-sizing: border-box; border-radius: 10px 10px 3px 3px; border: 1.5px dashed rgba(232,200,138,.75); background: repeating-linear-gradient(135deg, rgba(232,200,138,.25) 0 6px, transparent 6px 12px)"></span>
+                </span>
+                <span style="position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; font-size: 13px; font-weight: 800; white-space: nowrap"><span class="lf">{{c.short}}</span><span class="ls">{{c.tiny}}</span></span>
+                <span style="position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 12px; color: #A3B58F">{{c.sub}}</span>
               </a>
-            </sc-for>
-          </div>
-        </div>
+            </li>
+          </sc-for>
+        </ol>
       </div>
     </section>
 
@@ -188,14 +219,16 @@ nav[aria-label="Main"]>:nth-child(2),nav[aria-label="Main"] a[aria-label="Accoun
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { count: 0, shownPlan: 6746, on: [false, false, false], touched: false };
+    this.state = { count: 0, shownPlan: 6746, on: [false, false, false], touched: false, view: 'break', viewTouched: false, ukOn: false };
   }
   componentDidMount() {
     this.tween('count', 0, 6746, 1600);
+    this.viewT = setTimeout(() => { if (!this.state.viewTouched) this.setState({ view: 'compare' }); }, 3400);
     this.timers = (this.props.autoplay ?? true) ? [0, 1, 2].map((i) => setTimeout(() => { if (!this.state.touched) this.flip(i, true); }, 2200 + i * 700)) : [];
   }
   componentWillUnmount() {
     (this.timers || []).forEach(clearTimeout);
+    clearTimeout(this.viewT);
     cancelAnimationFrame(this.rafA); cancelAnimationFrame(this.rafB);
   }
   tween(key, from, to, dur) {
@@ -236,14 +269,23 @@ class Component extends DCLogic {
       water: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z'
     };
     const RAW = [
-      ['meals', 'Meals & diet', 'Meals', 2314, '#A9C795'], ['bank', 'Banking & pension', 'Money', 1931, '#7FA36E'],
-      ['home', 'Home energy', 'Home', 1451, '#D7DFC9'], ['pets', 'Pets', 'Pets', 385, '#E8C88A'],
-      ['flights', 'Flights', 'Flights', 367, '#E8946A'], ['commute', 'Commute & travel', 'Commute', 280, '#C4A684'], ['water', 'Water', 'Water', 17, '#8FC3D0']
+      // [key, label, short, kg now, colour, kg after realistic changes, UK average]
+      ['meals', 'Meals & diet', 'Meals', 2314, '#A9C795', 1248, 1821], ['bank', 'Banking & pension', 'Money', 1931, '#7FA36E', 756, null],
+      ['home', 'Home energy', 'Home', 1451, '#D7DFC9', 1204, 1080], ['pets', 'Pets', 'Pets', 385, '#E8C88A', 289, 231],
+      ['flights', 'Flights', 'Flights', 367, '#E8946A', 11, 429], ['commute', 'Commute & travel', 'Commute', 280, '#C4A684', 13, 280], ['water', 'Water', 'Water', 17, '#8FC3D0', 14, 18]
     ];
     const total = 6746;
-    const cats = RAW.map(([key, label, short, v, color], i) => {
+    const cmp = st.view === 'compare', uk = st.ukOn;
+    const H = (kg) => Math.max(1.5, (kg / 2500) * 84.7);
+    const cats = RAW.map(([key, label, short, v, color, real, ukv], i) => {
       const share = Math.max(1, Math.round((v / total) * 100)) + '%';
-      return { key, label, short, v, color, icon: I[key], share, kg: fmt(v), labelOp: v / total > 0.05 ? 1 : 0,
+      const gapPct = 0.42;
+      const tiny = { meals: 'Food', bank: 'Money', home: 'Home', pets: 'Pets', flights: 'Fly', commute: 'Travel', water: 'Water' }[key];
+      return { key, label, short, v, color, icon: I[key], share, kg: fmt(v), labelOp: !cmp && v / total > 0.05 ? 1 : 0,
+        tiny, w: Math.max(0.6, ((cmp ? real : v) / total) * 100 - gapPct).toFixed(2), legendKg: fmt(cmp ? real : v),
+        barH: H(v).toFixed(1), barDelay: (0.3 + i * 0.08).toFixed(2) + 's', youL: uk ? 6 : 14, youW: uk ? 46 : 72,
+        ukH: ukv ? H(ukv).toFixed(1) : 0, ukOp: uk && ukv ? 1 : 0, ukLabel: ukv ? fmt(ukv) : '',
+        sub: uk ? (ukv ? (Math.abs(v - ukv) / ukv < 0.03 ? 'Same as UK' : (v > ukv ? '+' : '−') + fmt(Math.abs(v - ukv))) : 'No UK figure') : share,
         delay: (0.5 + i * 0.08).toFixed(2) + 's', aria: label + ', ' + fmt(v) + ' kg, ' + share + ' of your footprint', go: remember(key) };
     });
     const tileOf = (c, i) => ({ ...c, delay: (0.2 + i * 0.08).toFixed(2) + 's' });
@@ -257,6 +299,13 @@ class Component extends DCLogic {
     });
     const count = st.on.filter(Boolean).length;
     return {
+      isBreak: !cmp, isCompare: cmp, ghostOp: cmp ? 1 : 0, markOp: cmp ? 1 : 0,
+      stripAria: cmp ? 'After realistic changes: 3,536 kg, against a 1.5°C budget of 2,500 kg and a UK average of 3,900 kg' : 'Your footprint split by category',
+      showBreak: () => this.setState({ view: 'break', viewTouched: true }), showCompare: () => this.setState({ view: 'compare', viewTouched: true }),
+      breakOn: cmp ? 'false' : 'true', compareOn: cmp ? 'true' : 'false',
+      breakBg: cmp ? 'transparent' : '#E8C88A', breakInk: cmp ? '#C9D3BC' : '#1F2D1C', compareBg: cmp ? '#E8C88A' : 'transparent', compareInk: cmp ? '#1F2D1C' : '#C9D3BC',
+      toggleUk: () => this.setState({ ukOn: !uk }), ukAttr: uk ? 'true' : 'false', ukTrack: uk ? '#E8C88A' : 'rgba(246,241,230,.2)', ukKnob: uk ? 19 : 3,
+      grid: [0, 500, 1000, 1500, 2000, 2500].map((g) => ({ y: ((g / 2500) * 100).toFixed(1), label: g.toLocaleString('en-GB') })),
       countLabel: fmt(st.count),
       cats, bigTiles: [tileOf(cats[0], 0), tileOf(cats[1], 1)], home: cats[2], smallTiles: cats.slice(3).map((c, i) => tileOf(c, i + 3)),
       moves, planLabel: fmt(planned), planW: ((planned / 8000) * 100).toFixed(2),

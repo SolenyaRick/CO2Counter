@@ -99,7 +99,8 @@ on phones and tablets (laptops only when it starts below the fold).
 
 - `Glass2-ResultsV3.dc.html` (+ `Phone-ResultsV3.dc.html`): a fresh take on
   Results, built from scratch for comparison. Dark "night forest" style with
-  honey accents: the total over one strip of the whole year by category, a
-  treemap of where it comes from, "Build your plan" (tick your 3 biggest moves
+  honey accents: the total over one strip of the whole year by category that
+  morphs into each category's realistic size against the 1.5°C budget and UK
+  average, a bar chart of where it comes from (with UK average), "Build your plan" (tick your 3 biggest moves
   and watch the number fall towards the UK average and 1.5°C budget) and
   three comparison tiles.
