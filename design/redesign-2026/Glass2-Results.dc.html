@@ -61,6 +61,26 @@ footer[style]{flex-direction:column;gap:10px!important}
 .support{padding:14px!important}
 .support .cta{width:100%;justify-content:center}
 .vchart.is-bars{display:none!important}
+/* phone: facts first, minimal text */
+.hero{text-align:center}
+.heroL{flex-direction:column!important;gap:6px!important;width:100%}
+.gauge{display:none!important}
+.hlab{font-size:12px!important;font-weight:800!important;letter-spacing:.12em;text-transform:uppercase;color:#6E8B5E!important}
+.bignum{font-size:76px!important;line-height:.9!important}
+.hero .heroL>div>div:nth-child(2){justify-content:center}
+.hunit{font-size:14px!important}
+.hchips{justify-content:center;margin-top:12px!important}
+.pchip{display:inline-flex!important}
+.hero>div:last-child{text-align:left;padding-top:18px;border-top:1px solid rgba(46,42,34,.08)}
+.rlab{font-size:12px!important;font-weight:800!important;letter-spacing:.12em;text-transform:uppercase;color:#6E8B5E!important}
+.fnote,.csub,.sdesc,.mdesc,.trend{display:none!important}
+.chartcard h2,.moves h2{font-size:24px!important}
+.opp h3{font-size:21px!important}
+.support{gap:12px!important}
+.support b{font-size:16px!important}
+.eq{grid-template-columns:1fr 1fr!important}
+.eq>div:nth-child(3){display:none!important}
+.support>.beat{display:none!important}
 .hbars.is-bars{display:flex!important}
 }
 a{color:#3F5B3A}a:hover{color:#2B3F28}
@@ -202,12 +222,13 @@ body{padding-bottom:88px}
           <figcaption style="position: absolute; inset: 0; display: grid; place-items: center; text-align: center"><span><b class="num" style="display: block; font-size: 30px; line-height: 1">{{budgetX}}×</b><span style="font-size: 11px; font-weight: 700; color: #5C5649">1.5°C budget</span></span></figcaption>
         </figure>
         <div style="min-width: 0">
-        <div style="font-size: 15px; font-weight: 700; color: #5C5649">Your footprint this year</div>
+        <div class="hlab" style="font-size: 15px; font-weight: 700; color: #5C5649">Your footprint this year</div>
         <div style="margin-top: 4px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap">
           <span class="num bignum" style="font-weight: 800; font-size: 84px; line-height: .95; letter-spacing: -0.045em">{{countLabel}}</span>
-          <span style="font-size: 16px; color: #5C5649">kg CO₂e</span>
+          <span class="hunit" style="font-size: 16px; color: #5C5649">kg CO₂e</span>
         </div>
-        <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px">
+        <div class="hchips" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px">
+          <span class="chip pchip" style="display: none; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: rgba(217,164,65,.18); color: #6B4A12; font-size: 14px; font-weight: 700; animation-delay: .15s">{{budgetX}}× the 1.5°C budget</span>
           <span class="chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: rgba(184,101,61,.12); color: #8C4A2A; font-size: 14px; font-weight: 700"><span aria-hidden="true">▲</span>25% above UK average*</span>
         </div>
         </div>
@@ -215,7 +236,7 @@ body{padding-bottom:88px}
 
       <div style="position: relative; flex: 1 1 440px; min-width: 0">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
-          <span style="font-size: 15px; font-weight: 700; color: #5C5649">With realistic changes</span>
+          <span class="rlab" style="font-size: 15px; font-weight: 700; color: #5C5649">With realistic changes</span>
           <span style="padding: 4px 12px; border-radius: 99px; background: rgba(63,91,58,.1); color: #2B3F28; font-size: 14px; font-weight: 700; opacity: {{chipAlpha}}; transition: opacity .6s">−3,210 kg · 48% less</span>
         </div>
         <div style="margin-top: 4px; display: flex; align-items: baseline; gap: 10px">
@@ -237,7 +258,7 @@ body{padding-bottom:88px}
           <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 20px; height: 10px; border-radius: 99px; background: #A3B58F"></span>Realistic <b class="num" style="color: #2E2A22">3,536</b></span>
           <span style="display: inline-flex; align-items: center; gap: 8px; opacity: {{ghostAllA}}; transition: opacity .7s"><span style="width: 20px; height: 10px; border-radius: 99px; border: 1.5px dashed #D9A441"></span>All the way <b class="num" style="color: #2E2A22">1,654</b></span>
         </div>
-        <p style="margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: #A3B58F">*The UK average leaves out banking and pensions (no UK figure). On the same basis you’re at 4.8 t.</p>
+        <p class="fnote" style="margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: #A3B58F">*The UK average leaves out banking and pensions (no UK figure). On the same basis you’re at 4.8 t.</p>
       </div>
     </section>
 
@@ -246,7 +267,7 @@ body{padding-bottom:88px}
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
           <div>
             <h2 class="serif" style="margin: 0; font-size: 26px; font-weight: 800">Where it comes from</h2>
-            <p style="margin: 4px 0 0; font-size: 14px; color: #5C5649">Meals, money and home make up <b>84%</b>. Tap one to improve it.</p>
+            <p class="csub" style="margin: 4px 0 0; font-size: 14px; color: #5C5649">Meals, money and home make up <b>84%</b>. Tap one to improve it.</p>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
           <button class="pill" onClick="{{toggleUk}}" aria-pressed="{{ukOnAttr}}" style="all: unset; box-sizing: border-box; min-height: 42px; padding: 0 14px 0 8px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; border: 1.5px solid rgba(46,42,34,.14); background: rgba(255,252,245,.8)"><span style="position: relative; width: 36px; height: 22px; border-radius: 99px; background: {{ukTrack}}; transition: background .3s"><span style="position: absolute; top: 3px; left: {{ukKnob}}px; width: 16px; height: 16px; border-radius: 99px; background: #FFFCF5; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .3s cubic-bezier(.3,1.4,.5,1)"></span></span>UK average</button>
@@ -367,7 +388,7 @@ body{padding-bottom:88px}
     <section class="moves reveal {{rv.moves}}" id="sec-moves" data-sec="moves" aria-labelledby="moves-h" style="filter: {{op.moves}}; margin-top: 16px; padding: 24px 26px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18)">
       <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap">
         <h2 id="moves-h" class="serif" style="margin: 0; font-size: 26px; font-weight: 800">Your 3 biggest moves</h2>
-        <span style="font-size: 14px; color: #5C5649"><b class="num" style="color: #2B3F28">−2,597</b> kg a year between them</span>
+        <span style="font-size: 14px; color: #5C5649"><b class="num" style="color: #2B3F28">−2,597</b> kg<span class="mdesc"> a year between them</span></span>
       </div>
       <ol style="list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px" class="movelist">
         <sc-for list="{{moves}}" as="mv" hint-placeholder-count="3">
@@ -385,7 +406,7 @@ body{padding-bottom:88px}
 
     <section class="support reveal {{rv.moves}}" style="margin-top: 16px; padding: 16px 18px 16px 22px; border-radius: 28px; background: #FFFDF8; border: 1px solid rgba(46,42,34,.06); box-shadow: 0 1px 2px rgba(46,42,34,.04), 0 22px 44px -22px rgba(46,42,34,.18); display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; animation-delay: .5s">
       <span class="beat" style="flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(184,101,61,.14); color: #B8653D"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"></path></svg></span>
-      <span style="flex: 1 1 320px; min-width: 0"><b class="serif" style="display: block; font-size: 18px; font-weight: 800">Free for everyone, kept going by supporters</b><span style="font-size: 14px; color: #5C5649">No ads, never sells your data. Chip in £2 a year if it’s helped you.</span></span>
+      <span style="flex: 1 1 320px; min-width: 0"><b class="serif" style="display: block; font-size: 18px; font-weight: 800">Free for everyone, kept going by supporters</b><span class="sdesc" style="font-size: 14px; color: #5C5649">No ads, never sells your data. Chip in £2 a year if it’s helped you.</span></span>
       <a class="cta" href="https://buy.stripe.com/9B6eVd0a4g2X4Gbc2K5EY00" style="min-height: 46px; padding: 0 20px; border-radius: 99px; display: inline-flex; align-items: center; gap: 8px; background: #3F5B3A; color: #F6F1E6; font-weight: 700; font-size: 15px; text-decoration: none">Support for £2 a year</a>
     </section>
 
