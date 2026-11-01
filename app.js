@@ -4033,14 +4033,15 @@
     const form = !currentUser
       ? ""
       : st.energySentTo
-        ? '<p class="sm green-dark fw-700 mt-2">' + icon("check") + " Sent to " + esc(st.energySentTo) + ". You'll get a copy.</p>"
+        ? '<p class="sm green-dark fw-700 mt-2">' + icon("check") + " Sent to " + esc(st.energySentTo) + ". You'll get a copy.</p>" +
+          '<p class="xs muted">New senders sometimes land in junk. If they can\'t see it, ask them to check junk and mark it "Not junk", or send it from your own email below.</p>'
         : '<form id="energy-send-form" class="letter-form mt-2">' +
           '<div class="letter-two"><label class="xs fw-700">Their email<input class="input" id="es-to" type="email" autocomplete="off" maxlength="200" placeholder="landlord@example.com" value="' + esc(ui.esTo || "") + '" /></label>' +
           '<label class="xs fw-700">Your name<input class="input" id="es-name" autocomplete="name" maxlength="80" value="' + esc(ui.esName || ui.userName || "") + '" /></label></div>' +
           '<label class="xs fw-700">Your message<textarea class="input" id="es-message" rows="7">' + esc(ui.esDraft || energyAskText(true).body) + "</textarea></label>" +
           '<button type="submit" class="btn btn-green btn-sm"' + (st.sending ? " disabled" : "") + ">" + (st.sending ? "Sending…" : "Send it") + "</button>" +
           (st.error ? '<p class="xs red" role="status">' + esc(st.error) + "</p>" : "") +
-          '<p class="xs muted">Sent from CO2 Counter\'s address with a link for them to confirm once you\'ve switched. You get a copy and replies go to you.</p></form>';
+          '<p class="xs muted">Sent from CO2 Counter\'s address in your name, with a link for them to confirm once you\'ve switched. You get a copy and replies go to you. Sending from your own email (below) is the surest way to reach their inbox.</p></form>';
     const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
     return (
       '<div class="ask-box"><p class="sm">' +
