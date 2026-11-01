@@ -4009,12 +4009,12 @@
     const year = 12 * (e.electricityKwh || 0);
     const cut = year * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR);
     const pct = Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100);
-    const names = D.USEFUL_LINKS.energy.items.map((l) => l.label).join(", ").replace(/, ([^,]*)$/, " and $1");
+    const list = D.USEFUL_LINKS.energy.items.map((l) => "• " + l.label + ": " + l.url).join("\n");
     return {
       subject: "Could we switch to a renewable electricity tariff?",
       body:
         "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
-        "Suppliers like " + names + " offer them. Switching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
+        "These suppliers offer them:\n" + list + "\n\nSwitching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
         (forApp ? "Thanks,\n" + signName() : (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
         "Thanks,\n" + (signName() || "[Your name]")),
     };
@@ -5575,7 +5575,7 @@
     const rankOf = (uid) => friends.board.findIndex((b) => b.user_id === uid);
     const posts = (friends.feed || []).map((e) => {
       const who = e.is_self ? "You" : e.display_name;
-      const base = { key: e.post_key, at: new Date(e.at), name: who, av: frAv(e.user_id, e.display_name, 44, e.is_self), when: frWhen(e.at), social: !e.is_self, mine: e.is_self, cheers: e.cheers || 0, cheered: !!e.cheered, cheerers: e.cheerers || [] };
+      const base = { key: e.post_key, uid: e.user_id, kind: e.kind, at: new Date(e.at), name: who, av: frAv(e.user_id, e.display_name, 44, e.is_self), when: frWhen(e.at), social: !e.is_self, mine: e.is_self, cheers: e.cheers || 0, cheered: !!e.cheered, cheerers: e.cheerers || [] };
       if (e.kind === "retake") {
         const before = Number(e.before_total), after = Number(e.after_total), up = after > before;
         const pct = before > 0 ? Math.round((Math.abs(after - before) / before) * 100) : 0;
@@ -5614,6 +5614,31 @@
       '<span class="min0 fr-pwho"><b class="display">' + esc(p.name) + "</b> " + (p.verb ? '<span class="fr-verb">' + esc(p.verb) + "</span>" : "") + '<span class="fr-when">' + esc(p.when || frWhen(p.at)) + "</span></span>" +
       '<span class="fr-tag ' + p.tag[1] + '">' + esc(p.tag[0]) + "</span></header>" + p.body + foot + "</article>"
     );
+  }
+  // One stack per person (and one for new friends), newest post on top, so a
+  // busy circle doesn't turn into a long list. Tap to fan a stack out.
+  function feedStacks(posts) {
+    const stacks = [], byKey = {};
+    posts.forEach((p) => {
+      const k = p.uid ? (p.kind === "friend" ? "friends" : "u:" + p.uid) : null;
+      if (k && byKey[k]) byKey[k].items.push(p);
+      else {
+        const st = { key: k, items: [p] };
+        if (k) byKey[k] = st;
+        stacks.push(st);
+      }
+    });
+    return stacks;
+  }
+  function stackHtml(st, i) {
+    if (st.items.length === 1) return postHtml(st.items[0], i);
+    const n = st.items.length - 1, top = st.items[0];
+    const open = !!(ui.feedOpen && ui.feedOpen[st.key]);
+    const label = st.key === "friends" ? n + " more new " + (n === 1 ? "friend" : "friends") : n + " more from " + (top.mine ? "you" : top.name);
+    const btn = (txt) => '<button type="button" class="fr-stack-btn" data-action="feed-stack" data-key="' + esc(st.key) + '" aria-expanded="' + open + '">' + txt + "</button>";
+    return open
+      ? '<div class="fr-stack open">' + st.items.map((p, j) => postHtml(p, i + j)).join("") + btn("Show less") + "</div>"
+      : '<div class="fr-stack closed"><div class="fr-pile" data-n="' + Math.min(n, 2) + '">' + postHtml(top, i) + "</div>" + btn("+" + esc(label)) + "</div>";
   }
   function standingsHtml() {
     const myName = friends.myName || (currentUser.email || "").split("@")[0];
@@ -5722,9 +5747,12 @@
       '<button type="button" class="fr-btn ghost sq" data-action="friend-remove" data-id="' + f.id + '" aria-label="Decline ' + esc(f.name) + '\'s request">' + icon("x") + "</button></div>").join("");
 
     const posts = feedPosts();
+    const stacks = feedStacks(posts);
+    const shown = ui.feedShown || 5;
     const feed =
       '<div class="fr-feedhead"><h2 class="display">Feed</h2><span class="xs muted">Retakes, monthly standings and new friends</span></div>' +
-      (posts.length ? posts.map(postHtml).join("") + '<p class="center sm muted">You\'re all caught up</p>'
+      (posts.length ? stacks.slice(0, shown).map(stackHtml).join("") +
+          (stacks.length > shown ? '<button type="button" class="btn btn-outline btn-sm fr-older" data-action="feed-more">Show older posts</button>' : '<p class="center sm muted">You\'re all caught up</p>')
         : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
@@ -7409,6 +7437,15 @@
       }
     },
     "accept-privacy": () => acceptPrivacy(),
+    "feed-stack": (el) => {
+      ui.feedOpen = ui.feedOpen || {};
+      ui.feedOpen[el.dataset.key] = !ui.feedOpen[el.dataset.key];
+      render();
+    },
+    "feed-more": () => {
+      ui.feedShown = (ui.feedShown || 5) + 5;
+      render();
+    },
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
       render();
