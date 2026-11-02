@@ -1465,6 +1465,9 @@
     saveSnapshot(footprint(survey).totalYearly);
     // Once saved, tell whoever invited this person (their act 7 may tick).
     recordHistory(survey).then(() => setTimeout(() => { if (currentUser && sb) sb.rpc("check_referrer").then(() => {}, () => {}); }, 1500));
+    // Without an account, count that a survey was finished: just the time,
+    // nothing about the person or their answers (those stay on the device).
+    if (!currentUser && sb) sb.rpc("count_guest_survey").then(() => {}, () => {});
     ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
     location.hash = "#/results";
   }
@@ -5061,6 +5064,13 @@
       } catch (e2) {
         analytics.acts = null;
       }
+      // Surveys finished without an account (null until that SQL is run).
+      try {
+        const gs = await sb.rpc("admin_guest_surveys");
+        analytics.guests = gs.error ? null : gs.data;
+      } catch (e4) {
+        analytics.guests = null;
+      }
       // Reports from Report buttons (null until the safety SQL is run).
       try {
         const rp = await sb.rpc("admin_reports");
@@ -5265,6 +5275,10 @@
       tile("Median", t.n ? kgFmt(t.median) : "–", "half are above, half below") +
       tile("People", m.people, m.accounts + " accounts · " + m.surveys + " surveys taken") +
       "</div>" +
+      (analytics.guests
+        ? '<p class="sm mt-3"><b>+ ' + Number(analytics.guests.total || 0).toLocaleString() + "</b> surveys finished without an account" + (analytics.guests.last30 != null ? " (" + Number(analytics.guests.last30).toLocaleString() + " in the last 30 days)" : "") +
+          '. <span class="muted">Only counted: nothing about the person or their answers is saved, so they\'re not in the figures above.</span></p>'
+        : "") +
       '<p class="xs muted mt-3">For reference, a typical UK resident on today\'s figures: ' + kgFmt(uk) + " kg. Each survey is worked out with the figures it was taken with.</p></section>";
     html +=
       '<section class="glass an-card"><h2 class="card-title">Average by area</h2><p class="sm muted">Bars show the average; the line shows ± one standard deviation.</p>' +
@@ -6073,7 +6087,7 @@
         [
           "What we collect",
           ul([
-            "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only.",
+            "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only, and we only count that a survey was finished and when, with nothing about you or your answers.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
@@ -7399,7 +7413,8 @@
     "open-move": (el, e) => {
       e.preventDefault();
       const cat = el.dataset.cat;
-      ui.openSheet = { cat, index: guideIndex(cat) };
+      // Flights moves land on the Flights page itself; others open their guide.
+      if (cat !== "flights") ui.openSheet = { cat, index: guideIndex(cat) };
       if (currentPath() === "/explainer/" + cat) render();
       else location.hash = "#/explainer/" + cat;
     },
