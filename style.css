@@ -4929,3 +4929,17 @@ span.todo-guide { cursor: pointer; }
 .notif-switch.on { background: #3F5B3A; }
 .notif-switch.on span { transform: translateX(20px); }
 @media (max-width: 640px) { .notif-offer { padding: 14px; gap: 10px; } .notif-ic { width: 36px; height: 36px; border-radius: 12px; } }
+
+/* The 1.5°C budget page */
+.budget-you { padding: 20px 22px; margin-bottom: 22px; }
+.budget-sum { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.budget-sum > div { display: flex; flex-direction: column; min-width: 0; }
+.budget-sum b { font-size: 30px; line-height: 1.1; }
+.budget-sum .hl b { color: #3F5B3A; }
+.budget-op { font-size: 24px; font-weight: 700; color: #8B8478; }
+.budget-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
+.budget-list li { display: flex; gap: 10px; align-items: baseline; }
+.budget-list li span { flex: none; width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 800; }
+.budget-list li.in span { background: rgba(63, 91, 58, 0.15); color: #3F5B3A; }
+.budget-list li.out span { background: rgba(184, 101, 61, 0.15); color: #8C4A2A; }
+@media (max-width: 640px) { .budget-sum b { font-size: 24px; } .budget-sum { gap: 8px; } }
