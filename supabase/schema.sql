@@ -2525,3 +2525,46 @@ $$;
 
 revoke all on function public.save_push_token(text, text), public.remove_push_token(text) from public;
 grant execute on function public.save_push_token(text, text), public.remove_push_token(text) to authenticated;
+
+-- ---------- Surveys finished without an account (November 2026) ----------
+-- Only the time a survey was finished: no answers, no account, nothing
+-- about the person. Shown as a count on the owner's Analytics page.
+-- Safe to run again.
+
+create table if not exists public.guest_surveys (
+  id bigint generated always as identity primary key,
+  completed_at timestamptz not null default now()
+);
+alter table public.guest_surveys enable row level security;
+revoke all on public.guest_surveys from anon, authenticated;
+
+-- Anyone can add one; capped at 500 an hour so it can't be flooded.
+create or replace function public.count_guest_survey()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.guest_surveys (completed_at)
+  select now()
+  where (select count(*) from public.guest_surveys where completed_at > now() - interval '1 hour') < 500;
+$$;
+
+create or replace function public.admin_guest_surveys()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  return jsonb_build_object(
+    'total', (select count(*) from public.guest_surveys),
+    'last30', (select count(*) from public.guest_surveys where completed_at > now() - interval '30 days'));
+end;
+$$;
+
+revoke all on function public.count_guest_survey(), public.admin_guest_surveys() from public;
+grant execute on function public.count_guest_survey() to anon, authenticated;
+grant execute on function public.admin_guest_surveys() to authenticated;
