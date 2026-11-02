@@ -2266,3 +2266,212 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ---------- Report and block (November 2026) ----------
+-- People can block someone (removes the friendship, stops new requests,
+-- hides them from group boards) and report a person or a group to the
+-- app owner, who reviews reports on the Analytics page. Safe to run again.
+
+create table if not exists public.blocks (
+  blocker_id uuid not null references auth.users(id) on delete cascade,
+  blocked_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id),
+  check (blocker_id <> blocked_id)
+);
+alter table public.blocks enable row level security;
+revoke all on public.blocks from anon, authenticated;
+
+create table if not exists public.reports (
+  id bigint generated always as identity primary key,
+  reporter_id uuid references auth.users(id) on delete set null,
+  target_user uuid references auth.users(id) on delete cascade,
+  -- set null, so the report stays on record after the group is removed
+  target_group uuid references public.groups(id) on delete set null,
+  target_name text,
+  reason text not null check (reason in ('offensive_name', 'harassment', 'spam', 'other')),
+  details text,
+  status text not null default 'open' check (status in ('open', 'dismissed', 'name_cleared', 'group_removed')),
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+alter table public.reports enable row level security;
+revoke all on public.reports from anon, authenticated;
+
+-- True if the signed-in person and p_other have blocked each other either way.
+create or replace function public.blocked_with(p_other uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.blocks b
+    where (b.blocker_id = auth.uid() and b.blocked_id = p_other)
+       or (b.blocker_id = p_other and b.blocked_id = auth.uid()));
+$$;
+
+-- No friend requests between people where either has blocked the other.
+drop policy if exists "friendships: create as requester" on public.friendships;
+create policy "friendships: create as requester" on public.friendships
+  for insert with check (auth.uid() = requester_id and not public.blocked_with(addressee_id));
+
+create or replace function public.block_user(p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Please sign in'; end if;
+  if p_user is null or p_user = auth.uid() then raise exception 'You can''t block yourself'; end if;
+  insert into public.blocks (blocker_id, blocked_id) values (auth.uid(), p_user) on conflict do nothing;
+  delete from public.friendships f
+    where (f.requester_id = auth.uid() and f.addressee_id = p_user)
+       or (f.requester_id = p_user and f.addressee_id = auth.uid());
+end;
+$$;
+
+create or replace function public.unblock_user(p_user uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.blocks where blocker_id = auth.uid() and blocked_id = p_user;
+$$;
+
+create or replace function public.my_blocks()
+returns table (user_id uuid, name text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select b.blocked_id, coalesce(nullif(p.display_name, ''), nullif(p.username, ''), 'Someone')
+  from public.blocks b left join public.profiles p on p.id = b.blocked_id
+  where b.blocker_id = auth.uid()
+  order by b.created_at desc;
+$$;
+
+-- Report a person or a group. The name is saved as it was, so the owner
+-- sees what was reported even if it changes. Up to 20 reports a day.
+create or replace function public.report_content(p_user uuid default null, p_group uuid default null, p_reason text default 'other', p_details text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  nm text;
+begin
+  if auth.uid() is null then raise exception 'Please sign in'; end if;
+  if p_user is null and p_group is null then raise exception 'Nothing to report'; end if;
+  if p_reason not in ('offensive_name', 'harassment', 'spam', 'other') then raise exception 'Please pick a reason'; end if;
+  if (select count(*) from public.reports r where r.reporter_id = auth.uid() and r.created_at > now() - interval '1 day') >= 20 then
+    raise exception 'You''ve sent a lot of reports today. Please try again tomorrow.';
+  end if;
+  if p_user is not null then
+    select coalesce(nullif(p.display_name, ''), '') || coalesce(' (@' || p.username || ')', '') into nm from public.profiles p where p.id = p_user;
+  else
+    select g.name into nm from public.groups g where g.id = p_group;
+  end if;
+  insert into public.reports (reporter_id, target_user, target_group, target_name, reason, details)
+  values (auth.uid(), p_user, p_group, nm, p_reason, nullif(left(trim(coalesce(p_details, '')), 500), ''));
+end;
+$$;
+
+-- For the owner: reports, newest open first.
+create or replace function public.admin_reports()
+returns table (id bigint, kind text, target_name text, current_name text, reason text, details text, status text, created_at timestamptz, reporter text)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  return query
+    select r.id,
+      case when r.target_user is not null then 'person' else 'group' end,
+      r.target_name,
+      case when r.target_user is not null
+        then (select coalesce(nullif(p.display_name, ''), '') || coalesce(' (@' || p.username || ')', '') from public.profiles p where p.id = r.target_user)
+        else (select g.name from public.groups g where g.id = r.target_group) end,
+      r.reason, r.details, r.status, r.created_at,
+      left(md5('co2:' || coalesce(r.reporter_id::text, '')), 12)
+    from public.reports r
+    order by (r.status = 'open') desc, r.created_at desc
+    limit 200;
+end;
+$$;
+
+-- For the owner: act on a report. 'clear_name' wipes the person's display
+-- name and replaces their username; 'remove_group' deletes the group.
+create or replace function public.admin_resolve_report(p_id bigint, p_action text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r public.reports;
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  select * into r from public.reports where id = p_id;
+  if r.id is null then raise exception 'No such report'; end if;
+  if p_action = 'clear_name' and r.target_user is not null then
+    update public.profiles set display_name = '', username = 'user_' || left(md5(id::text), 8) where id = r.target_user;
+    update public.reports set status = 'name_cleared', resolved_at = now() where target_user = r.target_user and status = 'open';
+  elsif p_action = 'remove_group' and r.target_group is not null then
+    update public.reports set status = 'group_removed', resolved_at = now() where target_group = r.target_group and status = 'open';
+    delete from public.groups where id = r.target_group;
+  elsif p_action = 'dismiss' then
+    update public.reports set status = 'dismissed', resolved_at = now() where id = p_id;
+  else
+    raise exception 'Unknown action';
+  end if;
+end;
+$$;
+
+-- Group boards now include each member's id (for report and block) and
+-- leave out anyone the viewer has blocked.
+drop function if exists public.group_board(uuid);
+create function public.group_board(p_group uuid)
+returns table (display_name text, total_yearly numeric, first_total numeric, latest_total numeric, surveys integer, is_self boolean, user_id uuid)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with members as (
+    select m.user_id from public.group_members m
+    where m.group_id = p_group
+      and exists (select 1 from public.group_members me where me.group_id = p_group and me.user_id = auth.uid())
+      and not exists (select 1 from public.blocks b where b.blocker_id = auth.uid() and b.blocked_id = m.user_id)
+  ),
+  h as (
+    select sh.user_id, sh.total_yearly,
+      row_number() over (partition by sh.user_id order by sh.completed_at asc) as first_n,
+      row_number() over (partition by sh.user_id order by sh.completed_at desc) as last_n,
+      count(*) over (partition by sh.user_id) as n
+    from public.survey_history sh join members mb on mb.user_id = sh.user_id
+    where sh.total_yearly is not null
+  )
+  select
+    coalesce(nullif(p.display_name, ''), nullif(p.username, ''), 'Member'),
+    s.total_yearly,
+    (select h1.total_yearly from h h1 where h1.user_id = mb.user_id and h1.first_n = 1),
+    (select h2.total_yearly from h h2 where h2.user_id = mb.user_id and h2.last_n = 1),
+    coalesce((select h3.n::integer from h h3 where h3.user_id = mb.user_id and h3.first_n = 1), 0),
+    mb.user_id = auth.uid(),
+    mb.user_id
+  from members mb
+  left join public.survey_responses s on s.user_id = mb.user_id
+  left join public.profiles p on p.id = mb.user_id;
+$$;
+
+revoke all on function public.blocked_with(uuid), public.block_user(uuid), public.unblock_user(uuid), public.my_blocks(),
+  public.report_content(uuid, uuid, text, text), public.admin_reports(), public.admin_resolve_report(bigint, text), public.group_board(uuid) from public;
+grant execute on function public.blocked_with(uuid), public.block_user(uuid), public.unblock_user(uuid), public.my_blocks(),
+  public.report_content(uuid, uuid, text, text), public.admin_reports(), public.admin_resolve_report(bigint, text), public.group_board(uuid) to authenticated;
