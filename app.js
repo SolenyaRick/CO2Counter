@@ -1244,13 +1244,81 @@
     const amount = n >= 1 ? funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many) : Math.max(1, Math.round(n * 100)) + "% of " + (/^[aeiou]/i.test(item.one) ? "an " : "a ") + item.one;
     return mode === "saves" ? "That's " + amount + " less CO₂ a year." : "That weighs as much as " + amount + ".";
   }
+  // ---------- Picture it: now and after the 7 Acts ----------
+  // Weights as rows of icons (each icon may stand for several), the cut
+  // shown faded; heights as two stacks of figures; tiny shares as a bar.
+  const NICE_UNITS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000];
+  const funIndex = () => {
+    const n = funList().length;
+    return (((ui.funIdx || 0) % n) + n) % n;
+  };
+  function infoModel(item, now, after, maxIcons, maxStack) {
+    if (item.type === "h") {
+      const sNow = cubeSide(now), sAfter = cubeSide(after);
+      const nNow = sNow / item.m, nAfter = sAfter / item.m;
+      const unit = NICE_UNITS.find((u) => nNow / u <= maxStack) || 1;
+      return { kind: "stack", item, nNow, nAfter, sNow, sAfter, unit, iNow: Math.max(1, Math.round(nNow / unit)), iAfter: Math.max(nAfter > 0 ? 1 : 0, Math.round(nAfter / unit)) };
+    }
+    const nNow = now / item.kg, nAfter = after / item.kg;
+    if (nNow < 1) return { kind: "share", item, nNow, nAfter };
+    const unit = NICE_UNITS.find((u) => nNow / u <= maxIcons) || 1;
+    return { kind: "grid", item, nNow, nAfter, unit, iNow: Math.max(1, Math.round(nNow / unit)), iAfter: Math.round(nAfter / unit) };
+  }
+  const pct = (n) => (n * 100 < 10 ? (Math.round(n * 1000) / 10).toFixed(1) : String(Math.round(n * 100))) + "%";
+  const ofA = (item) => (/^[aeiou]/i.test(item.one) ? "an " : "a ") + item.one;
+  const howMany = (n, item) => funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many);
+  function infoCaption(m) {
+    const it = m.item;
+    if (m.kind === "share")
+      return "It would take " + funNum(1 / m.nNow) + " years of your footprint to weigh as much as " + ofA(it) + " now, and " + funNum(1 / Math.max(m.nAfter, 1e-9)) + " years after the 7 Acts.";
+    if (m.kind === "stack")
+      return "As gas, your CO₂ would fill a cube " + m.sNow.toFixed(1) + " m tall now, and " + m.sAfter.toFixed(1) + " m after the 7 Acts." + (m.unit > 1 ? " Each " + it.emoji + " is " + funNum(m.unit) + " " + it.many + "." : "");
+    return "The 7 Acts would save " + howMany(m.nNow - m.nAfter, it) + " a year." + (m.unit > 1 ? " Each " + it.emoji + " is " + funNum(m.unit) + " " + it.many + "." : "");
+  }
+  function pictureItHtml() {
+    const ba = actsBeforeAfter();
+    if (!ba) return "";
+    const list = funList();
+    const idx = funIndex();
+    const m = infoModel(list[idx], ba.now, ba.after, 40, 12);
+    const it = m.item;
+    const chips =
+      '<div class="ig-chips" role="tablist" aria-label="Compare with">' +
+      list.map((x, i) => '<button type="button" role="tab" class="ig-chip' + (i === idx ? " on" : "") + '" aria-selected="' + (i === idx) + '" data-action="fun-pick" data-i="' + i + '"><span aria-hidden="true">' + x.emoji + "</span>" + esc(x.short || x.one) + "</button>").join("") +
+      "</div>";
+    const icons = (n, cls) => Array.from({ length: n }, () => '<span class="' + cls + '">' + it.emoji + "</span>").join("");
+    let body;
+    if (m.kind === "grid") {
+      const row = (label, n, on, ghost, cls) =>
+        '<div class="ig-row ' + cls + '"><div class="ig-row-head"><span class="ig-when">' + label + '</span><b class="display tnum">' + esc(howMany(n, it)) + "</b></div>" +
+        '<div class="ig-icons" aria-hidden="true">' + icons(on, "ig-i") + icons(ghost, "ig-i ghost") + "</div></div>";
+      body = row("Now", m.nNow, m.iNow, 0, "now") + row("After the 7 Acts", m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "after");
+    } else if (m.kind === "stack") {
+      const col = (label, side, n, on, ghost, cls) =>
+        '<div class="ig-col ' + cls + '"><div class="ig-stack" aria-hidden="true">' + icons(ghost, "ig-i ghost") + icons(on, "ig-i") + "</div>" +
+        '<b class="display tnum">' + side.toFixed(1) + ' m</b><span class="xs">' + esc(howMany(n, it)) + '</span><span class="ig-when">' + label + "</span></div>";
+      body = '<div class="ig-cols">' + col("Now", m.sNow, m.nNow, m.iNow, 0, "now") + col("After the 7 Acts", m.sAfter, m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "after") + "</div>";
+    } else {
+      const bar = (label, n, cls) =>
+        '<div class="ig-row ' + cls + '"><div class="ig-row-head"><span class="ig-when">' + label + '</span><b class="display tnum">' + pct(n) + " of " + esc(ofA(it)) + "</b></div>" +
+        '<div class="ig-share"><span class="ig-share-ic" aria-hidden="true">' + it.emoji + '</span><span class="ig-share-bar"><span style="width:' + Math.min(100, (n / m.nNow) * 100).toFixed(1) + '%"></span></span></div></div>';
+      body = bar("Now", m.nNow, "now") + bar("After the 7 Acts", m.nAfter, "after");
+    }
+    return (
+      '<section class="glass picture-it" id="picture-it" aria-labelledby="pi-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="pi-h" class="card-title">Picture it</h2>' +
+      '<span class="sm muted">Your footprint now, and after Real Zero\'s 7 Acts</span></div>' + chips +
+      '<div class="ig-body">' + body + "</div>" +
+      '<p class="sm mt-3">' + esc(infoCaption(m)) + "</p>" +
+      '<div class="chip-row mt-3"><button type="button" class="btn btn-green btn-sm" data-action="share-card">' + icon("link") + " Share this picture</button></div></section>"
+    );
+  }
   function funLine(kg) {
     const list = funList();
     const item = list[((ui.funIdx || 0) % list.length + list.length) % list.length];
     return (
       '<p class="res-fun"><span class="res-fun-ic" aria-hidden="true">' + item.emoji + "</span><span>" + esc(funFact(kg, item, "weighs")) + "</span>" +
       '<button type="button" class="link-btn" data-action="fun-next">Another</button>' +
-      '<button type="button" class="link-btn" data-action="share-card">Share my before and after</button></p>'
+      '<a class="link-btn" href="#picture-it" data-action="fr-jump">Picture it</a></p>'
     );
   }
 
@@ -2796,6 +2864,7 @@
       '<p class="xs muted mt-1">Like for like: your survey without your bank and pension' + (bb.money >= 0.5 ? ' (<b class="tnum">' + kgFmt(bb.money) + " kg</b> on top)" : "") +
       ", plus a typical " + (bb.shop / 1000).toFixed(1) + ' t for shopping. <a class="link-btn" href="#/budget">How we compare</a></p></div></section>';
 
+    if (!ui.exampleMode) html += pictureItHtml();
     html +=
       '<div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
       '<div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap a category to see how to improve it</p></div>' +
@@ -3674,32 +3743,81 @@
     x.fillStyle = "#3F5B3A";
     const lab = "with the 7 Acts";
     x.fillText(lab, W - 80 - x.measureText(lab).width, 505);
-    // bars
-    const max = Math.max(ba.now, 1), bw = W - 160;
-    x.fillStyle = "rgba(46,42,34,.08)";
-    roundRect(x, 80, 560, bw, 44, 22); x.fill();
-    roundRect(x, 80, 624, bw, 44, 22); x.fill();
-    x.fillStyle = "#B8653D";
-    roundRect(x, 80, 560, bw, 44, 22); x.fill();
-    x.fillStyle = "#3F5B3A";
-    roundRect(x, 80, 624, Math.max(44, (bw * ba.after) / max), 44, 22); x.fill();
-    // comparisons
+    // the chosen comparison, now and after
+    const m = infoModel(funList()[funIndex()], ba.now, ba.after, 30, 6);
+    const it = m.item;
     x.fillStyle = "#2E2A22";
-    x.font = "800 52px " + DISP;
-    let y = wrapText(x, "🥬 That's " + lettuces(ba.cut) + " Liz Truss lettuces less CO₂ a year.", 80, 790, W - 160, 64);
-    x.font = "600 38px " + BODY;
+    x.font = "800 44px " + DISP;
+    x.fillText(it.emoji + "  In " + (m.kind === "stack" ? it.many + ", stacked up" : it.many), 80, 600);
+    const EMO = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+    const drawIcons = (n, ghost, X, Y, perRow, size, step) => {
+      x.font = size + "px " + EMO;
+      for (let k = 0; k < n + ghost; k++) {
+        x.globalAlpha = k < n ? 1 : 0.2;
+        x.fillText(it.emoji, X + (k % perRow) * step, Y + Math.floor(k / perRow) * step);
+      }
+      x.globalAlpha = 1;
+    };
+    let captionY = 1050;
+    if (m.kind === "grid") {
+      // Up to 30 icons, 15 a row: two rows each for now and after.
+      const block = (label, n, on, ghost, Y, col) => {
+        x.font = "700 34px " + BODY;
+        x.fillStyle = col;
+        x.fillText(label + ": " + howMany(n, it), 80, Y);
+        drawIcons(on, ghost, 80, Y + 58, 15, 50, 60);
+        return Y + 58 + (Math.ceil((on + ghost) / 15) - 1) * 60 + 30;
+      };
+      const endNow = block("Now", m.nNow, m.iNow, 0, 660, "#B8653D");
+      captionY = block("After the 7 Acts", m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), endNow + 40, "#3F5B3A") + 26;
+    } else if (m.kind === "stack") {
+      // Two stacks side by side, standing on the same floor.
+      const floor = 990;
+      const colAt = (X, label, side, n, on, ghost, col) => {
+        drawIcons(0, 0, X, floor, 1, 56, 60);
+        x.font = "56px " + EMO;
+        for (let k = 0; k < on + ghost; k++) {
+          x.globalAlpha = k >= on ? 0.2 : 1;
+          x.fillText(it.emoji, X, floor - k * 60);
+        }
+        x.globalAlpha = 1;
+        x.fillStyle = col;
+        x.font = "800 52px " + DISP;
+        x.fillText(side.toFixed(1) + " m", X + 90, floor - 48);
+        x.font = "700 30px " + BODY;
+        x.fillText(label, X + 90, floor - 8);
+        x.font = "600 28px " + BODY;
+        x.fillStyle = "#5E574B";
+        x.fillText(howMany(n, it), X + 90, floor + 28);
+      };
+      colAt(80, "Now", m.sNow, m.nNow, m.iNow, 0, "#B8653D");
+      colAt(560, "After the 7 Acts", m.sAfter, m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "#3F5B3A");
+      captionY = 1068;
+    } else {
+      const barAt = (Y, label, n, col) => {
+        x.font = "700 34px " + BODY;
+        x.fillStyle = col;
+        x.fillText(label + ": " + pct(n) + " of " + ofA(it), 80, Y);
+        x.fillStyle = "rgba(46,42,34,.08)";
+        roundRect(x, 80, Y + 24, W - 160, 44, 22); x.fill();
+        x.fillStyle = col;
+        roundRect(x, 80, Y + 24, Math.max(44, (W - 160) * Math.min(1, n / m.nNow)), 44, 22); x.fill();
+      };
+      barAt(700, "Now", m.nNow, "#B8653D");
+      barAt(840, "After the 7 Acts", m.nAfter, "#3F5B3A");
+    }
     x.fillStyle = "#5E574B";
-    const devito = D.FUN_COMPARISONS.heights[0];
-    y = wrapText(x, "As gas, the cut would fill a cube " + cubeSide(ba.cut).toFixed(1).replace(/\.0$/, "") + " m tall: " + funNum(cubeSide(ba.cut) / devito.m) + " Danny DeVitos stacked up.", 80, y + 20, W - 160, 50);
+    x.font = "600 30px " + BODY;
+    wrapText(x, infoCaption(m), 80, Math.min(captionY, 1080), W - 160, 36);
     // footer
     x.fillStyle = "#3F5B3A";
-    roundRect(x, 80, 1080, W - 160, 190, 36);
+    roundRect(x, 80, 1130, W - 160, 150, 36);
     x.fill();
     x.fillStyle = "#F6F1E6";
-    x.font = "800 50px " + DISP;
-    x.fillText("Find yours, free", 120, 1160);
-    x.font = "600 38px " + BODY;
-    x.fillText("co2counter.co.uk" + (ui.actsInfo && ui.actsInfo.code ? "  ·  code " + ui.actsInfo.code : ""), 120, 1225);
+    x.font = "800 46px " + DISP;
+    x.fillText("Find yours, free", 120, 1196);
+    x.font = "600 34px " + BODY;
+    x.fillText("co2counter.co.uk" + (ui.actsInfo && ui.actsInfo.code ? "  ·  code " + ui.actsInfo.code : ""), 120, 1250);
     return c;
   }
   async function openShareCard() {
@@ -3717,6 +3835,7 @@
       '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet share-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet-body">' +
       '<div class="sheet-head"><div class="min0"><h2 id="sheet-title" class="display">Your before and after</h2><p class="sheet-habit">Share it, or press and hold the picture to save it</p></div>' +
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+      '<div class="ig-chips sm-chips" role="tablist" aria-label="Compare with">' + funList().map((xx, k) => '<button type="button" role="tab" class="ig-chip' + (k === funIndex() ? " on" : "") + '" aria-selected="' + (k === funIndex()) + '" data-action="share-pick" data-i="' + k + '"><span aria-hidden="true">' + xx.emoji + "</span>" + esc(xx.short || xx.one) + "</button>").join("") + "</div>" +
       '<img class="share-card-img" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + ' t with the 7 Acts" />' +
       '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
@@ -8321,6 +8440,15 @@
       render();
     },
     "share-card": () => openShareCard(),
+    "fun-pick": (el) => {
+      ui.funIdx = Number(el.dataset.i);
+      render();
+    },
+    "share-pick": (el) => {
+      ui.funIdx = Number(el.dataset.i);
+      if (currentPath() === "/results") render();
+      openShareCard();
+    },
     "share-card-send": async () => {
       const sc = ui.shareCard;
       if (!sc) return;

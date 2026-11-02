@@ -5000,3 +5000,32 @@ span.todo-guide { cursor: pointer; }
 .q.q-in { animation: q-in 0.32s ease-out both; }
 .q-list.one.q-leave > .q { animation: q-out 0.18s ease-in forwards; }
 @media (prefers-reduced-motion: reduce) { .q.q-in, .q-list.one.q-leave > .q { animation: none; } }
+
+/* Picture it: comparison infographic */
+.picture-it { padding: 22px 24px; margin: 18px 0; }
+.ig-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 14px -4px 4px; padding: 2px 4px 6px; }
+.ig-chips::-webkit-scrollbar { display: none; }
+.ig-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(255, 252, 245, 0.7); font: inherit; font-size: 14px; font-weight: 700; color: #2E2A22; cursor: pointer; }
+.ig-chip span { font-size: 18px; line-height: 1; }
+.ig-chip.on { background: #3F5B3A; border-color: #3F5B3A; color: #F6F1E6; }
+.ig-body { margin-top: 10px; }
+.ig-row { padding: 12px 0; }
+.ig-row + .ig-row { border-top: 1px solid rgba(46, 42, 34, 0.08); }
+.ig-row-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.ig-when { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.ig-row.now .ig-when, .ig-col.now .ig-when, .ig-col.now b { color: #B8653D; }
+.ig-row.after .ig-when, .ig-col.after .ig-when, .ig-col.after b { color: #3F5B3A; }
+.ig-row-head b { font-size: 20px; }
+.ig-icons { display: flex; flex-wrap: wrap; gap: 4px; font-size: 26px; line-height: 1.1; }
+.ig-i.ghost { opacity: 0.18; filter: grayscale(1); }
+.ig-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
+.ig-col { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.ig-stack { display: flex; flex-direction: column; align-items: center; font-size: 30px; line-height: 1; margin-bottom: 6px; }
+.ig-col b { font-size: 24px; }
+.ig-share { display: flex; align-items: center; gap: 10px; }
+.ig-share-ic { font-size: 30px; }
+.ig-share-bar { flex: 1; height: 16px; border-radius: 999px; background: rgba(46, 42, 34, 0.08); overflow: hidden; }
+.ig-share-bar span { display: block; height: 100%; border-radius: 999px; background: #B8653D; }
+.ig-row.after .ig-share-bar span { background: #3F5B3A; }
+.sm-chips { margin-top: 0; }
+@media (max-width: 640px) { .picture-it { padding: 16px; } .ig-icons { font-size: 22px; } .ig-stack { font-size: 24px; } }
