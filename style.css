@@ -4943,3 +4943,46 @@ span.todo-guide { cursor: pointer; }
 .budget-list li.in span { background: rgba(63, 91, 58, 0.15); color: #3F5B3A; }
 .budget-list li.out span { background: rgba(184, 101, 61, 0.15); color: #8C4A2A; }
 @media (max-width: 640px) { .budget-sum b { font-size: 24px; } .budget-sum { gap: 8px; } }
+
+/* Meals: days a week per main meal */
+.meal-total { margin: 0 0 10px; font-size: 15px; }
+.meal-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.meal-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: 14px; background: rgba(255, 252, 245, 0.55); }
+.meal-row.on { border-color: rgba(63, 91, 58, 0.45); background: rgba(63, 91, 58, 0.06); }
+.meal-row b { display: block; }
+.meal-dot { flex: none; width: 12px; height: 12px; border-radius: 50%; }
+.meal-step { flex: none; display: flex; align-items: center; gap: 10px; }
+.meal-step b { min-width: 18px; text-align: center; font-size: 20px; }
+.meal-step .step-btn:disabled { opacity: 0.35; cursor: default; }
+.pet-more { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.pet-more p { margin: 0 0 4px; }
+
+/* One question at a time */
+.q-progress { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.q-progress-n { font-size: 13px; font-weight: 700; color: #6B6458; }
+.q-dots { display: flex; gap: 6px; }
+.q-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(46, 42, 34, 0.15); }
+.q-dots i.done { background: #8FA58A; }
+.q-dots i.on { background: #3F5B3A; width: 22px; border-radius: 999px; }
+.q-list.one > .q-note { margin-top: 12px; }
+.pc-help { margin-top: 12px; }
+.pc-help summary { cursor: pointer; color: #3F5B3A; font-weight: 700; font-size: 14px; }
+.pc-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-top: 10px; }
+@media (max-width: 640px) { .pc-form { grid-template-columns: 1fr; } }
+
+/* Extra bank accounts and pensions */
+.extra-row { display: grid; grid-template-columns: auto 1fr 140px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.extra-kind { color: #6B6458; min-width: 86px; }
+.extra-amt { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 640px) { .extra-row { grid-template-columns: 1fr auto; } .extra-kind { grid-column: 1 / -1; } }
+.mot-form { display: grid; gap: 6px; }
+.mot-row { display: flex; gap: 8px; }
+.mot-reg { max-width: 160px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+.meal-row .grow { min-width: 0; }
+@media (max-width: 400px) {
+  .meal-row { gap: 8px; padding: 8px 10px; }
+  .meal-dot { display: none; }
+  .meal-step { gap: 6px; }
+  .meal-step .step-btn { width: 34px; height: 34px; min-width: 34px; }
+  .meal-step b { min-width: 14px; font-size: 18px; }
+}
