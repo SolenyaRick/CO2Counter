@@ -152,6 +152,30 @@
   const GREEN_ELECTRICITY_FACTOR = 0.04;
   const GAS_FACTOR = 0.21317;
   const WATER_FACTOR = 0.36218; // kg / 1000 L
+  // Fun ways to picture a footprint. CO2 is a gas: a tonne fills about
+  // 535 m³ (1.87 kg/m³ at 15 °C at sea level), so a footprint makes a cube we
+  // can measure in heights. Weights are typical adults; heights are published.
+  const FUN_COMPARISONS = {
+    co2Density: 1.87,
+    heights: [
+      { key: "devito", emoji: "🧍", one: "Danny DeVito", many: "Danny DeVitos", m: 1.47 },
+      { key: "lincoln", emoji: "🎩", one: "Abraham Lincoln", many: "Abraham Lincolns", m: 1.93 },
+      { key: "bus", emoji: "🚌", one: "London double-decker bus", many: "double-decker buses", m: 4.38 },
+      { key: "giraffe", emoji: "🦒", one: "giraffe", many: "giraffes", m: 5.5 },
+    ],
+    weights: [
+      { key: "lettuce", emoji: "🥬", one: "Liz Truss lettuce", many: "Liz Truss lettuces", kg: 0.5, note: "the Daily Star's iceberg, about 0.5 kg" },
+      { key: "robin", emoji: "🐦", one: "robin", many: "robins", kg: 0.018 },
+      { key: "puffin", emoji: "🐧", one: "puffin", many: "puffins", kg: 0.4 },
+      { key: "salmon", emoji: "🐟", one: "Atlantic salmon", many: "Atlantic salmon", kg: 4.5 },
+      { key: "swan", emoji: "🦢", one: "mute swan", many: "mute swans", kg: 11 },
+      { key: "penguin", emoji: "🐧", one: "emperor penguin", many: "emperor penguins", kg: 23 },
+      { key: "ostrich", emoji: "🪶", one: "ostrich", many: "ostriches", kg: 110 },
+      { key: "shark", emoji: "🦈", one: "great white shark", many: "great white sharks", kg: 1100 },
+      { key: "whale", emoji: "🐋", one: "blue whale", many: "blue whales", kg: 150000 },
+    ],
+  };
+
   const DOG_YEARLY = 770;
   const CAT_YEARLY = 310;
   // A horse or pony: feed, bedding and stabling, before any travel.
@@ -1937,7 +1961,7 @@
     CAR_TYPES, CAR_SIZES, KM_PER_MILE,
     DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT, ASSUMED_SHOPPING,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
-    WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
+    FUN_COMPARISONS, WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,

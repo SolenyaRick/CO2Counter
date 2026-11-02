@@ -129,6 +129,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
     pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
@@ -1206,6 +1207,53 @@
     return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)) };
   }
 
+  // ---------- fun comparisons ----------
+  // A footprint as Liz Truss lettuces, birds and fish (by weight), or as a
+  // cube of CO2 gas measured in Danny DeVitos, Abraham Lincolns and so on.
+  function funList() {
+    const f = D.FUN_COMPARISONS;
+    const w = f.weights.map((x) => ({ type: "w", ...x }));
+    const h = f.heights.map((x) => ({ type: "h", ...x }));
+    const out = [];
+    for (let i = 0; i < Math.max(w.length, h.length); i++) {
+      if (w[i]) out.push(w[i]);
+      if (h[i]) out.push(h[i]);
+    }
+    return out;
+  }
+  // 15,600 · 140 · 11 · 3½
+  function funNum(n) {
+    if (n >= 1000) return (Math.round(n / 100) * 100).toLocaleString("en-GB");
+    if (n >= 100) return String(Math.round(n / 10) * 10);
+    if (n >= 10) return String(Math.round(n));
+    const half = Math.round(n * 2) / 2;
+    return String(Math.floor(half)) + (half % 1 ? "½" : "");
+  }
+  const cubeSide = (kg) => Math.cbrt(Math.max(0, kg) / D.FUN_COMPARISONS.co2Density);
+  // mode: "weighs" (your footprint) or "saves" (a cut).
+  function funFact(kg, item, mode) {
+    if (item.type === "h") {
+      const side = cubeSide(kg);
+      const n = side / item.m;
+      const what = n >= 1 ? funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many) : "less than one " + item.one;
+      return mode === "saves"
+        ? "As gas, that cut is a cube of CO₂ " + side.toFixed(1).replace(/\.0$/, "") + " m tall: " + what + " stacked up."
+        : "As gas, it would fill a cube " + side.toFixed(1).replace(/\.0$/, "") + " m tall: " + what + " stacked up.";
+    }
+    const n = kg / item.kg;
+    const amount = n >= 1 ? funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many) : Math.max(1, Math.round(n * 100)) + "% of " + (/^[aeiou]/i.test(item.one) ? "an " : "a ") + item.one;
+    return mode === "saves" ? "That's " + amount + " less CO₂ a year." : "That weighs as much as " + amount + ".";
+  }
+  function funLine(kg) {
+    const list = funList();
+    const item = list[((ui.funIdx || 0) % list.length + list.length) % list.length];
+    return (
+      '<p class="res-fun"><span class="res-fun-ic" aria-hidden="true">' + item.emoji + "</span><span>" + esc(funFact(kg, item, "weighs")) + "</span>" +
+      '<button type="button" class="link-btn" data-action="fun-next">Another</button>' +
+      '<button type="button" class="link-btn" data-action="share-card">Share my before and after</button></p>'
+    );
+  }
+
   // The 1.5°C budget (Hot or Cool Institute) covers household consumption:
   // food, home, travel, goods and leisure. It leaves out banks and pensions
   // (financed emissions) and public services. So we compare like with like:
@@ -1841,7 +1889,7 @@
 
   const STEP_TAB = { meals: "Meals", commute: "Commute", flights: "Flights", energy: "Home & water", pets: "Pets", banking: "Money" };
   const STEP_INTRO = {
-    meals: "A few quick questions about what you eat. Food is often the biggest part of a footprint.",
+    meals: "Food is often the biggest part of a footprint.",
     commute: "How you get around day to day. It repeats over 200 times a year, so it adds up.",
     flights: "Flights are rare but large. Add the trips you took in the last 12 months.",
     energy: "Your energy and water use. Have a recent bill handy if you can.",
@@ -1864,7 +1912,7 @@
   function qCard(n, title, hint, body, opts) {
     const o = opts || {};
     return (
-      '<li class="q' + (qAnimate ? " rise" : "") + (o.note ? " q-note" : "") + '" style="animation-delay:' + (0.06 * n).toFixed(2) + 's">' +
+      '<li class="q' + (qAnimate ? " q-in" : "") + (o.note ? " q-note" : "") + '">' +
       '<span class="qn' + (n === 1 && !o.note ? " lead" : "") + '">' + (o.note ? icon("info") : n) + "</span>" +
       '<div class="min0"><h2 class="qt">' + title + (o.optional ? ' <span class="q-opt">Optional</span>' : "") + "</h2>" +
       (hint ? '<p class="qh">' + hint + "</p>" : "") + (body ? '<div class="q-body">' + body + "</div>" : "") + "</div></li>"
@@ -1927,7 +1975,7 @@
       qCard(
         1,
         "What's your overall diet?",
-        "If you mix it up, choose <strong>Meat eater</strong> and say roughly how often you have each meal.",
+        "Mix it up? Choose <strong>Meat eater</strong>.",
         '<div class="q-grid">' +
           D.DIETS.map((d) =>
             optionCard(diet === d.key, 'data-action="set-diet" data-key="' + d.key + '"', '<span class="opt-title display">' + esc(d.label) + '</span><span class="opt-sub">' + esc(d.desc) + "</span>", "q-opt-card")
@@ -1959,22 +2007,19 @@
       cards.push(
         qCard(
           n++,
-          "In a typical week, what's your main meal?",
-          "Roughly how many days a week you have each. It doesn't need to be exact.",
+          "How many days a week is your main meal…",
+          "",
           '<p class="meal-total"><b class="tnum">' + total + " of 7 days</b>" + (total < 7 ? '<span class="muted"> · ' + (7 - total) + " to go</span>" : ' <span class="green-dark">' + icon("check") + "</span>") + "</p>" +
             '<ul class="meal-rows">' + rows + "</ul>" + tip
         )
       );
-    } else if (diet) {
-      const d = byKey(D.DIETS, diet);
-      cards.push(goodToKnow("We'll estimate your week from a " + esc(d.label.toLowerCase()) + " diet. Choose <strong>Meat eater</strong> if you'd rather say how often you have each meal."));
     }
     if (diet) {
       cards.push(
         qCard(
           n++,
           "How often do you eat out or get a takeaway?",
-          "Each one counts as " + D.EAT_OUT_MULTIPLIER + "× a meal at home: bigger portions and more waste.",
+          "",
           '<div class="chip-wrap">' + D.EAT_OUT_OPTIONS.map((o) => chip((m.eatOut || 0) === o.value, 'data-action="set-eatout" data-value="' + o.value + '"', esc(o.label))).join("") + "</div>"
         )
       );
@@ -1982,7 +2027,7 @@
         qCard(
           n++,
           "How much of your food ends up thrown away?",
-          "Wasted food means wasted emissions. A rough guess is fine.",
+          "A rough guess is fine.",
           '<div class="q-grid">' +
             D.FOOD_WASTE.map((o) =>
               optionCard((m.foodWaste || "low") === o.key, 'data-action="set-waste" data-key="' + o.key + '"', '<span class="opt-title display">' + esc(o.title) + '</span><span class="opt-sub tnum">' + esc(o.range) + "</span>", "q-opt-card")
@@ -2734,7 +2779,7 @@
       '<p class="fw-600 muted">Your footprint this year</p>' +
       '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
       '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ' like for like. <a class="link-btn" href="#/budget">What\'s in the budget?</a></p>' +
-      '<details class="res-more"><summary>What about shopping and public services?</summary>' + sharedLine(now) + "</details></div>" +
+      '<details class="res-more"><summary>What about shopping and public services?</summary>' + sharedLine(now) + "</details>" + funLine(now) + "</div>" +
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">Against the 1.5°C budget, with realistic changes</span>' +
       (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
@@ -3528,11 +3573,158 @@
     }
     render();
   }
+  // Your footprint now, and after the big switches in Real Zero's 7 Acts
+  // (Acts 1 to 4, the ones with a figure), for sharing.
+  function actsBeforeAfter() {
+    if (!survey || !survey.completedAt) return null;
+    const now = footprint(survey).totalYearly;
+    // The same areas as Acts 1 to 4 on the Habits page (worked out directly,
+    // as the Habits page uses this share text itself).
+    const keys = asksBillPayer(survey) ? ["banking", "meals", "commute", "flights"] : ["banking", "energy", "meals", "commute", "flights"];
+    const cut = switchAreas({ s: survey, mine: true }).filter((a) => keys.includes(a.key) && !a.done).reduce((t, a) => t + (a.save || 0), 0);
+    return { now, after: Math.max(0, now - cut), cut };
+  }
+  const lettuces = (kg) => funNum(kg / D.FUN_COMPARISONS.weights[0].kg);
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
+    const ba = actsBeforeAfter();
+    if (ba && ba.cut >= 50)
+      return "My carbon footprint is " + (ba.now / 1000).toFixed(1) + " t CO₂e a year. Real Zero's 7 Acts would take it to " + (ba.after / 1000).toFixed(1) + " t: that's " +
+        lettuces(ba.cut) + " Liz Truss lettuces 🥬 less CO₂ a year. Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
     return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
       "Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
   }
+  // ---------- before and after picture card ----------
+  // Drawn on the phone (nothing is uploaded), then shared as an image with
+  // the share text, or shown to press and hold to save.
+  function roundRect(x, X, Y, w, h, r) {
+    x.beginPath();
+    x.moveTo(X + r, Y);
+    x.arcTo(X + w, Y, X + w, Y + h, r);
+    x.arcTo(X + w, Y + h, X, Y + h, r);
+    x.arcTo(X, Y + h, X, Y, r);
+    x.arcTo(X, Y, X + w, Y, r);
+    x.closePath();
+  }
+  function wrapText(x, text, X, Y, maxW, lineH) {
+    const words = text.split(" ");
+    let line = "", y = Y;
+    words.forEach((w) => {
+      const test = line ? line + " " + w : w;
+      if (x.measureText(test).width > maxW && line) {
+        x.fillText(line, X, y);
+        line = w;
+        y += lineH;
+      } else line = test;
+    });
+    if (line) x.fillText(line, X, y);
+    return y + lineH;
+  }
+  async function drawShareCard(ba) {
+    const W = 1080, H = 1350;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const x = c.getContext("2d");
+    try { await document.fonts.load("800 80px 'Bricolage Grotesque'"); await document.fonts.load("600 40px Karla"); } catch (e) {}
+    const DISP = "'Bricolage Grotesque', system-ui, sans-serif", BODY = "Karla, system-ui, sans-serif";
+    x.fillStyle = "#EFE9DC";
+    x.fillRect(0, 0, W, H);
+    const blob = (cx, cy, r, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(239,233,220,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+    blob(120, 160, 520, "rgba(183,196,164,.85)");
+    blob(980, 1240, 560, "rgba(232,200,138,.6)");
+    // brand
+    x.fillStyle = "#3F5B3A";
+    roundRect(x, 80, 80, 64, 64, 16);
+    x.fill();
+    x.fillStyle = "#F6F1E6";
+    x.font = "800 34px " + DISP;
+    x.fillText("CO", 90, 124);
+    x.fillStyle = "#2E2A22";
+    x.font = "800 40px " + DISP;
+    x.fillText("CO2 Counter", 164, 125);
+    // headline
+    x.font = "700 44px " + BODY;
+    x.fillStyle = "#5E574B";
+    x.fillText("My carbon footprint", 80, 270);
+    const t = (kg) => (kg / 1000).toFixed(1);
+    x.fillStyle = "#B8653D";
+    x.font = "800 170px " + DISP;
+    x.fillText(t(ba.now), 80, 450);
+    const wNow = x.measureText(t(ba.now)).width;
+    x.font = "800 60px " + DISP;
+    x.fillText(" t", 80 + wNow, 450);
+    x.fillStyle = "#5E574B";
+    x.font = "600 34px " + BODY;
+    x.fillText("a year now", 86, 505);
+    x.fillStyle = "#3F5B3A";
+    x.font = "800 90px " + DISP;
+    x.fillText("→", 600, 430);
+    x.font = "800 170px " + DISP;
+    const after = t(ba.after);
+    const wAfter = x.measureText(after).width;
+    x.font = "800 60px " + DISP;
+    const wT = x.measureText(" t").width;
+    const ax = W - 80 - wAfter - wT;
+    x.font = "800 170px " + DISP;
+    x.fillText(after, ax, 450);
+    x.font = "800 60px " + DISP;
+    x.fillText(" t", ax + wAfter, 450);
+    x.font = "600 34px " + BODY;
+    x.fillStyle = "#3F5B3A";
+    const lab = "with the 7 Acts";
+    x.fillText(lab, W - 80 - x.measureText(lab).width, 505);
+    // bars
+    const max = Math.max(ba.now, 1), bw = W - 160;
+    x.fillStyle = "rgba(46,42,34,.08)";
+    roundRect(x, 80, 560, bw, 44, 22); x.fill();
+    roundRect(x, 80, 624, bw, 44, 22); x.fill();
+    x.fillStyle = "#B8653D";
+    roundRect(x, 80, 560, bw, 44, 22); x.fill();
+    x.fillStyle = "#3F5B3A";
+    roundRect(x, 80, 624, Math.max(44, (bw * ba.after) / max), 44, 22); x.fill();
+    // comparisons
+    x.fillStyle = "#2E2A22";
+    x.font = "800 52px " + DISP;
+    let y = wrapText(x, "🥬 That's " + lettuces(ba.cut) + " Liz Truss lettuces less CO₂ a year.", 80, 790, W - 160, 64);
+    x.font = "600 38px " + BODY;
+    x.fillStyle = "#5E574B";
+    const devito = D.FUN_COMPARISONS.heights[0];
+    y = wrapText(x, "As gas, the cut would fill a cube " + cubeSide(ba.cut).toFixed(1).replace(/\.0$/, "") + " m tall: " + funNum(cubeSide(ba.cut) / devito.m) + " Danny DeVitos stacked up.", 80, y + 20, W - 160, 50);
+    // footer
+    x.fillStyle = "#3F5B3A";
+    roundRect(x, 80, 1080, W - 160, 190, 36);
+    x.fill();
+    x.fillStyle = "#F6F1E6";
+    x.font = "800 50px " + DISP;
+    x.fillText("Find yours, free", 120, 1160);
+    x.font = "600 38px " + BODY;
+    x.fillText("co2counter.co.uk" + (ui.actsInfo && ui.actsInfo.code ? "  ·  code " + ui.actsInfo.code : ""), 120, 1225);
+    return c;
+  }
+  async function openShareCard() {
+    const ba = actsBeforeAfter();
+    if (!ba) return;
+    const canvas = await drawShareCard(ba);
+    const text = shareText() + " " + inviteLink();
+    const file = await new Promise((res) => canvas.toBlob((b) => res(b ? new File([b], "co2counter-before-after.png", { type: "image/png" }) : null), "image/png"));
+    // Shown first; its Share button opens the phone's share sheet straight
+    // from a tap (Safari only allows sharing right after one).
+    ui.shareCard = { file, text };
+    const canShareFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+    const url = canvas.toDataURL("image/png");
+    modalRoot.innerHTML =
+      '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet share-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet-body">' +
+      '<div class="sheet-head"><div class="min0"><h2 id="sheet-title" class="display">Your before and after</h2><p class="sheet-habit">Share it, or press and hold the picture to save it</p></div>' +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+      '<img class="share-card-img" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + ' t with the 7 Acts" />' +
+      '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
+      '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
+      '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy the words</button></div>" +
+      '<p class="xs muted mt-2">' + esc(text) + "</p></div></div></div>";
+    document.body.classList.add("modal-open");
+  }
+
   // The invite code on its own, and the link, each with a copy button.
   function inviteCodeHtml() {
     const code = ui.actsInfo && ui.actsInfo.code;
@@ -3628,6 +3820,7 @@
     return (
       '<span class="hb-share">' +
       '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
+      (survey && survey.completedAt ? '<button type="button" class="hb-act-link" data-action="share-card">Before and after picture</button>' : "") +
       '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
       '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
       '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
@@ -4510,6 +4703,11 @@
         "<p>To keep global warming to 1.5°C, lifestyle footprints need to fall to about {{budget_t}} tonnes of CO₂-equivalent per person a year by 2030 (Hot or Cool Institute). " +
           "The budget covers food, home, travel, goods and leisure, but not banks and pensions or public services, so we compare like with like: your survey without money, plus typical shopping. " +
           'Your bank and pension are shown on their own. <a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
+      ) +
+      section(
+        "Fun comparisons",
+        "<p>To make tonnes easier to picture, the results page compares your footprint with everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adult birds and fish, from a 18 g robin to a 150-tonne blue whale. " +
+          "As a gas: CO₂ weighs about 1.87 kg a cubic metre (at 15°C at sea level), so a tonne fills a cube about 8 m tall, which we measure in published heights: Danny DeVito (1.47 m), Abraham Lincoln (1.93 m), a London double-decker bus (4.38 m) and a giraffe (about 5.5 m). They're for fun and scale, not precision.</p>"
       ) +
       section(
         "Potential savings",
@@ -7419,6 +7617,34 @@
     obj[a] = { ...(obj[a] || {}), [b]: value };
   }
 
+  // Moving between questions: the current one fades out, then the next
+  // fades in (straight away for people who prefer reduced motion).
+  let qFadeTimer = null;
+  function fadeToQuestion(q) {
+    const go = () => {
+      qFadeTimer = null;
+      ui.q = q;
+      render();
+      const top = document.querySelector(".step-body");
+      if (top && top.getBoundingClientRect().top < 0) window.scrollTo(0, 0);
+    };
+    clearTimeout(qFadeTimer);
+    const list = document.querySelector(".q-list.one");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!list || reduce) return go();
+    list.classList.add("q-leave");
+    qFadeTimer = setTimeout(go, 180);
+  }
+  // Single-choice answers move on by themselves, after a beat to show the
+  // tick. Not on a step's last question, so a new section never jumps in.
+  function autoAdvance() {
+    const step = ui.step, q = ui.q;
+    if (q >= (ui.qCount || 1) - 1) return;
+    setTimeout(() => {
+      if (currentPath() === "/" && ui.step === step && ui.q === q) fadeToQuestion(q + 1);
+    }, 320);
+  }
+
   // ==================== events ====================
 
   const actions = {
@@ -7431,7 +7657,7 @@
     },
     "prev-step": () => {
       ui.airport = null;
-      if (ui.q > 0) ui.q--;
+      if (ui.q > 0) return fadeToQuestion(ui.q - 1);
       else if (ui.step > 0) {
         ui.step--;
         ui.q = 99; // the previous step's last question
@@ -7442,11 +7668,8 @@
     "next-step": () => {
       ui.airport = null;
       ui.commuteOpen = null;
-      if (ui.q < (ui.qCount || 1) - 1) {
-        ui.q++;
-        render();
-        window.scrollTo(0, 0);
-      } else if (ui.step < STEPS.length - 1) {
+      if (ui.q < (ui.qCount || 1) - 1) return fadeToQuestion(ui.q + 1);
+      else if (ui.step < STEPS.length - 1) {
         ui.step++;
         ui.q = 0;
         render();
@@ -7460,6 +7683,7 @@
       survey.meals = meals;
       surveyChanged();
       render();
+      autoAdvance();
     },
     "set-meal": (el) => {
       survey.meals = { ...survey.meals, [el.dataset.day]: el.dataset.key };
@@ -7472,6 +7696,7 @@
       survey.meals = { ...survey.meals, eatOut: Number(el.dataset.value) };
       surveyChanged();
       render();
+      autoAdvance();
     },
     "set-waste": (el) => {
       survey.meals = { ...survey.meals, foodWaste: el.dataset.key };
@@ -8085,6 +8310,24 @@
       const rp = await sb.rpc("admin_reports");
       if (!rp.error) analytics.reports = rp.data || [];
       render();
+    },
+    "fun-next": () => {
+      ui.funIdx = (ui.funIdx || 0) + 1;
+      render();
+    },
+    "share-card": () => openShareCard(),
+    "share-card-send": async () => {
+      const sc = ui.shareCard;
+      if (!sc) return;
+      try {
+        await navigator.share({ files: [sc.file], text: sc.text, title: "CO2 Counter" });
+      } catch (e) {}
+    },
+    "share-copy-text": async (el) => {
+      try {
+        await navigator.clipboard.writeText(shareText() + " " + inviteLink());
+        el.textContent = "Copied";
+      } catch (e) {}
     },
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
