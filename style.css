@@ -4993,3 +4993,10 @@ span.todo-guide { cursor: pointer; }
 .res-fun > span:nth-child(2) { flex: 1 1 220px; }
 .res-fun .link-btn { font-size: 14px; font-weight: 700; }
 .share-card-img { display: block; width: 100%; max-width: 420px; margin: 4px auto 0; border-radius: 18px; box-shadow: 0 12px 30px rgba(46, 42, 34, 0.18); -webkit-touch-callout: default; }
+
+/* Fade between survey questions */
+@keyframes q-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes q-out { to { opacity: 0; transform: translateY(-6px); } }
+.q.q-in { animation: q-in 0.32s ease-out both; }
+.q-list.one.q-leave > .q { animation: q-out 0.18s ease-in forwards; }
+@media (prefers-reduced-motion: reduce) { .q.q-in, .q-list.one.q-leave > .q { animation: none; } }

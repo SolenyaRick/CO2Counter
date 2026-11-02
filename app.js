@@ -1889,7 +1889,7 @@
 
   const STEP_TAB = { meals: "Meals", commute: "Commute", flights: "Flights", energy: "Home & water", pets: "Pets", banking: "Money" };
   const STEP_INTRO = {
-    meals: "A few quick questions about what you eat. Food is often the biggest part of a footprint.",
+    meals: "Food is often the biggest part of a footprint.",
     commute: "How you get around day to day. It repeats over 200 times a year, so it adds up.",
     flights: "Flights are rare but large. Add the trips you took in the last 12 months.",
     energy: "Your energy and water use. Have a recent bill handy if you can.",
@@ -1912,7 +1912,7 @@
   function qCard(n, title, hint, body, opts) {
     const o = opts || {};
     return (
-      '<li class="q' + (qAnimate ? " rise" : "") + (o.note ? " q-note" : "") + '" style="animation-delay:' + (0.06 * n).toFixed(2) + 's">' +
+      '<li class="q' + (qAnimate ? " q-in" : "") + (o.note ? " q-note" : "") + '">' +
       '<span class="qn' + (n === 1 && !o.note ? " lead" : "") + '">' + (o.note ? icon("info") : n) + "</span>" +
       '<div class="min0"><h2 class="qt">' + title + (o.optional ? ' <span class="q-opt">Optional</span>' : "") + "</h2>" +
       (hint ? '<p class="qh">' + hint + "</p>" : "") + (body ? '<div class="q-body">' + body + "</div>" : "") + "</div></li>"
@@ -1975,7 +1975,7 @@
       qCard(
         1,
         "What's your overall diet?",
-        "If you mix it up, choose <strong>Meat eater</strong> and say roughly how often you have each meal.",
+        "Mix it up? Choose <strong>Meat eater</strong>.",
         '<div class="q-grid">' +
           D.DIETS.map((d) =>
             optionCard(diet === d.key, 'data-action="set-diet" data-key="' + d.key + '"', '<span class="opt-title display">' + esc(d.label) + '</span><span class="opt-sub">' + esc(d.desc) + "</span>", "q-opt-card")
@@ -2007,22 +2007,19 @@
       cards.push(
         qCard(
           n++,
-          "In a typical week, what's your main meal?",
-          "Roughly how many days a week you have each. It doesn't need to be exact.",
+          "How many days a week is your main meal…",
+          "",
           '<p class="meal-total"><b class="tnum">' + total + " of 7 days</b>" + (total < 7 ? '<span class="muted"> · ' + (7 - total) + " to go</span>" : ' <span class="green-dark">' + icon("check") + "</span>") + "</p>" +
             '<ul class="meal-rows">' + rows + "</ul>" + tip
         )
       );
-    } else if (diet) {
-      const d = byKey(D.DIETS, diet);
-      cards.push(goodToKnow("We'll estimate your week from a " + esc(d.label.toLowerCase()) + " diet. Choose <strong>Meat eater</strong> if you'd rather say how often you have each meal."));
     }
     if (diet) {
       cards.push(
         qCard(
           n++,
           "How often do you eat out or get a takeaway?",
-          "Each one counts as " + D.EAT_OUT_MULTIPLIER + "× a meal at home: bigger portions and more waste.",
+          "",
           '<div class="chip-wrap">' + D.EAT_OUT_OPTIONS.map((o) => chip((m.eatOut || 0) === o.value, 'data-action="set-eatout" data-value="' + o.value + '"', esc(o.label))).join("") + "</div>"
         )
       );
@@ -2030,7 +2027,7 @@
         qCard(
           n++,
           "How much of your food ends up thrown away?",
-          "Wasted food means wasted emissions. A rough guess is fine.",
+          "A rough guess is fine.",
           '<div class="q-grid">' +
             D.FOOD_WASTE.map((o) =>
               optionCard((m.foodWaste || "low") === o.key, 'data-action="set-waste" data-key="' + o.key + '"', '<span class="opt-title display">' + esc(o.title) + '</span><span class="opt-sub tnum">' + esc(o.range) + "</span>", "q-opt-card")
@@ -7620,6 +7617,34 @@
     obj[a] = { ...(obj[a] || {}), [b]: value };
   }
 
+  // Moving between questions: the current one fades out, then the next
+  // fades in (straight away for people who prefer reduced motion).
+  let qFadeTimer = null;
+  function fadeToQuestion(q) {
+    const go = () => {
+      qFadeTimer = null;
+      ui.q = q;
+      render();
+      const top = document.querySelector(".step-body");
+      if (top && top.getBoundingClientRect().top < 0) window.scrollTo(0, 0);
+    };
+    clearTimeout(qFadeTimer);
+    const list = document.querySelector(".q-list.one");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!list || reduce) return go();
+    list.classList.add("q-leave");
+    qFadeTimer = setTimeout(go, 180);
+  }
+  // Single-choice answers move on by themselves, after a beat to show the
+  // tick. Not on a step's last question, so a new section never jumps in.
+  function autoAdvance() {
+    const step = ui.step, q = ui.q;
+    if (q >= (ui.qCount || 1) - 1) return;
+    setTimeout(() => {
+      if (currentPath() === "/" && ui.step === step && ui.q === q) fadeToQuestion(q + 1);
+    }, 320);
+  }
+
   // ==================== events ====================
 
   const actions = {
@@ -7632,7 +7657,7 @@
     },
     "prev-step": () => {
       ui.airport = null;
-      if (ui.q > 0) ui.q--;
+      if (ui.q > 0) return fadeToQuestion(ui.q - 1);
       else if (ui.step > 0) {
         ui.step--;
         ui.q = 99; // the previous step's last question
@@ -7643,11 +7668,8 @@
     "next-step": () => {
       ui.airport = null;
       ui.commuteOpen = null;
-      if (ui.q < (ui.qCount || 1) - 1) {
-        ui.q++;
-        render();
-        window.scrollTo(0, 0);
-      } else if (ui.step < STEPS.length - 1) {
+      if (ui.q < (ui.qCount || 1) - 1) return fadeToQuestion(ui.q + 1);
+      else if (ui.step < STEPS.length - 1) {
         ui.step++;
         ui.q = 0;
         render();
@@ -7661,6 +7683,7 @@
       survey.meals = meals;
       surveyChanged();
       render();
+      autoAdvance();
     },
     "set-meal": (el) => {
       survey.meals = { ...survey.meals, [el.dataset.day]: el.dataset.key };
@@ -7673,6 +7696,7 @@
       survey.meals = { ...survey.meals, eatOut: Number(el.dataset.value) };
       surveyChanged();
       render();
+      autoAdvance();
     },
     "set-waste": (el) => {
       survey.meals = { ...survey.meals, foodWaste: el.dataset.key };
