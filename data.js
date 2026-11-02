@@ -154,6 +154,12 @@
   const WATER_FACTOR = 0.36218; // kg / 1000 L
   const DOG_YEARLY = 770;
   const CAT_YEARLY = 310;
+  // A horse or pony: feed, bedding and stabling, before any travel.
+  // Wageningen University sport-horse model (2025): about 4.1 t a year.
+  const HORSE_YEARLY = 4100;
+  // Rabbits, guinea pigs, birds, fish and the like. No published study yet,
+  // so a rough figure for food and bedding.
+  const SMALL_PET_YEARLY = 45;
   const EAT_OUT_MULTIPLIER = 1.78;
   const PORTION = 0.15; // kg of meat in a main meal
   buildUkTypical(PORTION);
@@ -200,7 +206,7 @@
     "key": "meat_eater",
     "label": "Meat eater",
     "emoji": "🥩",
-    "desc": "Pick day by day",
+    "desc": "A mix through the week",
     "mealKey": null
   }
 ];
@@ -259,53 +265,22 @@
   }
 ];
   const EAT_OUT_OPTIONS = [
-  {
-    "value": 0,
-    "label": "Never"
-  },
-  {
-    "value": 1,
-    "label": "1× / week"
-  },
-  {
-    "value": 2,
-    "label": "2× / week"
-  },
-  {
-    "value": 3,
-    "label": "3× / week"
-  },
-  {
-    "value": 4,
-    "label": "4+ × / week"
-  }
-];
+    { value: 0, label: "Never" },
+    { value: 1, label: "1× a week" },
+    { value: 2, label: "2× a week" },
+    { value: 3, label: "3× a week" },
+    { value: 4, label: "4× a week" },
+    { value: 5, label: "5× a week" },
+    { value: 6, label: "6× a week" },
+    { value: 7, label: "Every day" },
+  ];
+  // Plain words for how much is thrown away; the share stays as small print.
   const FOOD_WASTE = [
-  {
-    "key": "low",
-    "label": "Low (0–3%)",
-    "emoji": "🟢",
-    "multiplier": 1.02
-  },
-  {
-    "key": "some",
-    "label": "Some (3–10%)",
-    "emoji": "🟡",
-    "multiplier": 1.065
-  },
-  {
-    "key": "high",
-    "label": "High (10–25%)",
-    "emoji": "🟠",
-    "multiplier": 1.175
-  },
-  {
-    "key": "severe",
-    "label": "Severe (25%+)",
-    "emoji": "🔴",
-    "multiplier": 1.4
-  }
-];
+    { key: "low", label: "Hardly any (under 3%)", title: "Hardly any", range: "under 3%", emoji: "🟢", multiplier: 1.02 },
+    { key: "some", label: "A little (3–10%)", title: "A little", range: "3–10%", emoji: "🟡", multiplier: 1.065 },
+    { key: "high", label: "A fair amount (10–25%)", title: "A fair amount", range: "10–25%", emoji: "🟠", multiplier: 1.175 },
+    { key: "severe", label: "A lot (over 25%)", title: "A lot", range: "over 25%", emoji: "🔴", multiplier: 1.4 },
+  ];
   const COMMUTE_MODES = [
   {
     "key": "wfh",
@@ -1851,10 +1826,10 @@
     { group: "Food", key: "meat_lamb", label: "Lamb and mutton", unit: "kg CO₂e per kg", path: "MEAT_PER_KG.lamb", source: PN2018, asOf: "2018-06", every: 96 },
     { group: "Food", key: "portion", label: "Meat in a main meal", unit: "kg", path: "PORTION", source: "Survey assumption: a medium 150 g portion" },
     { group: "Food", key: "eat_out", label: "Eating out", unit: "× a home-cooked day", path: "EAT_OUT_MULTIPLIER", source: "RESOLVE working paper 02-10" },
-    { group: "Food", key: "waste_low", label: "Food waste: low (0–3%)", unit: "× food", path: "FOOD_WASTE[low].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
-    { group: "Food", key: "waste_some", label: "Food waste: some (3–10%)", unit: "× food", path: "FOOD_WASTE[some].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
-    { group: "Food", key: "waste_high", label: "Food waste: high (10–25%)", unit: "× food", path: "FOOD_WASTE[high].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
-    { group: "Food", key: "waste_severe", label: "Food waste: severe (25%+)", unit: "× food", path: "FOOD_WASTE[severe].multiplier", source: "As 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_low", label: "Food waste: hardly any (under 3%)", unit: "× food", path: "FOOD_WASTE[low].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_some", label: "Food waste: a little (3–10%)", unit: "× food", path: "FOOD_WASTE[some].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_high", label: "Food waste: a fair amount (10–25%)", unit: "× food", path: "FOOD_WASTE[high].multiplier", source: "Midpoint of the bracket, as 1 ÷ (1 − share wasted)" },
+    { group: "Food", key: "waste_severe", label: "Food waste: a lot (over 25%)", unit: "× food", path: "FOOD_WASTE[severe].multiplier", source: "As 1 ÷ (1 − share wasted)" },
     { group: "Travel", key: "train", label: "Train (national rail)", unit: "kg CO₂e per km", path: "COMMUTE_MODES[train].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
     { group: "Travel", key: "tube", label: "Tube (London Underground)", unit: "kg CO₂e per km", path: "COMMUTE_MODES[tube].factor", source: DESNZ_2026, asOf: "2026-06", every: 12 },
     { group: "Travel", key: "bus", label: "Bus", unit: "kg CO₂e per km", path: "COMMUTE_MODES[bus].factor", source: DESNZ_2026 + " (average local bus)", asOf: "2026-06", every: 12 },
@@ -1884,8 +1859,10 @@
     { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ), gross CV + well-to-tank", asOf: "2025-06", every: 12 },
     { group: "Home", key: "water", label: "Mains water", unit: "kg CO₂e per 1,000 L", path: "WATER_FACTOR", source: DESNZ_2026 + ": supply + treatment", asOf: "2026-06", every: 12 },
     { group: "Home", key: "heat_pump_cop", label: "Heat pump efficiency (COP)", unit: "kWh heat per kWh", path: "ASSUMPTIONS.HEAT_PUMP_COP", source: "App assumption for the “going all the way” saving" },
-    { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "No source recorded yet" },
-    { group: "Pets", key: "cat", label: "Cat", unit: "kg CO₂e a year", path: "CAT_YEARLY", source: "No source recorded yet" },
+    { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "Average-sized dog, Mike Berners-Lee, How Bad Are Bananas? (2020 edition)" },
+    { group: "Pets", key: "cat", label: "Cat", unit: "kg CO₂e a year", path: "CAT_YEARLY", source: "Average-sized cat, Mike Berners-Lee, How Bad Are Bananas? (2020 edition)" },
+    { group: "Pets", key: "horse", label: "Horse or pony", unit: "kg CO₂e a year", path: "HORSE_YEARLY", source: "Wageningen University sport-horse greenhouse gas model (Animal, 2025): about 4.1 t a year before travel" },
+    { group: "Pets", key: "small_pet", label: "Small pet (rabbit, guinea pig, bird, fish)", unit: "kg CO₂e a year", path: "SMALL_PET_YEARLY", source: "Rough estimate for food and bedding; no published study yet" },
   ];
   const SIZE_WORD = { small: "small", medium: "medium", large: "large or SUV" };
   const ICCT_CARS = "ICCT, A global comparison of the life-cycle GHG emissions of combustion engine and electric passenger cars (Bieker, 2021): production and recycling per tonne of car times the average EU and UK car weight for the size, plus the battery at 60 kg CO₂e per kWh";
@@ -1960,7 +1937,7 @@
     CAR_TYPES, CAR_SIZES, KM_PER_MILE,
     DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT, ASSUMED_SHOPPING,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
-    WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
+    WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,

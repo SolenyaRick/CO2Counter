@@ -717,6 +717,27 @@
 
   // Every category is returned as kg CO2e per year. The survey asks for
   // weekly habits and monthly bills, so those are scaled up here.
+  // Extra bank accounts and pension pots, on top of the main ones.
+  const moneyExtras = (b) => (Array.isArray(b && b.extra) ? b.extra : []).filter((x) => x && (x.amount || 0) > 0);
+  const extraPension = (x) => byKey(D.PENSION_PROVIDERS, x.provider) || byKey(D.PENSION_PROVIDERS, "other");
+  const extrasKg = (b) =>
+    moneyExtras(b).reduce((t, x) => t + (x.kind === "pension" ? pensionKg(x.amount, extraPension(x).tPerMillion) : x.amount * factorOf(D.BANKS, x.bank)), 0);
+  function extrasSaving(b) {
+    const greenest = Math.min(...D.BANKS.map((x) => x.factor));
+    return moneyExtras(b).reduce((t, x) => {
+      if (x.kind === "pension") return t + Math.max(0, pensionKg(x.amount, extraPension(x).tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
+      const bank = byKey(D.BANKS, x.bank);
+      return t + (bank && bank.factor > greenest ? x.amount * (bank.factor - greenest) : 0);
+    }, 0);
+  }
+
+  // Every pet, by kind: dogs and cats (food is most of it), horses and small pets.
+  const petsKg = (p) => (p.dogs || 0) * D.DOG_YEARLY + (p.cats || 0) * D.CAT_YEARLY + (p.horses || 0) * D.HORSE_YEARLY + (p.smallPets || 0) * D.SMALL_PET_YEARLY;
+  const petCount = (p) => (p.dogs || 0) + (p.cats || 0) + (p.horses || 0) + (p.smallPets || 0);
+  const petWords = (p) =>
+    [p.dogs ? plural(Math.round(p.dogs), "dog") : "", p.cats ? plural(Math.round(p.cats), "cat") : "", p.horses ? plural(Math.round(p.horses), "horse") : "", p.smallPets ? plural(Math.round(p.smallPets), "small pet") : ""]
+      .filter(Boolean).join(", ") || "No pets";
+
   function footprint(s) {
     const items = [];
     const household = Math.max(1, (s.energy && s.energy.household) || 1);
@@ -733,7 +754,7 @@
     const mealsWeekly = mealBase * eatOutMult * (waste ? waste.multiplier : 1);
     const mealNotes = [
       eatOut > 0 ? "eat out " + eatOut + "×/wk" : null,
-      waste && waste.key !== "low" ? waste.label.split(" ")[0].toLowerCase() + " waste" : null,
+      waste && waste.key !== "low" ? waste.title.toLowerCase() + " wasted" : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -796,8 +817,8 @@
       key: "pets",
       label: "Pets",
       icon: "🐾",
-      yearly: ((pets.dogs || 0) * D.DOG_YEARLY + (pets.cats || 0) * D.CAT_YEARLY) / household,
-      detail: (pets.dogs || 0) + (pets.cats || 0) + " pet(s)",
+      yearly: petsKg(pets) / household,
+      detail: petCount(pets) + " pet(s)",
     });
 
     const banking = s.banking || {};
@@ -808,7 +829,7 @@
       key: "banking",
       label: "Banking & Pension",
       icon: "🏦",
-      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank) + pensionKg(pot, pension.tPerMillion),
+      yearly: (banking.amount || 0) * factorOf(D.BANKS, banking.bank) + pensionKg(pot, pension.tPerMillion) + extrasKg(banking),
       detail: [bank ? bank.label : "", pot > 0 ? "pension: " + pension.label : ""].filter(Boolean).join(" · "),
     });
 
@@ -826,6 +847,25 @@
     const out = {};
     if (m.weekMix) Object.keys(m.weekMix).forEach((k) => (out[k] = m.weekMix[k]));
     else DAYS.forEach((d) => m[d] && (out[m[d]] = (out[m[d]] || 0) + 1));
+    return out;
+  }
+
+  // Whole days a week of each main meal (the survey stores them by weekday).
+  function mealDayCounts(s) {
+    const c = mealCounts(s);
+    const out = {};
+    Object.keys(c).forEach((k) => (out[k] = Math.round(c[k])));
+    return out;
+  }
+  // Writes counts back as weekdays, so everything else reads them unchanged.
+  function mealsFromCounts(meals, counts) {
+    const out = { ...meals };
+    delete out.weekMix;
+    DAYS.forEach((d) => delete out[d]);
+    let i = 0;
+    D.MEAL_OPTIONS.forEach((o) => {
+      for (let k = 0; k < (counts[o.key] || 0) && i < DAYS.length; k++) out[DAYS[i++]] = o.key;
+    });
     return out;
   }
 
@@ -1061,7 +1101,11 @@
         const greenest = Math.min(...D.BANKS.map((x) => x.factor));
         const bankSaving = !bank || bank.factor <= greenest ? 0 : (b.amount || 0) * (bank.factor - greenest);
         const pension = pensionProvider(b);
-        const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION));
+        // Extra accounts and pots count towards whichever saving they are.
+        const xBank = moneyExtras(b).filter((x) => x.kind !== "pension");
+        const xPension = moneyExtras(b).filter((x) => x.kind === "pension");
+        const pensionSaving = Math.max(0, pensionKg(b.pensionPot, pension.tPerMillion - D.GREEN_PENSION_T_PER_MILLION)) + extrasSaving({ extra: xPension });
+        const bankSavingAll = bankSaving + extrasSaving({ extra: xBank });
         // Already with a very good bank: say so, and how much further the greenest goes.
         const greenestBank = D.BANKS.slice().sort((x, y) => x.factor - y.factor)[0];
         const bankDone = bank && bankRating(bank).key === "vgood";
@@ -1069,7 +1113,7 @@
           ? "You're already with " + bank.label.replace(/^The /, "") + ", one of the greenest banks." +
             (bankSaving > 0.5 ? " You could go a bit further: moving to " + greenestBank.label.replace(/^The /, "") + " would cut about " + kgFmt(bankSaving) + " kg a year more." : " There's no greener bank on our list.")
           : "Traditional banks finance fossil fuel projects with your deposits. Moving your savings to a bank that doesn't fund fossil fuels (e.g. Triodos, Co-op) can reduce your financed emissions by up to {{bank_cut}}.";
-        if (pensionSaving > bankSaving) {
+        if (pensionSaving > bankSavingAll) {
           return {
             title: "Switch your pension to a climate-focused fund",
             body:
@@ -1081,7 +1125,7 @@
               (b.pensionProvider && b.pensionProvider !== "other" ? pension.label + "'s default" : "a typical default fund") +
               ". Ask your provider or HR how to switch; it usually takes a few minutes online." +
               (bankSaving > 0 ? " " + bankBody : ""),
-            saving: bankSaving + pensionSaving,
+            saving: bankSavingAll + pensionSaving,
             realisticLabel: "a greener bank and a climate-focused pension fund",
           };
         }
@@ -1089,7 +1133,7 @@
           realisticLabel: "a greener bank and a climate-focused pension fund",
           title: bankDone ? (bankSaving > 0.5 ? "You've switched bank. Go a bit further?" : "You're with the greenest bank") : "Move your money to a greener bank",
           body: bankBody + (pensionSaving > 0 ? " Switching your pension to a climate-focused fund helps too." : ""),
-          saving: bankSaving + pensionSaving,
+          saving: bankSavingAll + pensionSaving,
         };
       },
     };
@@ -1659,7 +1703,7 @@
       const waste = byKey(D.FOOD_WASTE, m.foodWaste || "low");
       return [
         (diet ? diet.label + ": " : "") + (countLabels(D.MEAL_OPTIONS, DAYS.map((d) => m[d])) || "No meals chosen"),
-        "Eat out " + (m.eatOut || 0) + "× a week · " + (waste ? waste.label.split(" ")[0] : "Low") + " food waste",
+        "Eat out " + ((m.eatOut || 0) >= 7 ? "every day" : (m.eatOut || 0) + "× a week") + " · " + (waste ? waste.title : "Hardly any") + " food wasted",
       ];
     }
     if (key === "commute") {
@@ -1687,7 +1731,7 @@
     }
     if (key === "pets") {
       const p = s.pets || {};
-      return [(p.dogs || 0) + (p.cats || 0) ? [p.dogs ? plural(p.dogs, "dog") : "", p.cats ? plural(p.cats, "cat") : ""].filter(Boolean).join(", ") : "No pets"];
+      return [petWords(p)];
     }
     if (key === "banking") {
       const b = s.banking || {};
@@ -1696,7 +1740,7 @@
       return [
         (bank ? bank.label : "Bank not chosen") + " · £" + (b.amount || 0).toLocaleString(),
         pension && pension.unfunded ? "Pension: " + pension.label : b.pensionPot ? "Pension: " + (pension ? pension.label : "provider not chosen") + " · £" + b.pensionPot.toLocaleString() : "No pension added",
-      ];
+      ].concat(moneyExtras(b).length ? ["+ " + moneyExtras(b).length + (moneyExtras(b).length === 1 ? " more account or pension" : " more accounts or pensions")] : []);
     }
     return [];
   }
@@ -1746,9 +1790,13 @@
     if (survey.completedAt && !ui.editing) return renderSurveyDone();
     const step = STEPS[ui.step];
     const n = STEPS.length;
-    const pct = Math.round(((ui.step + 1) / n) * 100);
-    qAnimate = ui.shownStep !== ui.step;
-    ui.shownStep = ui.step;
+    const qKey = ui.step + ":" + (ui.q || 0);
+    qAnimate = ui.shownStep !== qKey;
+    ui.shownStep = qKey;
+    // Render the step first: it sets how many questions it has (ui.qCount).
+    const body = step.render();
+    const qMore = ui.q < (ui.qCount || 1) - 1;
+    const pct = Math.round(((ui.step + (ui.q + 1) / (ui.qCount || 1)) / n) * 100);
     const tabs = STEPS.map((s, i) => {
       const on = i === ui.step;
       const done = !on && i < ui.step;
@@ -1778,13 +1826,15 @@
       '<figure class="cat-share"><svg viewBox="0 0 42 42" role="img" aria-label="Step ' + (ui.step + 1) + " of " + n + '"><circle cx="21" cy="21" r="20" fill="rgba(63,91,58,.12)"></circle>' +
       '<circle cx="21" cy="21" r="10" fill="none" stroke="#3F5B3A" stroke-width="20" pathLength="100" stroke-dasharray="' + pct + ' 100" transform="rotate(-90 21 21)"></circle></svg>' +
       "<figcaption><span>" + (ui.step + 1) + " of " + n + " steps</span></figcaption></figure></div></header>" +
-      '<div class="step-body">' + step.render() + "</div>" +
+      '<div class="step-body">' + body + "</div>" +
       '<div class="step-nav-v2">' +
-      (prev
+      (ui.q > 0
+        ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back</button>"
+        : prev
         ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back: " + esc(STEP_TAB[prev.key]) + "</button>"
         : ui.newSurvey || ui.editing ? '<a class="btn btn-outline" href="#/results">Back to results</a>' : "<span></span>") +
       '<button type="button" class="btn btn-green" data-action="next-step">' +
-      (last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + "</button>" +
+      (qMore ? "Next question" : last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + "</button>" +
       "</div></div>"
     );
   }
@@ -1795,7 +1845,7 @@
     commute: "How you get around day to day. It repeats over 200 times a year, so it adds up.",
     flights: "Flights are rare but large. Add the trips you took in the last 12 months.",
     energy: "Your energy and water use. Have a recent bill handy if you can.",
-    pets: "Just two quick counts.",
+    pets: "A few quick counts. Most of a pet's footprint is its food.",
     banking: "Where your money sits can matter as much as what you buy.",
   };
 
@@ -1820,7 +1870,31 @@
       (hint ? '<p class="qh">' + hint + "</p>" : "") + (body ? '<div class="q-body">' + body + "</div>" : "") + "</div></li>"
     );
   }
-  const qList = (cards) => '<ol class="q-list">' + cards.join("") + "</ol>";
+  // One question at a time: a step's questions show one by one, with Next
+  // and Back moving between them (ui.q). "Good to know" notes stay with the
+  // question before them (or the first one).
+  const isNote = (c) => /^<li class="q[^"]*\bq-note\b/.test(c);
+  function qList(cards) {
+    const groups = [];
+    let lead = [];
+    cards.filter(Boolean).forEach((c) => {
+      if (isNote(c)) groups.length ? groups[groups.length - 1].push(c) : lead.push(c);
+      else {
+        groups.push(lead.concat(c));
+        lead = [];
+      }
+    });
+    if (lead.length) groups.length ? groups[groups.length - 1].push(...lead) : groups.push(lead);
+    const n = Math.max(1, groups.length);
+    ui.qCount = n;
+    ui.q = Math.min(Math.max(0, ui.q || 0), n - 1);
+    const dots =
+      n > 1
+        ? '<div class="q-progress" role="img" aria-label="Question ' + (ui.q + 1) + " of " + n + '"><span class="q-progress-n">Question ' + (ui.q + 1) + " of " + n + "</span>" +
+          '<span class="q-dots">' + groups.map((_, i) => '<i class="' + (i < ui.q ? "done" : i === ui.q ? "on" : "") + '"></i>').join("") + "</span></div>"
+        : "";
+    return dots + '<ol class="q-list one">' + (groups[ui.q] || []).join("") + "</ol>";
+  }
   const goodToKnow = (text) => qCard(0, "Good to know", text, "", { note: true });
 
   // A number with − and + buttons either side.
@@ -1853,7 +1927,7 @@
       qCard(
         1,
         "What's your overall diet?",
-        "If you mix it up, choose <strong>Meat eater</strong> and pick day by day.",
+        "If you mix it up, choose <strong>Meat eater</strong> and say roughly how often you have each meal.",
         '<div class="q-grid">' +
           D.DIETS.map((d) =>
             optionCard(diet === d.key, 'data-action="set-diet" data-key="' + d.key + '"', '<span class="opt-title display">' + esc(d.label) + '</span><span class="opt-sub">' + esc(d.desc) + "</span>", "q-opt-card")
@@ -1863,41 +1937,37 @@
     );
     let n = 2;
     if (diet === "meat_eater") {
-      const day = DAYS.includes(ui.mealDay) ? ui.mealDay : DAYS.find((d) => !m[d]) || "Mon";
-      const cur = m[day];
-      const days =
-        '<div class="day-pick">' +
-        DAYS.map((d) => {
-          const o = byKey(D.MEAL_OPTIONS, m[d]);
-          return (
-            '<button type="button" class="day-btn' + (d === day ? " on" : "") + '" data-action="pick-meal-day" data-day="' + d + '" aria-pressed="' + (d === day) +
-            '" aria-label="' + DAY_NAMES[d] + ": " + (o ? esc(o.label) : "not chosen") + '"><span class="display">' + d + "</span>" +
-            '<i style="background:' + (o ? dayDot(o.factor, 8, 3, 2) : "transparent") + '"' + (o ? "" : ' class="empty"') + "></i>" +
-            '<span class="day-val">' + (o ? esc(o.key === "veggie" ? "Veggie" : o.label) : "Choose") + '</span><span class="day-kg tnum">' + (o ? o.factor.toFixed(2) + " kg" : "") + "</span></button>"
-          );
-        }).join("") +
-        "</div>";
-      const chosen = byKey(D.MEAL_OPTIONS, cur);
+      // A rough week, not specific days: how many days each main meal.
+      const counts = mealDayCounts(survey);
+      const total = Object.values(counts).reduce((t, v) => t + v, 0);
+      const rows = D.MEAL_OPTIONS.map((o) => {
+        const c = counts[o.key] || 0;
+        return (
+          '<li class="meal-row' + (c ? " on" : "") + '"><i class="meal-dot" style="background:' + dayDot(o.factor, 8, 3, 2) + '" aria-hidden="true"></i>' +
+          '<span class="min0 grow"><b>' + esc(o.label) + '</b><span class="xs muted tnum">' + o.factor.toFixed(2) + " kg a meal</span></span>" +
+          '<span class="meal-step"><button type="button" class="step-btn" data-action="meal-count" data-key="' + o.key + '" data-delta="-1" aria-label="Fewer ' + esc(o.label) + ' days"' + (c ? "" : " disabled") + ">" + icon("minus") + "</button>" +
+          '<b class="display tnum" aria-live="polite">' + c + "</b>" +
+          '<button type="button" class="step-btn" data-action="meal-count" data-key="' + o.key + '" data-delta="1" aria-label="More ' + esc(o.label) + ' days"' + (total < 7 ? "" : " disabled") + ">" + icon("plus") + "</button></span></li>"
+        );
+      }).join("");
+      const top = D.MEAL_OPTIONS.filter((o) => counts[o.key]).sort((a, b) => b.factor - a.factor)[0];
       const veg = byKey(D.MEAL_OPTIONS, "veggie");
       const tip =
-        chosen && veg && chosen.factor > veg.factor * 2
-          ? '<p class="q-tip">Swapping ' + DAY_NAMES[day] + "'s " + esc(chosen.label.toLowerCase()) + " for a vegetarian meal would save about " +
-            kgFmt((chosen.factor - veg.factor) * D.WEEKS_PER_YEAR) + " kg a year.</p>"
+        total === 7 && top && veg && top.factor > veg.factor * 2
+          ? '<p class="q-tip">Swapping one ' + esc(top.label.toLowerCase()) + " day a week for a vegetarian meal would save about " + kgFmt((top.factor - veg.factor) * D.WEEKS_PER_YEAR) + " kg a year.</p>"
           : "";
       cards.push(
         qCard(
           n++,
-          "What was each day's main meal?",
-          "Pick a day, then choose what you ate.",
-          days +
-            '<div class="q-sub"><p class="q-sub-title display">' + DAY_NAMES[day] + '</p><div class="chip-wrap">' +
-            D.MEAL_OPTIONS.map((o) => chip(cur === o.key, 'data-action="set-meal" data-day="' + day + '" data-key="' + o.key + '"', esc(o.label), o.factor.toFixed(2) + " kg")).join("") +
-            "</div>" + tip + "</div>"
+          "In a typical week, what's your main meal?",
+          "Roughly how many days a week you have each. It doesn't need to be exact.",
+          '<p class="meal-total"><b class="tnum">' + total + " of 7 days</b>" + (total < 7 ? '<span class="muted"> · ' + (7 - total) + " to go</span>" : ' <span class="green-dark">' + icon("check") + "</span>") + "</p>" +
+            '<ul class="meal-rows">' + rows + "</ul>" + tip
         )
       );
     } else if (diet) {
       const d = byKey(D.DIETS, diet);
-      cards.push(qCard(n++, "Your week", "We'll estimate your week from a " + esc(d.label.toLowerCase()) + " diet. Choose <strong>Meat eater</strong> above to pick day by day.", ""));
+      cards.push(goodToKnow("We'll estimate your week from a " + esc(d.label.toLowerCase()) + " diet. Choose <strong>Meat eater</strong> if you'd rather say how often you have each meal."));
     }
     if (diet) {
       cards.push(
@@ -1911,11 +1981,11 @@
       cards.push(
         qCard(
           n++,
-          "How much food do you throw away?",
-          "Wasted food means wasted emissions.",
+          "How much of your food ends up thrown away?",
+          "Wasted food means wasted emissions. A rough guess is fine.",
           '<div class="q-grid">' +
             D.FOOD_WASTE.map((o) =>
-              optionCard((m.foodWaste || "low") === o.key, 'data-action="set-waste" data-key="' + o.key + '"', '<span class="opt-title display">' + esc(o.label.split(" ")[0]) + '</span><span class="opt-sub tnum">' + esc((o.label.match(/\((.*)\)/) || [])[1] || "") + "</span>", "q-opt-card")
+              optionCard((m.foodWaste || "low") === o.key, 'data-action="set-waste" data-key="' + o.key + '"', '<span class="opt-title display">' + esc(o.title) + '</span><span class="opt-sub tnum">' + esc(o.range) + "</span>", "q-opt-card")
             ).join("") +
             "</div>"
         )
@@ -1952,7 +2022,7 @@
         : "";
     return qList([
       qCard(1, "Do you own or lease a car?", "Count a company car too. Making a car has a big footprint of its own, so we spread it over the years a car lasts.", renderCars()),
-      qCard(2, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km")),
+      qCard(2, "How far is your commute, one way?", "A rough figure is fine. We count there and back.", stepper("commute.distance", distance, 1, 0, "km", "One-way distance in km") + commuteFinder()),
       qCard(
         3,
         "How did you get there each day?",
@@ -1969,6 +2039,31 @@
   }
 
   const carLabel = (c) => (byKey(D.CAR_SIZES, carSize(c)) || {}).label + " " + carType(c).label.toLowerCase() + " car";
+
+  // Optional: yearly miles from the number plate's MOT history (the
+  // mot-lookup function). Shown only once it's set up, and only signed in.
+  function motFinder(i) {
+    if (currentUser && ui.motEnabled === undefined && sb) {
+      ui.motEnabled = null;
+      fetch(SUPABASE_URL + "/functions/v1/mot-lookup", { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY }, body: '{"ping":true}' })
+        .then((r) => r.json())
+        .then((o) => {
+          ui.motEnabled = !!(o && o.enabled);
+          if (ui.motEnabled) render();
+        })
+        .catch(() => (ui.motEnabled = false));
+    }
+    if (!currentUser || !ui.motEnabled) return "";
+    const st = (ui.mot || {})[i] || {};
+    return (
+      '<form class="mot-form mt-2" id="mot-form-' + i + '" data-car-index="' + i + '"><label class="xs fw-700" for="mot-reg-' + i + '">Or find the miles from your number plate</label>' +
+      '<span class="mot-row"><input class="input mot-reg" id="mot-reg-' + i + '" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AB12 CDE" value="' + esc(st.reg || "") + '" />' +
+      '<button type="submit" class="btn btn-outline btn-sm"' + (st.busy ? " disabled" : "") + ">" + (st.busy ? "Looking…" : "Look up") + "</button></span>" +
+      (st.msg ? '<span class="xs ' + (st.ok ? "green-dark fw-700" : "red") + '" role="status">' + esc(st.msg) + "</span>" : "") +
+      '<span class="xs muted">From its MOT history (DVSA). We don\'t save the number plate.</span></form>'
+    );
+  }
+  const motFuel = (f) => (/plug|phev/i.test(f) ? "phev" : /hybrid/i.test(f) ? "hybrid" : /electric/i.test(f) ? "ev" : /diesel/i.test(f) ? "diesel" : /petrol/i.test(f) ? "petrol" : "");
 
   function renderCars() {
     const owns = survey.car && survey.car.owns;
@@ -1996,6 +2091,7 @@
           '" data-car="' + i + '" data-key="share" aria-label="People who share this car" /></div>' +
           '<div class="grow minw-160"><label class="xs">Miles you drive it a year <span class="muted">(optional)</span></label><input class="input mt-1" type="number" min="0" inputmode="numeric" placeholder="e.g. 7,000" value="' +
           esc(Number(c.miles) > 0 ? c.miles : "") + '" data-car="' + i + '" data-key="miles" aria-label="Miles you drive this car a year" /></div></div>' +
+          motFinder(i) +
           '<p class="xs muted mt-2">Making it: about ' + kgFmt(total) + " kg CO₂e, spread over " + A.CAR_LIFE_YEARS + " years" + (share > 1 ? " and split " + share + " ways" : "") +
           ' = <strong class="tnum">' + kgFmt(make) + " kg a year</strong>. That's the same whether you bought it new or used: each year of its life carries a share.</p>" +
           '<div class="row-between journey-foot mt-3"><span></span><span class="label-row">' +
@@ -2097,6 +2193,49 @@
     dl.id = "places-list";
     dl.innerHTML = window.ECO_PLACES.map((p) => '<option value="' + esc(p[0]) + '"></option>').join("");
     document.body.appendChild(dl);
+  }
+
+  // "Not sure?" helper for the commute: two postcodes (looked up with the
+  // free postcodes.io service) or two towns, straight line + 25% for roads.
+  // Nothing is saved except the distance.
+  const POSTCODE_RE = /^[A-Z]{1,2}[0-9][0-9A-Z]?\s*[0-9][A-Z]{2}$/i;
+  function commuteFinder() {
+    const st = ui.pcFind || {};
+    return (
+      '<details class="pc-help"' + (st.open ? " open" : "") + '><summary data-action="pc-toggle">Not sure? Work it out from two postcodes</summary>' +
+      '<form id="pc-form" class="pc-form"><input class="input" id="pc-from" autocomplete="postal-code" maxlength="60" placeholder="Home, e.g. M1 1AE" aria-label="Home postcode or town" value="' + esc(st.from || "") + '" />' +
+      '<input class="input" id="pc-to" autocomplete="off" maxlength="60" placeholder="Work, e.g. M13 9PL" aria-label="Work postcode or town" value="' + esc(st.to || "") + '" />' +
+      '<button type="submit" class="btn btn-outline btn-sm"' + (st.busy ? " disabled" : "") + ">" + (st.busy ? "Working it out…" : "Work it out") + "</button></form>" +
+      (st.msg ? '<p class="xs mt-2 ' + (st.ok ? "green-dark fw-700" : "red") + '" role="status">' + esc(st.msg) + "</p>" : "") +
+      '<p class="xs muted mt-1">Postcodes are looked up with postcodes.io and not saved. Town names work too. We use the straight line plus 25% for the roads.</p></details>'
+    );
+  }
+  async function findCommuteKm(from, to) {
+    const pcs = [from, to].filter((x) => POSTCODE_RE.test(x));
+    const coords = {};
+    if (pcs.length) {
+      const res = await fetch("https://api.postcodes.io/postcodes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postcodes: pcs }) });
+      const out = await res.json();
+      (out.result || []).forEach((r) => r.result && (coords[r.query] = { lat: r.result.latitude, lon: r.result.longitude }));
+    }
+    if (!window.ECO_PLACES && [from, to].some((x) => !POSTCODE_RE.test(x))) {
+      await new Promise((resolve) => {
+        const sc = document.createElement("script");
+        sc.src = "places.js?v=" + ASSET_VERSION;
+        sc.onload = resolve;
+        sc.onerror = resolve;
+        document.head.appendChild(sc);
+      });
+      placeIndex = null;
+    }
+    const where = (x) => {
+      if (coords[x]) return coords[x];
+      const p = findPlace(x);
+      return p ? { lat: p[1], lon: p[2] } : null;
+    };
+    const a = where(from), b = where(to);
+    if (!a || !b) return { error: !a ? "We couldn't find \"" + from + "\". Check the postcode or try the town name." : "We couldn't find \"" + to + "\". Check the postcode or try the town name." };
+    return { km: Math.max(1, Math.round(greatCircleKm(a, b) * A.LAND_ROUTE_UPLIFT)) };
   }
 
   function renderLongTrips() {
@@ -2266,8 +2405,34 @@
     return qList([
       qCard(1, "How many dogs do you have?", "About " + D.DOG_YEARLY + " kg CO₂e a year each, mostly from their food.", stepper("pets.dogs", p.dogs == null ? 0 : p.dogs, 1, 0, "", "Dogs")),
       qCard(2, "And cats?", "About " + D.CAT_YEARLY + " kg CO₂e a year each. Put 0 if you don't have any.", stepper("pets.cats", p.cats == null ? 0 : p.cats, 1, 0, "", "Cats")),
+      qCard(3, "Any other pets?", "Optional. Leave at 0 if not.",
+        '<div class="pet-more"><div><p class="fw-700">Horses and ponies</p><p class="xs muted">About ' + kgFmt(D.HORSE_YEARLY) + " kg a year each, mostly feed and bedding</p>" + stepper("pets.horses", p.horses || 0, 1, 0, "", "Horses and ponies") + "</div>" +
+          '<div><p class="fw-700">Small pets</p><p class="xs muted">Rabbits, guinea pigs, birds, fish: about ' + D.SMALL_PET_YEARLY + " kg a year each (a rough figure)</p>" + stepper("pets.smallPets", p.smallPets || 0, 1, 0, "", "Small pets") + "</div></div>",
+        { optional: true }),
       goodToKnow("A medium dog's food can emit as much as a small car over a year. You don't need to change your pet, just what goes in the bowl."),
     ]);
+  }
+
+  function extrasEditor(b) {
+    const list = Array.isArray(b.extra) ? b.extra : [];
+    const rows = list.map((x, i) => {
+      const pension = x.kind === "pension";
+      const opts = pension
+        ? D.PENSION_PROVIDERS.filter((p) => !p.unfunded).map((p) => '<option value="' + p.key + '"' + (p.key === x.provider ? " selected" : "") + ">" + esc(p.label) + "</option>").join("")
+        : D.BANKS.map((p) => '<option value="' + p.key + '"' + (p.key === x.bank ? " selected" : "") + ">" + esc(p.label) + "</option>").join("");
+      return (
+        '<div class="extra-row"><span class="extra-kind xs fw-700">' + (pension ? "Pension" : "Bank account") + "</span>" +
+        '<select class="input" data-extra="' + i + '" data-extra-field="' + (pension ? "provider" : "bank") + '" aria-label="' + (pension ? "Pension provider" : "Bank") + '">' +
+        '<option value=""' + ((pension ? x.provider : x.bank) ? "" : " selected") + " disabled>" + (pension ? "Provider" : "Bank") + "</option>" + opts + "</select>" +
+        '<label class="extra-amt"><span class="muted">£</span><input class="input" type="number" min="0" inputmode="numeric" value="' + esc(x.amount || 0) + '" data-extra="' + i + '" data-extra-field="amount" aria-label="' + (pension ? "Pot size in pounds" : "Amount in pounds") + '" /></label>' +
+        '<button type="button" class="fr-btn ghost sq" data-action="remove-extra" data-i="' + i + '" aria-label="Remove">' + icon("x") + "</button></div>"
+      );
+    }).join("");
+    return (
+      rows +
+      '<div class="chip-row mt-2"><button type="button" class="q-add" data-action="add-extra" data-kind="bank">' + icon("plus") + ' Add a bank account</button>' +
+      '<button type="button" class="q-add" data-action="add-extra" data-kind="pension">' + icon("plus") + " Add a pension</button></div>"
+    );
   }
 
   function renderBankingStep() {
@@ -2299,8 +2464,9 @@
       pension && pension.unfunded
         ? ""
         : qCard(4, "Roughly how big is your pension pot?", "Add up your workplace and personal pots. Check your provider's app or latest statement. Leave it at 0 if you don't have one.", fieldInput("banking.pensionPot", b.pensionPot == null ? 0 : b.pensionPot, "", "Pension pot in pounds", "£")),
+      qCard(pension && pension.unfunded ? 4 : 5, "Any other accounts or pensions?", "Optional. Add savings with another bank, or an old workplace pension, so they count too.", extrasEditor(b), { optional: true }),
       // Optional, for anonymous totals by role (also on the Account page).
-      qCard(pension && pension.unfunded ? 4 : 5, "What best describes your work?", "Only used for anonymous totals, like the average footprint of nurses. Never shown with your name.",
+      qCard(pension && pension.unfunded ? 5 : 6, "What best describes your work?", "Only used for anonymous totals, like the average footprint of nurses. Never shown with your name.",
         '<select class="input q-select" data-field="about.role" data-type="text" aria-label="Your work">' +
           '<option value="">Prefer not to say</option>' +
           ROLES.map(([k, l]) => '<option value="' + k + '"' + (((survey.about || {}).role || "") === k ? " selected" : "") + ">" + l + "</option>").join("") +
@@ -4990,7 +5156,7 @@
       const top = modes.sort((a, b) => modes.filter((m) => m === b).length - modes.filter((m) => m === a).length)[0];
       const mode = byKey(D.COMMUTE_MODES, top);
       const commute = !mode || top === "wfh" ? "Mostly from home" : (s.commute.distance || 0) + " km, mostly " + mode.label.toLowerCase().replace(/ \(.*\)/, "");
-      const pets = [s.pets.dogs ? plural(Math.round(s.pets.dogs), "dog") : "", s.pets.cats ? plural(Math.round(s.pets.cats), "cat") : ""].filter(Boolean).join(", ") || "No pets";
+      const pets = petWords(s.pets);
       const water = kgFmt((s.water.liters || 0) / 30.4 / householdOf(s)) + " litres a day";
       return [meals, energy, flights, commute, pets, water];
     };
@@ -6206,6 +6372,8 @@
               "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
               "<strong>GitHub Pages</strong>: hosting the website.",
               "<strong>Apple Push Notification service</strong>: delivers app notifications about friends' activity, if you turn them on.",
+              "<strong>postcodes.io</strong>: if you use <em>Work it out from two postcodes</em> for your commute, the two postcodes are looked up there to find the distance. We don't save them.",
+              "<strong>DVSA MOT history service</strong>: if you look up your car's miles from its number plate, the plate is sent to the DVSA to read its MOT mileage. We don't save the plate, only the miles you keep.",
             ]) +
             "<p>Some of these providers may process data outside the UK. Where they do, they rely on safeguards recognised under UK data protection law, such as adequacy regulations or standard contractual clauses.</p>",
         ],
@@ -7256,21 +7424,31 @@
   const actions = {
     "goto-step": (el) => {
       ui.step = Number(el.dataset.step);
+      ui.q = 0;
       ui.commuteOpen = null;
       ui.airport = null;
       render();
     },
     "prev-step": () => {
-      ui.step = Math.max(0, ui.step - 1);
       ui.airport = null;
+      if (ui.q > 0) ui.q--;
+      else if (ui.step > 0) {
+        ui.step--;
+        ui.q = 99; // the previous step's last question
+      }
       render();
       window.scrollTo(0, 0);
     },
     "next-step": () => {
       ui.airport = null;
       ui.commuteOpen = null;
-      if (ui.step < STEPS.length - 1) {
+      if (ui.q < (ui.qCount || 1) - 1) {
+        ui.q++;
+        render();
+        window.scrollTo(0, 0);
+      } else if (ui.step < STEPS.length - 1) {
         ui.step++;
+        ui.q = 0;
         render();
         window.scrollTo(0, 0);
       } else finishSurvey();
@@ -7463,6 +7641,34 @@
       else location.hash = "#/";
       window.scrollTo(0, 0);
     },
+    "meal-count": (el) => {
+      const counts = mealDayCounts(survey);
+      const total = Object.values(counts).reduce((t, v) => t + v, 0);
+      const k = el.dataset.key, delta = Number(el.dataset.delta);
+      if (delta > 0 && total >= 7) return;
+      counts[k] = Math.max(0, (counts[k] || 0) + delta);
+      survey.meals = mealsFromCounts(survey.meals, counts);
+      surveyChanged();
+      render();
+    },
+    "add-extra": (el) => {
+      const b = survey.banking || {};
+      const extra = (Array.isArray(b.extra) ? b.extra : []).concat(el.dataset.kind === "pension" ? { kind: "pension", provider: "", amount: 0 } : { kind: "bank", bank: "", amount: 0 });
+      survey.banking = { ...b, extra };
+      surveyChanged();
+      render();
+    },
+    "remove-extra": (el) => {
+      const b = survey.banking || {};
+      survey.banking = { ...b, extra: (b.extra || []).filter((_, i) => i !== Number(el.dataset.i)) };
+      surveyChanged();
+      render();
+    },
+    "pc-toggle": (el, e) => {
+      e.preventDefault();
+      ui.pcFind = { ...(ui.pcFind || {}), open: !(ui.pcFind && ui.pcFind.open) };
+      render();
+    },
     "pick-meal-day": (el) => {
       ui.mealDay = el.dataset.day;
       render();
@@ -7499,6 +7705,7 @@
       ui.reviewing = false;
       ui.fromReview = true;
       ui.step = step;
+      ui.q = 0;
       location.hash = "#/";
       render();
       window.scrollTo(0, 0);
@@ -7736,6 +7943,7 @@
       ui.draft = ui.prevSurvey = null;
       survey = normaliseSurvey(null);
       ui.step = 0;
+      ui.q = 0;
       location.hash = "#/";
       render();
     },
@@ -7934,6 +8142,7 @@
       ui.userName = "";
       survey = normaliseSurvey(null);
       ui.step = 0;
+      ui.q = 0;
       location.hash = "#/";
       render();
       alert("Your account has been deleted.");
@@ -7948,6 +8157,7 @@
       ui.newSurvey = true;
       ui.editing = false;
       ui.step = 0;
+      ui.q = 0;
       render();
       window.scrollTo(0, 0);
     },
@@ -7975,6 +8185,7 @@
       ui.reviewing = false;
       ui.fromReview = true;
       ui.step = Number(el.dataset.step) || 0;
+      ui.q = 0;
       render();
       window.scrollTo(0, 0);
     },
@@ -7992,6 +8203,7 @@
       ui.draft = null;
       ui.prevSurvey = null;
       ui.step = 0;
+      ui.q = 0;
       ui.flash = "New survey cancelled. Your previous answers are unchanged.";
       render();
       window.scrollTo(0, 0);
@@ -8004,6 +8216,7 @@
       ui.editBase = JSON.parse(JSON.stringify(survey));
       ui.editing = true;
       ui.step = 0;
+      ui.q = 0;
       if (location.hash === "#/" || location.hash === "") render();
       else location.hash = "#/";
       window.scrollTo(0, 0);
@@ -8014,6 +8227,7 @@
       CATEGORIES.forEach((c) => lsRemove(KEY_HABITS + c));
       survey = normaliseSurvey(null);
       ui.step = 0;
+      ui.q = 0;
       render();
     },
   };
@@ -8081,6 +8295,13 @@
       row.querySelector('[data-action="save-input"][data-key="' + key + '"]').disabled = !dirty;
       return;
     }
+    if (t.dataset.extra != null && t.tagName === "INPUT") {
+      const i = Number(t.dataset.extra);
+      const b = survey.banking || {};
+      survey.banking = { ...b, extra: (b.extra || []).map((x, k) => (k === i ? { ...x, amount: Math.max(0, Number(t.value) || 0) } : x)) };
+      surveyChanged();
+      return;
+    }
     if (t.dataset.field && t.tagName === "INPUT") {
       let v = Number(t.value);
       if (t.dataset.field === "energy.household") v = Math.max(1, v);
@@ -8102,6 +8323,12 @@
         }
       }
       if (t.dataset.rerender) render();
+    } else if (t.dataset.extra != null && t.tagName === "SELECT") {
+      const i = Number(t.dataset.extra);
+      const b = survey.banking || {};
+      survey.banking = { ...b, extra: (b.extra || []).map((x, k) => (k === i ? { ...x, [t.dataset.extraField]: t.value } : x)) };
+      surveyChanged();
+      render();
     } else if (t.dataset.flight) {
       const i = Number(t.dataset.flight);
       const value = t.type === "checkbox" ? t.checked : t.value;
@@ -8184,6 +8411,57 @@
       if (!out.error && ui.actsInfo) ui.actsInfo = { ...ui.actsInfo, verified: { ...(ui.actsInfo.verified || {}), mobilise: new Date().toISOString() } };
       render();
       return;
+    }
+    if (/^mot-form-\d+$/.test(e.target.id)) {
+      e.preventDefault();
+      const i = Number(e.target.dataset.carIndex);
+      const reg = document.getElementById("mot-reg-" + i).value.trim();
+      ui.mot = { ...(ui.mot || {}), [i]: { reg, busy: true } };
+      render();
+      let out = {};
+      try {
+        const { data } = await sb.auth.getSession();
+        const token = data && data.session && data.session.access_token;
+        const res = await fetch(SUPABASE_URL + "/functions/v1/mot-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + (token || SUPABASE_ANON_KEY) },
+          body: JSON.stringify({ reg }),
+        });
+        out = await res.json().catch(() => ({}));
+      } catch (err) {
+        out = { error: "Couldn't look that up just now. Please try again, or enter the miles yourself." };
+      }
+      if (out.ok && out.milesPerYear) {
+        const fuel = motFuel(out.fuelType || "");
+        survey.cars = survey.cars.map((c, k) => (k === i ? { ...c, miles: out.milesPerYear, ...(fuel ? { fuel } : {}) } : c));
+        surveyChanged();
+        ui.mot[i] = { reg, ok: true, msg: [out.make, out.model].filter(Boolean).join(" ") + ": about " + kgFmt(out.milesPerYear) + " miles a year from its MOTs. We've put that in." };
+      } else ui.mot[i] = { reg, msg: out.ok ? "Its MOT records don't have enough readings to work out a yearly figure yet." : out.error || "Couldn't look that up." };
+      return render();
+    }
+    if (e.target.id === "pc-form") {
+      e.preventDefault();
+      const from = document.getElementById("pc-from").value.trim();
+      const to = document.getElementById("pc-to").value.trim();
+      ui.pcFind = { open: true, from, to };
+      if (!from || !to) {
+        ui.pcFind.msg = "Add both: where you start and where you work.";
+        return render();
+      }
+      ui.pcFind.busy = true;
+      render();
+      try {
+        const out = await findCommuteKm(from, to);
+        if (out.error) ui.pcFind = { open: true, from, to, msg: out.error };
+        else {
+          survey.commute = { ...survey.commute, distance: out.km };
+          surveyChanged();
+          ui.pcFind = { open: true, from, to, ok: true, msg: "About " + out.km + " km each way. We've put that in above." };
+        }
+      } catch (err) {
+        ui.pcFind = { open: true, from, to, msg: "Couldn't look that up just now. Check your connection, or enter a rough distance above." };
+      }
+      return render();
     }
     if (e.target.id === "energy-send-form") {
       e.preventDefault();
