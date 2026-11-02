@@ -7639,7 +7639,7 @@
   // tick. Not on a step's last question, so a new section never jumps in.
   function autoAdvance() {
     const step = ui.step, q = ui.q;
-    if (q >= (ui.qCount || 1) - 1) return;
+    if (currentPath() !== "/" || q >= (ui.qCount || 1) - 1) return;
     setTimeout(() => {
       if (currentPath() === "/" && ui.step === step && ui.q === q) fadeToQuestion(q + 1);
     }, 320);
@@ -7734,6 +7734,8 @@
       if (owns === "no") survey.cars = [];
       surveyChanged();
       render();
+      // "Yes" opens the car's details on the same question.
+      if (owns === "no") autoAdvance();
     },
     "set-car": (el) => {
       const i = Number(el.dataset.index);
@@ -7829,6 +7831,7 @@
       survey.energy = { ...survey.energy, billPayer: el.dataset.value };
       surveyChanged();
       render();
+      autoAdvance();
     },
     "energy-asked": () => {
       const t = { ...actsTicked(), energyAsked: true };
@@ -7845,6 +7848,8 @@
       survey.energy = { ...survey.energy, greenTariff: el.dataset.value === "1" };
       surveyChanged();
       render();
+      // "No" asks who chooses the supplier on the same question.
+      if (el.dataset.value === "1") autoAdvance();
     },
     "step-field": (el) => {
       const [x, y] = el.dataset.field.split(".");
@@ -8566,6 +8571,11 @@
         }
       }
       if (t.dataset.rerender) render();
+      // Picking a bank or pension provider moves on, like a tapped answer.
+      if (t.dataset.field === "banking.bank" || t.dataset.field === "banking.pensionProvider") {
+        if (!t.dataset.rerender) render();
+        autoAdvance();
+      }
     } else if (t.dataset.extra != null && t.tagName === "SELECT") {
       const i = Number(t.dataset.extra);
       const b = survey.banking || {};
