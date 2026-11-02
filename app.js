@@ -129,6 +129,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
     pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
     link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
@@ -565,7 +566,12 @@
     if (canSync() && sb) {
       try {
         await sb.from("survey_history").insert({ user_id: currentUser.id, survey_data: entry.survey, total_yearly: entry.totalYearly });
+        notifyFriends({ kind: "survey" });
       } catch (e) {}
+    }
+    if (isNativeApp()) {
+      sundaySig = null;
+      syncSunday();
     }
   }
 
@@ -3626,6 +3632,7 @@
   }
   function renderHabitsPage() {
     const { acts, ready, billPayer } = habitActs();
+    syncSunday(acts);
     const state = (a) => (a.done ? "done" : a.pending ? "wait" : "todo");
     const made = acts.filter((a) => a.done).length;
     const waiting = acts.filter((a) => state(a) === "wait").length;
@@ -3726,7 +3733,7 @@
       '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
       (ready ? '<a class="hb-swlink" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
-      "</div></div>" + ring + "</header>" +
+      "</div></div>" + ring + "</header>" + sundayOffer(acts) +
       group("Switch the big things", billPayer ? "Acts 1 to 4 · 1, 3 and 4 tick from your survey" : "Acts 1 to 4 · they tick from your survey", acts.slice(0, 4)) +
       group("Keep measuring", "Act 5", acts.slice(4, 5)) +
       group("Use your voice", "Acts 6 and 7 · verified, never ticked by hand", acts.slice(5)) +
@@ -5411,6 +5418,181 @@
     }
   }
 
+  // ---------- notifications (app only) ----------
+  // Sunday reminder: scheduled on the phone itself (no server), every Sunday
+  // at 10am with your next big switch, until Acts 1 to 4 are all done.
+  // Friends' activity (iOS): Apple push, sent by the push-notify function
+  // when a friend retakes the survey, cheers you on, or accepts your request.
+  // Both are offered once, and can be switched on or off on the Account page.
+  const KEY_SUNDAY = "co2_notify_sunday"; // "on" | "off"
+  const KEY_FEEDPUSH = "co2_notify_feed"; // "on" | "off"
+  const KEY_PUSHTOKEN = "co2_push_token";
+  const SUNDAY_ID = 7001;
+  const NOTIF_OFF_MSG = "Notifications are off for CO2 Counter. To allow them, open your phone's Settings, then Notifications, then CO2 Counter.";
+  const nativePlugins = {};
+  const plugin = (name) => {
+    if (!isNativeApp() || !window.Capacitor.registerPlugin) return null;
+    return nativePlugins[name] || (nativePlugins[name] = window.Capacitor.registerPlugin(name));
+  };
+  const canFeedPush = () => isNativeApp() && !!window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios";
+  const switchesLeft = (acts) => (survey && survey.completedAt ? (acts || habitActs().acts).slice(0, 4).filter((a) => !a.done) : null);
+  function sundayText(left) {
+    const top = left.slice().sort((a, b) => (b.save || 0) - (a.save || 0))[0];
+    return {
+      title: "Your Sunday switch",
+      body: top.name + (top.save >= 0.5 ? ": could save about " + kgFmt(top.save) + " kg a year." : ".") + " " + (left.length === 4 ? "4 big switches to go." : 4 - left.length + " of 4 big switches done."),
+    };
+  }
+  let sundaySig = null;
+  async function syncSunday(acts) {
+    const LN = plugin("LocalNotifications");
+    if (!LN) return;
+    const left = switchesLeft(acts);
+    const on = lsGet(KEY_SUNDAY, "") === "on" && left && left.length > 0;
+    const t = on ? sundayText(left) : null;
+    const sig = on ? t.title + "|" + t.body : "off";
+    if (sig === sundaySig) return;
+    sundaySig = sig;
+    try {
+      await LN.cancel({ notifications: [{ id: SUNDAY_ID }] });
+      if (on) await LN.schedule({ notifications: [{ id: SUNDAY_ID, title: t.title, body: t.body, schedule: { on: { weekday: 1, hour: 10, minute: 0 }, allowWhileIdle: true }, extra: { route: "#/habits" } }] });
+    } catch (e) {
+      sundaySig = null;
+    }
+  }
+  async function turnOnSunday() {
+    const LN = plugin("LocalNotifications");
+    if (!LN) return;
+    try {
+      let perm = await LN.checkPermissions();
+      if (perm.display !== "granted") perm = await LN.requestPermissions();
+      if (perm.display !== "granted") {
+        lsSet(KEY_SUNDAY, "off");
+        ui.flash = NOTIF_OFF_MSG;
+      } else {
+        lsSet(KEY_SUNDAY, "on");
+        ui.flash = "Done. We'll remind you on Sunday mornings until your four big switches are done.";
+      }
+    } catch (e) {
+      ui.flash = "Couldn't switch on reminders. Please try again.";
+    }
+    sundaySig = null;
+    await syncSunday();
+    render();
+  }
+  async function turnOffSunday() {
+    lsSet(KEY_SUNDAY, "off");
+    sundaySig = null;
+    await syncSunday();
+    render();
+  }
+  let pushListening = false;
+  async function registerPush() {
+    const PN = plugin("PushNotifications");
+    if (!PN || !currentUser) return;
+    if (!pushListening) {
+      pushListening = true;
+      await PN.addListener("registration", (t) => {
+        lsSet(KEY_PUSHTOKEN, t.value);
+        if (currentUser && sb) sb.rpc("save_push_token", { p_token: t.value, p_platform: "ios" }).then(() => {}, () => {});
+      });
+      await PN.addListener("registrationError", () => {});
+      await PN.addListener("pushNotificationActionPerformed", (a) => {
+        const d = (a && a.notification && a.notification.data) || {};
+        location.hash = /^#\/[a-z]/.test(d.route || "") ? d.route : "#/friends";
+      });
+    }
+    await PN.register();
+  }
+  async function turnOnFeedPush() {
+    const PN = plugin("PushNotifications");
+    if (!PN) return;
+    try {
+      let perm = await PN.checkPermissions();
+      if (perm.receive !== "granted") perm = await PN.requestPermissions();
+      if (perm.receive !== "granted") {
+        lsSet(KEY_FEEDPUSH, "off");
+        ui.flash = NOTIF_OFF_MSG;
+      } else {
+        lsSet(KEY_FEEDPUSH, "on");
+        await registerPush();
+        ui.flash = "Done. We'll tell you when friends retake the survey or cheer you on.";
+      }
+    } catch (e) {
+      ui.flash = "Couldn't switch on notifications. Please try again.";
+    }
+    render();
+  }
+  async function forgetPushToken() {
+    const t = lsGet(KEY_PUSHTOKEN, "");
+    if (t && sb && currentUser) {
+      try {
+        await sb.rpc("remove_push_token", { p_token: t });
+      } catch (e) {}
+    }
+  }
+  async function turnOffFeedPush() {
+    lsSet(KEY_FEEDPUSH, "off");
+    await forgetPushToken();
+    render();
+  }
+  // Tell friends (through push-notify) about something you just did. Runs on
+  // the website too, so app users hear about friends who use the site.
+  async function notifyFriends(body) {
+    if (!sb || !currentUser) return;
+    try {
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session && data.session.access_token;
+      if (!token) return;
+      await fetch(SUPABASE_URL + "/functions/v1/push-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + token },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {}
+  }
+  let notifStarted = false;
+  function notifStart() {
+    if (!isNativeApp()) return;
+    if (!notifStarted) {
+      notifStarted = true;
+      const LN = plugin("LocalNotifications");
+      if (LN)
+        Promise.resolve(LN.addListener("localNotificationActionPerformed", (a) => {
+          const r = a && a.notification && a.notification.extra && a.notification.extra.route;
+          location.hash = r || "#/habits";
+        })).catch(() => {});
+    }
+    syncSunday();
+    if (currentUser && canFeedPush() && lsGet(KEY_FEEDPUSH, "") === "on") registerPush().catch(() => {});
+  }
+  const notifCard = (id, title, text, onAction, onLabel, noAction) =>
+    '<section class="glass notif-offer" aria-labelledby="' + id + '"><span class="notif-ic" aria-hidden="true">' + icon("bell") + '</span><div class="min0 grow"><h2 id="' + id + '" class="display">' + title + '</h2><p class="sm muted">' + text + "</p>" +
+    '<div class="chip-row mt-3"><button type="button" class="btn btn-green btn-sm" data-action="' + onAction + '">' + onLabel + '</button><button type="button" class="btn btn-outline btn-sm" data-action="' + noAction + '">No thanks</button></div></div></section>';
+  function sundayOffer(acts) {
+    if (!isNativeApp() || lsGet(KEY_SUNDAY, "")) return "";
+    const left = switchesLeft(acts);
+    if (!left || !left.length) return "";
+    return notifCard("nf-sun", "A nudge on Sundays?", "One reminder each Sunday morning with your next big switch, until all four are done.", "notif-sunday-on", "Remind me on Sundays", "notif-sunday-no");
+  }
+  function feedOffer() {
+    if (!canFeedPush() || lsGet(KEY_FEEDPUSH, "")) return "";
+    if (!friends.rows.some((f) => f.status === "accepted")) return "";
+    return notifCard("nf-feed", "Know when friends make a move", "Get a notification when a friend retakes the survey, cheers you on or accepts your request.", "notif-feed-on", "Turn on", "notif-feed-no");
+  }
+  function notifSettingsCard() {
+    if (!isNativeApp()) return "";
+    const row = (title, text, on, action) =>
+      '<div class="acc-row"><span class="acc-row-text"><b class="display">' + title + "</b>" + text + "</span>" +
+      '<button type="button" class="notif-switch' + (on ? " on" : "") + '" role="switch" aria-checked="' + on + '" aria-label="' + title + '" data-action="' + action + '"><span></span></button></div>';
+    return (
+      '<section class="glass acc-box" aria-labelledby="acc-notif"><h2 id="acc-notif" class="display">Notifications</h2>' +
+      row("Sunday reminder", "Your next big switch, each Sunday morning until all four are done.", lsGet(KEY_SUNDAY, "") === "on", "notif-sunday-toggle") +
+      (canFeedPush() ? row("Friends' activity", "When friends retake the survey, cheer you on or accept your request.", lsGet(KEY_FEEDPUSH, "") === "on", "notif-feed-toggle") : "") +
+      "</section>"
+    );
+  }
+
   // ---------- report and block ----------
   // A small "..." button on people and groups opens a sheet to report them
   // to us or block them. Blocking removes the friendship, stops new
@@ -5821,7 +6003,7 @@
     const stacks = feedStacks(posts);
     const shown = ui.feedShown || 5;
     const feed =
-      '<div class="fr-feedhead"><h2 class="display">Feed</h2><span class="xs muted">Retakes, monthly standings and new friends</span></div>' +
+      feedOffer() + '<div class="fr-feedhead"><h2 class="display">Feed</h2><span class="xs muted">Retakes, monthly standings and new friends</span></div>' +
       (posts.length ? stacks.slice(0, shown).map(stackHtml).join("") +
           (stacks.length > shown ? '<button type="button" class="btn btn-outline btn-sm fr-older" data-action="feed-more">Show older posts</button>' : '<p class="center sm muted">You\'re all caught up</p>')
         : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
@@ -5900,6 +6082,7 @@
             "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
             "<strong>Letters sent from the app</strong>: if you send a letter to your MP or a message to whoever pays your energy bills from CO2 Counter, it's sent through our email provider, Resend, from our address, with a copy to you and replies going to you. We keep only the date and the type of letter, not what you wrote or your address.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
+            "<strong>Notifications (app only)</strong>: Sunday reminders are scheduled on your phone, and nothing about them is sent to us. If you turn on notifications about friends' activity, we store your phone's push token (an address Apple gives your phone for notifications) until you turn them off, sign out or delete your account.",
             "<strong>Reports and blocks</strong>: if you report someone or a group, we keep the report (the reason, anything you add, and the name at the time) so we can review it. If you block someone, we keep that so they can't contact you. The person you report or block isn't told.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
@@ -5935,6 +6118,7 @@
               "<strong>Supabase</strong>: sign-in and database (your account, saved answers and support status).",
               "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
               "<strong>GitHub Pages</strong>: hosting the website.",
+              "<strong>Apple Push Notification service</strong>: delivers app notifications about friends' activity, if you turn them on.",
             ]) +
             "<p>Some of these providers may process data outside the UK. Where they do, they rely on safeguards recognised under UK data protection law, such as adequacy regulations or standard contractual clauses.</p>",
         ],
@@ -6237,7 +6421,7 @@
     return (
       '<div class="container account-v2 acc-page"><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
       '<main class="acc-main"><h1 class="display acc-h1">Account</h1><div class="acc-row2">' + profile + plan + "</div>" +
-      aboutYouCard() +
+      aboutYouCard() + notifSettingsCard() +
       (ui.isAdmin
         ? '<section class="glass acc-box"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
           esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
@@ -6707,6 +6891,7 @@
       await loadHistory();
       if (currentPath() === "/account") location.hash = "#/results";
     }
+    notifStart();
     render();
   }
 
@@ -7443,6 +7628,8 @@
       render();
     },
     "sign-out": async () => {
+      // This phone stops getting the signed-out account's notifications.
+      if (isNativeApp()) await forgetPushToken();
       if (sb) await sb.auth.signOut();
       currentUser = null;
       membership = null;
@@ -7508,6 +7695,7 @@
         post.cheers = Math.max(0, post.cheers + (data ? 1 : -1));
         render();
       }
+      if (!error && data) notifyFriends({ kind: "cheer", key: post.post_key });
     },
     "accept-privacy": () => acceptPrivacy(),
     "feed-stack": (el) => {
@@ -7519,6 +7707,18 @@
       ui.feedShown = (ui.feedShown || 5) + 5;
       render();
     },
+    "notif-sunday-on": () => turnOnSunday(),
+    "notif-sunday-no": () => {
+      lsSet(KEY_SUNDAY, "off");
+      render();
+    },
+    "notif-sunday-toggle": () => (lsGet(KEY_SUNDAY, "") === "on" ? turnOffSunday() : turnOnSunday()),
+    "notif-feed-on": () => turnOnFeedPush(),
+    "notif-feed-no": () => {
+      lsSet(KEY_FEEDPUSH, "off");
+      render();
+    },
+    "notif-feed-toggle": () => (lsGet(KEY_FEEDPUSH, "") === "on" ? turnOffFeedPush() : turnOnFeedPush()),
     safety: (el) => {
       ui.safety = { kind: el.dataset.kind, id: el.dataset.id, name: el.dataset.name, reason: "" };
       openSafety();
@@ -7599,7 +7799,8 @@
       if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
     },
     "friend-accept": async (el) => {
-      await sb.from("friendships").update({ status: "accepted" }).eq("id", el.dataset.id);
+      const { error: accErr } = await sb.from("friendships").update({ status: "accepted" }).eq("id", el.dataset.id);
+      if (!accErr) notifyFriends({ kind: "friend", id: el.dataset.id });
       friends.loaded = false;
       await loadFriends();
     },
@@ -8041,6 +8242,7 @@
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
     await loadHistory();
+    notifStart();
     // Coming back with a finished survey: start on your plan (or your results
     // when signed out), not on the survey you've already done.
     const bareHome = (location.pathname === "/" || /\/index\.html$/.test(location.pathname)) && /^#?$/.test(location.hash);

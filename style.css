@@ -4917,3 +4917,15 @@ span.todo-guide { cursor: pointer; }
 .an-report { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: rgba(255, 252, 245, 0.55); border: 1px solid var(--glass-border); }
 .an-report.open { border-color: rgba(184, 101, 61, 0.45); }
 .an-report p { margin: 2px 0 0; }
+
+/* Notifications: offer cards and Account switches */
+.notif-offer { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; margin: 16px 0; }
+.notif-offer h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; }
+.notif-offer p { margin: 0; }
+.notif-ic { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; background: rgba(217, 164, 65, 0.22); color: #8A5F12; }
+.notif-ic .icon { width: 22px; height: 22px; }
+.notif-switch { flex: none; position: relative; width: 50px; height: 30px; border: 0; border-radius: 999px; background: rgba(46, 42, 34, 0.18); cursor: pointer; transition: background 0.2s; }
+.notif-switch span { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s; }
+.notif-switch.on { background: #3F5B3A; }
+.notif-switch.on span { transform: translateX(20px); }
+@media (max-width: 640px) { .notif-offer { padding: 14px; gap: 10px; } .notif-ic { width: 36px; height: 36px; border-radius: 12px; } }

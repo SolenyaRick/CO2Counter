@@ -362,6 +362,38 @@ so content clears the notch/Dynamic Island and home indicator, and so
 "Add to Home Screen" from Safari (a separate, App-Store-free path to a
 home-screen icon - see `manifest.json`) looks reasonable too.
 
+## App notifications
+
+Two kinds, both only in the app and both offered once (and switchable on the
+Account page):
+
+- **Sunday reminder.** Scheduled on the phone (`@capacitor/local-notifications`),
+  every Sunday at 10am, naming the next big switch, until Acts 1 to 4 are all
+  done. No server or setup needed.
+- **Friends' activity (iOS).** Apple push (`@capacitor/push-notifications`),
+  sent by the `push-notify` Edge Function when a friend finishes a survey,
+  cheers you on, or accepts your request. Android needs Firebase first, so the
+  app only offers this on iPhone for now.
+
+One-off setup for friends' activity:
+
+1. Run the push SQL (the `push_tokens` and `push_sent` tables at the end of
+   `supabase/schema.sql`) in the Supabase SQL Editor.
+2. Apple Developer → Certificates, IDs & Profiles → **Keys** → **+**, tick
+   **Apple Push Notifications service (APNs)**, continue and download the `.p8`
+   file (you can only download it once). Note the **Key ID**, and your **Team ID**
+   (top right of the developer site).
+3. Supabase → Edge Functions → Secrets: add `APNS_KEY_ID`, `APNS_TEAM_ID` and
+   `APNS_PRIVATE_KEY` (paste the whole `.p8` file, including the BEGIN/END lines).
+4. Deploy the function: Edge Functions → **Deploy a new function** → name it
+   `push-notify` and paste `supabase/functions/push-notify/index.ts`, or
+   `npx supabase functions deploy push-notify --project-ref fbgfylfnbtxzbwgilktt`.
+5. In Xcode: App target → **Signing & Capabilities** → **+ Capability** →
+   **Push Notifications**. Then archive and upload as usual.
+
+Until the secrets are set the function quietly sends nothing, so the app keeps
+working.
+
 ## Android app (Capacitor)
 
 The `android/` folder is the same Capacitor wrapper for Android, made with
