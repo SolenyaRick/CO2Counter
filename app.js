@@ -1207,20 +1207,21 @@
     return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)) };
   }
 
-  // ---------- fun comparisons ----------
-  // A footprint as Liz Truss lettuces, birds and fish (by weight), or as a
-  // cube of CO2 gas measured in Danny DeVitos, Abraham Lincolns and so on.
-  function funList() {
-    const f = D.FUN_COMPARISONS;
-    const w = f.weights.map((x) => ({ type: "w", ...x }));
-    const h = f.heights.map((x) => ({ type: "h", ...x }));
-    const out = [];
-    for (let i = 0; i < Math.max(w.length, h.length); i++) {
-      if (w[i]) out.push(w[i]);
-      if (h[i]) out.push(h[i]);
-    }
-    return out;
-  }
+  // ---------- Picture it: your footprint as lettuces, axolotls, Danny DeVitos ----------
+  // Now and after the big switches in Real Zero's 7 Acts. Weights become a
+  // field of dots or a grid of drawings; heights a stack of figures as tall
+  // as your CO2 would be as a cube of gas; giants "years of you" stripes.
+  const piItems = () => D.FUN_COMPARISONS.items;
+  const KEY_MASCOT = "co2_mascot";
+  const piMascot = () => {
+    const k = lsGet(KEY_MASCOT, "");
+    return piItems().some((x) => x.key === k) ? k : "";
+  };
+  const piIndex = () => {
+    const n = piItems().length;
+    if (ui.piIdx == null) ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === piMascot()));
+    return ((ui.piIdx % n) + n) % n;
+  };
   // 15,600 · 140 · 11 · 3½
   function funNum(n) {
     if (n >= 1000) return (Math.round(n / 100) * 100).toLocaleString("en-GB");
@@ -1230,97 +1231,271 @@
     return String(Math.floor(half)) + (half % 1 ? "½" : "");
   }
   const cubeSide = (kg) => Math.cbrt(Math.max(0, kg) / D.FUN_COMPARISONS.co2Density);
-  // mode: "weighs" (your footprint) or "saves" (a cut).
-  function funFact(kg, item, mode) {
-    if (item.type === "h") {
-      const side = cubeSide(kg);
-      const n = side / item.m;
-      const what = n >= 1 ? funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many) : "less than one " + item.one;
-      return mode === "saves"
-        ? "As gas, that cut is a cube of CO₂ " + side.toFixed(1).replace(/\.0$/, "") + " m tall: " + what + " stacked up."
-        : "As gas, it would fill a cube " + side.toFixed(1).replace(/\.0$/, "") + " m tall: " + what + " stacked up.";
-    }
-    const n = kg / item.kg;
-    const amount = n >= 1 ? funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many) : Math.max(1, Math.round(n * 100)) + "% of " + (/^[aeiou]/i.test(item.one) ? "an " : "a ") + item.one;
-    return mode === "saves" ? "That's " + amount + " less CO₂ a year." : "That weighs as much as " + amount + ".";
-  }
-  // ---------- Picture it: now and after the 7 Acts ----------
-  // Weights as rows of icons (each icon may stand for several), the cut
-  // shown faded; heights as two stacks of figures; tiny shares as a bar.
-  const NICE_UNITS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000];
-  const funIndex = () => {
-    const n = funList().length;
-    return (((ui.funIdx || 0) % n) + n) % n;
-  };
-  function infoModel(item, now, after, maxIcons, maxStack) {
-    if (item.type === "h") {
-      const sNow = cubeSide(now), sAfter = cubeSide(after);
-      const nNow = sNow / item.m, nAfter = sAfter / item.m;
-      const unit = NICE_UNITS.find((u) => nNow / u <= maxStack) || 1;
-      return { kind: "stack", item, nNow, nAfter, sNow, sAfter, unit, iNow: Math.max(1, Math.round(nNow / unit)), iAfter: Math.max(nAfter > 0 ? 1 : 0, Math.round(nAfter / unit)) };
-    }
-    const nNow = now / item.kg, nAfter = after / item.kg;
-    if (nNow < 1) return { kind: "share", item, nNow, nAfter };
-    const unit = NICE_UNITS.find((u) => nNow / u <= maxIcons) || 1;
-    return { kind: "grid", item, nNow, nAfter, unit, iNow: Math.max(1, Math.round(nNow / unit)), iAfter: Math.round(nAfter / unit) };
-  }
-  const pct = (n) => (n * 100 < 10 ? (Math.round(n * 1000) / 10).toFixed(1) : String(Math.round(n * 100))) + "%";
-  const ofA = (item) => (/^[aeiou]/i.test(item.one) ? "an " : "a ") + item.one;
   const howMany = (n, item) => funNum(n) + " " + (funNum(n) === "1" ? item.one : item.many);
-  function infoCaption(m) {
-    const it = m.item;
-    if (m.kind === "share")
-      return "It would take " + funNum(1 / m.nNow) + " years of your footprint to weigh as much as " + ofA(it) + " now, and " + funNum(1 / Math.max(m.nAfter, 1e-9)) + " years after the 7 Acts.";
-    if (m.kind === "stack")
-      return "As gas, your CO₂ would fill a cube " + m.sNow.toFixed(1) + " m tall now, and " + m.sAfter.toFixed(1) + " m after the 7 Acts." + (m.unit > 1 ? " Each " + it.emoji + " is " + funNum(m.unit) + " " + it.many + "." : "");
-    return "The 7 Acts would save " + howMany(m.nNow - m.nAfter, it) + " a year." + (m.unit > 1 ? " Each " + it.emoji + " is " + funNum(m.unit) + " " + it.many + "." : "");
+  // The clay look: soft highlight from the top left and a shaded lower edge.
+  const PI_DEFS =
+    '<filter id="pi-clay" x="-8%" y="-8%" width="116%" height="124%" color-interpolation-filters="sRGB">' +
+    '<feGaussianBlur in="SourceAlpha" stdDeviation="1.1" result="blur"/>' +
+    '<feSpecularLighting in="blur" surfaceScale="2.4" specularConstant=".7" specularExponent="14" lighting-color="#FFFFFF" result="spec"><fePointLight x="6" y="-14" z="26"/></feSpecularLighting>' +
+    '<feComposite in="spec" in2="SourceAlpha" operator="in" result="hi"/><feOffset in="SourceAlpha" dx="0" dy="-1.4" result="up"/>' +
+    '<feComposite in="SourceAlpha" in2="up" operator="out" result="edge"/><feGaussianBlur in="edge" stdDeviation=".5" result="edgeSoft"/>' +
+    '<feFlood flood-color="#000000" flood-opacity=".26"/><feComposite in2="edgeSoft" operator="in" result="shade"/>' +
+    '<feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/><feMergeNode in="hi"/></feMerge></filter>' +
+    '<filter id="pi-grey" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/></filter>';
+  const piDefsSvg = () => '<svg class="pi-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>' + PI_DEFS + "</defs></svg>";
+  // One drawing, in a 48 x 48 box.
+  function piArt(key, shadow) {
+    const parts = (D.FUN_COMPARISONS.art[key] || [])
+      .map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"/>')
+      .join("");
+    return (shadow ? '<path d="M24 46.4m-15 0a15 2.1 0 1 0 30 0a15 2.1 0 1 0 -30 0" fill="rgba(46,42,34,.14)"/>' : "") + '<g filter="url(#pi-clay)">' + parts + "</g>";
   }
+  const piIcon = (key, size) => '<svg class="pi-ic" viewBox="0 0 48 48" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' + piArt(key, true) + "</svg>";
+  const f1 = (v) => (Math.round(v * 10) / 10).toString();
+
+  // The picture for one comparison, as a single SVG W x H (it scales to fit).
+  // o: { w, h, big, minPitch, minCell, maxCell, maxPitch, uid }
+  function piModel(it, now, after, o) {
+    const W = o.w, H = o.h, big = !!o.big, uid = o.uid || "p";
+    const base = { it, uid, W, H, big };
+    const fs = (a, b) => (big ? a : b);
+    if (it.type === "h") {
+      // Stacks of the real thing, on each other's shoulders, as tall as the
+      // cube of gas now and after.
+      const sNow = cubeSide(now), sAft = cubeSide(after);
+      const nNow = sNow / it.size, nAft = sAft / it.size;
+      const ground = H - fs(34, 22), top = fs(46, 26);
+      const uNow = Math.max(1, Math.round(nNow * 2)), uAft = Math.round(nAft * 2);
+      const fh = Math.min((ground - top) / (Math.max(uNow, nNow * 2) / 2), (W - 120) / 2);
+      const k = fh / it.size;
+      const colW = fh, gap = Math.max(30, colW * 0.45), cutGap = Math.max(colW / 2 + 6, fs(74, 34));
+      const groupW = 44 + colW * 1.5 + gap + cutGap + fs(40, 22);
+      const x0 = Math.max(0, (W - groupW) / 2);
+      const rx = x0 + 28, xNow = x0 + 44, xAft = xNow + colW + gap;
+      const slots = (x, n, solid) => {
+        let s = "";
+        for (let j = 0; j < n; j++)
+          s += '<svg x="' + f1(x) + '" y="' + f1(ground - (j + 1) * fh / 2) + '" width="' + f1(colW) + '" height="' + f1(fh / 2) + '" viewBox="' + (j % 2 === 0 ? "0 24 48 24" : "0 0 48 24") +
+            '" preserveAspectRatio="xMidYMid meet" overflow="hidden"' + (j < solid ? "" : ' opacity=".2"') + ">" + piArt(it.key, false) + "</svg>";
+        return s;
+      };
+      const step = sNow * k > 260 ? 1 : 2;
+      let ruler = '<line x1="' + f1(Math.max(6, x0 - 10)) + '" y1="' + ground + '" x2="' + f1(Math.min(W, x0 + groupW + 10)) + '" y2="' + ground + '" stroke="rgba(46,42,34,.3)" stroke-width="1.5"/>' +
+        '<line x1="' + f1(rx) + '" y1="' + ground + '" x2="' + f1(rx) + '" y2="' + f1(ground - Math.floor(sNow) * k) + '" stroke="rgba(46,42,34,.3)" stroke-width="1.5"/>';
+      for (let m = 0; m <= Math.floor(sNow); m += step) {
+        const y = ground - m * k;
+        ruler += '<line x1="' + f1(rx - 4) + '" y1="' + f1(y) + '" x2="' + f1(rx + 4) + '" y2="' + f1(y) + '" stroke="rgba(46,42,34,.3)" stroke-width="1.5"/>' +
+          '<text x="' + f1(rx - 7) + '" y="' + f1(y + 3) + '" text-anchor="end" font-size="' + fs(18, 9) + '" fill="#5E574B">' + (m ? m + " m" : "0") + "</text>";
+      }
+      const topNow = ground - uNow * fh / 2, topAft = ground - uAft * fh / 2;
+      const label = (x, y, text, col, size, weight, anchor) => '<text x="' + f1(x) + '" y="' + f1(y) + '" text-anchor="' + (anchor || "middle") + '" font-size="' + size + '" font-weight="' + (weight || 800) + '" fill="' + col + '">' + text + "</text>";
+      const svg =
+        ruler + slots(xNow, uNow, uNow) + slots(xAft, uNow, uAft) +
+        label(xNow + colW / 2, topNow - 6, sNow.toFixed(1) + " m", "#9A5130", fs(30, 13)) +
+        label(xAft + colW / 2, topAft - 6, sAft.toFixed(1) + " m", "#3F5B3A", fs(30, 13)) +
+        label(xAft + colW / 2 + cutGap, topNow + fs(20, 10), "cut", "#9A5130", fs(22, 10), 700, "start") +
+        label(xNow + colW / 2, ground + fs(28, 16), "NOW", "#2E2A22", fs(22, 10)) +
+        label(xAft + colW / 2, ground + fs(28, 16), "AFTER", "#2E2A22", fs(22, 10));
+      return { ...base, mode: "tower", svg,
+        headline: funNum(nNow) + " → " + funNum(nAft), unitWord: it.many + " tall", title: "In " + it.many + ", stacked up",
+        caption: "As gas, your CO₂ would fill a cube " + sNow.toFixed(1) + " m tall: " + howMany(nNow, it) + " standing on each other's shoulders. After the 7 Acts, " + funNum(nAft) + "." };
+    }
+    const nNow = now / it.size, nAft = after / it.size;
+    if (nNow < 1) {
+      // Bigger than a whole footprint: years of you to weigh one, a stripe a year.
+      const yNow = Math.max(1, Math.round(it.size / Math.max(now, 1))), yAft = Math.max(1, Math.round(it.size / Math.max(after, 1)));
+      const gs = Math.floor(Math.min((W - 24) / 2, H - fs(90, 46)));
+      const gap = fs(28, 10), x1 = (W - gs * 2 - gap) / 2;
+      const giant = (x, years, col, label, labelCol, n) => {
+        const stripes = Array.from({ length: years }, (_, i) =>
+          '<rect x="' + (11.6 + i * 33.4 / years).toFixed(2) + '" y="18" width="' + Math.max(0.3, 33.4 / years - 0.5).toFixed(2) + '" height="20" fill="' + (i === 0 ? col : "rgba(255,255,255,.5)") + '" opacity=".85"/>').join("");
+        return '<svg x="' + f1(x) + '" y="0" width="' + gs + '" height="' + gs + '" viewBox="0 0 48 48" overflow="visible"><defs><clipPath id="pi-cl-' + uid + n + '"><path d="' + (D.FUN_COMPARISONS.body[it.key] || "") + '"/></clipPath></defs>' +
+          piArt(it.key, true) + '<g clip-path="url(#pi-cl-' + uid + n + ')">' + stripes + "</g></svg>" +
+          '<text x="' + f1(x) + '" y="' + f1(gs + fs(40, 18)) + '" font-size="' + fs(40, 15) + '" font-weight="800" fill="' + labelCol + '">' + years + " years of you</text>" +
+          '<text x="' + f1(x) + '" y="' + f1(gs + fs(70, 31)) + '" font-size="' + fs(18, 9) + '" font-weight="800" fill="#2E2A22">' + label + "</text>";
+      };
+      return { ...base, mode: "stripes", vh: gs + fs(80, 36),
+        svg: giant(x1, yNow, "#B8653D", "NOW", "#9A5130", "a") + giant(x1 + gs + gap, yAft, "#3F5B3A", "AFTER THE 7 ACTS", "#3F5B3A", "b"),
+        headline: yNow + " → " + yAft, unitWord: "years of you to weigh one", title: "Years of you to weigh one " + it.one,
+        caption: "An " + it.one + " weighed about " + funNum(it.size / 1000) + " tonnes: " + yNow + " years of your footprint now, " + yAft + " after the 7 Acts. Each stripe is a year; this year is coloured in." };
+    }
+    // How big each drawing can be if n of them fill the box.
+    const fit = (n, gap) => {
+      let best = { cell: 0, cols: 1 };
+      for (let cols = 1; cols <= n; cols++) {
+        const rows = Math.ceil(n / cols);
+        const cell = Math.min((W - gap * (cols - 1)) / cols, (H - gap * (rows - 1)) / rows);
+        if (cell > best.cell) best = { cell, cols };
+      }
+      return best;
+    };
+    const n = Math.max(1, Math.round(nNow));
+    const gap = fs(14, 5);
+    const g = n <= 400 ? fit(n, gap) : { cell: 0 };
+    const headline = funNum(nNow) + " → " + funNum(nAft);
+    if (g.cell >= (o.minCell || 22)) {
+      const cell = Math.floor(Math.min(g.cell, o.maxCell || 999)), kept = Math.round(nAft);
+      const rows = Math.ceil(n / g.cols), gw = g.cols * cell + (g.cols - 1) * gap, gh = rows * cell + (rows - 1) * gap;
+      const ox = (W - gw) / 2;
+      let cells = "";
+      for (let i = 0; i < n; i++) {
+        const x = ox + (i % g.cols) * (cell + gap), y = Math.floor(i / g.cols) * (cell + gap);
+        const cut = i >= kept;
+        cells += (cut ? '<rect x="' + f1(x) + '" y="' + f1(y) + '" width="' + cell + '" height="' + cell + '" rx="' + f1(cell * 0.14) + '" fill="none" stroke="#B8653D" stroke-width="' + fs(2.4, 1.2) + '" stroke-dasharray="' + fs("8 6", "4 3") + '"/>' : "") +
+          '<svg x="' + f1(x) + '" y="' + f1(y) + '" width="' + cell + '" height="' + cell + '" viewBox="0 0 48 48" overflow="visible"' + (cut ? ' opacity=".3"' : "") + ">" +
+          (cut ? '<g filter="url(#pi-grey)">' + piArt(it.key, false) + "</g>" : piArt(it.key, false)) + "</svg>";
+      }
+      return { ...base, mode: "grid", svg: cells, vh: gh,
+        headline, unitWord: it.many, title: "In " + it.many,
+        legend: [["sq", "#7FAE4E", "Still there after the 7 Acts"], ["dash", "#B8653D", "Cut by them"]],
+        caption: "The 7 Acts would cut " + howMany(nNow - nAft, it) + " a year." };
+    }
+    // Lots of them: a field of dots, one each (or a round number each), as
+    // big as the box allows, so the cut stays visible however big the number.
+    const dotFit = (count) => {
+      for (let p = Math.min(o.maxPitch || 30, Math.sqrt((W * H) / count)); p >= 1; p -= 0.1) {
+        const cols = Math.floor(W / p);
+        if (Math.ceil(count / cols) * p <= H) return { p: Math.floor(p * 10) / 10, cols };
+      }
+      return { p: 1, cols: Math.floor(W) };
+    };
+    let u = 1, d = dotFit(n);
+    for (const x of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 10000]) {
+      u = x;
+      d = dotFit(Math.ceil(nNow / x));
+      if (d.p >= (o.minPitch || 5)) break;
+    }
+    const pitch = d.p, cols = d.cols;
+    const total = Math.round(nNow / u), kept = Math.round(nAft / u), rows = Math.ceil(total / cols);
+    const fw = cols * pitch, ox = (W - fw) / 2;
+    const seg = (a, b, fill) => {
+      let out = "", i = a;
+      while (i < b) {
+        const r = Math.floor(i / cols), c = i % cols;
+        if (c === 0 && b - i >= cols) {
+          const full = Math.floor((b - i) / cols);
+          out += '<rect x="' + f1(ox) + '" y="' + f1(r * pitch) + '" width="' + f1(cols * pitch) + '" height="' + f1(full * pitch) + '" fill="' + fill + '"/>';
+          i += full * cols;
+        } else {
+          const kk = Math.min(cols - c, b - i);
+          out += '<rect x="' + f1(ox + c * pitch) + '" y="' + f1(r * pitch) + '" width="' + f1(kk * pitch) + '" height="' + pitch + '" fill="' + fill + '"/>';
+          i += kk;
+        }
+      }
+      return out;
+    };
+    const pat = (id, col) => '<pattern id="' + id + '" x="' + f1(ox) + '" width="' + pitch + '" height="' + pitch + '" patternUnits="userSpaceOnUse"><circle cx="' + pitch / 2 + '" cy="' + pitch / 2 + '" r="' + (pitch * 0.36).toFixed(2) + '" fill="' + col + '"/></pattern>';
+    const per = u === 1 ? "Each dot is one " + it.one : "Each dot is " + howMany(u, it);
+    return { ...base, mode: "dots", vh: rows * pitch,
+      svg: "<defs>" + pat("pi-dk-" + uid, it.dot) + pat("pi-dc-" + uid, "#C9774F") + "</defs>" + seg(0, kept, "url(#pi-dk-" + uid + ")") + seg(kept, total, "url(#pi-dc-" + uid + ")"),
+      headline, unitWord: it.many, title: "In " + it.many, per,
+      legend: [["dot", it.dot, funNum(nAft) + " still there"], ["dot", "#C9774F", funNum(nNow - nAft) + " cut by the 7 Acts"], ["", "", per]],
+      caption: "The 7 Acts would cut " + howMany(nNow - nAft, it) + " a year: the clay dots. " + per + "." };
+  }
+  // The whole picture as one SVG. defs: include the filters (for pictures
+  // drawn outside the page, like the share card).
+  function piSvg(m, defs) {
+    const h = m.vh ? Math.min(m.H, Math.ceil(m.vh)) : m.H;
+    return '<svg class="pi-svg" viewBox="0 0 ' + m.W + " " + h + '" ' + (defs ? 'width="' + m.W + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg" ' : "") +
+      'font-family="Karla, Arial, sans-serif" role="img" aria-label="' + esc(m.caption) + '" preserveAspectRatio="xMidYMid meet">' + (defs ? "<defs>" + PI_DEFS + "</defs>" : "") + m.svg + "</svg>";
+  }
+  const piLegend = (m) =>
+    m.legend
+      ? '<div class="pi-legend">' + m.legend.map((l) => '<span class="' + (l[0] ? "" : "muted") + '">' + (l[0] ? '<i class="pi-key ' + l[0] + '" style="--c:' + l[1] + '"></i>' : "") + esc(l[2]) + "</span>").join("") + "</div>"
+      : "";
+
   function pictureItHtml() {
     const ba = actsBeforeAfter();
     if (!ba) return "";
-    const list = funList();
-    const idx = funIndex();
-    const m = infoModel(list[idx], ba.now, ba.after, 40, 12);
-    const it = m.item;
-    const chips =
-      '<div class="ig-chips" role="tablist" aria-label="Compare with">' +
-      list.map((x, i) => '<button type="button" role="tab" class="ig-chip' + (i === idx ? " on" : "") + '" aria-selected="' + (i === idx) + '" data-action="fun-pick" data-i="' + i + '"><span aria-hidden="true">' + x.emoji + "</span>" + esc(x.short || x.one) + "</button>").join("") +
-      "</div>";
-    const icons = (n, cls) => Array.from({ length: n }, () => '<span class="' + cls + '">' + it.emoji + "</span>").join("");
-    let body;
-    if (m.kind === "grid") {
-      const row = (label, n, on, ghost, cls) =>
-        '<div class="ig-row ' + cls + '"><div class="ig-row-head"><span class="ig-when">' + label + '</span><b class="display tnum">' + esc(howMany(n, it)) + "</b></div>" +
-        '<div class="ig-icons" aria-hidden="true">' + icons(on, "ig-i") + icons(ghost, "ig-i ghost") + "</div></div>";
-      body = row("Now", m.nNow, m.iNow, 0, "now") + row("After the 7 Acts", m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "after");
-    } else if (m.kind === "stack") {
-      const col = (label, side, n, on, ghost, cls) =>
-        '<div class="ig-col ' + cls + '"><div class="ig-stack" aria-hidden="true">' + icons(ghost, "ig-i ghost") + icons(on, "ig-i") + "</div>" +
-        '<b class="display tnum">' + side.toFixed(1) + ' m</b><span class="xs">' + esc(howMany(n, it)) + '</span><span class="ig-when">' + label + "</span></div>";
-      body = '<div class="ig-cols">' + col("Now", m.sNow, m.nNow, m.iNow, 0, "now") + col("After the 7 Acts", m.sAfter, m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "after") + "</div>";
-    } else {
-      const bar = (label, n, cls) =>
-        '<div class="ig-row ' + cls + '"><div class="ig-row-head"><span class="ig-when">' + label + '</span><b class="display tnum">' + pct(n) + " of " + esc(ofA(it)) + "</b></div>" +
-        '<div class="ig-share"><span class="ig-share-ic" aria-hidden="true">' + it.emoji + '</span><span class="ig-share-bar"><span style="width:' + Math.min(100, (n / m.nNow) * 100).toFixed(1) + '%"></span></span></div></div>';
-      body = bar("Now", m.nNow, "now") + bar("After the 7 Acts", m.nAfter, "after");
+    const items = piItems();
+    const mascot = piMascot();
+    const head = (extra) =>
+      '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' + (extra || "") + "</div>";
+    // First look: pick a mascot. It leads the slideshow and the share card.
+    if (!mascot || ui.piPicking) {
+      return (
+        '<section class="glass picture-it pi-wrap" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head() +
+        '<div class="pi-pick"><p class="pi-pick-q display">Pick your mascot</p><div class="pi-pick-grid">' +
+        items.map((x) => '<button type="button" class="pi-pick-btn' + (x.key === mascot ? " on" : "") + '" data-action="pi-mascot" data-key="' + x.key + '">' + piIcon(x.key, 52) + "<span>" + esc(x.short) + "</span></button>").join("") +
+        "</div></div></section>"
+      );
     }
+    const idx = piIndex();
+    const it = items[idx];
+    const badge =
+      '<button type="button" class="pi-mascot" data-action="pi-mascot-change" aria-label="Your mascot: ' + esc(items.find((x) => x.key === mascot).short) + '. Change it">' + piIcon(mascot, 34) + "</button>";
+    if (ui.piOpen) {
+      const wide = window.innerWidth >= 760;
+      const m = piModel(it, ba.now, ba.after, { w: wide ? 620 : 330, h: wide ? 360 : 250, minPitch: wide ? 6 : 5, minCell: wide ? 28 : 22, maxCell: wide ? 120 : 90, uid: "o" });
+      return (
+        '<section class="glass picture-it pi-wrap open" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
+        head(badge + '<button type="button" class="pi-close" data-action="pi-close" aria-label="Back to the slideshow">' + icon("x") + "</button>") +
+        '<div class="pi-chips" role="tablist" aria-label="Compare with">' +
+        items.map((x, i) => '<button type="button" role="tab" class="pi-chip' + (i === idx ? " on" : "") + '" aria-selected="' + (i === idx) + '" data-action="pi-pick" data-i="' + i + '"><span class="pi-chip-ic">' + piIcon(x.key, 28) + "</span>" + esc(x.short) + "</button>").join("") +
+        '</div><div class="pi-open-body"><div class="pi-open-vis">' + piSvg(m) + piLegend(m) + "</div>" +
+        '<div class="pi-open-side"><div class="pi-nums"><div><span class="pi-when">Now → after the 7 Acts</span><b class="display tnum">' + esc(m.headline) + '</b><span class="sm muted">' + esc(m.unitWord) + "</span></div>" +
+        '<div class="pi-t display tnum"><span class="clay">' + (ba.now / 1000).toFixed(1) + " t</span> → <span class=\"green-dark\">" + (ba.after / 1000).toFixed(1) + " t</span></div></div>" +
+        '<p class="pi-cap">' + esc(m.caption) + '</p><p class="xs muted">' + esc(it.source) + " For fun and scale, not precision.</p>" +
+        '<div class="chip-row"><button type="button" class="btn btn-green btn-sm" data-action="share-card">' + icon("link") + " Share this picture</button></div></div></div></section>"
+      );
+    }
+    // The square slideshow: slides on by itself; tap to see them all.
+    const slides = items
+      .map((x) => {
+        const m = piModel(x, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + x.key });
+        return '<div class="pi-slide"><div class="pi-slide-head">' + piIcon(x.key, 40) + '<div class="min0"><span class="pi-slide-t">' + esc(m.title) + '</span><b class="display tnum">' + esc(m.headline) + "</b></div></div>" +
+          '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + "</div>";
+      })
+      .join("");
     return (
-      '<section class="glass picture-it" id="picture-it" aria-labelledby="pi-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="pi-h" class="card-title">Picture it</h2>' +
-      '<span class="sm muted">Your footprint now, and after Real Zero\'s 7 Acts</span></div>' + chips +
-      '<div class="ig-body">' + body + "</div>" +
-      '<p class="sm mt-3">' + esc(infoCaption(m)) + "</p>" +
-      '<div class="chip-row mt-3"><button type="button" class="btn btn-green btn-sm" data-action="share-card">' + icon("link") + " Share this picture</button></div></section>"
+      '<section class="glass picture-it pi-wrap" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head(badge) +
+      '<div class="pi-square"><button type="button" class="pi-opener" data-action="pi-open" aria-label="Picture it: ' + esc(it.short) + ". Tap to see every comparison\">" +
+      '<span class="pi-track" style="transform:translateX(' + -idx * 100 + '%)">' + slides + "</span></button>" +
+      '<span class="pi-count tnum" aria-hidden="true">' + (idx + 1) + "/" + items.length + "</span>" +
+      '<div class="pi-dots">' + items.map((x, i) => '<button type="button" class="pi-dot' + (i === idx ? " on" : "") + '" data-action="pi-go" data-i="' + i + '" aria-label="' + esc(x.short) + '"' + (i === idx ? ' aria-current="true"' : "") + "></button>").join("") + "</div></div>" +
+      '<p class="xs muted pi-hint">Tap the picture to see them all</p></section>'
     );
   }
-  function funLine(kg) {
-    const list = funList();
-    const item = list[((ui.funIdx || 0) % list.length + list.length) % list.length];
-    return (
-      '<p class="res-fun"><span class="res-fun-ic" aria-hidden="true">' + item.emoji + "</span><span>" + esc(funFact(kg, item, "weighs")) + "</span>" +
-      '<button type="button" class="link-btn" data-action="fun-next">Another</button>' +
-      '<a class="link-btn" href="#picture-it" data-action="fr-jump">Picture it</a></p>'
-    );
+  // Move the slideshow without re-rendering the page.
+  function piGo(i) {
+    const n = piItems().length;
+    ui.piIdx = ((i % n) + n) % n;
+    const track = document.querySelector(".pi-track");
+    if (!track) return;
+    track.style.transform = "translateX(" + -ui.piIdx * 100 + "%)";
+    document.querySelectorAll(".pi-dot").forEach((d, k) => {
+      d.classList.toggle("on", k === ui.piIdx);
+      if (k === ui.piIdx) d.setAttribute("aria-current", "true");
+      else d.removeAttribute("aria-current");
+    });
+    const c = document.querySelector(".pi-count");
+    if (c) c.textContent = ui.piIdx + 1 + "/" + n;
+    const op = document.querySelector(".pi-opener");
+    if (op) op.setAttribute("aria-label", "Picture it: " + piItems()[ui.piIdx].short + ". Tap to see every comparison");
   }
+  // Every few seconds, unless it's off screen, in use or motion is reduced.
+  setInterval(() => {
+    const sq = document.querySelector(".pi-square");
+    if (!sq || document.hidden || ui.piOpen || sq.matches(":hover") || sq.querySelector(":focus-visible")) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = sq.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) return;
+    piGo(piIndex() + 1);
+  }, 3500);
+  // Swipe the square left or right.
+  let piSwipe = null;
+  document.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".pi-opener")) piSwipe = { x: e.clientX, y: e.clientY, moved: false };
+  });
+  document.addEventListener("pointerup", (e) => {
+    if (!piSwipe) return;
+    const dx = e.clientX - piSwipe.x, dy = e.clientY - piSwipe.y;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      piSwipe.moved = true;
+      piGo(piIndex() + (dx < 0 ? 1 : -1));
+    }
+    setTimeout(() => (piSwipe = null), 0);
+  });
 
   // The 1.5°C budget (Hot or Cool Institute) covers household consumption:
   // food, home, travel, goods and leisure. It leaves out banks and pensions
@@ -2797,33 +2972,20 @@
     const afterMax = Math.max(0, lifeNow - Math.max(0, totalMax - bb.moneyMax));
     const lifePct = (v) => (lifeNow ? Math.round((v / lifeNow) * 100) : 0);
     const ukTotal = cmp.uk + bb.shop;
-    const best = tips.slice().sort((x, y) => y.t.saving - x.t.saving)[0];
-    const lead = best && best.t.saving > 0.5 ? best : tips[0];
-    const top3 = fp.breakdown.slice(0, 3);
-    const top3Pct = pct(top3.reduce((t, b) => t + b.yearly, 0));
     const snapshots = getSnapshots();
     const mode = ui.showUk ? "bars" : ui.chartMode || "donut";
     const animate = !ui.resultsSeen;
     ui.resultsSeen = true;
 
-    const ukText =
-      cmp.pct < 5 ? "about the same as the UK average" : '<span class="' + (cmp.above ? "clay" : "green") + ' fw-700">' + cmp.pct + "% " + (cmp.above ? "above" : "below") + "</span> the UK average";
-    const budgetText = budgetPhrase(lifeNow);
+    const ukTag = cmp.pct < 5 ? "About the UK average" : cmp.pct + "% " + (cmp.above ? "above" : "below") + " the UK average";
+    const budgetRatio = lifeNow / budget;
+    const budgetTag = budgetRatio <= 1 ? "Inside the 1.5°C budget" : budgetRatio < 1.5 ? Math.round((budgetRatio - 1) * 100) + "% over the 1.5°C budget" : budgetRatio.toFixed(1).replace(/\.0$/, "") + "× the 1.5°C budget";
 
     // Path bar scale: room for now, the UK average and the budget.
     const scale = Math.max(lifeNow, ukTotal, budget) * 1.15;
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
-    const realisticLine =
-      after <= budget
-        ? "Realistic changes put you inside the 1.5°C budget."
-        : after < ukTotal
-        ? "Realistic changes take you below the UK average." + (afterMax <= budget ? " Going all the way puts you inside the 1.5°C budget." : "")
-        : afterMax <= budget
-        ? "Going all the way puts you inside the 1.5°C budget."
-        : "Every step down counts. The biggest wins are below.";
-
     let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
     if (ui.exampleMode) {
       html +=
@@ -2846,9 +3008,9 @@
       '<section class="glass res-hero' + (animate ? " rise" : "") + '"><div class="res-hero-main">' +
       '<p class="fw-600 muted">Your footprint this year</p>' +
       '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
-      '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ' like for like. <a class="link-btn" href="#/budget">What\'s in the budget?</a></p>' +
-      '<details class="res-more"><summary>What about shopping and public services?</summary>' + sharedLine(now) + "</details>" + funLine(now) + "</div>" +
-      '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">Against the 1.5°C budget, with realistic changes</span>' +
+      '<div class="res-tags"><span class="res-tag ' + (cmp.pct < 5 ? "" : cmp.above ? "up" : "down") + '">' + ukTag + "</span>" +
+      '<a class="res-tag ' + (budgetRatio <= 1 ? "down" : "up") + '" href="#/budget">' + budgetTag + "</a></div></div>" +
+      '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
       (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
       '<div class="path' + (animate ? " animate" : "") + '">' +
@@ -2860,14 +3022,11 @@
       '<div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">' + kgFmt(afterMax) + "</b></span>" +
       '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
       '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(lifeNow) + "</b></span></div>" +
-      '<p class="sm muted mt-2">' + realisticLine + "</p>" +
-      '<p class="xs muted mt-1">Like for like: your survey without your bank and pension' + (bb.money >= 0.5 ? ' (<b class="tnum">' + kgFmt(bb.money) + " kg</b> on top)" : "") +
-      ", plus a typical " + (bb.shop / 1000).toFixed(1) + ' t for shopping. <a class="link-btn" href="#/budget">How we compare</a></p></div></section>';
+      '<p class="xs muted mt-2">Compared like for like. <a class="link-btn" href="#/budget">How we compare</a></p></div></section>';
 
-    if (!ui.exampleMode) html += pictureItHtml();
     html +=
-      '<div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
-      '<div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap a category to see how to improve it</p></div>' +
+      '<div class="res-grid">' + (ui.exampleMode ? "" : pictureItHtml()) + '<section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
+      '<div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap one to see how to cut it</p></div>' +
       '<div class="chip-row" style="align-items:center">' +
       '<button type="button" class="uk-toggle' + (ui.showUk ? " on" : "") + '" data-action="toggle-uk" aria-pressed="' + (ui.showUk ? "true" : "false") + '">' +
       '<span class="uk-toggle-track"><span class="uk-toggle-knob"></span></span>UK average</button>' +
@@ -2879,16 +3038,7 @@
       (ui.showUk
         ? '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting.</p>'
         : "") +
-      "</section>" +
-      '<aside class="res-aside">' +
-      (lead
-        ? '<section class="res-opp"><span class="eyebrow">Your biggest opportunity</span><h3 class="display">' + esc(lead.t.title) + "</h3>" +
-          (lead.t.saving > 0.5 ? '<p class="res-opp-kg display tnum">−' + kgFmt(lead.t.saving) + " <small>kg a year</small></p>" : "") +
-          '<a class="btn btn-honey btn-block" href="' + catHref(lead.b.key) + '" data-action="open-move" data-cat="' + lead.b.key + '">See how ' + icon("arrowRight") + "</a></section>"
-        : "") +
-      '<section class="glass res-three"><h3 class="display">Biggest three</h3><p class="sm">' +
-      top3.map((b) => esc(b.label)).join(", ").replace(/, ([^,]*)$/, " and $1") + " make up <b>" + top3Pct + "%</b> of your footprint. Start there for the biggest difference.</p></section>" +
-      "</aside></div>" + (ui.exampleMode ? "" : movesHtml(tips));
+      "</section></div>" + (ui.exampleMode ? "" : movesHtml(tips));
 
     const hist = ui.exampleMode ? [] : historyByDay();
     if (hist.length) {
@@ -2949,7 +3099,7 @@
     html +=
       '<div class="btn-row mt-6"><button type="button" class="btn btn-outline" data-action="edit-survey">' + icon("refresh") + " Edit my answers</button></div>" +
       saveCard() + (historyByDay().length >= 2 ? supportCard() : "") +
-      '<p class="xs muted footnote">Estimates are approximate and based on typical lifecycle emission factors. Use as a guide to find your biggest opportunities to reduce impact. Figures last updated ' +
+      '<p class="xs muted footnote">Estimates, to guide you to your biggest wins. Figures updated ' +
       esc(shortDate(figuresUpdated())) + '. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>';
     return html;
   }
@@ -3653,7 +3803,7 @@
     const cut = switchAreas({ s: survey, mine: true }).filter((a) => keys.includes(a.key) && !a.done).reduce((t, a) => t + (a.save || 0), 0);
     return { now, after: Math.max(0, now - cut), cut };
   }
-  const lettuces = (kg) => funNum(kg / D.FUN_COMPARISONS.weights[0].kg);
+  const lettuces = (kg) => funNum(kg / D.FUN_COMPARISONS.items[0].size);
   function shareText() {
     const fp = survey && survey.completedAt ? footprint(survey) : null;
     const ba = actsBeforeAfter();
@@ -3689,159 +3839,176 @@
     if (line) x.fillText(line, X, y);
     return y + lineH;
   }
-  async function drawShareCard(ba) {
-    const W = 1080, H = 1350;
+  // Square post (1080 x 1350) or story (1080 x 1920), light or dark.
+  const SHARE_THEMES = {
+    light: { bg: "#EFE9DC", card: "rgba(255,252,245,.82)", ink: "#2E2A22", muted: "#5E574B", green: "#3F5B3A", clay: "#9A5130", foot: "#3F5B3A", footInk: "#F6F1E6", glowA: "rgba(183,196,164,.85)", glowB: "rgba(232,200,138,.6)" },
+    dark: { bg: "#16211A", card: "rgba(246,241,230,.94)", ink: "#F6F1E6", muted: "#C9D3BC", green: "#A9C795", clay: "#F2B48E", foot: "#E8C88A", footInk: "#16211A", glowA: "rgba(63,91,58,.75)", glowB: "rgba(184,101,61,.35)" },
+  };
+  const svgImage = (svg) =>
+    new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = rej;
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    });
+  async function drawShareCard(ba, fmt, theme, plain) {
+    const story = fmt === "story";
+    const T = SHARE_THEMES[theme] || SHARE_THEMES.light;
+    const W = 1080, H = story ? 1920 : 1350, PAD = 80, top = story ? 110 : 64, gap = story ? 56 : 30;
     const c = document.createElement("canvas");
     c.width = W;
     c.height = H;
     const x = c.getContext("2d");
-    try { await document.fonts.load("800 80px 'Bricolage Grotesque'"); await document.fonts.load("600 40px Karla"); } catch (e) {}
+    try { await document.fonts.load("800 80px 'Bricolage Grotesque'"); await document.fonts.load("700 40px Karla"); } catch (e) {}
     const DISP = "'Bricolage Grotesque', system-ui, sans-serif", BODY = "Karla, system-ui, sans-serif";
-    x.fillStyle = "#EFE9DC";
+    x.fillStyle = T.bg;
     x.fillRect(0, 0, W, H);
-    const blob = (cx, cy, r, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, "rgba(239,233,220,0)"); x.fillStyle = g; x.fillRect(0, 0, W, H); };
-    blob(120, 160, 520, "rgba(183,196,164,.85)");
-    blob(980, 1240, 560, "rgba(232,200,138,.6)");
+    const glow = (cx, cy, r, col) => { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, col); g.addColorStop(1, col.replace(/[\d.]+\)$/, "0)")); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+    glow(W * 0.08, H * 0.06, 620, T.glowA);
+    glow(W * 0.96, H, 680, T.glowB);
     // brand
     x.fillStyle = "#3F5B3A";
-    roundRect(x, 80, 80, 64, 64, 16);
+    roundRect(x, PAD, top, 64, 64, 16);
     x.fill();
-    x.fillStyle = "#F6F1E6";
-    x.font = "800 34px " + DISP;
-    x.fillText("CO", 90, 124);
-    x.fillStyle = "#2E2A22";
+    x.save();
+    x.translate(PAD + 14, top + 14);
+    x.scale(1.5, 1.5);
+    x.strokeStyle = "#F6F1E6";
+    x.lineWidth = 1.8;
+    x.lineCap = x.lineJoin = "round";
+    x.stroke(new Path2D("M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10ZM2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"));
+    x.restore();
+    x.fillStyle = T.ink;
     x.font = "800 40px " + DISP;
-    x.fillText("CO2 Counter", 164, 125);
-    // headline
-    x.font = "700 44px " + BODY;
-    x.fillStyle = "#5E574B";
-    x.fillText("My carbon footprint", 80, 270);
+    x.fillText("CO2 Counter", PAD + 84, top + 46);
+    // now -> after
+    let y = top + 64 + gap + 34;
+    x.fillStyle = T.muted;
+    x.font = "700 34px " + BODY;
+    x.fillText("My carbon footprint", PAD, y);
+    const big = story ? 190 : 128;
+    const yN = y + 14 + big * 0.82;
     const t = (kg) => (kg / 1000).toFixed(1);
-    x.fillStyle = "#B8653D";
-    x.font = "800 170px " + DISP;
-    x.fillText(t(ba.now), 80, 450);
-    const wNow = x.measureText(t(ba.now)).width;
-    x.font = "800 60px " + DISP;
-    x.fillText(" t", 80 + wNow, 450);
-    x.fillStyle = "#5E574B";
-    x.font = "600 34px " + BODY;
-    x.fillText("a year now", 86, 505);
-    x.fillStyle = "#3F5B3A";
-    x.font = "800 90px " + DISP;
-    x.fillText("→", 600, 430);
-    x.font = "800 170px " + DISP;
-    const after = t(ba.after);
-    const wAfter = x.measureText(after).width;
-    x.font = "800 60px " + DISP;
-    const wT = x.measureText(" t").width;
-    const ax = W - 80 - wAfter - wT;
-    x.font = "800 170px " + DISP;
-    x.fillText(after, ax, 450);
-    x.font = "800 60px " + DISP;
-    x.fillText(" t", ax + wAfter, 450);
-    x.font = "600 34px " + BODY;
-    x.fillStyle = "#3F5B3A";
-    const lab = "with the 7 Acts";
-    x.fillText(lab, W - 80 - x.measureText(lab).width, 505);
-    // the chosen comparison, now and after
-    const m = infoModel(funList()[funIndex()], ba.now, ba.after, 30, 6);
-    const it = m.item;
-    x.fillStyle = "#2E2A22";
-    x.font = "800 44px " + DISP;
-    x.fillText(it.emoji + "  In " + (m.kind === "stack" ? it.many + ", stacked up" : it.many), 80, 600);
-    const EMO = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-    const drawIcons = (n, ghost, X, Y, perRow, size, step) => {
-      x.font = size + "px " + EMO;
-      for (let k = 0; k < n + ghost; k++) {
-        x.globalAlpha = k < n ? 1 : 0.2;
-        x.fillText(it.emoji, X + (k % perRow) * step, Y + Math.floor(k / perRow) * step);
-      }
-      x.globalAlpha = 1;
+    const num = (s, X, col, right) => {
+      x.font = "800 " + big + "px " + DISP;
+      const w1 = x.measureText(s).width;
+      x.font = "800 52px " + DISP;
+      const w2 = x.measureText(" t").width;
+      const X0 = right ? X - w1 - w2 : X;
+      x.fillStyle = col;
+      x.font = "800 " + big + "px " + DISP;
+      x.fillText(s, X0, yN);
+      x.font = "800 52px " + DISP;
+      x.fillText(" t", X0 + w1, yN);
     };
-    let captionY = 1050;
-    if (m.kind === "grid") {
-      // Up to 30 icons, 15 a row: two rows each for now and after.
-      const block = (label, n, on, ghost, Y, col) => {
-        x.font = "700 34px " + BODY;
-        x.fillStyle = col;
-        x.fillText(label + ": " + howMany(n, it), 80, Y);
-        drawIcons(on, ghost, 80, Y + 58, 15, 50, 60);
-        return Y + 58 + (Math.ceil((on + ghost) / 15) - 1) * 60 + 30;
-      };
-      const endNow = block("Now", m.nNow, m.iNow, 0, 660, "#B8653D");
-      captionY = block("After the 7 Acts", m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), endNow + 40, "#3F5B3A") + 26;
-    } else if (m.kind === "stack") {
-      // Two stacks side by side, standing on the same floor.
-      const floor = 990;
-      const colAt = (X, label, side, n, on, ghost, col) => {
-        drawIcons(0, 0, X, floor, 1, 56, 60);
-        x.font = "56px " + EMO;
-        for (let k = 0; k < on + ghost; k++) {
-          x.globalAlpha = k >= on ? 0.2 : 1;
-          x.fillText(it.emoji, X, floor - k * 60);
-        }
-        x.globalAlpha = 1;
-        x.fillStyle = col;
-        x.font = "800 52px " + DISP;
-        x.fillText(side.toFixed(1) + " m", X + 90, floor - 48);
-        x.font = "700 30px " + BODY;
-        x.fillText(label, X + 90, floor - 8);
-        x.font = "600 28px " + BODY;
-        x.fillStyle = "#5E574B";
-        x.fillText(howMany(n, it), X + 90, floor + 28);
-      };
-      colAt(80, "Now", m.sNow, m.nNow, m.iNow, 0, "#B8653D");
-      colAt(560, "After the 7 Acts", m.sAfter, m.nAfter, m.iAfter, Math.max(0, m.iNow - m.iAfter), "#3F5B3A");
-      captionY = 1068;
-    } else {
-      const barAt = (Y, label, n, col) => {
-        x.font = "700 34px " + BODY;
-        x.fillStyle = col;
-        x.fillText(label + ": " + pct(n) + " of " + ofA(it), 80, Y);
-        x.fillStyle = "rgba(46,42,34,.08)";
-        roundRect(x, 80, Y + 24, W - 160, 44, 22); x.fill();
-        x.fillStyle = col;
-        roundRect(x, 80, Y + 24, Math.max(44, (W - 160) * Math.min(1, n / m.nNow)), 44, 22); x.fill();
-      };
-      barAt(700, "Now", m.nNow, "#B8653D");
-      barAt(840, "After the 7 Acts", m.nAfter, "#3F5B3A");
-    }
-    x.fillStyle = "#5E574B";
-    x.font = "600 30px " + BODY;
-    wrapText(x, infoCaption(m), 80, Math.min(captionY, 1080), W - 160, 36);
+    num(t(ba.now), PAD, T.clay);
+    num(t(ba.after), W - PAD, T.green, true);
+    x.fillStyle = T.green;
+    x.font = "800 72px " + DISP;
+    x.fillText("→", W / 2 - 36, yN - big * 0.28);
+    x.font = "700 28px " + BODY;
+    x.fillStyle = T.muted;
+    x.fillText("a year now", PAD, yN + 42);
+    x.fillStyle = T.green;
+    const lab = "with the 7 Acts";
+    x.fillText(lab, W - PAD - x.measureText(lab).width, yN + 42);
     // footer
-    x.fillStyle = "#3F5B3A";
-    roundRect(x, 80, 1130, W - 160, 150, 36);
+    const code = ui.actsInfo && ui.actsInfo.code;
+    const footH = story ? 172 : 140, footY = H - top - footH;
+    x.fillStyle = T.foot;
+    roundRect(x, PAD, footY, W - PAD * 2, footH, 32);
     x.fill();
-    x.fillStyle = "#F6F1E6";
-    x.font = "800 46px " + DISP;
-    x.fillText("Find yours, free", 120, 1196);
-    x.font = "600 34px " + BODY;
-    x.fillText("co2counter.co.uk" + (ui.actsInfo && ui.actsInfo.code ? "  ·  code " + ui.actsInfo.code : ""), 120, 1250);
+    x.fillStyle = T.footInk;
+    x.font = "800 " + (story ? 50 : 42) + "px " + DISP;
+    x.fillText("Find yours, free", PAD + 44, footY + footH / 2 - 4);
+    x.font = "600 30px " + BODY;
+    x.fillText("co2counter.co.uk", PAD + 44, footY + footH / 2 + 40);
+    if (code) {
+      x.font = "700 24px " + BODY;
+      x.fillText("Invite code", W - PAD - 44 - x.measureText("Invite code").width, footY + footH / 2 - 8);
+      x.font = "800 30px " + BODY;
+      x.fillText(code, W - PAD - 44 - x.measureText(code).width, footY + footH / 2 + 28);
+    }
+    // the picture
+    const cardY = yN + 42 + gap + 10, cardB = footY - gap, cp = story ? 40 : 28;
+    x.fillStyle = T.card;
+    roundRect(x, PAD, cardY, W - PAD * 2, cardB - cardY, 36);
+    x.fill();
+    const it = piItems()[piIndex()];
+    const iconS = story ? 110 : 84;
+    const vw = W - PAD * 2 - cp * 2, vy = cardY + cp + iconS + 20, vh = cardB - cp - 50 - vy;
+    const m = piModel(it, ba.now, ba.after, { w: vw, h: vh, big: true, minPitch: 10, minCell: 64, maxCell: 220, maxPitch: 60, uid: "c" });
+    x.fillStyle = "#5E574B";
+    x.font = "700 26px " + BODY;
+    x.fillText(m.title, PAD + cp + iconS + 20, cardY + cp + iconS / 2 - 14);
+    x.fillStyle = "#2E2A22";
+    x.font = "800 " + (story ? 64 : 50) + "px " + DISP;
+    x.fillText(m.headline, PAD + cp + iconS + 20, cardY + cp + iconS / 2 + (story ? 48 : 38));
+    if (!plain) {
+      const icon = await svgImage('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="' + iconS + '" height="' + iconS + '"><defs>' + PI_DEFS + "</defs>" + piArt(it.key, true) + "</svg>");
+      x.drawImage(icon, PAD + cp, cardY + cp, iconS, iconS);
+      const pic = await svgImage(piSvg(m, true));
+      const ph = pic.height || vh;
+      x.drawImage(pic, PAD + cp, vy + Math.max(0, (vh - ph) / 2), vw, ph);
+    } else {
+      x.fillStyle = "#5E574B";
+      x.font = "600 30px " + BODY;
+      wrapText(x, m.caption, PAD + cp, vy + 40, vw, 40);
+    }
+    // key
+    if (m.legend) {
+      x.font = "700 22px " + BODY;
+      const parts = m.legend.map((l) => ({ l, w: (l[0] ? 26 : 0) + x.measureText(l[2]).width }));
+      let lx = (W - parts.reduce((s, p) => s + p.w, 0) - 24 * (parts.length - 1)) / 2;
+      const ly = cardB - cp - 12;
+      parts.forEach(({ l, w }) => {
+        if (l[0] === "dot") { x.fillStyle = l[1]; x.beginPath(); x.arc(lx + 8, ly - 8, 8, 0, Math.PI * 2); x.fill(); }
+        else if (l[0] === "sq") { x.fillStyle = l[1]; roundRect(x, lx, ly - 16, 16, 16, 3); x.fill(); }
+        else if (l[0] === "dash") { x.strokeStyle = l[1]; x.setLineDash([4, 3]); x.lineWidth = 2; roundRect(x, lx, ly - 16, 16, 16, 3); x.stroke(); x.setLineDash([]); }
+        x.fillStyle = l[0] ? (l[1] === "#C9774F" || l[0] === "dash" ? "#9A5130" : "#2E2A22") : "#5E574B";
+        x.fillText(l[2], lx + (l[0] ? 26 : 0), ly);
+        lx += w + 24;
+      });
+    }
     return c;
   }
   async function openShareCard() {
     const ba = actsBeforeAfter();
     if (!ba) return;
-    const canvas = await drawShareCard(ba);
+    const fmt = ui.shareFmt || "post", theme = ui.shareTheme || "light";
+    let canvas = await drawShareCard(ba, fmt, theme);
+    let url;
+    try {
+      url = canvas.toDataURL("image/png");
+    } catch (e) {
+      // Some browsers won't export a canvas with SVG drawn on it.
+      canvas = await drawShareCard(ba, fmt, theme, true);
+      url = canvas.toDataURL("image/png");
+    }
     const text = shareText() + " " + inviteLink();
     const file = await new Promise((res) => canvas.toBlob((b) => res(b ? new File([b], "co2counter-before-after.png", { type: "image/png" }) : null), "image/png"));
     // Shown first; its Share button opens the phone's share sheet straight
     // from a tap (Safari only allows sharing right after one).
     ui.shareCard = { file, text };
     const canShareFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
-    const url = canvas.toDataURL("image/png");
+    const idx = piIndex();
+    const seg = (action, val, opts) =>
+      '<div class="seg" role="group">' + opts.map(([v, label]) => '<button type="button" data-action="' + action + '" data-v="' + v + '" aria-pressed="' + (v === val) + '"' + (v === val ? ' class="on"' : "") + ">" + label + "</button>").join("") + "</div>";
     modalRoot.innerHTML =
       '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet share-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet-body">' +
       '<div class="sheet-head"><div class="min0"><h2 id="sheet-title" class="display">Your before and after</h2><p class="sheet-habit">Share it, or press and hold the picture to save it</p></div>' +
-      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
-      '<div class="ig-chips sm-chips" role="tablist" aria-label="Compare with">' + funList().map((xx, k) => '<button type="button" role="tab" class="ig-chip' + (k === funIndex() ? " on" : "") + '" aria-selected="' + (k === funIndex()) + '" data-action="share-pick" data-i="' + k + '"><span aria-hidden="true">' + xx.emoji + "</span>" + esc(xx.short || xx.one) + "</button>").join("") + "</div>" +
-      '<img class="share-card-img" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + ' t with the 7 Acts" />' +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" + piDefsSvg() +
+      '<div class="pi-chips sm-chips" role="tablist" aria-label="Compare with">' +
+      piItems().map((it, k) => '<button type="button" role="tab" class="pi-chip' + (k === idx ? " on" : "") + '" aria-selected="' + (k === idx) + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piIcon(it.key, 26) + "</span>" + esc(it.short) + "</button>").join("") + "</div>" +
+      '<div class="chip-row share-opts">' + seg("share-fmt", fmt, [["post", "Post"], ["story", "Story"]]) + seg("share-theme", theme, [["light", "Light"], ["dark", "Dark"]]) + "</div>" +
+      '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(piItems()[idx].many) + '" />' +
       '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
       '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy the words</button></div>" +
       '<p class="xs muted mt-2">' + esc(text) + "</p></div></div></div>";
     document.body.classList.add("modal-open");
+    const on = modalRoot.querySelector(".pi-chip.on");
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
   }
 
   // The invite code on its own, and the link, each with a copy button.
@@ -4825,7 +4992,7 @@
       ) +
       section(
         "Fun comparisons",
-        "<p>To make tonnes easier to picture, the results page compares your footprint with everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adult birds and fish, from a 18 g robin to a 150-tonne blue whale. " +
+        "<p>To make tonnes easier to picture, the results page compares your footprint with everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adults of some unusual animals, from a 100 g axolotl to a 1.3-tonne narwhal, plus an Argentinosaurus (an estimated 70 tonnes). " +
           "As a gas: CO₂ weighs about 1.87 kg a cubic metre (at 15°C at sea level), so a tonne fills a cube about 8 m tall, which we measure in published heights: Danny DeVito (1.47 m), Abraham Lincoln (1.93 m), a London double-decker bus (4.38 m) and a giraffe (about 5.5 m). They're for fun and scale, not precision.</p>"
       ) +
       section(
@@ -8435,19 +8602,48 @@
       if (!rp.error) analytics.reports = rp.data || [];
       render();
     },
-    "fun-next": () => {
-      ui.funIdx = (ui.funIdx || 0) + 1;
-      render();
-    },
     "share-card": () => openShareCard(),
-    "fun-pick": (el) => {
-      ui.funIdx = Number(el.dataset.i);
-      render();
-    },
     "share-pick": (el) => {
-      ui.funIdx = Number(el.dataset.i);
+      ui.piIdx = Number(el.dataset.i);
       if (currentPath() === "/results") render();
       openShareCard();
+    },
+    "share-fmt": (el) => {
+      ui.shareFmt = el.dataset.v;
+      openShareCard();
+    },
+    "share-theme": (el) => {
+      ui.shareTheme = el.dataset.v;
+      openShareCard();
+    },
+    "pi-open": () => {
+      if (piSwipe && piSwipe.moved) return;
+      ui.piOpen = true;
+      render();
+    },
+    "pi-close": () => {
+      ui.piOpen = false;
+      render();
+      const el = document.getElementById("picture-it");
+      if (el) el.scrollIntoView({ block: "nearest" });
+    },
+    "pi-pick": (el) => {
+      ui.piIdx = Number(el.dataset.i);
+      const left = (document.querySelector(".pi-chips") || {}).scrollLeft;
+      render();
+      const ch = document.querySelector(".pi-chips");
+      if (ch && left != null) ch.scrollLeft = left;
+    },
+    "pi-go": (el) => piGo(Number(el.dataset.i)),
+    "pi-mascot": (el) => {
+      lsSet(KEY_MASCOT, el.dataset.key);
+      ui.piPicking = false;
+      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === el.dataset.key));
+      render();
+    },
+    "pi-mascot-change": () => {
+      ui.piPicking = true;
+      render();
     },
     "share-card-send": async () => {
       const sc = ui.shareCard;
