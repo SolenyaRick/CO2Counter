@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "1 November 2026";
+  const LEGAL_UPDATED = "2 November 2026";
   // Bump when the privacy policy changes in a way people should be told
   // about: signed-in accounts on an older version see a one-time notice.
   const PRIVACY_VERSION = "2026-10-28";
@@ -129,6 +129,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
     pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
     link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
@@ -5053,6 +5054,13 @@
       } catch (e2) {
         analytics.acts = null;
       }
+      // Reports from Report buttons (null until the safety SQL is run).
+      try {
+        const rp = await sb.rpc("admin_reports");
+        analytics.reports = rp.error ? null : rp.data || [];
+      } catch (e3) {
+        analytics.reports = null;
+      }
       analytics.at = new Date();
     } catch (e) {
       analytics.error = (e && e.message) || "Couldn't load the analytics.";
@@ -5202,6 +5210,29 @@
     );
   }
 
+  // Reports people send with the Report button. Apple expects reported
+  // names and groups to be dealt with within 24 hours.
+  function reportsCard() {
+    const list = analytics.reports;
+    if (list == null) return '<section class="glass an-card"><h2 class="card-title">Reports</h2><p class="sm muted">Run run-in-supabase-safety.sql in Supabase to switch on Report and Block.</p></section>';
+    const open = list.filter((r) => r.status === "open");
+    const done = { dismissed: "Dismissed", name_cleared: "Name cleared", group_removed: "Group removed" };
+    const row = (r) =>
+      '<li class="an-report' + (r.status === "open" ? " open" : "") + '"><div class="min0"><b>' + esc(r.target_name || "(no name)") + '</b> <span class="xs muted">' + (r.kind === "group" ? "group" : "person") +
+      (r.current_name && r.current_name !== r.target_name ? " · now " + esc(r.current_name) : "") + "</span>" +
+      '<p class="xs">' + esc(REPORT_REASONS[r.reason] || r.reason) + (r.details ? ": " + esc(r.details) : "") + '</p><p class="xs muted">' + new Date(r.created_at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " · reporter " + esc(r.reporter) + "</p></div>" +
+      (r.status === "open"
+        ? '<div class="chip-row">' + (r.kind === "group" ? '<button type="button" class="btn btn-sm btn-outline btn-danger" data-action="resolve-report" data-id="' + r.id + '" data-do="remove_group">Remove group</button>' : '<button type="button" class="btn btn-sm btn-outline btn-danger" data-action="resolve-report" data-id="' + r.id + '" data-do="clear_name">Clear name</button>') +
+          '<button type="button" class="btn btn-sm btn-outline" data-action="resolve-report" data-id="' + r.id + '" data-do="dismiss">Dismiss</button></div>'
+        : '<span class="xs muted">' + (done[r.status] || r.status) + "</span>") + "</li>";
+    return (
+      '<section class="glass an-card" id="an-reports"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="card-title">Reports</h2><span class="xs ' + (open.length ? "clay fw-700" : "muted") + '">' + open.length + " open</span></div>" +
+      '<p class="sm muted">From the Report button on people and groups. Deal with open ones within 24 hours: clear an offensive name, remove a group, or dismiss.</p>' +
+      (list.length ? '<ul class="an-reports mt-3">' + list.slice(0, 40).map(row).join("") + "</ul>" : '<p class="sm muted mt-3">No reports yet.</p>') +
+      (ui.reportMsg ? '<p class="xs mt-2 red" role="status">' + esc(ui.reportMsg) + "</p>" : "") + "</section>"
+    );
+  }
+
   function renderAnalytics() {
     if (!analytics.loaded) loadAnalytics();
     let html = '<div class="container analytics-page">' + pageHeader("Analytics", "How people use CO2 Counter", "chart");
@@ -5212,6 +5243,7 @@
       '<section class="glass an-card"><h2 class="card-title">Verify a letter to an MP</h2><p class="sm muted">Letters BCC\'d to ' + MP_COPY + " carry a reference like CO2-ABC123. Enter it to verify that person's act 6, then delete the email.</p>" +
       '<form id="verify-mp-form" class="hb-mp-form mt-3"><input class="input" id="verify-mp-code" placeholder="CO2-ABC123" maxlength="12" aria-label="Reference" /><button type="submit" class="btn btn-green btn-sm">Verify</button></form>' +
       (ui.verifyMsg ? '<p class="xs mt-2 ' + (ui.verifyMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.verifyMsg.text) + "</p>" : "") + "</section>";
+    html += reportsCard();
     const m = analyticsModel();
     const t = m.totals;
     const uk = withInputs(liveInputs, () => footprint(D.UK_TYPICAL_SURVEY).totalYearly);
@@ -5309,6 +5341,10 @@
       friends.feed = friends.feedReady ? feed.data.filter((x) => x && x.post_key && x.at && !isNaN(new Date(x.at))) : [];
       friends.cheersGot = (cheers && !cheers.error && Number(cheers.data)) || 0;
       await loadGroups();
+      // People you've blocked (missing until the safety SQL is run).
+      const bl = await sb.rpc("my_blocks").then((x) => x, () => ({ error: true }));
+      friends.safetyReady = !!(bl && !bl.error && Array.isArray(bl.data));
+      friends.blocks = friends.safetyReady ? bl.data : [];
       const list = rows || [];
       const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
       const names = {};
@@ -5375,6 +5411,50 @@
     }
   }
 
+  // ---------- report and block ----------
+  // A small "..." button on people and groups opens a sheet to report them
+  // to us or block them. Blocking removes the friendship, stops new
+  // requests and hides them from your group boards.
+  const REPORT_REASONS = { offensive_name: "Offensive name", harassment: "Harassment or bullying", spam: "Spam or fake account", other: "Something else" };
+  const safetyBtn = (kind, id, name) =>
+    id ? '<button type="button" class="fr-more-btn" data-action="safety" data-kind="' + kind + '" data-id="' + esc(id) + '" data-name="' + esc(name || "") + '" aria-label="' + (kind === "user" ? "Report or block " : "Report ") + esc(name || "") + '">' + icon("more") + "</button>" : "";
+  function openSafety() {
+    const sf = ui.safety;
+    if (!sf) return closeModal();
+    const person = sf.kind === "user";
+    const reasons = Object.keys(REPORT_REASONS).map((k) =>
+      '<label class="sf-reason"><input type="radio" name="sf-reason" value="' + k + '"' + (sf.reason === k ? " checked" : "") + " /> " + REPORT_REASONS[k] + "</label>").join("");
+    const body = sf.done
+      ? '<p class="sheet-lede">' + esc(sf.done) + '</p><button type="button" class="btn btn-green mt-2 modal-close" data-action="close-modal">Done</button>'
+      : '<section class="sheet-panel"><span class="eyebrow">Report</span><p class="sm muted">' + (person ? "Tell us if their name is offensive, or they're harassing you or spamming." : "Tell us if this group's name is offensive or it's being used for spam.") + " We review every report within 24 hours.</p>" +
+        '<div class="sf-reasons">' + reasons + "</div>" +
+        '<label class="xs fw-700">Anything else? (optional)<textarea class="input" id="sf-details" rows="2" maxlength="500">' + esc(sf.details || "") + "</textarea></label>" +
+        '<button type="button" class="btn btn-outline mt-2" data-action="safety-report"' + (sf.busy ? " disabled" : "") + ">Send report</button></section>" +
+        (person
+          ? '<section class="sheet-panel"><span class="eyebrow">Block</span><p class="sm muted">Removes ' + esc(sf.name || "them") + " from your friends, stops them sending you requests and hides them from your group boards. They aren't told.</p>" +
+            (sf.confirmBlock
+              ? '<div class="chip-row mt-2"><button type="button" class="btn btn-danger" data-action="safety-block"' + (sf.busy ? " disabled" : "") + ">Yes, block " + esc(sf.name || "them") + '</button><button type="button" class="btn btn-outline" data-action="safety-unconfirm">Cancel</button></div>'
+              : '<button type="button" class="btn btn-outline btn-danger mt-2" data-action="safety-confirm">Block ' + esc(sf.name || "them") + "</button>") +
+            "</section>"
+          : "") +
+        (sf.error ? '<p class="xs red mt-2" role="status">' + esc(sf.error) + "</p>" : "");
+    modalRoot.innerHTML =
+      '<div class="modal-backdrop sheet-backdrop" data-action="close-modal"><div class="sheet sf-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title"><div class="sheet-body">' +
+      '<div class="sheet-head"><div class="min0"><h2 id="sheet-title" class="display">' + esc(sf.name || (person ? "This person" : "This group")) + '</h2><p class="sheet-habit">' + (person ? "Report or block" : "Report this group") + "</p></div>" +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" + body + "</div></div></div>";
+    document.body.classList.add("modal-open");
+  }
+  const safetyErr = (e) => {
+    const m = (e && e.message) || "";
+    return /does not exist|could not find the function|schema cache/i.test(m) ? "Reporting isn't switched on yet. Please email " + CONTACT_EMAIL + " instead." : m || "Something went wrong. Please try again.";
+  };
+  function blockedHtml() {
+    const list = friends.blocks || [];
+    if (!list.length) return "";
+    return '<div class="fr-label">Blocked</div><div class="fr-plist">' + list.map((b) =>
+      '<div class="fr-prow">' + frAv(b.user_id, b.name, 28) + '<span class="grow fw-600 truncate">' + esc(b.name) + '</span><button type="button" class="fr-btn ghost" data-action="unblock" data-id="' + esc(b.user_id) + '">Unblock</button></div>').join("") + "</div>";
+  }
+
   function groupsHtml() {
     const groups = friends.groups || [];
     const g = groups.find((x) => x.id === ui.groupSel);
@@ -5392,13 +5472,13 @@
         (groups.length > 1
           ? '<div class="chip-row group-tabs mt-3" role="tablist" aria-label="Your groups">' + groups.map((x) => '<button type="button" role="tab" aria-selected="' + (x.id === g.id) + '" class="btn btn-sm ' + (x.id === g.id ? "btn-green" : "btn-outline") + '" data-action="select-group" data-id="' + x.id + '">' + esc(x.name) + "</button>").join("") + "</div>"
           : "") +
-        '<div class="group-head mt-4"><div class="min0"><h3 class="display group-name">' + esc(g.name) + '</h3><p class="xs muted">' + g.members + (g.members === 1 ? " member" : " members") + (g.is_owner ? " · you started it" : "") + "</p></div>" +
+        '<div class="group-head mt-4"><div class="min0"><h3 class="display group-name">' + esc(g.name) + '</h3><p class="xs muted">' + g.members + (g.members === 1 ? " member" : " members") + (g.is_owner ? " · you started it" : "") + "</p></div>" + (g.is_owner ? "" : safetyBtn("group", g.id, g.name)) +
         '<div class="group-code"><span class="xs muted">Code</span><b class="display tnum">' + esc(g.code) + '</b><button type="button" class="btn btn-sm btn-outline" data-action="copy-group" data-link="' + esc(link) + '" data-code="' + esc(g.code) + '">' + icon("copy") + " Copy invite</button></div></div>" +
         '<div class="stat-tiles mt-4"><div class="stat-tile"><span class="eyebrow">Average</span><b class="display tnum">' + (done.length ? (avg / 1000).toFixed(1) + " t" : "–") + '</b><span class="xs muted">a year, ' + done.length + " with results</span></div>" +
         '<div class="stat-tile"><span class="eyebrow">Change</span><b class="display tnum ' + (change != null && change < 0 ? "green" : change > 0 ? "clay" : "") + '">' + (change == null ? "–" : (change < 0 ? "▼ " : "▲ ") + Math.abs(Math.round(change * 100)) + "%") + '</b><span class="xs muted">since members\' first surveys</span></div></div>' +
         (done.length
           ? '<ol class="board mt-4">' +
-            done.map((r, i) => '<li class="' + (r.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(r.display_name) + (r.is_self ? " (you)" : "") + '</span><span class="board-bar"><span style="width:' + ((r.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span><span class="board-t"><b class="display tnum">' + (r.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>').join("") +
+            done.map((r, i) => '<li class="' + (r.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(r.display_name) + (r.is_self ? " (you)" : "") + (!r.is_self && r.user_id ? safetyBtn("user", r.user_id, r.display_name) : "") + '</span><span class="board-bar"><span style="width:' + ((r.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span><span class="board-t"><b class="display tnum">' + (r.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>').join("") +
             "</ol>"
           : '<p class="sm muted mt-3">No one has finished the survey yet.</p>') +
         (rows.length > done.length ? '<p class="xs muted mt-2">' + (rows.length - done.length) + " member" + (rows.length - done.length === 1 ? " hasn't" : "s haven't") + " finished the survey yet.</p>" : "") +
@@ -5707,10 +5787,10 @@
       (outgoing.length
         ? '<div class="fr-label">Waiting for a reply</div>' + outgoing.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 32, false, "dashed") + '<span class="grow fw-700 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost" data-action="friend-remove" data-id="' + f.id + '">Cancel</button></div>').join("")
         : "") +
-      '<details class="fr-details"' + (ui.frManageOpen ? " open" : "") + "><summary>Manage friends and your name</summary>" +
+      '<details class="fr-details"' + (ui.frManageOpen ? " open" : "") + "><summary>Manage friends, blocking and your name</summary>" +
       (accepted.length
-        ? '<div class="fr-plist">' + accepted.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 28) + '<span class="grow fw-600 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost clay" data-action="friend-remove" data-id="' + f.id + '">Remove</button></div>').join("") + "</div>"
-        : '<p class="xs muted mt-2">No friends yet.</p>') +
+        ? '<div class="fr-plist">' + accepted.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 28) + '<span class="grow fw-600 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost clay" data-action="friend-remove" data-id="' + f.id + '">Remove</button>' + safetyBtn("user", f.otherId, f.name) + "</div>").join("") + "</div>"
+        : '<p class="xs muted mt-2">No friends yet.</p>') + blockedHtml() +
       '<form id="name-form" class="fr-nameform"><label class="xs fw-700" for="display-name">Name your friends see</label><span class="fr-addform"><input class="input" id="display-name" maxlength="40" placeholder="e.g. Sam" value="' +
       esc(friends.myName) + '" /><button type="submit" class="btn btn-outline">Save</button></span></form></details></section>';
 
@@ -5735,7 +5815,7 @@
     const reqs = incoming.map((f) =>
       '<div class="fr-req rise">' + frAv(f.otherId, f.name, 42) + '<span class="grow min0"><b>' + esc(f.name) + "</b> wants to be friends</span>" +
       '<button type="button" class="fr-btn green" data-action="friend-accept" data-id="' + f.id + '">Accept</button>' +
-      '<button type="button" class="fr-btn ghost sq" data-action="friend-remove" data-id="' + f.id + '" aria-label="Decline ' + esc(f.name) + '\'s request">' + icon("x") + "</button></div>").join("");
+      '<button type="button" class="fr-btn ghost sq" data-action="friend-remove" data-id="' + f.id + '" aria-label="Decline ' + esc(f.name) + '\'s request">' + icon("x") + "</button>" + safetyBtn("user", f.otherId, f.name) + "</div>").join("");
 
     const posts = feedPosts();
     const stacks = feedStacks(posts);
@@ -5820,6 +5900,7 @@
             "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
             "<strong>Letters sent from the app</strong>: if you send a letter to your MP or a message to whoever pays your energy bills from CO2 Counter, it's sent through our email provider, Resend, from our address, with a copy to you and replies going to you. We keep only the date and the type of letter, not what you wrote or your address.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
+            "<strong>Reports and blocks</strong>: if you report someone or a group, we keep the report (the reason, anything you add, and the name at the time) so we can review it. If you block someone, we keep that so they can't contact you. The person you report or block isn't told.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
             "<strong>Technical data</strong>: our web host and service providers log basic request data such as IP addresses to run and secure the service.",
@@ -5902,7 +5983,8 @@
         ],
         [
           "Using the site fairly",
-          "<p>Please don't misuse the service: no attempts to break or overload it, access other people's data, or copy and resell its content. We may suspend accounts that do.</p>",
+          "<p>Please don't misuse the service: no attempts to break or overload it, access other people's data, or copy and resell its content. Names, usernames and group names must not be offensive, abusive or misleading, and you mustn't use CO2 Counter to harass anyone. We may suspend accounts that do.</p>" +
+            "<p>You can report a person or group, or block someone, with the <strong>…</strong> button next to them on the Friends page. We review reports within 24 hours and will remove offensive names or groups, and suspend accounts that break these terms.</p>",
         ],
         [
           "Our content",
@@ -7435,6 +7517,76 @@
     },
     "feed-more": () => {
       ui.feedShown = (ui.feedShown || 5) + 5;
+      render();
+    },
+    safety: (el) => {
+      ui.safety = { kind: el.dataset.kind, id: el.dataset.id, name: el.dataset.name, reason: "" };
+      openSafety();
+    },
+    "safety-confirm": () => {
+      ui.safety.confirmBlock = true;
+      openSafety();
+    },
+    "safety-unconfirm": () => {
+      ui.safety.confirmBlock = false;
+      openSafety();
+    },
+    "safety-report": async () => {
+      const sf = ui.safety;
+      const picked = document.querySelector('input[name="sf-reason"]:checked');
+      sf.details = (document.getElementById("sf-details") || {}).value || "";
+      if (!picked) {
+        sf.error = "Please pick a reason.";
+        return openSafety();
+      }
+      sf.reason = picked.value;
+      sf.busy = true;
+      sf.error = "";
+      openSafety();
+      try {
+        const { error } = await sb.rpc("report_content", sf.kind === "user" ? { p_user: sf.id, p_reason: sf.reason, p_details: sf.details } : { p_group: sf.id, p_reason: sf.reason, p_details: sf.details });
+        if (error) throw error;
+        sf.done = sf.kind === "user"
+          ? "Thanks for telling us. We'll review it within 24 hours. You can also block " + (sf.name || "them") + " so they can't contact you."
+          : "Thanks for telling us. We'll review it within 24 hours and remove the group if it breaks our rules. You can leave the group at any time.";
+      } catch (e) {
+        sf.error = safetyErr(e);
+      }
+      sf.busy = false;
+      openSafety();
+    },
+    "safety-block": async () => {
+      const sf = ui.safety;
+      sf.busy = true;
+      openSafety();
+      try {
+        const { error } = await sb.rpc("block_user", { p_user: sf.id });
+        if (error) throw error;
+        ui.safety = null;
+        closeModal();
+        friends.msg = "Blocked " + (sf.name || "them") + ". You can unblock them under Manage friends.";
+        friends.msgOk = true;
+        friends.loaded = false;
+        await loadFriends();
+        return;
+      } catch (e) {
+        sf.error = safetyErr(e);
+      }
+      sf.busy = false;
+      openSafety();
+    },
+    unblock: async (el) => {
+      await sb.rpc("unblock_user", { p_user: el.dataset.id });
+      ui.frManageOpen = true;
+      friends.loaded = false;
+      await loadFriends();
+    },
+    "resolve-report": async (el) => {
+      if (el.dataset.do !== "dismiss" && !window.confirm(el.dataset.do === "remove_group" ? "Remove this group for everyone?" : "Clear this person's name and username?")) return;
+      const { error } = await sb.rpc("admin_resolve_report", { p_id: Number(el.dataset.id), p_action: el.dataset.do });
+      ui.reportMsg = error ? error.message : "";
+      const rp = await sb.rpc("admin_reports");
+      if (!rp.error) analytics.reports = rp.data || [];
       render();
     },
     "stand-tab": (el) => {
