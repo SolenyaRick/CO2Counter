@@ -2475,3 +2475,53 @@ revoke all on function public.blocked_with(uuid), public.block_user(uuid), publi
   public.report_content(uuid, uuid, text, text), public.admin_reports(), public.admin_resolve_report(bigint, text), public.group_board(uuid) from public;
 grant execute on function public.blocked_with(uuid), public.block_user(uuid), public.unblock_user(uuid), public.my_blocks(),
   public.report_content(uuid, uuid, text, text), public.admin_reports(), public.admin_resolve_report(bigint, text), public.group_board(uuid) to authenticated;
+
+-- ---------- Push notifications for the feed (November 2026) ----------
+-- Phones that turn on "Friends' activity" save their push token here. The
+-- push-notify Edge Function reads them (with the service role) to tell
+-- friends about retakes, cheers and accepted requests. Safe to run again.
+
+create table if not exists public.push_tokens (
+  token text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  platform text not null default 'ios' check (platform in ('ios', 'android')),
+  updated_at timestamptz not null default now()
+);
+create index if not exists push_tokens_user on public.push_tokens (user_id);
+alter table public.push_tokens enable row level security;
+revoke all on public.push_tokens from anon, authenticated;
+
+-- One row per notification event, so each is only ever sent once.
+create table if not exists public.push_sent (
+  event_key text primary key,
+  sent_at timestamptz not null default now()
+);
+alter table public.push_sent enable row level security;
+revoke all on public.push_sent from anon, authenticated;
+
+create or replace function public.save_push_token(p_token text, p_platform text default 'ios')
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Please sign in'; end if;
+  if p_token is null or length(p_token) < 20 or length(p_token) > 300 then raise exception 'Bad token'; end if;
+  insert into public.push_tokens (token, user_id, platform, updated_at)
+  values (p_token, auth.uid(), case when p_platform = 'android' then 'android' else 'ios' end, now())
+  on conflict (token) do update set user_id = auth.uid(), platform = excluded.platform, updated_at = now();
+end;
+$$;
+
+create or replace function public.remove_push_token(p_token text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.push_tokens where token = p_token and user_id = auth.uid();
+$$;
+
+revoke all on function public.save_push_token(text, text), public.remove_push_token(text) from public;
+grant execute on function public.save_push_token(text, text), public.remove_push_token(text) to authenticated;
