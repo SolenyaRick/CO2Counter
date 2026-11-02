@@ -1162,6 +1162,24 @@
     return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)) };
   }
 
+  // The 1.5°C budget (Hot or Cool Institute) covers household consumption:
+  // food, home, travel, goods and leisure. It leaves out banks and pensions
+  // (financed emissions) and public services. So we compare like with like:
+  // the survey's areas apart from money, plus the typical shopping figure.
+  // Money is shown on its own, beside it.
+  const BUDGET_SOURCE_URL = "https://hotorcool.org/hc-projects/1-5-degree-lifestyles";
+  function budgetBasis(fp, tips) {
+    const money = fp.breakdown.filter((b) => b.key === "banking").reduce((t, b) => t + b.yearly, 0);
+    const shop = D.ASSUMED_SHOPPING.totalKg;
+    const life = fp.totalYearly - money + shop;
+    const mt = tips ? tips.find((x) => x.b.key === "banking") : null;
+    return { money, shop, life, moneySave: mt ? mt.t.saving : 0, moneyMax: mt ? mt.t.maxSaving : 0 };
+  }
+  const budgetPhrase = (kg) => {
+    const ratio = kg / D.BUDGET_YEARLY;
+    return ratio <= 1 ? "inside the 1.5°C budget" : ratio < 1.5 ? Math.round((ratio - 1) * 100) + "% over the 1.5°C budget" : ratio.toFixed(1).replace(/\.0$/, "") + " times the 1.5°C budget";
+  };
+
   function ukPill(cmp) {
     if (cmp.pct < 5) return '<span class="stat-pill">About the same as the UK average</span>';
     return (
@@ -1580,7 +1598,7 @@
       '<section class="intro-split"><div><h2 class="display">What we look at</h2><p>Six parts of everyday life, including one most calculators miss: where your money sits.</p><ul class="intro-chips">' +
       STEPS.map((st) => "<li>" + st.icon + esc(st.title) + "</li>").join("") +
       '</ul></div><div class="intro-why"><span class="eyebrow">Why it matters</span><span class="display intro-why-num">{{budget_t}} t</span>' +
-      "<p>is roughly each person's yearly share of CO₂e if we're to keep warming to 1.5°C. Most of us in the UK are well above it, and small, repeated changes are how we close the gap.</p></div></section>" +
+      "<p>is roughly each person's yearly share of CO₂e if we're to keep warming to 1.5°C. Most of us in the UK are well above it, and small, repeated changes are how we close the gap. <a href=\"/budget/\">What it covers</a></p></div></section>" +
       '<section class="intro-cards">' +
       [
         ["chart", "Built on official figures", 'We use UK government emission factors and published data from sources like DESNZ, Defra, Ofgem and the ONS. <a href="/how-we-calculate/">How we calculate</a>'],
@@ -2488,12 +2506,18 @@
     const totalSaving = tips.reduce((sum, x) => sum + x.t.saving, 0);
     const totalMax = tips.reduce((sum, x) => sum + x.t.maxSaving, 0);
     const now = fp.totalYearly;
-    const after = Math.max(0, now - totalSaving);
-    const afterMax = Math.max(0, now - totalMax);
     const pct = (v) => (now ? Math.round((v / now) * 100) : 0);
     const cmp = ukComparison(fp);
     const budget = D.BUDGET_YEARLY;
-    const ukTotal = cmp.uk;
+    // The path to the budget is like for like (see budgetBasis): no money,
+    // plus typical shopping, for you and for the UK average alike.
+    const bb = budgetBasis(fp, tips);
+    const lifeNow = bb.life;
+    const lifeSaving = Math.max(0, totalSaving - bb.moneySave);
+    const after = Math.max(0, lifeNow - lifeSaving);
+    const afterMax = Math.max(0, lifeNow - Math.max(0, totalMax - bb.moneyMax));
+    const lifePct = (v) => (lifeNow ? Math.round((v / lifeNow) * 100) : 0);
+    const ukTotal = cmp.uk + bb.shop;
     const best = tips.slice().sort((x, y) => y.t.saving - x.t.saving)[0];
     const lead = best && best.t.saving > 0.5 ? best : tips[0];
     const top3 = fp.breakdown.slice(0, 3);
@@ -2503,14 +2527,12 @@
     const animate = !ui.resultsSeen;
     ui.resultsSeen = true;
 
-    const ratio = now / budget;
     const ukText =
       cmp.pct < 5 ? "about the same as the UK average" : '<span class="' + (cmp.above ? "clay" : "green") + ' fw-700">' + cmp.pct + "% " + (cmp.above ? "above" : "below") + "</span> the UK average";
-    const budgetText =
-      ratio <= 1 ? "inside the 1.5°C budget" : ratio < 1.5 ? Math.round((ratio - 1) * 100) + "% over the 1.5°C budget" : ratio.toFixed(1).replace(/\.0$/, "") + " times the 1.5°C budget";
+    const budgetText = budgetPhrase(lifeNow);
 
     // Path bar scale: room for now, the UK average and the budget.
-    const scale = Math.max(now, ukTotal, budget) * 1.15;
+    const scale = Math.max(lifeNow, ukTotal, budget) * 1.15;
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
@@ -2545,23 +2567,23 @@
       '<section class="glass res-hero' + (animate ? " rise" : "") + '"><div class="res-hero-main">' +
       '<p class="fw-600 muted">Your footprint this year</p>' +
       '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
-      '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ".</p>" +
+      '<p class="res-lead">That\'s ' + ukText + " on the things we can compare, and " + budgetText + ' like for like. <a class="link-btn" href="#/budget">What\'s in the budget?</a></p>' +
       '<details class="res-more"><summary>What about shopping and public services?</summary>' + sharedLine(now) + "</details></div>" +
-      '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
-      (totalSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(totalSaving) + " kg · " + pct(totalSaving) + "% less</span>" : "") +
+      '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">Against the 1.5°C budget, with realistic changes</span>' +
+      (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
       '<div class="path' + (animate ? " animate" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
       '<span class="path-mark uk' + edge(W(ukTotal)) + '" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
-      '<span class="path-now" style="width:' + W(now) + '%"></span>' +
+      '<span class="path-now" style="width:' + W(lifeNow) + '%"></span>' +
       '<span class="path-real" style="width:' + W(after) + '%"></span>' +
       '<span class="path-all" style="width:' + W(afterMax) + '%"></span></div>' +
       '<div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">' + kgFmt(afterMax) + "</b></span>" +
       '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
-      '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(now) + "</b></span></div>" +
+      '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(lifeNow) + "</b></span></div>" +
       '<p class="sm muted mt-2">' + realisticLine + "</p>" +
-      '<details class="res-note xs muted mt-1"><summary>' + icon("info") + "About the UK average</summary>It leaves out banking and pensions, as there's no UK figure for them. On the same basis you're at " +
-      (cmp.mine / 1000).toFixed(1) + " t.</details></div></section>";
+      '<p class="xs muted mt-1">Like for like: your survey without your bank and pension' + (bb.money >= 0.5 ? ' (<b class="tnum">' + kgFmt(bb.money) + " kg</b> on top)" : "") +
+      ", plus a typical " + (bb.shop / 1000).toFixed(1) + ' t for shopping. <a class="link-btn" href="#/budget">How we compare</a></p></div></section>';
 
     html +=
       '<div class="res-grid"><section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
@@ -4319,8 +4341,9 @@
       ) +
       section(
         "The 1.5°C budget",
-        "<p>To keep global warming to 1.5°C, average emissions need to fall to roughly {{budget_t}} tonnes of CO₂-equivalent per person per year. " +
-          "We show your footprint as a share of that, as a sense of scale.</p>"
+        "<p>To keep global warming to 1.5°C, lifestyle footprints need to fall to about {{budget_t}} tonnes of CO₂-equivalent per person a year by 2030 (Hot or Cool Institute). " +
+          "The budget covers food, home, travel, goods and leisure, but not banks and pensions or public services, so we compare like with like: your survey without money, plus typical shopping. " +
+          'Your bank and pension are shown on their own. <a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
       ) +
       section(
         "Potential savings",
@@ -4356,6 +4379,56 @@
       ) +
       "</div>" +
       '<div class="center"><a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a></div></div>"
+    );
+  }
+
+  // ==================== The 1.5°C budget ====================
+  // What the 2.5 t budget covers, and how your footprint is compared with it.
+  function renderBudget() {
+    const t = (kg) => (kg / 1000).toFixed(1);
+    const card = (title, body) => '<div class="section-card static fade-up"><h2 class="fw-600 mb-2">' + esc(title) + '</h2><div class="sm muted lh method">' + body + "</div></div>";
+    const done = survey && survey.completedAt;
+    const fp = done ? footprint(survey) : null;
+    const bb = fp ? budgetBasis(fp) : null;
+    const yours = fp
+      ? '<section class="glass budget-you fade-up"><span class="eyebrow">Your figures</span>' +
+        '<div class="budget-sum"><div><b class="display tnum">' + t(fp.totalYearly - bb.money) + ' t</b><span class="xs muted">your survey, without money</span></div><span class="budget-op" aria-hidden="true">+</span>' +
+        '<div><b class="display tnum">' + t(bb.shop) + ' t</b><span class="xs muted">typical shopping</span></div><span class="budget-op" aria-hidden="true">=</span>' +
+        '<div class="hl"><b class="display tnum">' + t(bb.life) + ' t</b><span class="xs muted">compared with the budget</span></div></div>' +
+        '<p class="sm mt-3">That\'s <b>' + budgetPhrase(bb.life) + "</b> of " + t(D.BUDGET_YEARLY) + " t." +
+        (bb.money >= 0.5 ? " Your bank and pension add another <b>" + t(bb.money) + " t</b>, shown on their own." : "") + "</p></section>"
+      : "";
+    const inOut = (rows) => '<ul class="budget-list">' + rows.map(([ok, text]) => '<li class="' + (ok ? "in" : "out") + '"><span aria-hidden="true">' + (ok ? "✓" : "✕") + "</span>" + text + "</li>").join("") + "</ul>";
+    return (
+      '<div class="container narrow">' + pageHeader("The 1.5°C budget", "What it covers, and how we compare you with it", "info") +
+      yours +
+      '<div class="stack-6 mb-10">' +
+      card("Where 2.5 tonnes comes from",
+        "<p>To keep global warming to 1.5°C, the Hot or Cool Institute's <em>1.5-Degree Lifestyles</em> report (2021) works out how far each person's lifestyle footprint needs to fall, sharing what's left of the world's carbon budget fairly between everyone: " +
+          "about <strong>2.5 tonnes</strong> of CO₂e a person by 2030, <strong>1.4 tonnes</strong> by 2040 and <strong>0.7 tonnes</strong> by 2050. We use the 2030 figure. " +
+          '<a class="link-btn" href="' + BUDGET_SOURCE_URL + '" target="_blank" rel="noopener">The report</a></p>') +
+      card("What the budget covers",
+        "<p>It's a <em>lifestyle</em> footprint: the emissions from what households consume.</p>" +
+          inOut([
+            [true, "Food and drink"],
+            [true, "Home energy and water"],
+            [true, "Travel, including flights"],
+            [true, "Goods: clothes, electronics, furniture and the like"],
+            [true, "Leisure and services: hobbies, holidays, eating out"],
+            [false, "Money in banks and pensions (financed emissions)"],
+            [false, "Public services and infrastructure, like the NHS, schools and roads"],
+          ])) +
+      card("How we compare you with it",
+        "<p>We compare like with like. From your survey we take everything except your bank and pension: food, commuting and travel, flights, home energy, water and pets. " +
+          "Shopping isn't in the survey yet, so we add a typical UK figure of " + t(D.ASSUMED_SHOPPING.totalKg) + " t, the same as the budget would count. That total is what we put against the budget, and the UK average on the results page is worked out the same way.</p>" +
+          "<p>Your bank and pension are still in your footprint, and still count. We show them on their own because the budget doesn't include them, and because financed emissions are also counted in the footprints of the companies they fund, so adding them would mix two different kinds of figure.</p>" +
+          "<p>Public services and infrastructure (about " + t(D.SHARED_FOOTPRINT.totalKg) + " t a person between them) are left out of both, as the budget leaves them out too. They're shown on the results page as your shared footprint.</p>") +
+      card("Why your headline total is different",
+        "<p>The big number on your results page is everything the survey measures, including your bank and pension, so it's the one to watch as you make changes. " +
+          "The comparison with the budget takes money out and adds typical shopping, so the two figures won't match.</p>") +
+      "</div>" +
+      '<div class="center chip-row" style="justify-content:center">' + (done ? '<a class="btn btn-green" href="#/results">Back to my results ' + icon("arrowRight") + "</a>" : '<a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a>") +
+      '<a class="btn btn-outline" href="/how-we-calculate/">How we calculate</a></div></div>'
     );
   }
 
@@ -7064,7 +7137,7 @@
 
   // Public pages also have real addresses (co2counter.co.uk/about/ and so
   // on, built by scripts/build-pages.mjs) so search engines can find them.
-  const PAGE_PATHS = { "/about/": "/about", "/greener-switches/": "/switches", "/how-we-calculate/": "/how-we-calculate", "/example/": "/example", "/privacy/": "/privacy", "/terms/": "/terms" };
+  const PAGE_PATHS = { "/about/": "/about", "/greener-switches/": "/switches", "/how-we-calculate/": "/how-we-calculate", "/budget/": "/budget", "/example/": "/example", "/privacy/": "/privacy", "/terms/": "/terms" };
   function currentPath() {
     const hash = location.hash.replace(/^#/, "");
     if (!hash) return PAGE_PATHS[location.pathname.replace(/\/?$/, "/")] || "/";
@@ -7086,11 +7159,12 @@
     if (!authChecked || !survey || (currentUser && !membership)) html = spinner;
     else if (ui.pendingVerify) html = renderVerify();
     else if (ui.recovery) html = renderLogin();
-    else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate", "/about", "/switches"].includes(path)) html = renderChooseUsername();
+    else if (currentUser && ui.needUsername && !["/privacy", "/terms", "/how-we-calculate", "/budget", "/about", "/switches"].includes(path)) html = renderChooseUsername();
     else if (path === "/welcome") html = renderIntro();
     else if (path === "/example") html = renderExample();
     else if (path === "/") html = showIntroFirst() ? renderIntro() : renderSurvey();
     else if (path === "/how-we-calculate") html = renderMethod();
+    else if (path === "/budget") html = renderBudget();
     else if (path === "/privacy") html = renderPrivacy();
     else if (path === "/terms") html = renderTerms();
     else if (path === "/about") html = renderAbout();
