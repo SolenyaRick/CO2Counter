@@ -4986,3 +4986,10 @@ span.todo-guide { cursor: pointer; }
   .meal-step .step-btn { width: 34px; height: 34px; min-width: 34px; }
   .meal-step b { min-width: 14px; font-size: 18px; }
 }
+
+/* Fun comparisons and the before/after card */
+.res-fun { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin: 14px 0 0; font-size: 15px; }
+.res-fun-ic { font-size: 22px; line-height: 1; }
+.res-fun > span:nth-child(2) { flex: 1 1 220px; }
+.res-fun .link-btn { font-size: 14px; font-weight: 700; }
+.share-card-img { display: block; width: 100%; max-width: 420px; margin: 4px auto 0; border-radius: 18px; box-shadow: 0 12px 30px rgba(46, 42, 34, 0.18); -webkit-touch-callout: default; }
