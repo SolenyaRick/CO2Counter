@@ -5531,7 +5531,7 @@
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
           '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") +
           '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(firstSentence(a.fact)) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.done ? a.fact : firstSentence(a.fact)) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;
@@ -5565,7 +5565,7 @@
             '<div><b class="display tnum sw-big">' + esc(a.big) + '</b><p class="sw-big-label">' + esc(a.bigLabel) + "</p></div></div>" +
             '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : "") +
             '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
-            '<h2 class="display">' + esc(a.title) + '</h2><p class="sw-fact">' + esc(firstSentence(a.fact)) + "</p>" + a.action +
+            '<h2 class="display">' + esc(a.title) + '</h2><p class="sw-fact">' + esc(a.fact) + "</p>" + a.action +
             '<p class="sw-disc"><a href="' + a.page + '">More on Act ' + ACT_NO[a.key] + " " + icon("arrowRight") + "</a></p></div></div></section>"
         )
         .join("") +
