@@ -4555,7 +4555,7 @@
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
       '<div class="hb-chips">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg still to save</span></span>" : "") +
-      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-see">See your </span>switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
+      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
       "</div>" + ring + "</header>" + sundayOffer(acts) +
       '<section class="glass hb-acts" aria-label="The 7 Acts">' +
       group("Switch the big things", acts.slice(0, 4)) + group("Keep measuring", acts.slice(4, 5)) + group("Use your voice", acts.slice(5)) +

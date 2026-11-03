@@ -5286,4 +5286,5 @@ a.res-tag:hover { text-decoration: underline; }
 @media (max-width: 360px) { .hb2 .hb-chips { flex-wrap: wrap; } }
 .hb2 .hb-tick { position: static; left: auto; top: auto; z-index: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
 .hb2 .hb-tick .icon { width: 15px; height: 15px; }
-@media (max-width: 420px) { .hb2 .hb-sw-see { display: none; } .hb2 .hb-swlink { text-transform: none; } }
+.hb2 .hb-sw-short { display: none; }
+@media (max-width: 420px) { .hb2 .hb-sw-long { display: none; } .hb2 .hb-sw-short { display: inline; } }
