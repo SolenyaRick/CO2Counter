@@ -2942,21 +2942,77 @@
   }
 
   // Results end in action: the three changes that would cut the most, each
-  // opening its step (with the guide) on the category page.
+  // opening its step (with the guide) on the category page. Drawn as one
+  // bar of your footprint with each move's slice peeling off, then a card
+  // per move with a ring for its share of your footprint.
   function movesHtml(tips) {
     const top = tips.filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
     if (!top.length) return "";
+    const now = tips.reduce((t, x) => t + x.b.yearly, 0) || 1;
+    const cut = top.reduce((t, x) => t + x.t.saving, 0);
+    const after = Math.max(0, now - cut);
+    const w = (v) => Math.max(0, Math.min(100, (v / now) * 100)).toFixed(2);
+    const share = (v) => Math.max(1, Math.round((v / now) * 100));
+    let left = Number(w(after));
+    const segs = top
+      .map((x, i) => {
+        const sw = Number(w(x.t.saving));
+        const s = '<span class="mv-seg" style="left:' + left.toFixed(2) + "%;width:" + sw.toFixed(2) + "%;--c:" + CAT_COLOR[x.b.key] + ";--d:" + (0.35 + i * 0.35).toFixed(2) + 's"><i>' + (i + 1) + "</i></span>";
+        left += sw;
+        return s;
+      })
+      .join("");
     return (
-      '<section class="glass moves" aria-labelledby="moves-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2>' +
-      '<span class="sm muted">−' + kgFmt(top.reduce((t, x) => t + x.t.saving, 0)) + " kg a year between them</span></div><ol>" +
-      top.map((x, i) =>
-        '<li><a class="move" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
-        '<span class="move-n display">' + (i + 1) + '</span><span class="move-ic cat-badge">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + "</span>" +
-        '<span class="min0 grow"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + "</span></span>" +
-        '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg a year</span></span>' + icon("chevronRight") + "</a></li>"
-      ).join("") +
+      '<section class="glass moves mv" aria-labelledby="moves-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2>' +
+      '<span class="mv-total display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + "</span> kg a year</span></div>" +
+      '<div class="mv-bar" role="img" aria-label="Your footprint is ' + kgFmt(now) + " kg a year. These three moves cut " + kgFmt(cut) + " kg, to " + kgFmt(after) + ' kg.">' +
+      '<div class="mv-track"><span class="mv-keep" style="width:' + w(after) + '%"></span>' + segs +
+      '<span class="mv-after" style="left:' + w(after) + '%"></span></div>' +
+      '<div class="mv-ends"><span>Now <b class="display tnum">' + kgFmt(now) + '</b> kg</span><span class="mv-ends-after">After the three <b class="display tnum">' + kgFmt(after) + "</b> kg</span></div></div>" +
+      '<ol class="mv-cards">' +
+      top
+        .map((x, i) => {
+          const p = share(x.t.saving);
+          return (
+            '<li style="--d:' + (0.35 + i * 0.35).toFixed(2) + 's"><a class="move mv-card" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
+            '<span class="mv-ring" style="--c:' + CAT_COLOR[x.b.key] + '"><svg viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="17" class="mv-ring-bg"></circle>' +
+            '<circle cx="21" cy="21" r="17" class="mv-ring-fg" pathLength="100" style="--p:' + p + '" transform="rotate(-90 21 21)"></circle></svg>' +
+            '<span class="mv-ic">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + '</span><span class="mv-rank display">' + (i + 1) + "</span></span>" +
+            '<span class="mv-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + p + "% of your footprint</span></span>" +
+            '<span class="move-kg mv-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg a year</span></span>' +
+            '<span class="mv-go">' + icon("chevronRight") + "</span></a></li>"
+          );
+        })
+        .join("") +
       "</ol></section>"
     );
+  }
+  // Plays once, when the moves scroll into view.
+  function animateMoves() {
+    const el = app.querySelector(".mv:not(.mv-seen)");
+    if (!el) return;
+    el.classList.add("mv-seen");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || !("IntersectionObserver" in window)) return el.classList.add("in");
+    el.querySelectorAll("[data-mv-to]").forEach((n) => (n.textContent = "0"));
+    const play = () => {
+      el.classList.add("in");
+      const t0 = performance.now();
+      const nums = [...el.querySelectorAll("[data-mv-to]")];
+      const tick = (t) => {
+        const k = Math.min(1, (t - t0 - 350) / 1300);
+        nums.forEach((n) => (n.textContent = Math.round(Number(n.dataset.mvTo) * (k <= 0 ? 0 : 1 - Math.pow(1 - k, 3))).toLocaleString()));
+        if (k < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        play();
+      }
+    }, { threshold: 0.3 });
+    io.observe(el);
   }
 
   function renderResults() {
@@ -7860,6 +7916,7 @@
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
+    animateMoves();
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
