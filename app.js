@@ -4557,8 +4557,9 @@
       '<header class="hb-hero"><div class="hb-hero-main">' +
       '<div class="hb-top' + (animate ? " rise" : "") + '"><span class="hb-eyebrow">My Habits · The 7 Acts</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
       '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
-      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>: the changes that cut the most. ' +
-      (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
+      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <b>7 Acts</b>: the changes that cut the most. ' +
+      (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
+      ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
       '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
       (ready ? '<a class="hb-swlink" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
@@ -5705,7 +5706,7 @@
       '<div class="container sw-page">' +
       '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches · the 7 Acts</span>' +
       '<h1 class="display rise d1">The 7 Acts.<br><span>Up to ' + kgFmt(total) + " kg</span> a year, and more through others.</h1>" +
-      '<p class="rise d2">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>, worked out ' + (base.mine ? "for your footprint" : "for a typical UK footprint") +
+      '<p class="rise d2">Real Zero\'s <a href="#/habits">7 Acts</a>, worked out ' + (base.mine ? "for your footprint" : "for a typical UK footprint") +
       ". Flip a switch to see the saving.</p></div>" + board + "</header>" +
       plot + feats +
       others
