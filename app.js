@@ -4555,9 +4555,9 @@
     return (
       '<div class="container hb-page">' +
       '<header class="hb-hero"><div class="hb-hero-main">' +
-      '<span class="hb-eyebrow' + (animate ? " rise" : "") + '">My Habits · The 7 Acts</span>' +
+      '<div class="hb-top' + (animate ? " rise" : "") + '"><span class="hb-eyebrow">My Habits · The 7 Acts</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
       '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
-      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> : the changes that cut the most. ' +
+      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>: the changes that cut the most. ' +
       (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
       '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
@@ -4571,7 +4571,7 @@
       '<div class="hb-daily" aria-hidden="true">' +
       DAILY.map(([label, d, week]) => '<div><span class="hb-daily-icon">' + svgPath(d, 20) + '</span><span class="display">' + label + '</span><span class="hb-week">' + week.split("").map((c) => '<i class="' + (c === "g" ? "g" : c === "a" ? "a" : "") + '"></i>').join("") + "</span></div>").join("") +
       "</div></section>" +
-      '<p class="xs muted hb-credit">The 7 Acts are by <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">Real Zero</a>.</p></div>'
+      '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
     );
   }
   const ACT_SHORT = { 1: "Money", 2: "Energy", 3: "Food", 4: "Travel", 5: "Measure", 6: "Your MP", 7: "Invite 7" };

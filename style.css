@@ -5170,3 +5170,11 @@ a.res-tag:hover { text-decoration: underline; }
 .res-next-go.move-go, .res-next-go.move-go b, .res-next-go.move-go .res-next-k { color: #F6F1E6; }
 .res-next-go.sw-go, .res-next-go.sw-go b, .res-next-go.sw-go .res-next-k { color: #2E2A22; }
 @media (max-width: 640px) { .res-next-go { padding: 14px 13px 12px; } .res-next-go b { font-size: 15px; } .res-next-kg { font-size: 13px; } }
+
+/* Real Zero logo on My Habits */
+.hb-top { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.hb-rz { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-radius: 999px; background: rgba(255, 252, 245, 0.8); border: 1px solid rgba(46, 42, 34, 0.08); color: #5E574B; font-size: 13px; font-weight: 700; text-decoration: none; }
+.hb-rz:hover { border-color: rgba(63, 91, 58, 0.35); color: #2E2A22; }
+.hb-rz img { display: block; height: 22px; width: auto; }
+.hb-credit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hb-rz-foot img { display: block; height: 18px; width: auto; }
