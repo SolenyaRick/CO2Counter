@@ -2942,21 +2942,104 @@
   }
 
   // Results end in action: the three changes that would cut the most, each
-  // opening its step (with the guide) on the category page.
+  // opening its step (with the guide) on the category page. The saving is
+  // one big drawing of your mascot, cut into a slice per move (its share of
+  // the saving), the slices filling in one after another.
   function movesHtml(tips) {
     const top = tips.filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
     if (!top.length) return "";
+    const cut = top.reduce((t, x) => t + x.t.saving, 0);
+    const items = piItems();
+    const pal = items.find((x) => x.key === piMascot()) || items[0];
+    const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '"></path>').join("");
+    const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
+    const ofA = (/^[aeiou]/i.test(pal.one) ? "an " : "a ") + pal.one;
+    const worth = pal.type === "h"
+      ? "a cube of CO₂ " + cubeSide(cut).toFixed(1) + " m tall: " + howMany(total, pal)
+      : total >= 1 ? howMany(total, pal) : Math.max(1, Math.round(total * 100)) + "% of " + ofA;
+    // Slices left to right, by share of the saving (laid out on the
+    // drawing's own width once it's on the page).
+    let at = 0;
+    const slices = top.map((x, i) => {
+      const s = { i, c: CAT_COLOR[x.b.key], from: at, share: x.t.saving / cut };
+      at += s.share;
+      return s;
+    });
+    const big =
+      '<svg class="mv3-big" viewBox="0 -6 48 56" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
+      top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
+      '<defs><clipPath id="mv3-sil">' + parts + "</clipPath>" +
+      slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
+      '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true) + "</g>" +
+      slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g filter="url(#pi-clay)"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect></g></g><g class="mv3-shade">' + piArt(pal.key, false) + "</g></g>").join("") +
+      '<g clip-path="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
+      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" cy="-2.4" fill="' + s.c + '"></circle><text y="-1.1" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
+      "</svg>";
     return (
-      '<section class="glass moves" aria-labelledby="moves-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2>' +
-      '<span class="sm muted">−' + kgFmt(top.reduce((t, x) => t + x.t.saving, 0)) + " kg a year between them</span></div><ol>" +
-      top.map((x, i) =>
-        '<li><a class="move" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
-        '<span class="move-n display">' + (i + 1) + '</span><span class="move-ic cat-badge">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + "</span>" +
-        '<span class="min0 grow"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + "</span></span>" +
-        '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg a year</span></span>' + icon("chevronRight") + "</a></li>"
-      ).join("") +
-      "</ol></section>"
+      '<section class="glass moves mv3" aria-labelledby="moves-h">' + piDefsSvg() +
+      '<h2 id="moves-h" class="card-title">Your 3 biggest moves</h2><div class="mv3-in">' +
+      '<figure class="mv3-fig">' + big + '<figcaption><b class="display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + '</span> kg</b><span>a year: ' + esc(worth) + "</span></figcaption></figure>" +
+      '<ol class="mv3-list">' +
+      top
+        .map(
+          (x, i) =>
+            '<li style="--c:' + CAT_COLOR[x.b.key] + ";--d:" + (0.2 + i * 0.7).toFixed(2) + 's"><a class="move mv3-row" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
+            '<span class="mv3-n display">' + (i + 1) + "</span>" +
+            '<span class="mv3-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + Math.round((x.t.saving / cut) * 100) + "% of " + esc(pal.key === "lettuce" ? "the lettuce" : "your " + (["devito", "lincoln", "argentinosaurus"].includes(pal.key) ? pal.short : pal.short.toLowerCase())) + "</span></span>" +
+            '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg</span></span>' + icon("chevronRight") + "</a></li>"
+        )
+        .join("") +
+      "</ol></div></section>"
     );
+  }
+  // Lays the slices on the drawing's real width, then fills them in one
+  // after another when the moves scroll into view (once).
+  function animateMoves() {
+    const el = app.querySelector(".mv3:not(.mv-seen)");
+    if (!el) return;
+    el.classList.add("mv-seen");
+    const svg = el.querySelector(".mv3-big");
+    let x0 = 4, w = 40;
+    try {
+      const b = svg.querySelector(".mv3-ghost").getBBox();
+      if (b.width > 4) { x0 = b.x; w = b.width; }
+    } catch (e) {}
+    const bands = [...el.querySelectorAll(".mv3-band")];
+    bands.forEach((r) => r.setAttribute("x", (x0 + Number(r.dataset.from) * w).toFixed(2)));
+    el.querySelectorAll(".mv3-cut").forEach((l) => { const x = (x0 + Number(l.dataset.at) * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); });
+    el.querySelectorAll(".mv3-tag").forEach((g) => g.setAttribute("transform", "translate(" + (x0 + Number(g.dataset.mid) * w).toFixed(2) + " 0)"));
+    const fill = (k) => bands.forEach((r) => r.setAttribute("width", (Number(r.dataset.share) * w * k(r)).toFixed(2)));
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Once per visit: the page redraws when data arrives, and that
+    // shouldn't replay it.
+    const sig = el.querySelector("[data-mv-to]").dataset.mvTo + location.hash;
+    if (reduce || !("IntersectionObserver" in window) || ui.mvPlayed === sig) {
+      fill(() => 1);
+      el.classList.add("still");
+      return el.classList.add("in");
+    }
+    el.querySelectorAll("[data-mv-to]").forEach((m) => (m.textContent = "0"));
+    const play = () => {
+      ui.mvPlayed = sig;
+      el.classList.add("in");
+      const t0 = performance.now(), each = 650, gap = 700, nums = [...el.querySelectorAll("[data-mv-to]")];
+      const ease = (v) => 1 - Math.pow(1 - Math.max(0, Math.min(1, v)), 3);
+      const tick = (t) => {
+        const ms = t - t0 - 200;
+        fill((r) => ease((ms - bands.indexOf(r) * gap) / each));
+        const all = ease(ms / (gap * (bands.length - 1) + each));
+        nums.forEach((m) => (m.textContent = Math.round(Number(m.dataset.mvTo) * all).toLocaleString()));
+        if (ms < gap * bands.length + each) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        play();
+      }
+    }, { threshold: 0.3 });
+    io.observe(el);
   }
 
   function renderResults() {
@@ -7860,6 +7943,7 @@
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
+    animateMoves();
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
