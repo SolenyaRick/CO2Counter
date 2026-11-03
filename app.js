@@ -4488,7 +4488,37 @@
       const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < n ? "fin" : i < joined ? "joined" : "") + '">' + icon(i < n ? "check" : i < joined ? "user" : "plus") + "</span>").join("");
       return '<div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>";
     };
-    // What opens under Acts 2, 6 and 7: the tools to do them.
+    // Every act opens in place: the links to do it, and Explain more, which
+    // opens that part of your results.
+    let areas = [];
+    try { areas = switchAreas(ready ? { s: survey, mine: true } : { s: switchBaseTypical(), mine: false }); } catch (e) {}
+    const areaOf = (k) => areas.find((x) => x.key === k);
+    const offers = (keys) => {
+      const seen = {}, list = [];
+      keys.forEach((k) => {
+        const ar = areaOf(k);
+        if (!ar || ar.askHtml) return;
+        (ar.links || []).forEach((l) => { if (!seen[l.label]) { seen[l.label] = 1; list.push({ k, ar, l }); } });
+      });
+      if (!list.length) return "";
+      const paid = list.some((x) => x.l.ref);
+      const bank = keys.includes("banking");
+      return (
+        '<ul class="hb-offers">' +
+        list.map(({ k, ar, l }) => {
+          const tone = TONES[l.tone] || TONES.leaf;
+          const name = l.label === "The Man in Seat 61" ? "Seat 61" : l.label.replace(/^The /, "");
+          return '<li><a class="hb-offer" ' + linkAttrs(k, l, "habits") + '><span class="display sw-mono" style="background:' + tone[0] + ";color:" + tone[1] + '">' + esc(monogramText(l.label)) + "</span>" +
+            '<span class="min0"><b class="display">' + esc(l.label) + (l.ref ? ' <span class="tag affiliate-tag">Affiliate</span>' : "") + '</b><span class="xs muted">' + esc(l.note) + "</span></span>" +
+            '<span class="hb-offer-go" aria-label="' + esc(ar.verb + " " + name) + '">' + icon("link") + "</span></a></li>";
+        }).join("") + "</ul>" +
+        '<p class="xs muted">' + (bank ? "Chosen using the bank league table. These are never affiliate links." : paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : "Independent suggestions. We don't get paid for these links.") + "</p>"
+      );
+    };
+    const explain = (cats) =>
+      '<div class="hb-explain-row">' +
+      cats.map(([cat, label]) => '<a class="btn btn-outline btn-sm hb-more" href="' + catHref(cat) + '" data-action="open-move" data-cat="' + cat + '">' + esc(label) + " " + icon("arrowRight") + "</a>").join("") +
+      "</div>";
     const inside = (a) => {
       const pageLink = (h) => '<a class="hb-page-link xs fw-700" href="' + h + '">More on this act ' + icon("arrowRight") + "</a>";
       if (a.n === 6) {
@@ -4507,19 +4537,23 @@
           (ui.shareMsg ? '<p class="xs green-dark">' + esc(ui.shareMsg) + "</p>" : "") + pageLink("#/acts/motivate")
         );
       }
-      return a.extra || "";
+      if (a.n === 5)
+        return '<p class="sm">' + (ready ? "Retake the survey every few months to see your footprint change." : "Take the survey to see your footprint.") + "</p>" +
+          '<div class="hb-explain-row"><a class="btn btn-green btn-sm" href="#/" data-action="start-survey">' + (ready ? "Update my survey" : "Take the survey") + " " + icon("arrowRight") + "</a>" +
+          (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "") + "</div>" +
+          '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>";
+      if (a.n === 4) return offers(["commute", "flights"]) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]]);
+      const cat = { 1: "banking", 2: "energy", 3: "meals" }[a.n];
+      return (a.energy ? a.extra || "" : offers([cat])) + explain([[cat, "Explain more"]]);
     };
-    const opens = (a) => (a.n === 6 && (!a.done || a.manual)) || (a.n === 7 && !a.done) || !!a.energy;
     const row = (a, i) => {
       const cls = "hb-row hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
-      const li = (inner) => '<li class="hb-item" id="hb-act-' + a.n + '" style="--i:' + i + '">' + inner + "</li>";
-      if (opens(a))
-        return li(
-          '<details class="hb-acc" data-n="' + a.n + '"' + (ui.hbOpen[a.n] ? " open" : "") + '><summary class="' + cls + '">' + node(a) + body(a) + save(a) + sr(a) + '<span class="hb-chev">' + icon("chevronDown") + "</span></summary>" +
-          '<div class="hb-acc-body">' + inside(a) + "</div></details>"
-        );
-      const href = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : a.href || "/greener-switches/";
-      return li('<a class="' + cls + '" href="' + href + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + body(a) + save(a) + sr(a) + icon("chevronRight") + "</a>");
+      return (
+        '<li class="hb-item" id="hb-act-' + a.n + '" style="--i:' + i + '">' +
+        '<details class="hb-acc" data-n="' + a.n + '"' + (ui.hbOpen[a.n] ? " open" : "") + '><summary class="' + cls + '"' + (a.cat ? ' data-cat="' + a.cat + '"' : "") + ">" +
+        node(a) + body(a) + save(a) + sr(a) + '<span class="hb-chev">' + icon("chevronDown") + "</span></summary>" +
+        '<div class="hb-acc-body">' + inside(a) + "</div></details></li>"
+      );
     };
     let k = 0;
     const group = (title, list) => '<h2 class="hb-glabel">' + esc(title) + '</h2><ol class="hb-list">' + list.map((a) => row(a, k++)).join("") + "</ol>";
@@ -4555,7 +4589,7 @@
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
       '<div class="hb-chips">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg still to save</span></span>" : "") +
-      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-see">See your </span>switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
+      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
       "</div>" + ring + "</header>" + sundayOffer(acts) +
       '<section class="glass hb-acts" aria-label="The 7 Acts">' +
       group("Switch the big things", acts.slice(0, 4)) + group("Keep measuring", acts.slice(4, 5)) + group("Use your voice", acts.slice(5)) +
