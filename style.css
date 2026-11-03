@@ -5075,3 +5075,9 @@ a.res-tag:hover { text-decoration: underline; }
 .results-v2 .res-hero { margin-bottom: 24px; }
 .results-v2 .moves { margin-bottom: 24px; }
 .results-v2 .res-chart { align-self: flex-start; }
+
+/* Calmer main pages: the short version here, the full text one tap away */
+.cat-v2 .todo-body { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cat-v2 .cat-why { max-width: 46ch; }
+.cat-plan .plan-go { margin-top: 12px; }
+.sw-page .sw-fact { max-width: 52ch; }

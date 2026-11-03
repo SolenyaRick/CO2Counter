@@ -85,6 +85,10 @@
       .replace(/"/g, "&quot;");
   }
 
+  // The first sentence of a paragraph, for main pages that keep text short
+  // (the full text stays on the pages that explain).
+  const firstSentence = (t) => String(t || "").split(/(?<=[.!?])\s+(?=[A-Z0-9£“"])/)[0];
+
   function lsGet(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -129,6 +133,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
@@ -3147,7 +3152,7 @@
       '<a class="back-overview" href="#/results">' + icon("chevronLeft") + " Back to overview</a>" +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
       '<div class="cat-hero-main"><div class="label-row"><span class="cat-badge">' + ex.icon + '</span><span class="eyebrow">' + rank + "</span></div>" +
-      '<h1 class="cat-title display">' + esc(ex.title) + '</h1><p class="cat-why">' + esc(ex.why) + "</p></div>" +
+      '<h1 class="cat-title display">' + esc(ex.title) + '</h1><p class="cat-why">' + esc(firstSentence(ex.why)) + "</p></div>" +
       '<div class="cat-hero-side"><div class="cat-figs"><div class="cat-kg display tnum">' + kgFmt(item.yearly) + "</div>" +
       '<div class="muted">kg CO₂e a year</div><div class="cat-yours">' + esc(categorySummary(cat)) + "</div>" +
       '<div class="cat-uk">' + esc(ukLine) + "</div></div>" +
@@ -3190,7 +3195,7 @@
       (tip.saving > 0.5 ? '<p class="xs muted mt-3">Realistic: ' + esc(tip.realisticLabel || tip.title) + ".</p>" : "") +
       "</section>" +
       (ex.fact ? '<section class="cat-fact"><span class="eyebrow">Good to know</span><p class="display">' + esc(ex.fact) + "</p></section>" : "") +
-      '<section class="cat-plan"><h3 class="display">Build the habit</h3><p class="sm">The 7 Acts are live in My Habits, and daily habit tracking is coming next.</p>' +
+      '<section class="cat-plan"><h3 class="display">Build the habit</h3>' +
       '<a class="plan-go" href="#/habits">Open My Habits ' + icon("arrowRight") + "</a></section></aside></div>" +
       '<div class="cat-steps"><a class="cat-step" href="#/explainer/' + prev.key + '">' + icon("chevronLeft") +
       '<span><small>Previous</small><b>' + esc(prev.label) + "</b></span></a>" +
@@ -3630,7 +3635,7 @@
     if (!links) return "";
     const tip = tipFor(cat, survey);
     const kg = tip.saving > 0.5 ? tip.saving : tip.maxSaving;
-    return offerCard(cat, links, "guide", kg > 0.5 ? "Making this change could cut about <strong>" + Math.round(kg).toLocaleString() + " kg CO₂e a year</strong> from your footprint." : "");
+    return offerCard(cat, links, "guide", kg > 0.5 ? "Could cut about <strong>" + Math.round(kg).toLocaleString() + " kg CO₂e a year</strong>." : "");
   }
 
   // One area's partner tiles, with the disclosure line under them.
@@ -4004,10 +4009,11 @@
       piItems().map((it, k) => '<button type="button" role="tab" class="pi-chip' + (k === idx ? " on" : "") + '" aria-selected="' + (k === idx) + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piIcon(it.key, 26) + "</span>" + esc(it.short) + "</button>").join("") + "</div>" +
       '<div class="chip-row share-opts">' + seg("share-fmt", fmt, [["post", "Post"], ["story", "Story"]]) + seg("share-theme", theme, [["light", "Light"], ["dark", "Dark"]]) + "</div>" +
       '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(piItems()[idx].many) + '" />' +
-      '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
+      '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("image") + " Share picture</button>" : "") +
+      (navigator.share ? '<button type="button" class="btn btn-outline btn-sm" data-action="share-link-send">' + icon("link") + " Share link</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
       '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy link</button></div>" +
-      '<p class="xs muted mt-2">Sends the picture with your link: ' + esc(link.replace(/^https:\/\//, "")) + "</p></div></div></div>";
+      '<p class="xs muted mt-2">Your link, ' + esc(link.replace(/^https:\/\//, "")) + ", shows a preview card when you send it.</p></div></div></div>";
     document.body.classList.add("modal-open");
     const on = modalRoot.querySelector(".pi-chip.on");
     if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
@@ -4021,7 +4027,7 @@
       '<div class="invite-code"><div class="min0"><span class="eyebrow">Your invite code</span><b class="display tnum">' + esc(code) + "</b></div>" +
       '<button type="button" class="btn btn-green btn-sm" data-action="copy-code">' + icon("copy") + "Copy code</button></div>" +
       '<div class="act-link"><span class="sm">' + esc(inviteLink().replace(/^https:\/\//, "")) + '</span><button type="button" class="btn btn-outline btn-sm" data-action="copy-invite">' + icon("copy") + "Copy link</button></div>" +
-      '<p class="xs muted">Friends can open the link, or type the code on their Act 7 page after signing up.</p>'
+      '<p class="xs muted">Friends open the link, or type the code after signing up.</p>'
     );
   }
   const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
@@ -4108,7 +4114,6 @@
     return (
       '<span class="hb-share">' +
       '<button type="button" class="hb-act-link" data-action="share-app">' + icon("link") + "Share</button>" +
-      (survey && survey.completedAt ? '<button type="button" class="hb-act-link" data-action="share-card">Before and after picture</button>' : "") +
       '<button type="button" class="hb-act-link" data-action="share-instagram">Instagram</button>' +
       '<a class="hb-act-link" href="https://wa.me/?text=' + text + '" target="_blank" rel="noopener">WhatsApp</a>' +
       '<a class="hb-act-link" href="https://twitter.com/intent/tweet?text=' + text + '" target="_blank" rel="noopener">X</a>' +
@@ -4400,8 +4405,8 @@
       '<header class="hb-hero"><div class="hb-hero-main">' +
       '<span class="hb-eyebrow' + (animate ? " rise" : "") + '">My Habits · The 7 Acts</span>' +
       '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
-      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> for individuals: one-off changes that cut the most. ' +
-      (ready ? "Acts 1 to 5 tick themselves from your latest survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
+      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> : the changes that cut the most. ' +
+      (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
       '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
       (ready ? '<a class="hb-swlink" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
@@ -4410,7 +4415,7 @@
       group("Keep measuring", "Act 5", acts.slice(4, 5)) +
       group("Use your voice", "Acts 6 and 7 · verified, never ticked by hand", acts.slice(5)) +
       '<section class="hb-soon" aria-labelledby="hb-daily"><div class="hb-soon-main"><span class="hb-soon-tag">Coming soon</span><h2 id="hb-daily" class="display">Daily habits</h2>' +
-      "<p>Small things you do every day, like a meat-free lunch or a shorter shower, with streaks to keep you going. We're building this next.</p></div>" +
+      "<p>Streaks for small daily things, like a meat-free lunch. Coming next.</p></div>" +
       '<div class="hb-daily" aria-hidden="true">' +
       DAILY.map(([label, d, week]) => '<div><span class="hb-daily-icon">' + svgPath(d, 20) + '</span><span class="display">' + label + '</span><span class="hb-week">' + week.split("").map((c) => '<i class="' + (c === "g" ? "g" : c === "a" ? "a" : "") + '"></i>').join("") + "</span></div>").join("") +
       "</div></section>" +
@@ -5505,7 +5510,7 @@
         .join("");
     const plot =
       '<section class="sw-sec"><div class="sw-sec-head"><div><span class="sw-kicker">Where to start</span><h2 class="display">Impact against effort</h2></div>' +
-      "<p>Start top left: big saving, little effort. Tap a bubble to jump to it.</p></div>" +
+      "<p>Start top left: big saving, little effort.</p></div>" +
       '<div class="sw-plot"><span class="sw-ytitle">KG SAVED A YEAR ↑</span><div class="sw-area"><div class="sw-quick"></div><div class="sw-vmid"></div><div class="sw-hmid"></div>' +
       ticks.map((f) => '<div class="sw-tick' + (f ? "" : " zero") + '" style="bottom:' + f * 100 + '%"><span class="tnum">' + kgFmt(maxSave * f) + "</span></div>").join("") +
       '<span class="sw-q" style="left:12px;top:12px;color:#2B4128">★ Quick wins</span><span class="sw-q" style="right:4px;top:calc(50% - 26px)">Big, but a habit</span>' +
@@ -5524,9 +5529,9 @@
           '<div class="sw-panel-top"><span class="display tnum sw-no">Act ' + ACT_NO[a.key] + '</span><span class="sw-drop"><b class="display tnum" style="color:' + a.dropInk + '">−' + drop + "%</b><span>less CO₂e</span></span></div>" +
           '<div><div class="sw-vs-title">' + esc(a.vsTitle) + '</div><div class="sw-vs"><span>' + esc(a.beforeLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-before"></span></span><b class="display tnum">' + fmtKg(a.before) + "</b>" +
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
-          '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">' + esc(a.eyebrow) + "</span>") + '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span>" +
-          (a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") + "</div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.fact) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
+          '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") +
+          '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.done ? a.fact : firstSentence(a.fact)) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;
@@ -5540,9 +5545,7 @@
               );
             })
             .join("") +
-          '</div><p class="sw-disc">' +
-          (a.independent ? "Chosen using the bank league table. These are never affiliate links." : paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : "Independent suggestions. We don't get paid for these links.") +
-          "</p>" : "") + "</div></div></section>"
+          "</div>" + (paid ? '<p class="sw-disc">Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you.</p>' : "") : "") + "</div></div></section>"
         );
       })
       .join("");
@@ -5551,7 +5554,7 @@
       '<header class="sw-hero"><div class="sw-hero-main"><span class="ab-pill rise">Greener switches · the 7 Acts</span>' +
       '<h1 class="display rise d1">The 7 Acts.<br><span>Up to ' + kgFmt(total) + " kg</span> a year, and more through others.</h1>" +
       '<p class="rise d2">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>, worked out ' + (base.mine ? "for your footprint" : "for a typical UK footprint") +
-      ". Flip a switch to see what each one saves.</p></div>" + board + "</header>" +
+      ". Flip a switch to see the saving.</p></div>" + board + "</header>" +
       plot + feats +
       others
         .map(
@@ -5560,14 +5563,14 @@
             '<div class="sw-panel" style="background:' + a.panel + ";color:" + a.panelInk + '">' + svgPath(SW_ICONS[a.key], 260, ' class="sw-panel-bg"') +
             '<div class="sw-panel-top"><span class="display tnum sw-no">Act ' + ACT_NO[a.key] + '</span><span class="sw-drop"><b class="display">Indirect</b><span>impact</span></span></div>' +
             '<div><b class="display tnum sw-big">' + esc(a.big) + '</b><p class="sw-big-label">' + esc(a.bigLabel) + "</p></div></div>" +
-            '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : '<span class="sw-chip honey">Through others</span>') +
+            '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : "") +
             '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
             '<h2 class="display">' + esc(a.title) + '</h2><p class="sw-fact">' + esc(a.fact) + "</p>" + a.action +
             '<p class="sw-disc"><a href="' + a.page + '">More on Act ' + ACT_NO[a.key] + " " + icon("arrowRight") + "</a></p></div></div></section>"
         )
         .join("") +
 
-      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, including options that pay us nothing. Partners never change anyone\'s figures, and bank and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
+      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, mostly links that pay us nothing. Banks use the bank league table, and bank and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
       '<a class="sw-band-cta" href="#/">' + (base.mine ? "Update your survey" : "Find your biggest switch") + icon("arrowRight") + "</a></section>" +
       '<p class="xs muted sw-note-foot">' + (base.mine ? "Savings are worked out from your latest survey." : "Savings are for a typical UK resident with £" + kgFmt(A.EXAMPLE_SAVINGS) + " in a high-street bank. Take the survey to see yours.") +
       ' <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>'
@@ -6425,7 +6428,7 @@
     return (
       '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
       '<form id="group-create-form" class="stack-2"><input class="input" id="group-name" maxlength="60" minlength="2" required placeholder="e.g. Ward 7, Year 10 science" aria-label="Group name" /><button type="submit" class="btn btn-green btn-block">Create group</button></form></section>' +
-      '<section class="glass cat-drop"><h2 class="display side-title">Join a group</h2>' + (invite ? '<p class="sm mb-3 green-dark fw-600">You\'ve been invited to a group. Press Join to accept.</p>' : '<p class="sm muted mb-3">Enter the 6-character code someone shared with you.</p>') +
+      '<section class="glass cat-drop"><h2 class="display side-title">Join a group</h2>' + (invite ? '<p class="sm mb-3 green-dark fw-600">You\'ve been invited to a group. Press Join to accept.</p>' : '<p class="sm muted mb-3">Got a code? Enter it here.</p>') +
       '<form id="group-join-form" class="stack-2"><input class="input tnum" id="group-code" maxlength="300" required placeholder="Code or invite link, e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-outline btn-block">Join</button></form>' +
       '<p class="xs muted mt-2">Group members see your display name and yearly total.</p></section>'
     );
@@ -6656,8 +6659,8 @@
       (rows.length
         ? '<ol class="fr-stand">' + rows.map((r, i) => '<li class="' + (r.self ? "me" : "") + '"><span class="fr-n' + (r.first && tab === "board" ? " gold" : "") + '">' + (i + 1) + "</span>" + frAv(r.id, r.self ? myName : r.name, 34, r.self) +
             '<span class="min0"><span class="fr-sname">' + esc(r.name) + '</span><span class="fr-sbar ' + r.cls + '"><span style="width:' + r.w.toFixed(1) + '%"></span></span></span><b class="display tnum fr-sval ' + r.cls + '">' + r.val + "</b></li>").join("") + "</ol>"
-        : '<p class="sm muted mt-3">' + (tab === "board" ? "Finish the survey and add friends to compare yearly totals. Lowest footprint wins." : "Take a new survey every few months. Whoever cuts their footprint the most, compared with their first survey, tops this board.") + "</p>") +
-      '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals. Friends who haven't finished the survey don't appear yet." : "Change since each person's first survey. Only people with two or more surveys appear. Anyone can win this one.") + "</p></section>"
+        : '<p class="sm muted mt-3">' + (tab === "board" ? "Add friends to compare yearly totals. Lowest wins." : "Retake the survey every few months. The biggest cut wins.") + "</p>") +
+      (rows.length ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
     );
   }
   function renderFriends() {
@@ -6704,7 +6707,7 @@
       '<section class="glass fr-box fr-manage" aria-labelledby="fr-add-h"><h2 id="fr-add-h" class="display">Add a friend</h2>' +
       '<form id="friend-form" class="fr-addform"><input class="input" type="text" id="friend-email" placeholder="Username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send</button></form>' +
       (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark fw-700" : "red") + '">' + esc(friends.msg) + "</p>" : "") +
-      '<p class="xs muted mt-2">They need a CO2 Counter account. Friends see each other\'s yearly totals, never answers.</p>' +
+      '<p class="xs muted mt-2">Friends see each other\'s yearly totals, never answers.</p>' +
       (outgoing.length
         ? '<div class="fr-label">Waiting for a reply</div>' + outgoing.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 32, false, "dashed") + '<span class="grow fw-700 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost" data-action="friend-remove" data-id="' + f.id + '">Cancel</button></div>').join("")
         : "") +
@@ -6742,7 +6745,7 @@
     const stacks = feedStacks(posts);
     const shown = ui.feedShown || 5;
     const feed =
-      feedOffer() + '<div class="fr-feedhead"><h2 class="display">Feed</h2><span class="xs muted">Retakes, monthly standings and new friends</span></div>' +
+      feedOffer() + '<div class="fr-feedhead"><h2 class="display">Feed</h2></div>' +
       (posts.length ? stacks.slice(0, shown).map(stackHtml).join("") +
           (stacks.length > shown ? '<button type="button" class="btn btn-outline btn-sm fr-older" data-action="feed-more">Show older posts</button>' : '<p class="center sm muted">You\'re all caught up</p>')
         : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
@@ -8414,8 +8417,8 @@
       try { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied."; } catch (e) { ui.shareMsg = "Couldn't copy. Select the link instead."; }
       render();
     },
+    // One message: the link, which shows the site's preview card.
     "share-app": async () => {
-      if (actsBeforeAfter()) return openShareCard();
       try {
         if (navigator.share) await navigator.share({ url: inviteLink() });
         else { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Link copied. Paste it into a message or post."; render(); }
@@ -8651,7 +8654,12 @@
       const sc = ui.shareCard;
       if (!sc) return;
       try {
-        await navigator.share({ files: [sc.file], text: sc.link });
+        await navigator.share({ files: [sc.file] });
+      } catch (e) {}
+    },
+    "share-link-send": async () => {
+      try {
+        await navigator.share({ url: inviteLink() });
       } catch (e) {}
     },
     "share-copy-text": async (el) => {
