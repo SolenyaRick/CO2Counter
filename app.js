@@ -4576,7 +4576,7 @@
         '<div class="hb3-bubs"><span class="hb3-bub now"><span><b class="display tnum">' + kgFmt(now) + "</b><span>Now</span></span></span>" +
         '<span class="hb3-dash" aria-hidden="true"></span>' +
         '<span class="hb3-bubcol">' + (inside ? "" : '<span class="hb3-reallab">' + real + "</span>") +
-        '<span class="hb3-bub real" style="width:' + d.toFixed(0) + "px;height:" + d.toFixed(0) + 'px">' + (inside ? "<span>" + real + "</span>" : "") + "</span></span></div>" +
+        '<span class="hb3-bub real" style="--r:' + (d / 128).toFixed(3) + '">' + (inside ? "<span>" + real + "</span>" : "") + "</span></span></div>" +
         '<p class="hb-mini-cut">' + (cut >= 0.5 ? "−" + kgFmt(cut) + " kg a year · " + pct + "% less" : "Already about as low as it goes") + "</p>" +
         (ofWhole ? '<p class="hb3-ofwhole">' + ofWhole + "% of your whole footprint</p>" : "") + "</figure>"
       );
@@ -9184,6 +9184,17 @@
       render();
     }
   });
+
+  // While typing on a phone the keyboard is up: hide the tab bar so it
+  // doesn't sit on top of the form.
+  const isTypingField = (el) => !!el && (el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable ||
+    (el.tagName === "INPUT" && !/^(checkbox|radio|button|submit|range|file|color|reset|image)$/i.test(el.type)));
+  document.addEventListener("focusin", (e) => { if (isTypingField(e.target)) document.body.classList.add("typing"); });
+  document.addEventListener("focusout", () => setTimeout(() => { if (!isTypingField(document.activeElement)) document.body.classList.remove("typing"); }, 80));
+  if (window.visualViewport) {
+    const kb = () => document.body.classList.toggle("kb-open", window.innerHeight - window.visualViewport.height > 150);
+    window.visualViewport.addEventListener("resize", kb);
+  }
 
   document.addEventListener("toggle", (e) => {
     const d = e.target;
