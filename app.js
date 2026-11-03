@@ -4515,6 +4515,26 @@
         '<p class="xs muted">' + (bank ? "Chosen using the bank league table. " : "") + (paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : bank ? "" : "Independent suggestions. We don't get paid for these links.") + "</p>"
       );
     };
+    // A small now -> realistic picture for an area of your footprint.
+    const fpNow = ready ? footprint(survey) : null;
+    const kgOf = (keys) => (fpNow ? fpNow.breakdown.filter((b) => keys.includes(b.key)).reduce((t, b) => t + b.yearly, 0) : 0);
+    const cutOf = (keys) => (ready ? keys.reduce((t, k) => t + (tipFor(k, survey).saving || 0), 0) : 0);
+    const mini = (label, now, cut) => {
+      if (!ready) return "";
+      if (now < 0.5)
+        return '<figure class="hb-mini empty"><figcaption>' + esc(label) + '</figcaption><p class="xs muted">Nothing counted yet. ' +
+          (label === "Your money footprint" ? 'Add your bank and pension in the survey to see it.' : "Your survey has none here.") + "</p></figure>";
+      const after = Math.max(0, now - cut), pct = now ? Math.round((cut / now) * 100) : 0;
+      return (
+        '<figure class="hb-mini" role="img" aria-label="' + esc(label) + ": " + kgFmt(now) + " kg a year now" + (cut >= 0.5 ? ", " + kgFmt(after) + " kg with a realistic change" : "") + '">' +
+        '<figcaption>' + esc(label) + "</figcaption>" +
+        '<div class="hb-mini-row"><span>Now</span><span class="hb-mini-bar now"><i style="--w:100%"></i></span><b class="display tnum">' + kgFmt(now) + "</b></div>" +
+        '<div class="hb-mini-row"><span>Realistic</span><span class="hb-mini-bar real"><i style="--w:' + (now ? Math.max(2, (after / now) * 100) : 0).toFixed(1) + '%"></i></span><b class="display tnum">' + kgFmt(after) + "</b></div>" +
+        '<p class="hb-mini-cut">' + (cut >= 0.5 ? "−" + kgFmt(cut) + " kg a year · " + pct + "% less" : "Already about as low as it goes") + "</p></figure>"
+      );
+    };
+    // Picture on the left, links on the right.
+    const split = (pic, rest) => (pic ? '<div class="hb-split">' + pic + '<div class="hb-split-r">' + rest + "</div></div>" : rest);
     const explain = (cats) =>
       '<div class="hb-explain-row">' +
       cats.map(([cat, label]) => '<a class="btn btn-outline btn-sm hb-more" href="' + catHref(cat) + '" data-action="open-move" data-cat="' + cat + '">' + esc(label) + " " + icon("arrowRight") + "</a>").join("") +
@@ -4538,13 +4558,15 @@
         );
       }
       if (a.n === 5)
-        return '<p class="sm">' + (ready ? "Retake the survey every few months to see your footprint change." : "Take the survey to see your footprint.") + "</p>" +
+        return split(mini("Your whole footprint", fpNow ? fpNow.totalYearly : 0, fpNow ? fpNow.breakdown.reduce((t, b) => t + (tipFor(b.key, survey).saving || 0), 0) : 0),
+          '<p class="sm">' + (ready ? "Retake the survey every few months to see your footprint change." : "Take the survey to see your footprint.") + "</p>" +
           '<div class="hb-explain-row"><a class="btn btn-green btn-sm" href="#/" data-action="start-survey">' + (ready ? "Update my survey" : "Take the survey") + " " + icon("arrowRight") + "</a>" +
           (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "") + "</div>" +
-          '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>";
-      if (a.n === 4) return offers(["commute", "flights"]) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]]);
+          '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>");
+      if (a.n === 4) return split(mini("Your travel footprint", kgOf(["commute", "flights"]), cutOf(["commute", "flights"])), offers(["commute", "flights"]) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]]));
       const cat = { 1: "banking", 2: "energy", 3: "meals" }[a.n];
-      return (a.energy ? a.extra || "" : offers([cat])) + explain([[cat, "Explain more"]]);
+      const name = { 1: "Your money footprint", 2: "Your home energy footprint", 3: "Your food footprint" }[a.n];
+      return split(mini(name, kgOf([cat]), cutOf([cat])), (a.energy ? a.extra || "" : offers([cat])) + explain([[cat, "Explain more"]]));
     };
     const row = (a, i) => {
       const cls = "hb-row hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");

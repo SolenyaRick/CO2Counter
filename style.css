@@ -5302,3 +5302,22 @@ a.res-tag:hover { text-decoration: underline; }
 .hb2 .hb-explain-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .hb2 .hb-more .icon { width: 14px; height: 14px; }
 @media (max-width: 640px) { .hb2 .hb-offers { grid-template-columns: 1fr; } }
+/* the small now -> realistic picture in each act */
+.hb2 .hb-split { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; align-items: start; }
+.hb2 .hb-split-r { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.hb2 .hb-split-r > p.xs { margin: -4px 0 0; }
+.hb2 .hb-split-r .hb-offers { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.hb2 .hb-mini { margin: 0; padding: 14px; border-radius: 16px; background: #FFFCF5; border: 1px solid rgba(46, 42, 34, 0.08); display: flex; flex-direction: column; gap: 8px; }
+.hb2 .hb-mini figcaption { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #8A8273; }
+.hb2 .hb-mini-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #5E574B; }
+.hb2 .hb-mini-row b { font-size: 16px; font-weight: 800; color: #2E2A22; min-width: 46px; text-align: right; }
+.hb2 .hb-mini-bar { height: 10px; border-radius: 999px; background: rgba(46, 42, 34, 0.07); overflow: hidden; }
+.hb2 .hb-mini-bar i { display: block; height: 100%; width: var(--w); border-radius: 999px; transform-origin: left; }
+.hb2 .hb-mini-bar.now i { background: #B8653D; }
+.hb2 .hb-mini-bar.real i { background: #3F5B3A; }
+.hb2 .hb-acc.hb-slide .hb-mini-bar i { animation: hb-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+.hb2 .hb-acc.hb-slide .hb-mini-bar.real i { animation-delay: 0.35s; }
+@keyframes hb-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.hb2 .hb-mini-cut { margin: 2px 0 0; font-size: 13px; font-weight: 800; color: #3F5B3A; }
+@media (max-width: 760px) { .hb2 .hb-split { grid-template-columns: 1fr; gap: 12px; } }
+@media (prefers-reduced-motion: reduce) { .hb2 .hb-acc.hb-slide .hb-mini-bar i { animation: none; } }
