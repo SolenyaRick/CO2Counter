@@ -5067,6 +5067,7 @@ a.res-tag:hover { text-decoration: underline; }
 .mv3-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .mv3-big { display: block; width: 100%; max-width: 300px; aspect-ratio: 48 / 56; overflow: visible; }
 .mv3-ghost { opacity: 0.22; }
+.mv3-up .mv3-big { max-width: 340px; aspect-ratio: 1; }
 .mv3-shade { mix-blend-mode: luminosity; opacity: 0.5; }
 .mv3-cut { stroke: #FBF8F1; stroke-width: 0.9; opacity: 0; transition: opacity 0.4s 2.2s; }
 .mv3.in .mv3-cut { opacity: 1; }

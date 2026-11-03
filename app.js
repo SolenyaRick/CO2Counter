@@ -3018,6 +3018,8 @@
     const items = piItems();
     const pal = items.find((x) => x.key === piMascot()) || items[0];
     const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '"></path>').join("");
+    // Tall shapes and heights fill from the ground up; the rest side by side.
+    const up = pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
     const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
     const ofA = (/^[aeiou]/i.test(pal.one) ? "an " : "a ") + pal.one;
     const worth = pal.type === "h"
@@ -3032,17 +3034,17 @@
       return s;
     });
     const big =
-      '<svg class="mv3-big" viewBox="0 -6 48 56" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
+      '<svg class="mv3-big" viewBox="' + (up ? "-1 -6 56 56" : "0 -6 48 56") + '" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
       '<defs><clipPath id="mv3-sil">' + parts + "</clipPath>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
       '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true) + "</g>" +
       slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g filter="url(#pi-clay)"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect></g></g><g class="mv3-shade">' + piArt(pal.key, false) + "</g></g>").join("") +
       '<g clip-path="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
-      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" cy="-2.4" fill="' + s.c + '"></circle><text y="-1.1" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
+      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
       "</svg>";
     return (
-      '<section class="glass moves mv3" aria-labelledby="moves-h">' + piDefsSvg() +
+      '<section class="glass moves mv3' + (up ? " mv3-up" : "") + '" aria-labelledby="moves-h">' + piDefsSvg() +
       '<h2 id="moves-h" class="card-title">Your 3 biggest moves</h2><div class="mv3-in">' +
       '<figure class="mv3-fig">' + big + '<figcaption><b class="display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + '</span> kg</b><span>a year: ' + esc(worth) + "</span></figcaption></figure>" +
       '<ol class="mv3-list">' +
@@ -3065,16 +3067,33 @@
     if (!el) return;
     el.classList.add("mv-seen");
     const svg = el.querySelector(".mv3-big");
-    let x0 = 4, w = 40;
+    let x0 = 4, y0 = 2, w = 40, h = 44;
     try {
       const b = svg.querySelector(".mv3-ghost").getBBox();
-      if (b.width > 4) { x0 = b.x; w = b.width; }
+      if (b.width > 4) { x0 = b.x; y0 = b.y; w = b.width; h = b.height; }
     } catch (e) {}
+    // Tall shapes and heights (Danny DeVito, a bus) are sliced across and
+    // fill from the ground up; wide ones are sliced side by side.
+    const up = el.classList.contains("mv3-up");
     const bands = [...el.querySelectorAll(".mv3-band")];
-    bands.forEach((r) => r.setAttribute("x", (x0 + Number(r.dataset.from) * w).toFixed(2)));
-    el.querySelectorAll(".mv3-cut").forEach((l) => { const x = (x0 + Number(l.dataset.at) * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); });
-    el.querySelectorAll(".mv3-tag").forEach((g) => g.setAttribute("transform", "translate(" + (x0 + Number(g.dataset.mid) * w).toFixed(2) + " 0)"));
-    const fill = (k) => bands.forEach((r) => r.setAttribute("width", (Number(r.dataset.share) * w * k(r)).toFixed(2)));
+    const bottom = y0 + h;
+    if (up) bands.forEach((r) => { r.setAttribute("x", "-6"); r.setAttribute("width", "68"); r.setAttribute("height", "0"); r.setAttribute("y", (bottom - Number(r.dataset.from) * h).toFixed(2)); });
+    else bands.forEach((r) => r.setAttribute("x", (x0 + Number(r.dataset.from) * w).toFixed(2)));
+    el.querySelectorAll(".mv3-cut").forEach((l) => {
+      const a = Number(l.dataset.at);
+      if (up) { const y = (bottom - a * h).toFixed(2); l.setAttribute("x1", "-6"); l.setAttribute("x2", "62"); l.setAttribute("y1", y); l.setAttribute("y2", y); }
+      else { const x = (x0 + a * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); }
+    });
+    // Number tags: above each slice, or beside it on the right.
+    el.querySelectorAll(".mv3-tag").forEach((g) => {
+      const m = Number(g.dataset.mid);
+      g.setAttribute("transform", up ? "translate(" + Math.min(52, x0 + w + 4.5).toFixed(2) + " " + (bottom - m * h).toFixed(2) + ")" : "translate(" + (x0 + m * w).toFixed(2) + " -2.4)");
+    });
+    const fill = (k) => bands.forEach((r) => {
+      const len = Number(r.dataset.share) * (up ? h : w) * k(r);
+      if (up) { r.setAttribute("height", len.toFixed(2)); r.setAttribute("y", (bottom - Number(r.dataset.from) * h - len).toFixed(2)); }
+      else r.setAttribute("width", len.toFixed(2));
+    });
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Once per visit: the page redraws when data arrives, and that
     // shouldn't replay it.
