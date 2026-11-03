@@ -5147,3 +5147,34 @@ a.res-tag:hover { text-decoration: underline; }
   .pg-reveal, .pg-dot, .pg-val { transition: none; }
   .pg.in .pg-dot.last { animation: none; }
 }
+
+/* Under the chart: your biggest move, greener switches */
+.res-next { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.res-next-go { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px 16px 14px; border-radius: 20px; text-decoration: none; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s; }
+.res-next-go:hover, .res-next-go:focus-visible { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(46, 42, 34, 0.12); }
+.res-next-go.move-go { background: #2B3F28; color: #F6F1E6; }
+.res-next-go.sw-go { background: #E8C88A; color: #2E2A22; }
+.res-next-go:hover { color: inherit; }
+.res-next-ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 6px; }
+.move-go .res-next-ic { background: rgba(246, 241, 230, 0.12); color: #E8C88A; }
+.sw-go .res-next-ic { background: rgba(46, 42, 34, 0.08); color: #3F5B3A; }
+.res-next-ic svg { width: 19px; height: 19px; }
+.res-next-k { font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.8; }
+.res-next-go b { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.res-next-kg { display: inline-flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; font-size: 14px; font-weight: 800; }
+.move-go .res-next-kg { color: #E8C88A; }
+.res-next-kg svg { width: 15px; height: 15px; }
+.checkin-later { font-size: 14px; font-weight: 700; }
+@media (max-width: 360px) { .res-next { grid-template-columns: 1fr; } }
+.res-next-go { text-align: left; }
+.res-next-go.move-go, .res-next-go.move-go b, .res-next-go.move-go .res-next-k { color: #F6F1E6; }
+.res-next-go.sw-go, .res-next-go.sw-go b, .res-next-go.sw-go .res-next-k { color: #2E2A22; }
+@media (max-width: 640px) { .res-next-go { padding: 14px 13px 12px; } .res-next-go b { font-size: 15px; } .res-next-kg { font-size: 13px; } }
+
+/* Real Zero logo on My Habits */
+.hb-top { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+.hb-rz { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-radius: 999px; background: rgba(255, 252, 245, 0.8); border: 1px solid rgba(46, 42, 34, 0.08); color: #5E574B; font-size: 13px; font-weight: 700; text-decoration: none; }
+.hb-rz:hover { border-color: rgba(63, 91, 58, 0.35); color: #2E2A22; }
+.hb-rz img { display: block; height: 22px; width: auto; }
+.hb-credit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hb-rz-foot img { display: block; height: 18px; width: auto; }

@@ -632,6 +632,7 @@
     lsSet(KEY_SNAPSHOTS, list);
   }
 
+  const KEY_CHECKIN_SNOOZE = "co2_checkin_snooze"; // time the check-in shows again
   function checkInDue() {
     const list = getSnapshots();
     return list.length > 0 && list[list.length - 1].month !== monthKey();
@@ -3060,6 +3061,22 @@
       "</ol></div></section>"
     );
   }
+  // Under the chart: your biggest move, and the greener switches beside it.
+  function nextStepsHtml(tips) {
+    const top = tips.filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving)[0];
+    let sw = 0;
+    try { sw = switchAreas(switchBase()).reduce((t, a) => t + (a.save || 0), 0); } catch (e) {}
+    return (
+      '<div class="res-next">' +
+      (top
+        ? '<a class="res-next-go move-go" href="' + catHref(top.b.key) + '" data-action="open-move" data-cat="' + top.b.key + '"><span class="res-next-ic">' + ((D.EXPLAINERS[top.b.key] || {}).icon || "") + "</span>" +
+          '<span class="res-next-k">Your biggest move</span><b class="display">' + esc(capFirst(top.t.realisticLabel || top.t.title)) + '</b><span class="res-next-kg tnum">−' + kgFmt(top.t.saving) + " kg a year " + icon("arrowRight") + "</span></a>"
+        : "") +
+      '<a class="res-next-go sw-go" href="/greener-switches/"><span class="res-next-ic">' + icon("leaf") + "</span>" +
+      '<span class="res-next-k">Greener switches</span><b class="display">The 7 Acts, worked out for you</b><span class="res-next-kg tnum">' + (sw >= 0.5 ? "Up to −" + kgFmt(sw) + " kg a year " : "See them ") + icon("arrowRight") + "</span></a>" +
+      "</div>"
+    );
+  }
   // Lays the slices on the drawing's real width, then fills them in one
   // after another when the moves scroll into view (once).
   function animateMoves() {
@@ -3166,13 +3183,14 @@
         '<button type="button" class="btn btn-green" data-action="start-survey">Start your own ' + icon("arrowRight") + "</button></div>";
     }
 
-    if (!ui.exampleMode && checkInDue()) {
+    if (!ui.exampleMode && checkInDue() && !(lsGet(KEY_CHECKIN_SNOOZE, 0) > Date.now())) {
       html +=
         '<div class="card callout fade-up"><div class="callout-row"><div class="round-badge">' + icon("calendar") + '</div><div class="grow">' +
         '<h2 class="card-title mb-1">Time for your monthly check-in</h2><p class="sm muted mb-4 max-2xl">It\'s a new month since you last surveyed (' +
         esc(monthLabel(snapshots[snapshots.length - 1].month)) +
         '). Update your answers to see how your footprint has changed.</p>' +
-        '<a class="btn btn-green" href="#/">Update my survey ' + icon("arrowRight") + "</a></div></div></div>";
+        '<div class="chip-row" style="align-items:center"><a class="btn btn-green" href="#/">Update my survey ' + icon("arrowRight") + "</a>" +
+        '<button type="button" class="link-btn checkin-later" data-action="checkin-later">Remind me later</button></div></div></div></div>';
     }
 
     if (!ui.exampleMode) html += resultTabs(fp, null);
@@ -3207,7 +3225,7 @@
       '<button type="button" data-action="chart-mode" data-mode="donut" aria-pressed="' + (mode === "donut") + '"' + (mode === "donut" ? ' class="on"' : "") + ">Donut</button>" +
       '<button type="button" data-action="chart-mode" data-mode="bars" aria-pressed="' + (mode === "bars") + '"' + (mode === "bars" ? ' class="on"' : "") + ">Bars</button></div></div></div>" +
       (ui.showUk ? '<div class="chart-legend xs muted mt-3"><span><i class="lg-you"></i>You</span><span><i class="lg-uk"></i>Typical UK resident</span><span>No UK figure for money</span></div>' : "") +
-      '<div class="res-chart-body">' + (mode === "bars" ? barsChart(fp) : donutChart(fp)) + "</div>" +
+      '<div class="res-chart-body">' + (mode === "bars" ? barsChart(fp) : donutChart(fp)) + "</div>" + (ui.exampleMode ? "" : nextStepsHtml(tips)) +
       (ui.showUk
         ? '<p class="xs muted mt-2">UK averages use official figures: Defra\'s typical weekly diet, ONS trips abroad with DESNZ flight factors, Ofgem energy use and DfT commuting.</p>'
         : "") +
@@ -4537,9 +4555,9 @@
     return (
       '<div class="container hb-page">' +
       '<header class="hb-hero"><div class="hb-hero-main">' +
-      '<span class="hb-eyebrow' + (animate ? " rise" : "") + '">My Habits · The 7 Acts</span>' +
+      '<div class="hb-top' + (animate ? " rise" : "") + '"><span class="hb-eyebrow">My Habits · The 7 Acts</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
       '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
-      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a> : the changes that cut the most. ' +
+      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">7 Acts</a>: the changes that cut the most. ' +
       (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") + "</p>" +
       '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
       (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
@@ -4553,7 +4571,7 @@
       '<div class="hb-daily" aria-hidden="true">' +
       DAILY.map(([label, d, week]) => '<div><span class="hb-daily-icon">' + svgPath(d, 20) + '</span><span class="display">' + label + '</span><span class="hb-week">' + week.split("").map((c) => '<i class="' + (c === "g" ? "g" : c === "a" ? "a" : "") + '"></i>').join("") + "</span></div>").join("") +
       "</div></section>" +
-      '<p class="xs muted hb-credit">The 7 Acts are by <a href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">Real Zero</a>.</p></div>'
+      '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
     );
   }
   const ACT_SHORT = { 1: "Money", 2: "Energy", 3: "Food", 4: "Travel", 5: "Measure", 6: "Your MP", 7: "Invite 7" };
@@ -8744,6 +8762,10 @@
       render();
     },
     "share-card": () => openShareCard(),
+    "checkin-later": () => {
+      lsSet(KEY_CHECKIN_SNOOZE, Date.now() + 7 * 86400000);
+      render();
+    },
     "share-pick": (el) => {
       ui.piIdx = Number(el.dataset.i);
       if (currentPath() === "/results") render();
