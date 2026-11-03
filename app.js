@@ -4543,10 +4543,10 @@
         list.map(({ k, ar, l }, i) => {
           const name = l.label === "The Man in Seat 61" ? "Seat 61" : l.label.replace(/^The /, "");
           // Only the bank list is ranked (by the league table), so only it has a top pick.
-          return '<li><a class="hb-offer" ' + linkAttrs(k, l, "habits") + ">" + (bank && i === 0 ? '<span class="hb3-top">★ Top of the league</span>' : "") +
+          return '<li style="--k:' + i + '"><a class="hb-offer" ' + linkAttrs(k, l, "habits") + ">" + (bank && i === 0 ? '<span class="hb3-top">★ Top of the league</span>' : "") +
             '<span class="display sw-mono">' + esc(monogramText(l.label)) + "</span>" +
             '<span class="min0"><b class="display">' + esc(l.label) + (l.ref ? ' <span class="tag affiliate-tag">Affiliate</span>' : "") + '</b><span class="xs muted">' + esc(l.note) + "</span></span>" +
-            '<span class="hb-offer-go">' + esc(ar.verb + " " + name) + icon("link") + "</span></a></li>";
+            '<span class="hb-offer-go"><span>' + esc(ar.verb + " " + name).replace(/-/g, "\u2011") + icon("link") + "</span></span></a></li>";
         }).join("") + "</ul>" +
         '<p class="xs muted">' + (bank ? "Chosen using the bank league table. " : "") + (paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : bank ? "" : "Independent suggestions. We don't get paid for these links.") + "</p>"
       );
@@ -9132,6 +9132,7 @@
     "hb-go": (el) => {
       const d = app.querySelector('#hb-act-' + el.dataset.n + ' details');
       if (!d) return;
+      hbCloseOthers(d);
       d.open = true;
       hbScroll(d);
     },
@@ -9193,7 +9194,16 @@
   }, true);
   // A tapped act grows into its quest card: bring its top into view.
   let hbTapAt = 0;
-  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("details.hb-acc > summary")) hbTapAt = Date.now(); }, true);
+  // One act open at a time: tapping one closes the others.
+  document.addEventListener("click", (e) => {
+    const s = e.target.closest && e.target.closest("details.hb-acc > summary");
+    if (!s) return;
+    hbTapAt = Date.now();
+    if (!s.parentElement.open) hbCloseOthers(s.parentElement);
+  }, true);
+  function hbCloseOthers(keep) {
+    app.querySelectorAll("details.hb-acc[open]").forEach((o) => { if (o !== keep) o.open = false; });
+  }
   function hbScroll(d) {
     requestAnimationFrame(() => {
       const r = d.getBoundingClientRect();
