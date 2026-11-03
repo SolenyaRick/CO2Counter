@@ -2942,66 +2942,65 @@
   }
 
   // Results end in action: the three changes that would cut the most, each
-  // opening its step (with the guide) on the category page. Drawn as one
-  // bar of your footprint with each move's slice peeling off, then a card
-  // per move with a ring for its share of your footprint.
+  // opening its step (with the guide) on the category page. One ring of the
+  // saving, an arc per move drawing itself in, the total counting up in the
+  // middle (and in your mascot); then a row per move, its bar growing with
+  // its arc.
   function movesHtml(tips) {
     const top = tips.filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
     if (!top.length) return "";
     const now = tips.reduce((t, x) => t + x.b.yearly, 0) || 1;
     const cut = top.reduce((t, x) => t + x.t.saving, 0);
-    const after = Math.max(0, now - cut);
-    const w = (v) => Math.max(0, Math.min(100, (v / now) * 100)).toFixed(2);
-    const share = (v) => Math.max(1, Math.round((v / now) * 100));
-    let left = Number(w(after));
-    const segs = top
+    const biggest = top[0].t.saving || 1;
+    // Your mascot, by weight (heights and the giant fall back to lettuces).
+    const items = piItems();
+    const mine = items.find((x) => x.key === piMascot());
+    const pal = mine && mine.type === "w" && cut / mine.size >= 1 ? mine : items[0];
+    const n = cut / pal.size;
+    const gap = top.length > 1 ? 1.4 : 0;
+    let at = 0;
+    const arcs = top
       .map((x, i) => {
-        const sw = Number(w(x.t.saving));
-        const s = '<span class="mv-seg" style="left:' + left.toFixed(2) + "%;width:" + sw.toFixed(2) + "%;--c:" + CAT_COLOR[x.b.key] + ";--d:" + (0.35 + i * 0.35).toFixed(2) + 's"><i>' + (i + 1) + "</i></span>";
-        left += sw;
-        return s;
+        const len = Math.max(0.5, (x.t.saving / cut) * 100 - gap);
+        const a = '<circle class="mv2-arc" data-i="' + i + '" cx="60" cy="60" r="48" pathLength="100" style="--len:' + len.toFixed(2) + ";--rest:" + (100 - len).toFixed(2) + ";--off:" + (-at).toFixed(2) + ";--c:" + CAT_COLOR[x.b.key] + ";--d:" + (0.15 + i * 0.55).toFixed(2) + 's"></circle>';
+        at += (x.t.saving / cut) * 100;
+        return a;
       })
       .join("");
     return (
-      '<section class="glass moves mv" aria-labelledby="moves-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2>' +
-      '<span class="mv-total display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + "</span> kg a year</span></div>" +
-      '<div class="mv-bar" role="img" aria-label="Your footprint is ' + kgFmt(now) + " kg a year. These three moves cut " + kgFmt(cut) + " kg, to " + kgFmt(after) + ' kg.">' +
-      '<div class="mv-track"><span class="mv-keep" style="width:' + w(after) + '%"></span>' + segs +
-      '<span class="mv-after" style="left:' + w(after) + '%"></span></div>' +
-      '<div class="mv-ends"><span>Now <b class="display tnum">' + kgFmt(now) + '</b> kg</span><span class="mv-ends-after">After the three <b class="display tnum">' + kgFmt(after) + "</b> kg</span></div></div>" +
-      '<ol class="mv-cards">' +
+      '<section class="glass moves mv2" aria-labelledby="moves-h"><h2 id="moves-h" class="card-title">Your 3 biggest moves</h2><div class="mv2-in">' +
+      '<div class="mv2-ring" role="img" aria-label="Together these three moves cut ' + kgFmt(cut) + " kg a year, " + Math.round((cut / now) * 100) + '% of your footprint: about ' + esc(howMany(n, pal)) + '.">' +
+      '<svg viewBox="0 0 120 120" aria-hidden="true"><circle class="mv2-track" cx="60" cy="60" r="48"></circle>' + arcs + "</svg>" +
+      '<div class="mv2-mid"><b class="display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + '</span></b><span>kg a year</span>' +
+      '<span class="mv2-pal" aria-hidden="true">' + piIcon(pal.key, 26) + "× " + funNum(n) + "</span></div></div>" +
+      '<ol class="mv2-list">' +
       top
-        .map((x, i) => {
-          const p = share(x.t.saving);
-          return (
-            '<li style="--d:' + (0.35 + i * 0.35).toFixed(2) + 's"><a class="move mv-card" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
-            '<span class="mv-ring" style="--c:' + CAT_COLOR[x.b.key] + '"><svg viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="17" class="mv-ring-bg"></circle>' +
-            '<circle cx="21" cy="21" r="17" class="mv-ring-fg" pathLength="100" style="--p:' + p + '" transform="rotate(-90 21 21)"></circle></svg>' +
-            '<span class="mv-ic">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + '</span><span class="mv-rank display">' + (i + 1) + "</span></span>" +
-            '<span class="mv-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + p + "% of your footprint</span></span>" +
-            '<span class="move-kg mv-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg a year</span></span>' +
-            '<span class="mv-go">' + icon("chevronRight") + "</span></a></li>"
-          );
-        })
+        .map(
+          (x, i) =>
+            '<li style="--c:' + CAT_COLOR[x.b.key] + ";--d:" + (0.15 + i * 0.55).toFixed(2) + "s;--w:" + ((x.t.saving / biggest) * 100).toFixed(1) + '%"><a class="move mv2-row" data-i="' + i + '" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
+            '<span class="mv2-ic">' + ((D.EXPLAINERS[x.b.key] || {}).icon || "") + "</span>" +
+            '<span class="mv2-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="mv2-bar"><i></i></span></span>' +
+            '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg</span></span>' + icon("chevronRight") + "</a></li>"
+        )
         .join("") +
-      "</ol></section>"
+      "</ol></div></section>"
     );
   }
   // Plays once, when the moves scroll into view.
   function animateMoves() {
-    const el = app.querySelector(".mv:not(.mv-seen)");
+    const el = app.querySelector(".mv2:not(.mv-seen)");
     if (!el) return;
     el.classList.add("mv-seen");
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce || !("IntersectionObserver" in window)) return el.classList.add("in");
-    el.querySelectorAll("[data-mv-to]").forEach((n) => (n.textContent = "0"));
+    el.querySelectorAll("[data-mv-to]").forEach((m) => (m.textContent = "0"));
     const play = () => {
       el.classList.add("in");
       const t0 = performance.now();
       const nums = [...el.querySelectorAll("[data-mv-to]")];
       const tick = (t) => {
-        const k = Math.min(1, (t - t0 - 350) / 1300);
-        nums.forEach((n) => (n.textContent = Math.round(Number(n.dataset.mvTo) * (k <= 0 ? 0 : 1 - Math.pow(1 - k, 3))).toLocaleString()));
+        const k = Math.min(1, (t - t0 - 150) / 1700);
+        nums.forEach((m) => (m.textContent = Math.round(Number(m.dataset.mvTo) * (k <= 0 ? 0 : 1 - Math.pow(1 - k, 3))).toLocaleString()));
         if (k < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -3011,7 +3010,7 @@
         io.disconnect();
         play();
       }
-    }, { threshold: 0.3 });
+    }, { threshold: 0.35 });
     io.observe(el);
   }
 
