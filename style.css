@@ -5178,3 +5178,5 @@ a.res-tag:hover { text-decoration: underline; }
 .hb-rz img { display: block; height: 22px; width: auto; }
 .hb-credit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hb-rz-foot img { display: block; height: 18px; width: auto; }
+.hb-explain { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.hb-explain svg { width: 15px; height: 15px; }
