@@ -133,6 +133,7 @@
   const ICONS = {
     leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
@@ -4008,10 +4009,11 @@
       piItems().map((it, k) => '<button type="button" role="tab" class="pi-chip' + (k === idx ? " on" : "") + '" aria-selected="' + (k === idx) + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piIcon(it.key, 26) + "</span>" + esc(it.short) + "</button>").join("") + "</div>" +
       '<div class="chip-row share-opts">' + seg("share-fmt", fmt, [["post", "Post"], ["story", "Story"]]) + seg("share-theme", theme, [["light", "Light"], ["dark", "Dark"]]) + "</div>" +
       '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(piItems()[idx].many) + '" />' +
-      '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
+      '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("image") + " Share picture</button>" : "") +
+      (navigator.share ? '<button type="button" class="btn btn-outline btn-sm" data-action="share-link-send">' + icon("link") + " Share link</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
       '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy link</button></div>" +
-      '<p class="xs muted mt-2">Sends the picture with your link: ' + esc(link.replace(/^https:\/\//, "")) + "</p></div></div></div>";
+      '<p class="xs muted mt-2">Your link, ' + esc(link.replace(/^https:\/\//, "")) + ", shows a preview card when you send it.</p></div></div></div>";
     document.body.classList.add("modal-open");
     const on = modalRoot.querySelector(".pi-chip.on");
     if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
@@ -8415,8 +8417,8 @@
       try { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied."; } catch (e) { ui.shareMsg = "Couldn't copy. Select the link instead."; }
       render();
     },
+    // One message: the link, which shows the site's preview card.
     "share-app": async () => {
-      if (actsBeforeAfter()) return openShareCard();
       try {
         if (navigator.share) await navigator.share({ url: inviteLink() });
         else { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Link copied. Paste it into a message or post."; render(); }
@@ -8652,7 +8654,12 @@
       const sc = ui.shareCard;
       if (!sc) return;
       try {
-        await navigator.share({ files: [sc.file], text: sc.link });
+        await navigator.share({ files: [sc.file] });
+      } catch (e) {}
+    },
+    "share-link-send": async () => {
+      try {
+        await navigator.share({ url: inviteLink() });
       } catch (e) {}
     },
     "share-copy-text": async (el) => {
