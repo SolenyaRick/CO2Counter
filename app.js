@@ -4512,7 +4512,7 @@
             '<span class="min0"><b class="display">' + esc(l.label) + (l.ref ? ' <span class="tag affiliate-tag">Affiliate</span>' : "") + '</b><span class="xs muted">' + esc(l.note) + "</span></span>" +
             '<span class="hb-offer-go" aria-label="' + esc(ar.verb + " " + name) + '">' + icon("link") + "</span></a></li>";
         }).join("") + "</ul>" +
-        '<p class="xs muted">' + (bank ? "Chosen using the bank league table. These are never affiliate links." : paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : "Independent suggestions. We don't get paid for these links.") + "</p>"
+        '<p class="xs muted">' + (bank ? "Chosen using the bank league table. " : "") + (paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : bank ? "" : "Independent suggestions. We don't get paid for these links.") + "</p>"
       );
     };
     const explain = (cats) =>
@@ -5747,7 +5747,7 @@
         )
         .join("") +
 
-      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, mostly links that pay us nothing. Banks use the bank league table, and bank and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
+      '<section class="sw-band"><div><h2 class="display">Independent, always</h2><p>Picked for the climate first, mostly links that pay us nothing. Banks are chosen by the bank league table, whether or not a link pays us, and pension picks are never affiliate links. <a href="/about/">How we choose</a></p></div>' +
       '<a class="sw-band-cta" href="#/">' + (base.mine ? "Update your survey" : "Find your biggest switch") + icon("arrowRight") + "</a></section>" +
       '<p class="xs muted sw-note-foot">' + (base.mine ? "Savings are worked out from your latest survey." : "Savings are for a typical UK resident with £" + kgFmt(A.EXAMPLE_SAVINGS) + " in a high-street bank. Take the survey to see yours.") +
       ' <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p></div>'
@@ -5860,7 +5860,7 @@
       ["Climate first", "We recommend what cuts the most carbon, even when there's nothing in it for us.", "rgba(63,91,58,.14)", "#3F5B3A", "M5 19c0-8 5-13 14-14 0 9-5 14-14 14ZM5 19l7-7"],
       ["Free options too", "Free guides like The Man in Seat 61 and Fork Ranger sit alongside paid services.", "rgba(127,163,174,.22)", "#3E6672", "M4 6h16M4 12h16M4 18h10"],
       ["Figures stay ours", "No partner can change or sponsor the numbers in your results.", "rgba(217,164,65,.22)", "#8A5F12", "M7 11V8a5 5 0 0 1 10 0v3M5 11h14v9H5z"],
-      ["Money stays clean", "Bank and pension suggestions come from the league table and are never affiliate links.", "rgba(184,101,61,.18)", "#8C4A2A", "M3 10l9-6 9 6M5 10v8M19 10v8M9.5 10v8M14.5 10v8M3 20h18"],
+      ["Money stays clean", "Banks are picked from the league table, whether or not a link pays us. Pension suggestions are never affiliate links.", "rgba(184,101,61,.18)", "#8C4A2A", "M3 10l9-6 9 6M5 10v8M19 10v8M9.5 10v8M14.5 10v8M3 20h18"],
     ];
     const stats = [
       ["£0", "To use, for everyone. No paywall, no premium tier.", "#3F5B3A", "#F6F1E6"],
