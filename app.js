@@ -4468,56 +4468,61 @@
     const toSave = acts.slice(0, 4).reduce((t, a) => t + (a.done || !a.save ? 0 : a.save), 0);
     const animate = !ui.habitsSeen;
     ui.habitsSeen = true;
+    if (!ui.hbOpen) ui.hbOpen = {};
 
-    // The number on the timeline: a tick when done, a clock while someone
-    // else confirms it, otherwise the act's number.
-    // The act's number always shows; done and waiting add a small badge.
-    const node = (a) => '<span class="hb-node num ' + state(a) + '" aria-hidden="true">' + a.n + (a.done ? '<span class="hb-badge">' + icon("check") + "</span>" : a.pending ? '<span class="hb-badge">' + icon("clock") + "</span>" : "") + "</span>";
-    const tile = (a) => '<span class="hb-tile" aria-hidden="true">' + svgPath(a.icon, 26) + "</span>";
-    const body = (a) =>
-      '<span class="min0 hb-body"><span class="hb-eyeb">Act ' + a.n + '</span><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-what">' + esc(a.what) + '</span><span class="hb-sub">' + esc(a.sub) + "</span></span>";
-    const save = (a) => (ready && !a.done && a.save >= 0.5 ? '<span class="hb-save"><b class="display tnum">−' + kgFmt(a.save) + "</b><span>kg a year</span></span>" : "");
-    const howTicks =
-      '<div class="hb-how"><span class="hb-box-label">How it ticks</span><ol>' +
-      "<li><b>1</b>Write your letter here, or in Gmail or Outlook</li><li><b>2</b>We're copied in, so your MP doesn't see us</li><li><b>3</b>We match your reference, tick it and delete our copy</li></ol></div>";
+    // The act's icon, with its number (or a tick, or a clock) in the corner.
+    const node = (a) =>
+      '<span class="hb-node ' + state(a) + '" aria-hidden="true">' + svgPath(a.icon, 20) +
+      '<span class="hb-badge">' + (a.done ? icon("check") : a.pending ? icon("clock") : a.n) + "</span></span>";
+    // The saving shows on the right, so the status line doesn't repeat it.
+    const shows = (a) => ready && !a.done && a.save >= 0.5;
+    const subOf = (a) => (shows(a) ? String(a.sub).replace(/ · could save [\d,]+ kg a year$/, "") : a.sub);
+    const body = (a) => '<span class="min0 hb-body"><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-sub">' + esc(subOf(a)) + "</span></span>";
+    const save = (a) => (shows(a) ? '<span class="hb-save"><b class="display tnum">−' + kgFmt(a.save) + "</b><span>kg</span></span>" : "");
+    const sr = (a) => '<span class="sr-only">' + (a.done ? "done" : a.pending ? "waiting" : "not done yet") + "</span>";
     const people = () => {
       const info = ui.actsInfo;
       if (!info) return "";
       const n = Math.min(7, info.finished || 0);
       const joined = Math.min(7, Math.max(n, info.joined || 0));
       const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < n ? "fin" : i < joined ? "joined" : "") + '">' + icon(i < n ? "check" : i < joined ? "user" : "plus") + "</span>").join("");
-      return (
-        '<div class="hb-people"><span class="hb-box-label">People you\'ve invited</span><div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>" +
-        "<p>" + n + " of 7 have taken the survey · " + joined + " joined. It ticks itself at seven.</p></div>"
-      );
+      return '<div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>";
     };
-    // Acts 2, 6 and 7 keep their tools in boxes under the act.
-    const extraHtml = (a) => {
-      if (a.n === 6 && ui.actsInfo && !a.done)
-        return '<div class="hb-boxes"><div class="hb-light"><span class="display hb-box-title">Find your MP</span><p class="xs muted">We look it up on Parliament\'s own records.</p>' + a.extra + "</div>" + howTicks + "</div>";
-      if (a.n === 7) return '<div class="hb-boxes">' + people() + '<div class="hb-light">' + a.extra + "</div></div>";
-      if (a.energy && a.pending) return '<div class="hb-ebox">' + a.extra + "</div>";
-      return '<div class="hb-light">' + a.extra + "</div>";
+    // What opens under Acts 2, 6 and 7: the tools to do them.
+    const inside = (a) => {
+      const pageLink = (h) => '<a class="hb-page-link xs fw-700" href="' + h + '">More on this act ' + icon("arrowRight") + "</a>";
+      if (a.n === 6) {
+        const how = ui.actsInfo && !a.done
+          ? '<ol class="hb-how2"><li>Write your letter here, or in Gmail or Outlook</li><li>We\'re copied in, so your MP doesn\'t see us</li><li>We match your reference, tick it and delete our copy</li></ol>' : "";
+        const tick = a.manual ? '<button type="button" class="hb-tick btn btn-outline btn-sm" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '">' + icon("check") + (a.done ? " Done" : " Mark as done") + "</button>" : "";
+        return (ui.actsInfo && !a.done ? '<p class="xs muted">Find your MP on Parliament\'s own records.</p>' : "") + (a.done ? "" : a.extra || "") + how + tick + pageLink("#/acts/mobilise");
+      }
+      if (a.n === 7) {
+        const code = ui.actsInfo && ui.actsInfo.code;
+        return (
+          people() +
+          (code ? '<div class="hb-inv"><div class="min0"><span class="hb-box-label">Your invite code</span><b class="display tnum">' + esc(code) + '</b></div><button type="button" class="btn btn-outline btn-sm" data-action="copy-code">' + icon("copy") + "Copy</button></div>" : "") +
+          '<div class="chip-row"><button type="button" class="btn btn-green btn-sm" data-action="invite-share">' + icon("link") + " Invite friends</button>" +
+          '<a class="btn btn-outline btn-sm" href="#/friends">Add friends</a></div>' +
+          (ui.shareMsg ? '<p class="xs green-dark">' + esc(ui.shareMsg) + "</p>" : "") + pageLink("#/acts/motivate")
+        );
+      }
+      return a.extra || "";
     };
-    const row = (a) => {
-      const id = ' id="hb-act-' + a.n + '"';
-      const page = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : "";
-      const pageLink = page ? '<a class="hb-page-link xs fw-700" href="' + page + '">More on this act ' + icon("arrowRight") + "</a>" : "";
-      const cls = "hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
-      if (page && !a.manual && (a.done || !a.extra))
-        return '<li class="hb-item"' + id + '><a class="hb-row ' + cls + '" href="' + page + '">' + node(a) + tile(a) + body(a) + icon("chevronRight") + "</a></li>";
-      if (a.manual)
-        return '<li class="hb-item"' + id + '><button type="button" class="hb-tick" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '" aria-label="' + esc(a.name) + '">' + node(a) + "</button><div class=\"" + cls + ' hb-boxed">' +
-          '<div class="hb-row">' + tile(a) + body(a) + "</div>" + (a.extra && !a.done ? '<div class="hb-light">' + a.extra + "</div>" : "") + pageLink + "</div></li>";
-      if (a.extra || (a.verifiedTick && !a.cat && !a.href))
-        return '<li class="hb-item"' + id + '><div class="' + cls + ' hb-boxed">' + node(a) + '<div class="hb-row">' + tile(a) + body(a) + "</div>" +
-          (a.extra && (!a.done || a.keepExtra) ? extraHtml(a) : "") + pageLink + "</div></li>";
-      return '<li class="hb-item"' + id + '><a class="hb-row ' + cls + '" href="' + (a.href || "/greener-switches/") + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + tile(a) + body(a) + save(a) +
-        '<span class="sr-only">' + (a.done ? "done" : "not done yet") + "</span>" + icon("chevronRight") + "</a></li>";
+    const opens = (a) => (a.n === 6 && (!a.done || a.manual)) || (a.n === 7 && !a.done) || !!a.energy;
+    const row = (a, i) => {
+      const cls = "hb-row hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
+      const li = (inner) => '<li class="hb-item" id="hb-act-' + a.n + '" style="--i:' + i + '">' + inner + "</li>";
+      if (opens(a))
+        return li(
+          '<details class="hb-acc" data-n="' + a.n + '"' + (ui.hbOpen[a.n] ? " open" : "") + '><summary class="' + cls + '">' + node(a) + body(a) + save(a) + sr(a) + '<span class="hb-chev">' + icon("chevronDown") + "</span></summary>" +
+          '<div class="hb-acc-body">' + inside(a) + "</div></details>"
+        );
+      const href = a.n === 6 ? "#/acts/mobilise" : a.n === 7 ? "#/acts/motivate" : a.href || "/greener-switches/";
+      return li('<a class="' + cls + '" href="' + href + '"' + (a.cat && ready ? ' data-action="jump-switch" data-cat="' + a.cat + '"' : "") + ">" + node(a) + body(a) + save(a) + sr(a) + icon("chevronRight") + "</a>");
     };
-    const group = (title, note, list) =>
-      '<section class="glass hb-group' + (animate ? " fade-up" : "") + '" aria-label="' + esc(title) + '"><div class="hb-ghead"><h2 class="display">' + esc(title) + "</h2><span>" + esc(note) + "</span></div>" +
-      '<ol class="hb-list"><span class="hb-rail" aria-hidden="true"></span>' + list.map(row).join("") + "</ol></section>";
+    let k = 0;
+    const group = (title, list) => '<h2 class="hb-glabel">' + esc(title) + '</h2><ol class="hb-list">' + list.map((a) => row(a, k++)).join("") + "</ol>";
 
     // Seven ring segments with small gaps, starting at the top.
     const R = 94, C = 120, gap = 5;
@@ -4536,42 +4541,27 @@
       };
     });
     const ring =
-      '<div class="glass hb-ringwrap' + (animate ? " rise d2" : "") + '"><div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
+      '<div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
       segs.map((s) => s.path).join("") + segs.map((s) => s.label).join("") + "</svg>" +
-      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small> of 7</small></b><span>done' + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>" +
-      // Which act is which, with its state, so the ring reads at a glance.
-      '<ol class="hb-key">' +
-      acts.map((a) => {
-        const st = state(a);
-        return '<li class="' + st + '"><a href="#hb-act-' + a.n + '" data-action="fr-jump"><span class="hb-key-n num">' + a.n + "</span><span class=\"hb-key-name\">" + ACT_SHORT[a.n] + '</span><span class="hb-key-st">' + (st === "done" ? icon("check") + "Done" : st === "wait" ? icon("clock") + "Waiting" : "To do") + "</span></a></li>";
-      }).join("") +
-      "</ol></div>";
+      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small> of 7</small></b><span>done' + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>";
 
-    const DAILY = [
-      ["Meat-free lunch", SW_ICONS.meals, "gg-gg--"],
-      ["Shorter shower", SW_ICONS.water, "ggg----"],
-      ["Walk the short trips", HB_WALK, "a-g----"],
-    ];
+    const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
-      '<div class="container hb-page">' +
-      '<header class="hb-hero"><div class="hb-hero-main">' +
-      '<div class="hb-top' + (animate ? " rise" : "") + '"><span class="hb-eyebrow">My Habits · The 7 Acts</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
-      '<h1 class="display' + (animate ? " rise d1" : "") + '">Seven acts.<br>' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
-      '<p class="hb-lede' + (animate ? " rise d2" : "") + '">Real Zero\'s <b>7 Acts</b>: the changes that cut the most. ' +
-      (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
+      '<div class="container hb-page hb2' + (animate ? " hb-anim" : "") + '">' +
+      '<header class="glass hb-hero">' +
+      '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
+      '<h1 class="display">' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
+      '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
-      '<div class="hb-chips' + (animate ? " rise d3" : "") + '">' +
-      (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still to save <br>in acts 1 to 4</span></span>" : "") +
-      (ready ? '<a class="hb-swlink" href="/greener-switches/">See your switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
-      "</div></div>" + ring + "</header>" + sundayOffer(acts) +
-      group("Switch the big things", billPayer ? "Acts 1 to 4 · 1, 3 and 4 tick from your survey" : "Acts 1 to 4 · they tick from your survey", acts.slice(0, 4)) +
-      group("Keep measuring", "Act 5", acts.slice(4, 5)) +
-      group("Use your voice", "Acts 6 and 7 · verified, never ticked by hand", acts.slice(5)) +
-      '<section class="hb-soon" aria-labelledby="hb-daily"><div class="hb-soon-main"><span class="hb-soon-tag">Coming soon</span><h2 id="hb-daily" class="display">Daily habits</h2>' +
-      "<p>Streaks for small daily things, like a meat-free lunch. Coming next.</p></div>" +
-      '<div class="hb-daily" aria-hidden="true">' +
-      DAILY.map(([label, d, week]) => '<div><span class="hb-daily-icon">' + svgPath(d, 20) + '</span><span class="display">' + label + '</span><span class="hb-week">' + week.split("").map((c) => '<i class="' + (c === "g" ? "g" : c === "a" ? "a" : "") + '"></i>').join("") + "</span></div>").join("") +
-      "</div></section>" +
+      '<div class="hb-chips">' +
+      (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg still to save</span></span>" : "") +
+      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-see">See your </span>switches ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
+      "</div>" + ring + "</header>" + sundayOffer(acts) +
+      '<section class="glass hb-acts" aria-label="The 7 Acts">' +
+      group("Switch the big things", acts.slice(0, 4)) + group("Keep measuring", acts.slice(4, 5)) + group("Use your voice", acts.slice(5)) +
+      "</section>" +
+      '<section class="hb-soon" aria-labelledby="hb-daily"><span class="hb-soon-tag">Coming soon</span><p><b id="hb-daily" class="display">Daily habits</b> streaks for small daily things, like a meat-free lunch</p>' +
+      '<span class="hb-soon-ics" aria-hidden="true">' + DAILY.map((d) => "<i>" + svgPath(d, 16) + "</i>").join("") + "</span></section>" +
       '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
     );
   }
@@ -8763,6 +8753,13 @@
       render();
     },
     "share-card": () => openShareCard(),
+    "invite-share": async () => {
+      if (actsBeforeAfter()) return openShareCard();
+      try {
+        if (navigator.share) await navigator.share({ url: inviteLink() });
+        else { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Invite link copied. Paste it into a message."; render(); }
+      } catch (e) {}
+    },
     "checkin-later": () => {
       lsSet(KEY_CHECKIN_SNOOZE, Date.now() + 7 * 86400000);
       render();
@@ -8987,6 +8984,18 @@
       render();
     }
   });
+
+  document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.matches || !d.matches("details.hb-acc")) return;
+    ui.hbOpen = ui.hbOpen || {};
+    ui.hbOpen[d.dataset.n] = d.open;
+    if (d.open) {
+      d.classList.remove("hb-slide");
+      void d.offsetWidth;
+      d.classList.add("hb-slide");
+    }
+  }, true);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
