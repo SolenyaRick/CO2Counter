@@ -5067,6 +5067,7 @@ a.res-tag:hover { text-decoration: underline; }
 .mv3-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .mv3-big { display: block; width: 100%; max-width: 300px; aspect-ratio: 48 / 56; overflow: visible; }
 .mv3-ghost { opacity: 0.22; }
+.mv3-up .mv3-big { max-width: 340px; aspect-ratio: 1; }
 .mv3-shade { mix-blend-mode: luminosity; opacity: 0.5; }
 .mv3-cut { stroke: #FBF8F1; stroke-width: 0.9; opacity: 0; transition: opacity 0.4s 2.2s; }
 .mv3.in .mv3-cut { opacity: 1; }
@@ -5099,4 +5100,50 @@ a.res-tag:hover { text-decoration: underline; }
 .mv3.still .mv3-cut, .mv3.still .mv3-tag, .mv3.still .mv3-list li { transition: none; }
 @media (prefers-reduced-motion: reduce) {
   .mv3-cut, .mv3-tag, .mv3-list li { transition: none; }
+}
+
+/* ---------- Your progress: line graph ---------- */
+.pg { padding: 24px 28px 20px; border-radius: 28px; margin-bottom: 24px; }
+.pg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; }
+.pg-head .card-title { margin: 0; }
+.pg-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 14px; border-radius: 999px; background: rgba(46, 42, 34, 0.06); font: 800 17px var(--display, 'Bricolage Grotesque'), sans-serif; color: #2E2A22; }
+.pg-chip small { font: 600 13px Karla, sans-serif; color: inherit; opacity: 0.8; }
+.pg-chip.down { background: rgba(63, 91, 58, 0.12); color: #3F5B3A; }
+.pg-chip.up { background: rgba(184, 101, 61, 0.12); color: #9A5130; }
+.pg-plot { position: relative; height: 210px; margin: 34px 0 0; }
+.pg-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.pg-start { stroke: rgba(46, 42, 34, 0.28); stroke-width: 1.5; stroke-dasharray: 5 6; }
+.pg-next { stroke: rgba(63, 91, 58, 0.45); stroke-width: 3; stroke-dasharray: 2 8; stroke-linecap: round; }
+.pg-area { fill: url(#pg-fill); }
+.pg-line { fill: none; stroke: #3F5B3A; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.pg-reveal { transform-box: view-box; transform-origin: 0 0; transform: scaleX(0); transition: transform 1.4s cubic-bezier(0.45, 0, 0.2, 1) 0.2s; }
+.pg.in .pg-reveal { transform: none; }
+.pg-start-l, .pg-next-l { position: absolute; right: 0; transform: translateY(-120%); font-size: 12px; font-weight: 700; color: #8A8273; }
+.pg-next-l { right: 4%; color: #3F5B3A; }
+.pg-dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 999px; background: #FFFCF5; border: 3px solid #3F5B3A; box-sizing: border-box; transform: scale(0); transition: transform 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) var(--d); }
+.pg-dot.last { width: 18px; height: 18px; margin: -9px 0 0 -9px; background: #3F5B3A; border-color: #FFFCF5; box-shadow: 0 0 0 4px rgba(63, 91, 58, 0.18); }
+.pg.in .pg-dot { transform: scale(1); }
+.pg.in .pg-dot.last { animation: pg-pulse 2.4s ease-out 1.8s 2; }
+@keyframes pg-pulse { 0% { box-shadow: 0 0 0 4px rgba(63, 91, 58, 0.18); } 60% { box-shadow: 0 0 0 14px rgba(63, 91, 58, 0); } 100% { box-shadow: 0 0 0 4px rgba(63, 91, 58, 0); } }
+.pg-val { position: absolute; transform: translate(-50%, calc(-100% - 16px)); white-space: nowrap; font-size: 13px; font-weight: 700; color: #5E574B; opacity: 0; transition: opacity 0.5s 1.5s; }
+.pg-val.end { transform: translate(calc(-100% + 9px), calc(-100% - 16px)); }
+.pg-val.below { transform: translate(-50%, 16px); }
+.pg-val.end.below { transform: translate(calc(-100% + 9px), 16px); }
+.pg-val b { font-size: 22px; font-weight: 800; color: #2E2A22; letter-spacing: -0.02em; }
+.pg.in .pg-val { opacity: 1; }
+.pg-x { position: relative; height: 18px; margin-top: 12px; }
+.pg-x span { position: absolute; transform: translateX(-50%); font-size: 12px; font-weight: 700; color: #8A8273; white-space: nowrap; }
+.pg-tip { margin: 10px 0 0; }
+.pg.still .pg-reveal, .pg.still .pg-dot, .pg.still .pg-val { transition: none; }
+.pg.one .pg-plot { height: 90px; margin-top: 40px; }
+.pg.still .pg-dot.last { animation: none; }
+@media (max-width: 640px) {
+  .pg { padding: 18px 16px 16px; border-radius: 22px; }
+  .pg-plot { height: 170px; }
+  .pg-chip { font-size: 15px; }
+  .pg-x span:not(:first-child):not(:last-child) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pg-reveal, .pg-dot, .pg-val { transition: none; }
+  .pg.in .pg-dot.last { animation: none; }
 }

@@ -2941,6 +2941,72 @@
     );
   }
 
+  // Your progress: one point per survey, oldest to newest, as a line that
+  // draws itself in, with a dashed line where you started.
+  function progressHtml(points, nextTip) {
+    if (!points.length) return "";
+    const pts = points.slice(-8);
+    const first = pts[0], last = pts[pts.length - 1];
+    const one = pts.length === 1;
+    const change = last.kg - first.kg;
+    const vals = pts.map((p) => p.kg);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    const pad = Math.max((hi - lo) * 0.25, hi * 0.08, 150);
+    lo = Math.max(0, lo - pad);
+    hi = hi + pad;
+    // x and y in % of the plot
+    const X = (i) => (one ? 30 : 6 + (i / (pts.length - 1)) * 88);
+    const Y = (v) => 100 - ((v - lo) / (hi - lo || 1)) * 100;
+    const xy = pts.map((p, i) => [X(i), Y(p.kg)]);
+    const line = xy.map((q, i) => (i ? "L" : "M") + q[0].toFixed(2) + " " + q[1].toFixed(2)).join(" ");
+    const area = one ? "" : line + " L" + xy[xy.length - 1][0].toFixed(2) + " 100 L" + xy[0][0].toFixed(2) + " 100 Z";
+    const down = change < -0.5, up = change > 0.5;
+    const chip = one ? "" : '<span class="pg-chip ' + (down ? "down" : up ? "up" : "") + '">' + (down ? "▼ " : up ? "▲ " : "") +
+      (Math.abs(change) < 0.5 ? "No change" : kgFmt(Math.abs(change)) + " kg") + '<small> since your first survey</small></span>';
+    const label = (p) => p.label + ": " + kgFmt(p.kg) + " kg a year";
+    return (
+      '<section class="glass pg' + (one ? " one" : "") + '" aria-labelledby="pg-h"><div class="pg-head"><h2 id="pg-h" class="card-title">Your progress</h2>' + chip + "</div>" +
+      '<div class="pg-plot" role="img" aria-label="Your footprint over time. ' + esc(pts.map(label).join("; ")) + '.">' +
+      '<svg class="pg-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+      '<defs><linearGradient id="pg-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5C7A4E" stop-opacity=".28"></stop><stop offset="1" stop-color="#5C7A4E" stop-opacity="0"></stop></linearGradient>' +
+      '<clipPath id="pg-sweep"><rect class="pg-reveal" x="-2" y="-10" width="104" height="120"></rect></clipPath></defs>' +
+      (one ? '<line class="pg-next" x1="' + X(0) + '" x2="94" y1="' + Y(first.kg).toFixed(2) + '" y2="' + Y(first.kg).toFixed(2) + '" vector-effect="non-scaling-stroke"></line>'
+        : '<line class="pg-start" x1="0" x2="100" y1="' + Y(first.kg).toFixed(2) + '" y2="' + Y(first.kg).toFixed(2) + '" vector-effect="non-scaling-stroke"></line>' +
+          '<g clip-path="url(#pg-sweep)"><path class="pg-area" d="' + area + '"></path><path class="pg-line" d="' + line + '" vector-effect="non-scaling-stroke"></path></g>') +
+      "</svg>" +
+      (one ? "" : '<span class="pg-start-l" style="top:' + Y(first.kg).toFixed(2) + '%">Where you started</span>') +
+      pts.map((p, i) =>
+        '<span class="pg-dot' + (i === pts.length - 1 ? " last" : "") + '" style="left:' + xy[i][0].toFixed(2) + "%;top:" + xy[i][1].toFixed(2) + "%;--d:" + (0.2 + (one ? 0 : i / (pts.length - 1)) * 1.1).toFixed(2) + 's" title="' + esc(label(p)) + '"></span>'
+      ).join("") +
+      '<span class="pg-val' + (xy[xy.length - 1][0] > 70 ? " end" : "") + (!one && xy[xy.length - 2][1] < xy[xy.length - 1][1] ? " below" : "") + '" style="left:' + xy[xy.length - 1][0].toFixed(2) + "%;top:" + xy[xy.length - 1][1].toFixed(2) + '%"><b class="display tnum">' + kgFmt(last.kg) + "</b> kg</span>" +
+      (one ? '<span class="pg-next-l" style="top:' + Y(first.kg).toFixed(2) + '%">Next</span>' : "") +
+      "</div>" +
+      '<div class="pg-x" aria-hidden="true">' + pts.map((p, i) => '<span style="left:' + X(i).toFixed(2) + '%">' + esc(p.short) + "</span>").join("") + "</div>" +
+      (one ? '<p class="xs muted pg-tip">' + esc(nextTip) + "</p>" : "") +
+      "</section>"
+    );
+  }
+  // Plays once per visit, when it scrolls into view.
+  function animateProgress() {
+    const el = app.querySelector(".pg:not(.pg-seen)");
+    if (!el) return;
+    el.classList.add("pg-seen");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const sig = el.querySelector(".pg-plot").getAttribute("aria-label");
+    if (reduce || !("IntersectionObserver" in window) || ui.pgPlayed === sig) {
+      el.classList.add("still");
+      return el.classList.add("in");
+    }
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) {
+        io.disconnect();
+        ui.pgPlayed = sig;
+        el.classList.add("in");
+      }
+    }, { threshold: 0.35 });
+    io.observe(el);
+  }
+
   // Results end in action: the three changes that would cut the most, each
   // opening its step (with the guide) on the category page. The saving is
   // one big drawing of your mascot, cut into a slice per move (its share of
@@ -2952,6 +3018,8 @@
     const items = piItems();
     const pal = items.find((x) => x.key === piMascot()) || items[0];
     const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '"></path>').join("");
+    // Tall shapes and heights fill from the ground up; the rest side by side.
+    const up = pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
     const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
     const ofA = (/^[aeiou]/i.test(pal.one) ? "an " : "a ") + pal.one;
     const worth = pal.type === "h"
@@ -2966,17 +3034,17 @@
       return s;
     });
     const big =
-      '<svg class="mv3-big" viewBox="0 -6 48 56" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
+      '<svg class="mv3-big" viewBox="' + (up ? "-1 -6 56 56" : "0 -6 48 56") + '" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
       '<defs><clipPath id="mv3-sil">' + parts + "</clipPath>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
       '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true) + "</g>" +
       slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g filter="url(#pi-clay)"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect></g></g><g class="mv3-shade">' + piArt(pal.key, false) + "</g></g>").join("") +
       '<g clip-path="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
-      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" cy="-2.4" fill="' + s.c + '"></circle><text y="-1.1" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
+      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
       "</svg>";
     return (
-      '<section class="glass moves mv3" aria-labelledby="moves-h">' + piDefsSvg() +
+      '<section class="glass moves mv3' + (up ? " mv3-up" : "") + '" aria-labelledby="moves-h">' + piDefsSvg() +
       '<h2 id="moves-h" class="card-title">Your 3 biggest moves</h2><div class="mv3-in">' +
       '<figure class="mv3-fig">' + big + '<figcaption><b class="display tnum">−<span data-mv-to="' + Math.round(cut) + '">' + kgFmt(cut) + '</span> kg</b><span>a year: ' + esc(worth) + "</span></figcaption></figure>" +
       '<ol class="mv3-list">' +
@@ -2999,16 +3067,33 @@
     if (!el) return;
     el.classList.add("mv-seen");
     const svg = el.querySelector(".mv3-big");
-    let x0 = 4, w = 40;
+    let x0 = 4, y0 = 2, w = 40, h = 44;
     try {
       const b = svg.querySelector(".mv3-ghost").getBBox();
-      if (b.width > 4) { x0 = b.x; w = b.width; }
+      if (b.width > 4) { x0 = b.x; y0 = b.y; w = b.width; h = b.height; }
     } catch (e) {}
+    // Tall shapes and heights (Danny DeVito, a bus) are sliced across and
+    // fill from the ground up; wide ones are sliced side by side.
+    const up = el.classList.contains("mv3-up");
     const bands = [...el.querySelectorAll(".mv3-band")];
-    bands.forEach((r) => r.setAttribute("x", (x0 + Number(r.dataset.from) * w).toFixed(2)));
-    el.querySelectorAll(".mv3-cut").forEach((l) => { const x = (x0 + Number(l.dataset.at) * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); });
-    el.querySelectorAll(".mv3-tag").forEach((g) => g.setAttribute("transform", "translate(" + (x0 + Number(g.dataset.mid) * w).toFixed(2) + " 0)"));
-    const fill = (k) => bands.forEach((r) => r.setAttribute("width", (Number(r.dataset.share) * w * k(r)).toFixed(2)));
+    const bottom = y0 + h;
+    if (up) bands.forEach((r) => { r.setAttribute("x", "-6"); r.setAttribute("width", "68"); r.setAttribute("height", "0"); r.setAttribute("y", (bottom - Number(r.dataset.from) * h).toFixed(2)); });
+    else bands.forEach((r) => r.setAttribute("x", (x0 + Number(r.dataset.from) * w).toFixed(2)));
+    el.querySelectorAll(".mv3-cut").forEach((l) => {
+      const a = Number(l.dataset.at);
+      if (up) { const y = (bottom - a * h).toFixed(2); l.setAttribute("x1", "-6"); l.setAttribute("x2", "62"); l.setAttribute("y1", y); l.setAttribute("y2", y); }
+      else { const x = (x0 + a * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); }
+    });
+    // Number tags: above each slice, or beside it on the right.
+    el.querySelectorAll(".mv3-tag").forEach((g) => {
+      const m = Number(g.dataset.mid);
+      g.setAttribute("transform", up ? "translate(" + Math.min(52, x0 + w + 4.5).toFixed(2) + " " + (bottom - m * h).toFixed(2) + ")" : "translate(" + (x0 + m * w).toFixed(2) + " -2.4)");
+    });
+    const fill = (k) => bands.forEach((r) => {
+      const len = Number(r.dataset.share) * (up ? h : w) * k(r);
+      if (up) { r.setAttribute("height", len.toFixed(2)); r.setAttribute("y", (bottom - Number(r.dataset.from) * h - len).toFixed(2)); }
+      else r.setAttribute("width", len.toFixed(2));
+    });
     const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Once per visit: the page redraws when data arrives, and that
     // shouldn't replay it.
@@ -3128,57 +3213,23 @@
         : "") +
       "</section></div>" + (ui.exampleMode ? "" : movesHtml(tips));
 
+    // Your progress, as a graph: account history if signed in, else the
+    // monthly snapshots kept on this device.
     const hist = ui.exampleMode ? [] : historyByDay();
+    const sameYear = (d) => d.getFullYear() === new Date().getFullYear();
     if (hist.length) {
-      const recent = hist.slice(0, 6);
-      const dateOf = (h) => new Date(h.completedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-      const first = hist[hist.length - 1];
-      const change = hist.length > 1 ? recent[0].totalYearly - first.totalYearly : 0;
-      html +=
-        '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div>' +
-        (hist.length > 1
-          ? '<p class="sm mb-4">Since your first survey on ' + dateOf(first) + ", your footprint has " +
-            (change < 0 ? '<strong class="green-dark">fallen by ' + fixed(-change) + " kg a year</strong>." : change > 0 ? '<strong class="red">risen by ' + fixed(change) + " kg a year</strong>." : "stayed the same.") + "</p>"
-          : "") +
-        '<div class="stack-2">' +
-        recent
-          .map((h, i) => {
-            const prev = recent[i + 1];
-            const diff = prev ? h.totalYearly - prev.totalYearly : null;
-            const cls = diff > 0 ? "red" : diff < 0 ? "green" : "muted";
-            return (
-              '<div class="month-row"><div class="label-row min0"><span class="sm fw-500 truncate">' + esc(dateOf(h)) + "</span>" +
-              (i === 0 ? '<span class="tag green">Latest</span>' : "") +
-              '</div><div class="label-row shrink0">' +
-              (diff !== null ? '<span class="xs fw-500 ' + cls + '">' + (diff > 0 ? "▲" : diff < 0 ? "▼" : "—") + " " + Math.abs(diff).toFixed(0) + " kg</span>" : "") +
-              '<span class="fw-600">' + fixed(h.totalYearly) + '</span><span class="xs muted">kg/yr</span></div></div>'
-            );
-          })
-          .join("") +
-        "</div>" +
-        (hist.length < 2 ? '<p class="xs muted mt-3">Take a new survey in a few months to see how your footprint changes.</p>' : "") +
-        "</div>";
+      html += progressHtml(
+        hist.slice().reverse().map((h) => {
+          const d = new Date(h.completedAt);
+          return { kg: h.totalYearly, label: d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }), short: d.toLocaleDateString(undefined, sameYear(d) ? { day: "numeric", month: "short" } : { month: "short", year: "2-digit" }) };
+        }),
+        "Take the survey again in a few months to draw your line."
+      );
     } else if (!ui.exampleMode && snapshots.length) {
-      const recent = snapshots.slice(-6).reverse();
-      html +=
-        '<div class="card"><div class="label-row mb-4">' + icon("calendar", "green") + '<h2 class="card-title">Your progress</h2></div><div class="stack-2">' +
-        recent
-          .map((s, i) => {
-            const prev = recent[i + 1];
-            const diff = prev ? snapshotYearly(s) - snapshotYearly(prev) : null;
-            const cls = diff > 0 ? "red" : diff < 0 ? "green" : "muted";
-            return (
-              '<div class="month-row"><div class="label-row min0"><span class="sm fw-500 truncate">' + esc(monthLabel(s.month)) + "</span>" +
-              (s.month === monthKey() ? '<span class="tag green">This month</span>' : "") +
-              '</div><div class="label-row shrink0">' +
-              (diff !== null ? '<span class="xs fw-500 ' + cls + '">' + (diff > 0 ? "▲" : diff < 0 ? "▼" : "—") + " " + Math.abs(diff).toFixed(0) + " kg</span>" : "") +
-              '<span class="fw-600">' + fixed(snapshotYearly(s)) + '</span><span class="xs muted">kg/yr</span></div></div>'
-            );
-          })
-          .join("") +
-        "</div>" +
-        (snapshots.length < 2 ? '<p class="xs muted mt-3">Complete the survey again next month to start tracking your trend.</p>' : "") +
-        "</div>";
+      html += progressHtml(
+        snapshots.map((s) => ({ kg: snapshotYearly(s), label: monthLabel(s.month), short: monthLabel(s.month).replace(/ (\d{2})(\d{2})$/, " ’$2") })),
+        "Take the survey again next month to draw your line."
+      );
     }
 
     if (ui.exampleMode) {
@@ -7944,6 +7995,7 @@
     app.innerHTML = glyphify(fillTokens(html));
     countUp();
     animateMoves();
+    animateProgress();
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
