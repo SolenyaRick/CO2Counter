@@ -4540,7 +4540,8 @@
       if (a.n === 5)
         return '<p class="sm">' + (ready ? "Retake the survey every few months to see your footprint change." : "Take the survey to see your footprint.") + "</p>" +
           '<div class="hb-explain-row"><a class="btn btn-green btn-sm" href="#/" data-action="start-survey">' + (ready ? "Update my survey" : "Take the survey") + " " + icon("arrowRight") + "</a>" +
-          (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "") + "</div>";
+          (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "") + "</div>" +
+          '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>";
       if (a.n === 4) return offers(["commute", "flights"]) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]]);
       const cat = { 1: "banking", 2: "energy", 3: "meals" }[a.n];
       return (a.energy ? a.extra || "" : offers([cat])) + explain([[cat, "Explain more"]]);
