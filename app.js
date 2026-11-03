@@ -3985,11 +3985,13 @@
       canvas = await drawShareCard(ba, fmt, theme, true);
       url = canvas.toDataURL("image/png");
     }
-    const text = shareText() + " " + inviteLink();
+    // Just the picture and the invite link: a sentence as well arrives as
+    // a third message in most chat apps.
+    const link = inviteLink();
     const file = await new Promise((res) => canvas.toBlob((b) => res(b ? new File([b], "co2counter-before-after.png", { type: "image/png" }) : null), "image/png"));
     // Shown first; its Share button opens the phone's share sheet straight
     // from a tap (Safari only allows sharing right after one).
-    ui.shareCard = { file, text };
+    ui.shareCard = { file, link };
     const canShareFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
     const idx = piIndex();
     const seg = (action, val, opts) =>
@@ -4004,8 +4006,8 @@
       '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(piItems()[idx].many) + '" />' +
       '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("link") + " Share</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
-      '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy the words</button></div>" +
-      '<p class="xs muted mt-2">' + esc(text) + "</p></div></div></div>";
+      '<button type="button" class="btn btn-outline btn-sm" data-action="share-copy-text">' + icon("copy") + " Copy link</button></div>" +
+      '<p class="xs muted mt-2">Sends the picture with your link: ' + esc(link.replace(/^https:\/\//, "")) + "</p></div></div></div>";
     document.body.classList.add("modal-open");
     const on = modalRoot.querySelector(".pi-chip.on");
     if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
@@ -8413,10 +8415,10 @@
       render();
     },
     "share-app": async () => {
-      const text = shareText();
+      if (actsBeforeAfter()) return openShareCard();
       try {
-        if (navigator.share) await navigator.share({ title: "CO2 Counter", text, url: inviteLink() });
-        else { await navigator.clipboard.writeText(text + " " + inviteLink()); ui.shareMsg = "Copied. Paste it into a message or post."; render(); }
+        if (navigator.share) await navigator.share({ url: inviteLink() });
+        else { await navigator.clipboard.writeText(inviteLink()); ui.shareMsg = "Link copied. Paste it into a message or post."; render(); }
       } catch (e) {}
     },
     // Instagram has no share link: copy the words, then open Instagram to
@@ -8649,13 +8651,13 @@
       const sc = ui.shareCard;
       if (!sc) return;
       try {
-        await navigator.share({ files: [sc.file], text: sc.text, title: "CO2 Counter" });
+        await navigator.share({ files: [sc.file], text: sc.link });
       } catch (e) {}
     },
     "share-copy-text": async (el) => {
       try {
-        await navigator.clipboard.writeText(shareText() + " " + inviteLink());
-        el.textContent = "Copied";
+        await navigator.clipboard.writeText(inviteLink());
+        el.textContent = "Link copied";
       } catch (e) {}
     },
     "stand-tab": (el) => {
