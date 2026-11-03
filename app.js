@@ -4503,14 +4503,17 @@
       if (!list.length) return "";
       const paid = list.some((x) => x.l.ref);
       const bank = keys.includes("banking");
+      // Say plainly what to do, then a clear button on each.
+      const lead = keys.includes("banking") ? "Switch to one of these banks" : keys.includes("energy") ? "Switch to a renewable supplier" : keys.includes("meals") ? "Try one of these" : "Make the switch with one of these";
       return (
+        '<p class="hb-offers-lead display">' + lead + "</p>" +
         '<ul class="hb-offers">' +
         list.map(({ k, ar, l }) => {
           const tone = TONES[l.tone] || TONES.leaf;
           const name = l.label === "The Man in Seat 61" ? "Seat 61" : l.label.replace(/^The /, "");
           return '<li><a class="hb-offer" ' + linkAttrs(k, l, "habits") + '><span class="display sw-mono" style="background:' + tone[0] + ";color:" + tone[1] + '">' + esc(monogramText(l.label)) + "</span>" +
             '<span class="min0"><b class="display">' + esc(l.label) + (l.ref ? ' <span class="tag affiliate-tag">Affiliate</span>' : "") + '</b><span class="xs muted">' + esc(l.note) + "</span></span>" +
-            '<span class="hb-offer-go" aria-label="' + esc(ar.verb + " " + name) + '">' + icon("link") + "</span></a></li>";
+            '<span class="hb-offer-go">' + esc(ar.verb + " " + name) + icon("link") + "</span></a></li>";
         }).join("") + "</ul>" +
         '<p class="xs muted">' + (bank ? "Chosen using the bank league table. " : "") + (paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : bank ? "" : "Independent suggestions. We don't get paid for these links.") + "</p>"
       );
