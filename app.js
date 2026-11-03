@@ -4459,8 +4459,35 @@
     ];
     return { acts, ready, billPayer };
   }
+  // My Habits as a game: a level for the acts you've done, your next best
+  // act, a tile per act that opens into its quest (the picture, the links,
+  // the steps), badges, and a little party when an act is newly banked.
+  const HB_LEVELS = [[0, "Seed"], [1, "Sprout"], [3, "Sapling"], [5, "Tree"], [7, "Forest"]];
+  const HB_COL = { 1: "#3F5B3A", 2: "#B27A14", 3: "#557546", 4: "#3E7A8A", 5: "#2B3F28", 6: "#6F4E63", 7: "#B8653D" };
+  const HB_BADGE = { 1: "Clean money", 2: "Renewable home", 3: "Plant power", 4: "Green miles", 5: "First measure", 6: "Your voice", 7: "Team builder" };
+  const HB_WHY = {
+    1: "Your savings get lent out. Move them and they fund homes and wind farms, not oil.",
+    2: "Power from wind, sun and water instead of gas.",
+    3: "Food is a big slice for most people. A few plant-based days a week cuts it fast.",
+    4: "Swap a regular car trip or flight for a train, a bus or a bike.",
+    5: "What gets measured gets cut. Retake the survey and watch your line fall.",
+    6: "MPs read letters from the people they represent. One letter counts.",
+    7: "Friends copy friends. Seven of you doing the 7 Acts is seven times the cut.",
+  };
+  const HB_STEPS = {
+    1: [["Pick a bank below", "The Current Account Switch Service moves everything for you in 7 working days."], ["Open an account and switch", ""], ["Update your survey to bank it", ""]],
+    2: [["Pick a supplier below", "Switching online takes about 10 minutes. Your new supplier does the rest."], ["Switch online", ""], ["Update your survey to bank it", ""]],
+    3: [["Try a box or a recipe kit", "Start with one meal a week."], ["Swap a few meals a week", ""], ["Update your survey to bank it", ""]],
+    4: [["Pick a trip you make often", "Start with one trip, not all of them."], ["Try it by train, bus or bike", ""], ["Update your survey to bank it", ""]],
+    5: [["Retake the survey", "About 5 minutes, every few months."], ["See what changed", ""], ["Come back next season", ""]],
+    6: [["Find your MP", "About 5 minutes with the letter we start for you."], ["Send the letter", ""], ["It ticks itself when our copy arrives", ""]],
+    7: [["Share your invite link", "One link, sent to anyone."], ["Friends take the survey", ""], ["Ticks itself when seven have", ""]],
+  };
+  const HB_STAR = "M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9Z";
+  const KEY_HB_WON = "co2_hb_won"; // acts already celebrated, per account
+
   function renderHabitsPage() {
-    const { acts, ready, billPayer } = habitActs();
+    const { acts, ready } = habitActs();
     syncSunday(acts);
     const state = (a) => (a.done ? "done" : a.pending ? "wait" : "todo");
     const made = acts.filter((a) => a.done).length;
@@ -4469,27 +4496,33 @@
     const animate = !ui.habitsSeen;
     ui.habitsSeen = true;
     if (!ui.hbOpen) ui.hbOpen = {};
+    const lv = HB_LEVELS.reduce((k, l, i) => (made >= l[0] ? i : k), 0);
+    const nextLv = HB_LEVELS[lv + 1];
+    const toNext = nextLv ? nextLv[0] - made : 0;
+    const lvPct = nextLv ? Math.max(8, Math.round(((made - HB_LEVELS[lv][0]) / (nextLv[0] - HB_LEVELS[lv][0])) * 100)) : 100;
+    const toNextText = nextLv ? toNext + (toNext === 1 ? " act" : " acts") + " to " + nextLv[1] : "Top level";
 
-    // The act's icon, with its number (or a tick, or a clock) in the corner.
-    const node = (a) =>
-      '<span class="hb-node ' + state(a) + '" aria-hidden="true">' + svgPath(a.icon, 20) +
-      '<span class="hb-badge">' + (a.done ? icon("check") : a.pending ? icon("clock") : a.n) + "</span></span>";
-    // The saving shows on the right, so the status line doesn't repeat it.
-    const shows = (a) => ready && !a.done && a.save >= 0.5;
-    const subOf = (a) => (shows(a) ? String(a.sub).replace(/ · could save [\d,]+ kg a year$/, "") : a.sub);
-    const body = (a) => '<span class="min0 hb-body"><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-sub">' + esc(subOf(a)) + "</span></span>";
-    const save = (a) => (shows(a) ? '<span class="hb-save"><b class="display tnum">−' + kgFmt(a.save) + "</b><span>kg</span></span>" : "");
-    const sr = (a) => '<span class="sr-only">' + (a.done ? "done" : a.pending ? "waiting" : "not done yet") + "</span>";
+    // Newly banked acts get a party, once (the first visit counts too).
+    const wonKey = KEY_HB_WON + (currentUser ? ":" + currentUser.id : "");
+    if (!ui.hbWin || ui.hbWin.key !== wonKey) {
+      const before = lsGet(wonKey, []);
+      const doneNow = acts.filter((a) => a.done).map((a) => a.n);
+      const fresh = doneNow.filter((n) => !before.includes(n));
+      lsSet(wonKey, doneNow);
+      ui.hbWin = { key: wonKey, list: fresh };
+    }
+    const fresh = (ui.hbWin.list || []).map((n) => acts.find((a) => a.n === n)).filter((a) => a && a.done);
+
     const people = () => {
       const info = ui.actsInfo;
       if (!info) return "";
       const n = Math.min(7, info.finished || 0);
       const joined = Math.min(7, Math.max(n, info.joined || 0));
       const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < n ? "fin" : i < joined ? "joined" : "") + '">' + icon(i < n ? "check" : i < joined ? "user" : "plus") + "</span>").join("");
-      return '<div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>";
+      return '<div class="hb-ppl" role="img" aria-label="' + n + " of 7 invited people have taken the survey, " + joined + ' have joined">' + dots + "</div>" +
+        '<div class="hb3-xp" aria-hidden="true"><i style="--w:' + Math.max(4, (n / 7) * 100).toFixed(1) + '%"></i></div>' +
+        '<p class="hb3-note"><b>' + n + " of 7</b> have taken the survey" + (n < 7 ? " · " + (7 - n) + " more for <b>Team builder</b>" : "") + "</p>";
     };
-    // Every act opens in place: the links to do it, and Explain more, which
-    // opens that part of your results.
     let areas = [];
     try { areas = switchAreas(ready ? { s: survey, mine: true } : { s: switchBaseTypical(), mine: false }); } catch (e) {}
     const areaOf = (k) => areas.find((x) => x.key === k);
@@ -4503,90 +4536,141 @@
       if (!list.length) return "";
       const paid = list.some((x) => x.l.ref);
       const bank = keys.includes("banking");
-      // Say plainly what to do, then a clear button on each.
-      const lead = keys.includes("banking") ? "Switch to one of these banks" : keys.includes("energy") ? "Switch to a renewable supplier" : keys.includes("meals") ? "Try one of these" : "Make the switch with one of these";
+      const lead = bank ? "Switch to one of these banks" : keys.includes("energy") ? "Switch to a renewable supplier" : keys.includes("meals") ? "Try one of these" : "Make the switch with one of these";
       return (
         '<p class="hb-offers-lead display">' + lead + "</p>" +
         '<ul class="hb-offers">' +
-        list.map(({ k, ar, l }) => {
-          const tone = TONES[l.tone] || TONES.leaf;
+        list.map(({ k, ar, l }, i) => {
           const name = l.label === "The Man in Seat 61" ? "Seat 61" : l.label.replace(/^The /, "");
-          return '<li><a class="hb-offer" ' + linkAttrs(k, l, "habits") + '><span class="display sw-mono" style="background:' + tone[0] + ";color:" + tone[1] + '">' + esc(monogramText(l.label)) + "</span>" +
+          // Only the bank list is ranked (by the league table), so only it has a top pick.
+          return '<li><a class="hb-offer" ' + linkAttrs(k, l, "habits") + ">" + (bank && i === 0 ? '<span class="hb3-top">★ Top of the league</span>' : "") +
+            '<span class="display sw-mono">' + esc(monogramText(l.label)) + "</span>" +
             '<span class="min0"><b class="display">' + esc(l.label) + (l.ref ? ' <span class="tag affiliate-tag">Affiliate</span>' : "") + '</b><span class="xs muted">' + esc(l.note) + "</span></span>" +
             '<span class="hb-offer-go">' + esc(ar.verb + " " + name) + icon("link") + "</span></a></li>";
         }).join("") + "</ul>" +
         '<p class="xs muted">' + (bank ? "Chosen using the bank league table. " : "") + (paid ? "Some of these are referral links: if you switch, CO2 Counter may get a reward at no cost to you." : bank ? "" : "Independent suggestions. We don't get paid for these links.") + "</p>"
       );
     };
-    // A small now -> realistic picture for an area of your footprint.
+    // Now and realistic as two bubbles, their areas matching the kg.
     const fpNow = ready ? footprint(survey) : null;
     const kgOf = (keys) => (fpNow ? fpNow.breakdown.filter((b) => keys.includes(b.key)).reduce((t, b) => t + b.yearly, 0) : 0);
     const cutOf = (keys) => (ready ? keys.reduce((t, k) => t + (tipFor(k, survey).saving || 0), 0) : 0);
-    const mini = (label, now, cut) => {
+    const mini = (label, now, cut, whole) => {
       if (!ready) return "";
       if (now < 0.5)
         return '<figure class="hb-mini empty"><figcaption>' + esc(label) + '</figcaption><p class="xs muted">Nothing counted yet. ' +
-          (label === "Your money footprint" ? 'Add your bank and pension in the survey to see it.' : "Your survey has none here.") + "</p></figure>";
+          (label === "Your money footprint" ? "Add your bank and pension in the survey to see it." : "Your survey has none here.") + "</p></figure>";
       const after = Math.max(0, now - cut), pct = now ? Math.round((cut / now) * 100) : 0;
+      const d = Math.max(22, 128 * Math.sqrt(after / now));
+      const inside = d >= 70;
+      const real = '<b class="display tnum">' + kgFmt(after) + "</b><span>Realistic</span>";
+      const ofWhole = whole && fpNow && fpNow.totalYearly && cut >= 0.5 ? Math.round((cut / fpNow.totalYearly) * 100) : 0;
       return (
         '<figure class="hb-mini" role="img" aria-label="' + esc(label) + ": " + kgFmt(now) + " kg a year now" + (cut >= 0.5 ? ", " + kgFmt(after) + " kg with a realistic change" : "") + '">' +
-        '<figcaption>' + esc(label) + "</figcaption>" +
-        '<div class="hb-mini-row"><span>Now</span><span class="hb-mini-bar now"><i style="--w:100%"></i></span><b class="display tnum">' + kgFmt(now) + "</b></div>" +
-        '<div class="hb-mini-row"><span>Realistic</span><span class="hb-mini-bar real"><i style="--w:' + (now ? Math.max(2, (after / now) * 100) : 0).toFixed(1) + '%"></i></span><b class="display tnum">' + kgFmt(after) + "</b></div>" +
-        '<p class="hb-mini-cut">' + (cut >= 0.5 ? "−" + kgFmt(cut) + " kg a year · " + pct + "% less" : "Already about as low as it goes") + "</p></figure>"
+        '<figcaption><span>' + esc(label) + "</span><span>kg CO₂e a year</span></figcaption>" +
+        '<div class="hb3-bubs"><span class="hb3-bub now"><span><b class="display tnum">' + kgFmt(now) + "</b><span>Now</span></span></span>" +
+        '<span class="hb3-dash" aria-hidden="true"></span>' +
+        '<span class="hb3-bubcol">' + (inside ? "" : '<span class="hb3-reallab">' + real + "</span>") +
+        '<span class="hb3-bub real" style="width:' + d.toFixed(0) + "px;height:" + d.toFixed(0) + 'px">' + (inside ? "<span>" + real + "</span>" : "") + "</span></span></div>" +
+        '<p class="hb-mini-cut">' + (cut >= 0.5 ? "−" + kgFmt(cut) + " kg a year · " + pct + "% less" : "Already about as low as it goes") + "</p>" +
+        (ofWhole ? '<p class="hb3-ofwhole">' + ofWhole + "% of your whole footprint</p>" : "") + "</figure>"
       );
     };
-    // Picture on the left, links on the right.
+    const steps = (a) =>
+      '<div class="hb3-quest"><span class="hb3-k">Your quest</span><ol>' +
+      HB_STEPS[a.n].map((s, i) => '<li class="' + (a.done ? "done" : i === 0 ? "on" : "") + '"><span class="hb3-sn">' + (a.done ? icon("check") : i + 1) + "</span><span>" + esc(s[0]) + "</span></li>").join("") +
+      "</ol>" + (HB_STEPS[a.n][0][1] ? '<p class="hb3-time">' + icon("clock") + esc(HB_STEPS[a.n][0][1]) + "</p>" : "") + "</div>";
     const split = (pic, rest) => (pic ? '<div class="hb-split">' + pic + '<div class="hb-split-r">' + rest + "</div></div>" : rest);
     const explain = (cats) =>
-      '<div class="hb-explain-row">' +
-      cats.map(([cat, label]) => '<a class="btn btn-outline btn-sm hb-more" href="' + catHref(cat) + '" data-action="open-move" data-cat="' + cat + '">' + esc(label) + " " + icon("arrowRight") + "</a>").join("") +
-      "</div>";
+      cats.map(([cat, label]) => '<a class="btn btn-outline btn-sm hb-more" href="' + catHref(cat) + '" data-action="open-move" data-cat="' + cat + '">' + esc(label) + " " + icon("arrowRight") + "</a>").join("");
+    // "I've switched" takes you to that step of the survey, which banks it.
+    const stepOf = (cat) => Math.max(0, STEPS.findIndex((s) => s.key === cat));
+    const banked = (a, cat) =>
+      ready && !a.done && !a.pending && a.save >= 0.5
+        ? '<button type="button" class="hb3-win-btn" data-action="hb-update" data-step="' + stepOf(cat) + '">' + icon("check") + "I've switched · update my survey</button>"
+        : "";
+    const foot = (inner) => '<div class="hb-explain-row hb3-foot">' + inner + "</div>";
+    const streak = () => {
+      const hist = historyByDay().map((h) => monthKey(new Date(h.completedAt)));
+      const months = (hist.length ? hist : getSnapshots().map((s) => s.month)).concat(ready && survey.completedAt ? [monthKey(new Date(survey.completedAt))] : []);
+      const now = new Date();
+      const six = Array.from({ length: 6 }, (_, i) => monthKey(new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)));
+      const n = new Set(months).size;
+      return (
+        '<div class="hb3-streak"><span class="hb3-k">Your surveys</span><div class="hb3-months">' +
+        six.map((m, i) => '<span class="' + (months.includes(m) ? "on" : i === 5 ? "due" : "") + '"><i></i>' + esc(monthLabel(m).split(" ")[0]) + "</span>").join("") +
+        '</div><p class="hb3-note">' + (n ? "<b>" + n + (n === 1 ? " survey" : " surveys") + "</b> so far." + (months.includes(six[5]) ? " Done this month." : " Do one this month to keep it going.") : "Take your first survey to start.") + "</p></div>"
+      );
+    };
     const inside = (a) => {
       const pageLink = (h) => '<a class="hb-page-link xs fw-700" href="' + h + '">More on this act ' + icon("arrowRight") + "</a>";
+      const why = '<p class="hb3-why">' + esc(HB_WHY[a.n]) + "</p>";
       if (a.n === 6) {
         const how = ui.actsInfo && !a.done
           ? '<ol class="hb-how2"><li>Write your letter here, or in Gmail or Outlook</li><li>We\'re copied in, so your MP doesn\'t see us</li><li>We match your reference, tick it and delete our copy</li></ol>' : "";
         const tick = a.manual ? '<button type="button" class="hb-tick btn btn-outline btn-sm" data-action="tick-act" data-act="' + a.manual + '" role="checkbox" aria-checked="' + a.done + '">' + icon("check") + (a.done ? " Done" : " Mark as done") + "</button>" : "";
-        return (ui.actsInfo && !a.done ? '<p class="xs muted">Find your MP on Parliament\'s own records.</p>' : "") + (a.done ? "" : a.extra || "") + how + tick + pageLink("#/acts/mobilise");
+        return why + split(steps(a), (ui.actsInfo && !a.done ? '<p class="xs muted">Find your MP on Parliament\'s own records.</p>' : "") + (a.done ? "" : a.extra || "") + how + tick + pageLink("#/acts/mobilise"));
       }
       if (a.n === 7) {
         const code = ui.actsInfo && ui.actsInfo.code;
-        return (
+        return why + split(steps(a),
           people() +
           (code ? '<div class="hb-inv"><div class="min0"><span class="hb-box-label">Your invite code</span><b class="display tnum">' + esc(code) + '</b></div><button type="button" class="btn btn-outline btn-sm" data-action="copy-code">' + icon("copy") + "Copy</button></div>" : "") +
-          '<div class="chip-row"><button type="button" class="btn btn-green btn-sm" data-action="invite-share">' + icon("link") + " Invite friends</button>" +
+          '<div class="chip-row"><button type="button" class="btn btn-green hb3-big" data-action="invite-share">' + icon("link") + " Invite friends</button>" +
           '<a class="btn btn-outline btn-sm" href="#/friends">Add friends</a></div>' +
           (ui.shareMsg ? '<p class="xs green-dark">' + esc(ui.shareMsg) + "</p>" : "") + pageLink("#/acts/motivate")
         );
       }
       if (a.n === 5)
-        return split(mini("Your whole footprint", fpNow ? fpNow.totalYearly : 0, fpNow ? fpNow.breakdown.reduce((t, b) => t + (tipFor(b.key, survey).saving || 0), 0) : 0),
-          '<p class="sm">' + (ready ? "Retake the survey every few months to see your footprint change." : "Take the survey to see your footprint.") + "</p>" +
-          '<div class="hb-explain-row"><a class="btn btn-green btn-sm" href="#/" data-action="start-survey">' + (ready ? "Update my survey" : "Take the survey") + " " + icon("arrowRight") + "</a>" +
-          (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "") + "</div>" +
+        return why + split(
+          '<div class="hb3-left">' + mini("Your whole footprint", fpNow ? fpNow.totalYearly : 0, fpNow ? fpNow.breakdown.reduce((t, b) => t + (tipFor(b.key, survey).saving || 0), 0) : 0) + steps(a) + "</div>",
+          streak() +
+          foot('<a class="btn btn-green hb3-big" href="#/" data-action="start-survey">' + (ready ? "Update my survey" : "Take the survey") + " " + icon("arrowRight") + "</a>" +
+            (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "")) +
           '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>");
-      if (a.n === 4) return split(mini("Your travel footprint", kgOf(["commute", "flights"]), cutOf(["commute", "flights"])), offers(["commute", "flights"]) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]]));
+      if (a.n === 4)
+        return why + split('<div class="hb3-left">' + mini("Your travel footprint", kgOf(["commute", "flights"]), cutOf(["commute", "flights"]), true) + steps(a) + "</div>",
+          offers(["commute", "flights"]) + foot(banked(a, travelStep(a)) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]])));
       const cat = { 1: "banking", 2: "energy", 3: "meals" }[a.n];
       const name = { 1: "Your money footprint", 2: "Your home energy footprint", 3: "Your food footprint" }[a.n];
-      return split(mini(name, kgOf([cat]), cutOf([cat])), (a.energy ? a.extra || "" : offers([cat])) + explain([[cat, "Explain more"]]));
+      return why + split('<div class="hb3-left">' + mini(name, kgOf([cat]), cutOf([cat]), true) + steps(a) + "</div>",
+        (a.energy ? a.extra || "" : offers([cat])) + foot((a.energy ? "" : banked(a, cat)) + explain([[cat, "Explain more"]])));
     };
+    // Act 4's survey step: the commute unless that's done.
+    const travelStep = (a) => (a.cat === "flights" ? "flights" : "commute");
+    const shows = (a) => ready && !a.done && a.save >= 0.5;
+    const subOf = (a) => (shows(a) ? String(a.sub).replace(/ · could save [\d,]+ kg a year$/, "") : a.sub);
+    const chip = (a) =>
+      a.done ? '<span class="hb3-chip done">' + icon("check") + "Banked</span>"
+        : a.pending ? '<span class="hb3-chip wait">' + icon("clock") + "Waiting</span>"
+        : shows(a) ? '<span class="hb3-chip kg"><b class="tnum">−' + kgFmt(a.save) + "</b> kg</span>"
+        : a.n === 7 && ui.actsInfo ? '<span class="hb3-chip">' + Math.min(7, ui.actsInfo.finished || 0) + " of 7</span>"
+        : '<span class="hb3-chip">' + (ready || a.n > 5 ? "Ready" : "Survey first") + "</span>";
+    const reward = (a) =>
+      '<span class="hb3-medal" aria-hidden="true"><span>' +
+      (a.done ? icon("check") + "<small>Banked</small>" : shows(a) ? '<b class="display tnum">−' + kgFmt(a.save) + "</b><small>kg a year</small>" : '<b class="display">+1</b><small>act</small>') +
+      "</span></span>";
+    // The badge sits on the act's icon once it's banked.
+    const node = (a) =>
+      '<span class="hb-node ' + state(a) + '" aria-hidden="true">' + svgPath(a.icon, 22) +
+      (a.done ? '<span class="hb3-pin" title="' + esc(HB_BADGE[a.n]) + '">' + icon("check") + "</span>" : a.pending ? '<span class="hb3-pin wait">' + icon("clock") + "</span>" : "") + "</span>";
     const row = (a, i) => {
-      const cls = "hb-row hb-card " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
+      const cls = "hb-row hb-card hb3-tile " + state(a) + (a.done ? " done" : a.pending ? " pending" : "");
       return (
-        '<li class="hb-item" id="hb-act-' + a.n + '" style="--i:' + i + '">' +
+        '<li class="hb-item" id="hb-act-' + a.n + '" style="--i:' + i + ";--c:" + HB_COL[a.n] + '">' +
         '<details class="hb-acc" data-n="' + a.n + '"' + (ui.hbOpen[a.n] ? " open" : "") + '><summary class="' + cls + '"' + (a.cat ? ' data-cat="' + a.cat + '"' : "") + ">" +
-        node(a) + body(a) + save(a) + sr(a) + '<span class="hb-chev">' + icon("chevronDown") + "</span></summary>" +
+        node(a) + '<span class="hb3-actn">Act ' + a.n + ' <span class="hb3-q">· Quest</span></span>' +
+        '<span class="min0 hb-body"><span class="display hb-name">' + esc(a.name) + '</span><span class="hb-sub">' + esc(subOf(a)) + "</span></span>" +
+        chip(a) + reward(a) + '<span class="sr-only">' + (a.done ? "done" : a.pending ? "waiting" : "not done yet") + "</span>" +
+        '<span class="hb-chev" aria-hidden="true">' + icon("x") + "</span></summary>" +
         '<div class="hb-acc-body">' + inside(a) + "</div></details></li>"
       );
     };
-    let k = 0;
-    const group = (title, list) => '<h2 class="hb-glabel">' + esc(title) + '</h2><ol class="hb-list">' + list.map((a) => row(a, k++)).join("") + "</ol>";
 
     // Seven ring segments with small gaps, starting at the top.
     const R = 94, C = 120, gap = 5;
     const pt = (deg) => { const r = ((deg - 90) * Math.PI) / 180; return [C + R * Math.cos(r), C + R * Math.sin(r)]; };
-    const COL = { done: "#3F5B3A", wait: "#7FA3AE", todo: "transparent" };
+    const COL = { done: "#E8C88A", wait: "#7FA3AE", todo: "transparent" };
     const segs = acts.map((a, i) => {
       const a0 = i * (360 / 7) + gap / 2, a1 = (i + 1) * (360 / 7) - gap / 2;
       const [x0, y0] = pt(a0), [x1, y1] = pt(a1), [tx, ty] = pt((i + 0.5) * (360 / 7));
@@ -4594,31 +4678,64 @@
       const len = Math.ceil((R * Math.PI * (a1 - a0)) / 180);
       const st = state(a);
       return {
-        path: '<path d="' + d + '" fill="none" stroke="rgba(46,42,34,.1)" stroke-width="30"/>' +
+        path: '<path d="' + d + '" fill="none" stroke="rgba(246,241,230,.14)" stroke-width="30"/>' +
           '<path class="' + (animate ? "hb-seg" : "") + '" d="' + d + '" fill="none" stroke="' + COL[st] + '" stroke-width="30" style="--len:' + len + ";stroke-dasharray:" + len + ";animation-delay:" + (0.3 + i * 0.12).toFixed(2) + 's"/>',
-        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#5C5649" : st === "wait" ? "#14262B" : "#F6F1E6") + '">' + a.n + "</text>",
+        label: '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" text-anchor="middle" dominant-baseline="central" fill="' + (st === "todo" ? "#C9D3BC" : "#22331F") + '">' + a.n + "</text>",
       };
     });
     const ring =
       '<div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
       segs.map((s) => s.path).join("") + segs.map((s) => s.label).join("") + "</svg>" +
-      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + '<small> of 7</small></b><span>done' + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>";
+      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + "<small>/7</small></b><span>done" + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>";
+
+    // Your next best act: the biggest saving still to bank.
+    const best = acts.slice(0, 4).filter((a) => shows(a) && !a.pending).sort((x, y) => y.save - x.save)[0] || acts.find((a) => !a.done && !a.pending);
+    const spot = !ready
+      ? '<section class="hb3-spot" aria-label="Start here"><span class="hb3-k">Start here</span><div class="hb3-spot-main"><span class="hb3-spot-ic">' + svgPath(HB_CHART, 26) + '</span><div class="min0"><b class="display">Take the survey</b><span>Acts 1 to 5 tick themselves from it</span></div></div>' +
+        '<button type="button" class="hb3-go" data-action="start-survey">Let\'s go ' + icon("arrowRight") + "</button></section>"
+      : best
+        ? '<section class="hb3-spot" aria-label="Your next best act"><span class="hb3-k">Your next best act</span><div class="hb3-spot-main"><span class="hb3-spot-ic" style="background:' + HB_COL[best.n] + '">' + svgPath(best.icon, 26) + '</span><div class="min0"><b class="display">' + esc(best.name) + "</b><span>" +
+          (shows(best) ? "−" + kgFmt(best.save) + " kg a year to bank" : "Act " + best.n + " · ready when you are") + "</span></div></div>" +
+          '<button type="button" class="hb3-go" data-action="hb-go" data-n="' + best.n + '">Let\'s do it ' + icon("arrowRight") + "</button></section>"
+        : '<section class="hb3-spot" aria-label="All done"><span class="hb3-k">Forest level</span><div class="hb3-spot-main"><span class="hb3-spot-ic">' + svgPath(HB_STAR, 26) + '</span><div class="min0"><b class="display">All seven done</b><span>Keep measuring to keep your line falling</span></div></div></section>';
+
+    // The party for newly banked acts.
+    const party = fresh.length
+      ? (() => {
+          const top = fresh.slice().sort((x, y) => (y.n <= 4 ? 1 : 0) - (x.n <= 4 ? 1 : 0))[0];
+          const conf = Array.from({ length: 22 }, (_, k) => '<i style="left:' + ((k * 37) % 100) + "%;--d:" + ((k % 9) * 0.06).toFixed(2) + "s;--x:" + (((k * 29) % 60) - 30) + "px;--r:" + ((k * 53) % 360) + "deg;background:" + ["#E8C88A", "#3F5B3A", "#B8653D", "#7FA3AE", "#D9A441", "#6F4E63"][k % 6] + '"></i>').join("");
+          const others = fresh.filter((a) => a !== top).map((a) => HB_BADGE[a.n]);
+          return (
+            '<section class="hb3-party" role="status" aria-label="Badge unlocked: ' + esc(HB_BADGE[top.n]) + '"><span class="hb3-conf" aria-hidden="true">' + conf + "</span>" +
+            '<span class="hb3-big-medal" aria-hidden="true"><i class="hb3-rays"></i><span>' + svgPath(top.icon, 40) + "</span></span>" +
+            '<div class="hb3-party-t"><span class="hb3-k">Badge unlocked</span><b class="display">' + esc(HB_BADGE[top.n]) + "</b>" +
+            "<span>Act " + top.n + " banked" + (others.length ? ", plus " + esc(others.join(", ")) : "") + ". You're level " + (lv + 1) + ", " + HB_LEVELS[lv][1] + ".</span></div>" +
+            '<button type="button" class="hb3-go" data-action="hb-party-off">Nice!</button></section>'
+          );
+        })()
+      : "";
+
+    const order = [5, 1, 3, 2, 4, 6, 7];
+    const badges =
+      '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + " of 8</span></div><ul>" +
+      order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
+      '<li class="' + (made === 7 ? "got" : "") + '"><span>' + svgPath(HB_STAR, 22) + "</span><b>Seven strong</b><small>" + (made === 7 ? "Unlocked" : "All 7") + "</small></li></ul></section>";
 
     const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
-      '<div class="container hb-page hb2' + (animate ? " hb-anim" : "") + '">' +
-      '<header class="glass hb-hero">' +
+      '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '">' +
+      party + '<div class="hb3-top-row"><header class="hb-hero">' +
       '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
-      '<h1 class="display">' + (made === 7 ? '<span class="green-dark">All seven done.</span>' : '<span class="green-dark">' + made + " done,</span> " + (7 - made) + " to go.") + "</h1>" +
+      '<div class="hb3-lv">' + ring + '<div class="hb3-lvt"><span class="hb3-lvchip">Level ' + (lv + 1) + "</span>" +
+      '<h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" +
+      '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + toNextText + "</span></div></div>" +
+      (ready && toSave >= 0.5 ? '<p class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still up for grabs in Acts 1 to 4</span></p>" : "") +
       '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
-      '<div class="hb-chips">' +
-      (ready && toSave >= 0.5 ? '<span class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg still to save</span></span>" : "") +
-      (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") +
-      "</div>" + ring + "</header>" + sundayOffer(acts) +
-      '<section class="glass hb-acts" aria-label="The 7 Acts">' +
-      group("Switch the big things", acts.slice(0, 4)) + group("Keep measuring", acts.slice(4, 5)) + group("Use your voice", acts.slice(5)) +
-      "</section>" +
+      '<div class="hb-chips">' + (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") + "</div>" +
+      "</header>" + spot + "</div>" + sundayOffer(acts) +
+      '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
+      '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
       '<section class="hb-soon" aria-labelledby="hb-daily"><span class="hb-soon-tag">Coming soon</span><p><b id="hb-daily" class="display">Daily habits</b> streaks for small daily things, like a meat-free lunch</p>' +
       '<span class="hb-soon-ics" aria-hidden="true">' + DAILY.map((d) => "<i>" + svgPath(d, 16) + "</i>").join("") + "</span></section>" +
       '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
@@ -9005,6 +9122,24 @@
       render();
       window.scrollTo(0, 0);
     },
+    // My Habits: "I've switched" opens that step of the survey to update.
+    "hb-update": (el) => {
+      actions["whats-changed"]();
+      actions["review-edit"](el);
+      if (location.hash !== "#/") location.hash = "#/";
+    },
+    // Your next best act: open it and bring it into view.
+    "hb-go": (el) => {
+      const d = app.querySelector('#hb-act-' + el.dataset.n + ' details');
+      if (!d) return;
+      d.open = true;
+      hbScroll(d);
+    },
+    "hb-party-off": () => {
+      if (ui.hbWin) ui.hbWin.list = [];
+      const p = app.querySelector(".hb3-party");
+      if (p) p.remove();
+    },
     "dismiss-celebrate": () => {
       ui.celebrate = null;
       render();
@@ -9053,8 +9188,19 @@
       d.classList.remove("hb-slide");
       void d.offsetWidth;
       d.classList.add("hb-slide");
+      if (Date.now() - hbTapAt < 800) hbScroll(d);
     }
   }, true);
+  // A tapped act grows into its quest card: bring its top into view.
+  let hbTapAt = 0;
+  document.addEventListener("click", (e) => { if (e.target.closest && e.target.closest("details.hb-acc > summary")) hbTapAt = Date.now(); }, true);
+  function hbScroll(d) {
+    requestAnimationFrame(() => {
+      const r = d.getBoundingClientRect();
+      const top = (document.querySelector(".topbar") || {}).offsetHeight || 0;
+      if (r.top < top + 8 || r.top > innerHeight * 0.45) window.scrollTo({ top: Math.max(0, scrollY + r.top - top - 12), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -9062,6 +9208,16 @@
       else if (ui.airport) {
         ui.airport = null;
         render();
+      } else {
+        // Close an open act on My Habits, back to its tile.
+        const open = [...app.querySelectorAll(".hb3 details.hb-acc[open]")];
+        const mine = e.target.closest && e.target.closest("details.hb-acc[open]");
+        const d = mine || open[open.length - 1];
+        if (d && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) {
+          d.open = false;
+          const s = d.querySelector("summary");
+          if (s) s.focus();
+        }
       }
     }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches(".section-card")) {
