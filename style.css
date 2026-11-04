@@ -5725,3 +5725,14 @@ a.res-tag:hover { text-decoration: underline; }
 .mail-chip:hover { border-color: rgba(63, 91, 58, 0.45); color: #2E2A22; }
 .mail-chip:active { transform: scale(0.97); }
 .ask-who > .xs { flex-basis: 100%; }
+/* the tree sits beside its name */
+.hb3-name { display: flex; align-items: flex-end; gap: 10px; }
+.hb3-tree.now { position: static; flex: none; width: 92px; margin: 0 0 -6px; right: auto; bottom: auto; }
+.hb3 .hb3-lvt { max-width: 380px; }
+.hb3 .hb-hero .hb-lede, .hb3 .hb-hero .hb-chips { max-width: none; }
+@media (max-width: 640px) {
+  .hb3-name { gap: 6px; }
+  .hb3-tree.now { width: 68px; margin-bottom: -4px; }
+  .hb3 .hb-hero .hb-chips { max-width: none; }
+}
+@media (max-width: 380px) { .hb3-tree.now { width: 54px; } .hb3 .hb-hero h1 { font-size: 28px; } }

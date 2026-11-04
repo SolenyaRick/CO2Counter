@@ -4745,12 +4745,12 @@
       party + '<div class="hb3-top-row"><header class="hb-hero">' +
       '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
       '<div class="hb3-lv">' + ring + '<div class="hb3-lvt"><span class="hb3-lvchip">Level ' + (lv + 1) + "</span>" +
-      '<h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" +
+      '<div class="hb3-name"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" + hbTree(HB_LEVELS[lv][1], "now", animate) + "</div>" +
       '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + (nextLv ? hbTree(nextLv[1], "next") : "") + toNextText + "</span></div></div>" +
       (ready && toSave >= 0.5 ? '<p class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still up for grabs in Acts 1 to 4</span></p>" : "") +
       '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
-      '<div class="hb-chips">' + (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") + "</div>" + hbTree(HB_LEVELS[lv][1], "now", animate) +
+      '<div class="hb-chips">' + (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") + "</div>" +
       "</header>" + spot + "</div>" + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
