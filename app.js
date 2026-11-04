@@ -3912,11 +3912,24 @@
   const gmailLink = (m) =>
     "https://mail.google.com/mail/?view=cm&fs=1" + (m.to ? "&to=" + encodeURIComponent(m.to) : "") + (m.bcc ? "&bcc=" + encodeURIComponent(m.bcc) : "") +
     "&su=" + encodeURIComponent(m.subject) + "&body=" + encodeURIComponent(m.body);
-  const outlookLink = (m) =>
-    "https://outlook.office.com/mail/deeplink/compose?" + (m.to ? "to=" + encodeURIComponent(m.to) + "&" : "") + "subject=" + encodeURIComponent(m.subject) + "&body=" + encodeURIComponent(m.body);
-  const webmailButtons = (m, action) =>
-    '<a class="hb-act-link" href="' + esc(gmailLink(m)) + '" target="_blank" rel="noopener" data-action="' + action + '">Open in Gmail</a>' +
-    '<a class="hb-act-link" href="' + esc(outlookLink(m)) + '" target="_blank" rel="noopener" data-action="' + action + '">Open in Outlook</a>';
+  // Outlook: personal accounts (Outlook.com, Hotmail) use outlook.live.com;
+  // work and school accounts use outlook.office.com. On phones the Outlook
+  // app opens straight to the draft. Each keeps the To, subject and letter.
+  const mailQuery = (m, keys) => keys.filter(([k]) => m[k]).map(([k, name]) => name + "=" + encodeURIComponent(m[k])).join("&");
+  const outlookLink = (m) => "https://outlook.live.com/mail/0/deeplink/compose?" + mailQuery(m, [["to", "to"], ["subject", "subject"], ["body", "body"]]);
+  const outlookWorkLink = (m) => "https://outlook.office.com/mail/deeplink/compose?" + mailQuery(m, [["to", "to"], ["subject", "subject"], ["body", "body"]]);
+  const outlookAppLink = (m) => "ms-outlook://compose?" + mailQuery(m, [["to", "to"], ["bcc", "bcc"], ["subject", "subject"], ["body", "body"]]);
+  const onPhone = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  const webmailButtons = (m, action) => {
+    const go = (href, label, kind, blank) => '<a class="mail-chip" href="' + esc(href) + '"' + (blank ? ' target="_blank" rel="noopener"' : "") + ' data-action="' + action + '" data-mail="' + kind + '">' + label + "</a>";
+    return (
+      '<span class="mail-alt"><span class="mail-alt-k">Or open in</span>' +
+      go(gmailLink(m), "Gmail", "gmail", true) +
+      (onPhone() ? go(outlookAppLink(m), "Outlook app", "outlook-app", false) : "") +
+      go(outlookLink(m), onPhone() ? "Outlook.com" : "Outlook", "outlook", true) +
+      go(outlookWorkLink(m), "Work Outlook", "outlook-work", true) + "</span>"
+    );
+  };
   function mpLetterParts(mp) {
     return { to: mp.email, bcc: MP_COPY, subject: "Climate action: a letter from a constituent", body: decodeURIComponent(mpLetter(mp).split("&body=")[1] || "") };
   }
@@ -4242,7 +4255,7 @@
             (currentUser ? '<details class="letter-alt mt-3"><summary class="sm fw-700">Or use your own email app</summary>' : "") +
             '<div class="hb-share mt-2"><a class="btn ' + (currentUser ? "btn-outline" : "btn-green") + ' btn-sm" href="' + esc(mpLetter(mp)) + '" data-action="mp-sent">Email ' + esc(mp.name.split(" ")[0]) + " " + icon("arrowRight") + "</a>" +
             webmailButtons(mpLetterParts(mp), "mp-sent") + "</div>" +
-            '<p class="xs muted mt-2">Outlook can\'t add our copy for you: add ' + MP_COPY + ' as BCC there if you want it verified.</p>' +
+            '<p class="xs muted mt-2">Outlook on the web can\'t add our copy for you: add ' + MP_COPY + ' as BCC there if you want it verified.</p>' +
             '<p class="xs muted mt-2">Opens your email app with a letter to edit. Add your name and full address: MPs only reply to constituents. We\'re copied in (BCC, ' + MP_COPY + ") so we can verify it, then we delete our copy. Reference CO2-" + esc(info.code) + ".</p>" +
             (currentUser ? "</details>" : "")
           : '<a class="hb-act-link mt-2" href="https://members.parliament.uk/member/' + mp.id + '/contact" target="_blank" rel="noopener">Contact details ' + icon("link") + '</a><p class="xs muted mt-2">If you email them, BCC ' + MP_COPY + " with reference CO2-" + esc(info.code) + " in your message so we can verify it.</p>") +
@@ -5019,15 +5032,25 @@
     const cut = year * (D.ELECTRICITY_FACTOR - D.GREEN_ELECTRICITY_FACTOR);
     const pct = Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100);
     const list = D.USEFUL_LINKS.energy.items.map((l) => "• " + l.label + ": " + l.url).join("\n");
+    const tapLink = !forApp && ui.energyToken ? "Once it's switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "";
+    // A landlord gets a more formal letter about the property.
+    if (askWho() === "landlord")
+      return {
+        subject: "Switching the property's electricity to a renewable tariff",
+        body:
+          "Dear [Landlord's name],\n\nI'm writing about [your address]. Could the electricity supply for the property be switched to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
+          "These suppliers offer them:\n" + list + "\n\nSwitching takes a few minutes online, the new supplier handles everything, and the power never goes off. I'm happy to help with anything you need, such as meter readings.\n\n" +
+          tapLink + "Kind regards,\n" + (signName() || "[Your name]"),
+      };
     return {
       subject: "Could we switch to a renewable electricity tariff?",
       body:
         "Hi,\n\nCould we switch our electricity to a 100% renewable tariff? For our home it would cut the electricity's carbon footprint by about " + kgFmt(cut) + " kg CO₂e a year (" + pct + "% less), and green tariffs are often a similar price.\n\n" +
         "These suppliers offer them:\n" + list + "\n\nSwitching takes a few minutes online, the new supplier handles everything, and the power never goes off.\n\n" +
-        (forApp ? "Thanks,\n" + signName() : (ui.energyToken ? "Once we've switched, could you tap this link to let me know? It ticks it off for me on CO2 Counter, and you don't need an account:\n" + confirmLink() + "\n\n" : "") +
-        "Thanks,\n" + (signName() || "[Your name]")),
+        (forApp ? "Thanks,\n" + signName() : tapLink + "Thanks,\n" + (signName() || "[Your name]")),
     };
   }
+  const askWho = () => ui.askWho || "landlord";
   const confirmLink = () => PRODUCTION_URL + "#/confirm/energy?t=" + ui.energyToken;
   const energyVerified = () => ui.actsInfo && ui.actsInfo.verified && ui.actsInfo.verified.energy;
   function energyAskBox() {
@@ -5050,12 +5073,14 @@
         ? "You've asked. " + (ui.energyToken ? "When they tap the link in your message to say you've switched, this act is verified." : "Send it again any time.")
         : "Someone else chooses your supplier, so your switch is asking them. Here's a message ready to send, with your home's numbers in it" + (ui.energyToken ? ", and a link for them to tap once you've switched." : ".")) +
       "</p>" +
+      '<div class="ask-who mt-2" role="radiogroup" aria-label="Who is it to?"><span class="xs fw-700">Who\'s it to?</span>' +
+      [["landlord", "My landlord"], ["home", "Someone at home"]].map(([k, l]) => '<button type="button" class="chip' + (askWho() === k ? " on" : "") + '" role="radio" aria-checked="' + (askWho() === k) + '" data-action="ask-who" data-who="' + k + '">' + l + "</button>").join("") + "</div>" +
       '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
       webmailButtons({ subject: t.subject, body: t.body }, "energy-asked") +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
-      '<p class="xs muted mt-2">Your landlord, family or whoever pays the bills. Your email app, Gmail or Outlook opens with the message ready, and you add who it\'s to. Sending from your own email means it lands in their inbox, not junk.</p></div>'
+      '<p class="xs muted mt-2">Your email app, Gmail or Outlook opens with the message ready: add their email address, and your address if it\'s your landlord. Sending from your own email means it lands in their inbox, not junk.</p></div>'
     );
   }
 
@@ -8456,6 +8481,10 @@
       if (ui.acts) ui.acts = t;
       if (currentUser && sb) sb.from("profiles").update({ acts: t }).eq("id", currentUser.id).then(() => {}, () => {});
       setTimeout(render, 300);
+    },
+    "ask-who": (el) => {
+      ui.askWho = el.dataset.who;
+      render();
     },
     "copy-energy-ask": async () => {
       try { await navigator.clipboard.writeText(energyAskText().body); ui.askMsg = "Copied. Paste it into a message to them."; } catch (e) { ui.askMsg = "Couldn't copy. Select the text in your email app instead."; }

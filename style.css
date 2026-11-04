@@ -5712,3 +5712,16 @@ a.res-tag:hover { text-decoration: underline; }
   .hb3-party-t > span:last-child { display: none; }
 }
 @media (max-width: 380px) { .hb3-party-t .hb3-k { font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; } .hb3-big-medal { width: 54px; height: 54px; } .hb3-big-medal > span { width: 50px; height: 50px; } .hb3-party { gap: 10px; } }
+/* who the energy email is to */
+.ask-who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.ask-who .chip { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid rgba(46, 42, 34, 0.14); background: #FFFCF5; color: #2E2A22; font: 700 13px Karla, sans-serif; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+.ask-who .chip:hover { border-color: rgba(63, 91, 58, 0.45); }
+.ask-who .chip:active { transform: scale(0.97); }
+.ask-who .chip.on { background: #3F5B3A; border-color: #3F5B3A; color: #F6F1E6; }
+/* the email choices: one short row of chips */
+.mail-alt { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mail-alt-k { font-size: 12px; font-weight: 700; color: #6A6355; margin-right: 2px; }
+.mail-chip { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1.5px solid rgba(46, 42, 34, 0.12); background: #FFFCF5; color: #2E2A22; font-size: 13px; font-weight: 700; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+.mail-chip:hover { border-color: rgba(63, 91, 58, 0.45); color: #2E2A22; }
+.mail-chip:active { transform: scale(0.97); }
+.ask-who > .xs { flex-basis: 100%; }
