@@ -5629,3 +5629,86 @@ a.res-tag:hover { text-decoration: underline; }
 .hb3 .hb-offer { overflow: visible; }
 .hb3 .hb3-top { top: -11px; right: 14px; }
 .hb3 .hb-offer:has(.hb3-top) > .min0 { padding-top: 0; }
+/* the hand-drawn tree for your level, planted in the hero's corner */
+.hb3-tree .tr-g { stroke: #8FA27F; stroke-width: 2.4; }
+.hb3-tree .tr-t { stroke: #F6F1E6; stroke-width: 2.8; }
+.hb3-tree .tr-l { stroke: #E8C88A; stroke-width: 2.8; }
+.hb3-tree .tr-d { stroke: #C9D3BC; stroke-width: 1.8; }
+.hb3 .hb-hero > *:not(.hb3-tree) { position: relative; z-index: 1; }
+.hb3-tree.now { position: absolute; z-index: 0; right: 14px; bottom: -8px; width: 250px; height: auto; pointer-events: none; transform-origin: 50% 92%; animation: hb3-sway 6s ease-in-out 2.4s infinite; }
+@keyframes hb3-sway { 0%, 100% { transform: none; } 50% { transform: rotate(-1.2deg); } }
+.hb3-tree.draw path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: hb3-ink 0.9s cubic-bezier(0.4, 0, 0.2, 1) both; animation-delay: calc(0.4s + var(--n) * 0.14s); }
+@keyframes hb3-ink { to { stroke-dashoffset: 0; } }
+.hb3 .hb3-lvt { max-width: 340px; }
+.hb3 .hb-hero .hb-tosave { align-self: flex-start; }
+.hb3 .hb-hero .hb-lede, .hb3 .hb-hero .hb-chips { max-width: calc(100% - 250px); }
+.hb3-lvnext { display: inline-flex; align-items: center; gap: 6px; }
+.hb3-tree.next { width: 30px; height: auto; opacity: 0.7; }
+.hb3-tree.next .tr-t, .hb3-tree.next .tr-l { stroke: #C9D3BC; }
+@media (max-width: 640px) {
+  .hb3-tree.now { width: 132px; right: 2px; bottom: -6px; }
+  .hb3 .hb-hero .hb-lede { max-width: none; }
+  .hb3 .hb-hero .hb-chips { max-width: calc(100% - 130px); }
+  .hb3 .hb-hero .hb-tosave { align-self: stretch; }
+}
+@media (prefers-reduced-motion: reduce) { .hb3-tree.now { animation: none; } .hb3-tree.draw path { animation: none; stroke-dashoffset: 0; } }
+/* the keyboard is up: no tab bar over the form */
+@media (max-width: 760px) { body.typing .tabbar, body.kb-open .tabbar { display: none; } }
+
+/* ---------- My Habits on phones: fit and placement ---------- */
+.hb3 { --bub: 128px; }
+.hb3-bub.now { width: var(--bub); height: var(--bub); }
+.hb3-bub.real { width: calc(var(--bub) * var(--r, 0.5)); height: calc(var(--bub) * var(--r, 0.5)); }
+.hb3 .hb-split > *, .hb3 .hb-split-r > *, .hb3-left > * { min-width: 0; }
+.hb3 .hb-acc[open] { min-width: 0; max-width: 100%; }
+/* Act 7 fills the gap at the end of the grid, as a wide tile */
+.hb3 .hb3-grid > .hb-item:nth-child(7) { grid-column: span 2; }
+.hb3 .hb3-grid > .hb-item:nth-child(7) > details:not([open]) > .hb3-tile { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "node actn chip" "node body chip"; align-items: center; min-height: 0; }
+.hb3 .hb3-grid > .hb-item:nth-child(7) > details:not([open]) .hb3-chip { align-self: center; justify-self: end; }
+.hb3 .hb3-grid > .hb-item:nth-child(7) > details:not([open]) .hb3-actn { justify-self: start; align-self: end; }
+.hb3 .hb3-grid > .hb-item:nth-child(7) > details:not([open]) .hb-body { align-self: start; }
+@media (max-width: 1000px) { .hb3 .hb3-grid > .hb-item:nth-child(7) { grid-column: span 3; } }
+@media (max-width: 760px) {
+  .hb3 .hb3-grid > .hb-item:nth-child(7) { grid-column: span 2; }
+  .hb3 .hb-offers, .hb3 .hb-split-r .hb-offers { grid-template-columns: minmax(0, 1fr); }
+  .hb3 .hb-split { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  /* a compact party: medal beside the words */
+  .hb3-party { flex-wrap: nowrap; justify-content: flex-start; text-align: left; gap: 14px; padding: 14px 14px 14px 12px; border-radius: 22px; }
+  .hb3-big-medal { width: 64px; height: 64px; }
+  .hb3-big-medal > span { width: 58px; height: 58px; box-shadow: 0 0 0 4px #FFFCF5, 0 8px 18px rgba(217, 164, 65, 0.45); }
+  .hb3-big-medal svg { width: 28px; height: 28px; }
+  .hb3-rays { inset: -22px; }
+  .hb3-party-t { flex-basis: auto; align-items: flex-start; gap: 2px; }
+  .hb3-party-t b { font-size: 21px; }
+  .hb3-party-t > span:last-child { font-size: 13px; }
+  .hb3-party .hb3-go { min-height: 42px; padding: 0 14px; font-size: 14px; align-self: center; }
+  .hb3 .hb-hero .hb-lede { font-size: 13px; }
+  .hb3-badges ul { gap: 12px 4px; }
+  .hb3-badges li > span { width: 46px; height: 46px; }
+  .hb3-badges li > span svg { width: 20px; height: 20px; }
+  .hb3-badges b { font-size: 11px; }
+  .hb3-badges small { font-size: 10px; }
+}
+@media (max-width: 380px) {
+  .hb3 { --bub: 100px; }
+  .hb3-bub b { font-size: 21px; }
+  .hb3-bub.real b, .hb3-reallab b { font-size: 18px; }
+  .hb3-bub span span, .hb3-reallab span { font-size: 10px; }
+  .hb3-bubs { gap: 8px; min-height: 108px; }
+  .hb3-dash { width: 22px; }
+  .hb3 .hb-mini figcaption { flex-direction: column; gap: 2px; }
+  .hb3 .hb-top .hb-eyebrow { display: none; }
+  .hb3 .hb-acc[open] > summary .hb-name { font-size: 20px; }
+  .hb3 .hb-acc[open] .hb3-q { display: none; }
+  .hb3 .hb-acc-body { padding: 14px 12px 18px; }
+  .hb3 .hb-offer { padding: 12px; gap: 10px 12px; grid-template-columns: 48px minmax(0, 1fr); }
+  .hb3 .hb-offer .sw-mono { width: 48px; height: 48px; font-size: 16px; }
+  .hb3 .hb-offer b { font-size: 16px; }
+  .hb3-win-btn { font-size: 15px; padding: 0 14px; }
+  .hb3-party .hb3-go { padding: 0 12px; }
+  .hb3-party-t b { font-size: 19px; }
+  .hb3-party-t > span:last-child { display: none; }
+}
+@media (max-width: 380px) { .hb3-party-t .hb3-k { font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; } .hb3-big-medal { width: 54px; height: 54px; } .hb3-big-medal > span { width: 50px; height: 50px; } .hb3-party { gap: 10px; } }
