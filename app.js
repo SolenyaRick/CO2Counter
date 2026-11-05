@@ -1709,6 +1709,149 @@
       av.innerHTML = label ? label : icon("user");
       av.setAttribute("aria-label", currentUser ? "Account" : "Sign in");
     }
+    moveTabInk();
+  }
+
+  // ==================== the phone app shell ====================
+  // On a phone the app behaves like an iPhone app: a title bar with a back
+  // button on inner screens, screens that slide in and out, tabs that keep
+  // their place, and a tab bar whose highlight glides between tabs.
+  const ROOT_TABS = ["/", "/results", "/friends", "/habits", "/check-in", "/account", "/welcome"];
+  const pathDepth = (p) => (ROOT_TABS.includes(p) ? 1 : 2);
+  const onPhoneScreen = () => window.matchMedia("(max-width: 640px)").matches;
+  const reducedMotion = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const NAV_TITLES = { "/results": "Results", "/friends": "Friends", "/habits": "My Habits", "/check-in": "My Habits", "/switches": "Greener switches", "/about": "About", "/how-we-calculate": "How we calculate", "/budget": "The 1.5°C budget", "/privacy": "Privacy", "/terms": "Terms", "/example": "Example result", "/confirm/energy": "Confirm", "/inputs": "Inputs", "/analytics": "Analytics" };
+  function navMeta(path) {
+    const parts = path.split("/").filter(Boolean);
+    let title = NAV_TITLES[path] || "", parent = null;
+    if (path === "/") title = survey && survey.completedAt ? "Your survey" : "Survey";
+    if (path === "/account") title = currentUser ? "Account" : "Sign in";
+    if (parts[0] === "explainer" && D.EXPLAINERS[parts[1]]) { title = D.EXPLAINERS[parts[1]].title; parent = "/results"; }
+    if (parts[0] === "acts") { title = ACT_PAGES[parts[1]] ? "Act " + ACT_PAGES[parts[1]] + " of 7" : "The 7 Acts"; parent = "/habits"; }
+    if (path === "/switches" || path === "/example") parent = path === "/switches" ? "/habits" : "/results";
+    return { title, parent };
+  }
+  // Where we've been in this visit, so Back goes where you came from.
+  let navTrail = null;
+  let lastRoute = null;
+  let navIntent = null; // "back" from our back button or swipe, "tab" from the tab bar
+  const scrollMem = {};
+  function backTarget(path) {
+    const prev = navTrail && navTrail.length > 1 ? navTrail[navTrail.length - 2] : null;
+    if (pathDepth(path) === 1) return null;
+    return prev || navMeta(path).parent;
+  }
+  function navBar(path) {
+    const bar = document.querySelector(".topbar");
+    const back = document.getElementById("nav-back");
+    const title = document.getElementById("nav-title");
+    if (!bar || !back || !title) return;
+    const meta = navMeta(path);
+    title.textContent = app.querySelector(".intro-v2") ? "" : meta.title;
+    const to = backTarget(path);
+    back.hidden = !to;
+    bar.classList.toggle("has-back", !!to);
+    if (to) {
+      const label = (navMeta(to).title || "Back").replace(/^Your survey$/, "Survey");
+      back.querySelector("span").textContent = label.length > (window.innerWidth < 360 ? 8 : 13) ? "Back" : label;
+      back.dataset.to = to;
+      back.setAttribute("aria-label", "Back to " + label);
+    }
+    watchTitle();
+  }
+  // After each draw: the title bar, whether this is one of the app's own
+  // screens (no website footer), and the survey's focus mode (no tab bar).
+  function shellSync() {
+    const path = currentPath();
+    navBar(path);
+    const intro = !!app.querySelector(".intro-v2");
+    const inApp = ["/", "/results", "/friends", "/habits", "/check-in", "/account"].includes(path) || /^\/(explainer|acts)\//.test(path);
+    document.body.classList.toggle("in-app", inApp && !intro);
+    document.body.classList.toggle("survey-focus", path === "/" && !!app.querySelector(".survey-v2 .step-nav-v2"));
+    moveTabInk();
+    clampLongText();
+  }
+  // On a phone, long explanations show two lines and a More button, so a
+  // screen isn't a wall of text. Tapping More opens it in place.
+  const CLAMP_SEL = ".sw-fact, .cat-hero .cat-why, .act-page p.xs.muted, .act-page .act-ideas li, .ab-hero > p, .ab-founder p, .ab-note p, .ab-aff-text p, .ab-pcard p, .ab-belief p, .method > p, .method li";
+  function clampLongText() {
+    if (!onPhoneScreen()) return;
+    app.querySelectorAll(CLAMP_SEL).forEach((el) => {
+      if (el.classList.contains("ph-clamp") || (el.innerText.match(/\S+/g) || []).length < 22) return;
+      el.classList.add("ph-clamp");
+      requestAnimationFrame(() => {
+        if (el.scrollHeight <= el.clientHeight + 2) return el.classList.remove("ph-clamp");
+        const more = document.createElement("button");
+        more.type = "button";
+        more.className = "ph-more";
+        more.dataset.action = "ph-more";
+        more.textContent = "More";
+        if (el.tagName === "LI") {
+          const li = document.createElement("li");
+          li.className = "ph-more-li";
+          li.appendChild(more);
+          el.after(li);
+        } else el.after(more);
+      });
+    });
+  }
+  // The title shows in the bar once the page's own heading scrolls under it.
+  let titleObs = null;
+  function watchTitle() {
+    const bar = document.querySelector(".topbar");
+    if (titleObs) titleObs.disconnect();
+    titleObs = null;
+    if (!bar) return;
+    const h = app.querySelector("h1");
+    if (!h || !("IntersectionObserver" in window)) return bar.classList.add("titled");
+    bar.classList.remove("titled");
+    titleObs = new IntersectionObserver((es) => {
+      const e = es[es.length - 1];
+      bar.classList.toggle("titled", !e.isIntersecting && e.boundingClientRect.top < 80);
+    }, { rootMargin: "-64px 0px 0px 0px" });
+    titleObs.observe(h);
+  }
+  let barTick = false;
+  window.addEventListener("scroll", () => {
+    if (barTick) return;
+    barTick = true;
+    requestAnimationFrame(() => {
+      barTick = false;
+      const bar = document.querySelector(".topbar");
+      if (bar) bar.classList.toggle("scrolled", window.scrollY > 4);
+    });
+  }, { passive: true });
+  // The tab bar's highlight glides to the tab you're on.
+  function moveTabInk() {
+    const bar = document.getElementById("tabbar");
+    const ink = bar && bar.querySelector(".tab-ink");
+    if (!ink) return;
+    const a = bar.querySelector("a.active");
+    if (!a || !bar.offsetWidth) { ink.style.opacity = "0"; return; }
+    ink.style.opacity = "1";
+    ink.style.width = a.offsetWidth + "px";
+    ink.style.transform = "translateX(" + a.offsetLeft + "px)";
+    if (!ink.classList.contains("ready")) requestAnimationFrame(() => ink.classList.add("ready"));
+  }
+  // A light tap of haptics in the iPhone app (nothing on the web).
+  function haptic(kind) {
+    const h = plugin("Haptics");
+    if (!h) return;
+    try {
+      const p = kind === "success" ? h.notification({ type: "SUCCESS" }) : h.impact({ style: kind === "medium" ? "MEDIUM" : "LIGHT" });
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  }
+  // Screens glide in: a push slides in from the right, going back slides in
+  // from the left, and switching tabs is a quick fade.
+  function glide(dir) {
+    if (!dir || reducedMotion() || !onPhoneScreen()) return;
+    const cls = "pg-" + dir;
+    app.classList.remove("pg-push", "pg-pop", "pg-tab");
+    void app.offsetWidth;
+    app.classList.add(cls);
+    clearTimeout(glide.t);
+    glide.t = setTimeout(() => app.classList.remove(cls), 420);
   }
 
   // "Alex Green" -> "AG", "sam_green" -> "SG", "sam@x.com" -> "S".
@@ -2128,7 +2271,7 @@
       (ui.q > 0
         ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back</button>"
         : prev
-        ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + " Back: " + esc(STEP_TAB[prev.key]) + "</button>"
+        ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + ' Back<span class="nav-lbl">: ' + esc(STEP_TAB[prev.key]) + "</span></button>"
         : ui.newSurvey || ui.editing ? '<a class="btn btn-outline" href="#/results">Back to results</a>' : "<span></span>") +
       '<button type="button" class="btn btn-green" data-action="next-step">' +
       (qMore ? "Next question" : last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + "</button>" +
@@ -4528,6 +4671,7 @@
       const fresh = doneNow.filter((n) => !before.includes(n));
       lsSet(wonKey, doneNow);
       ui.hbWin = { key: wonKey, list: fresh };
+      if (fresh.length) setTimeout(() => haptic("success"), 450);
     }
     const fresh = (ui.hbWin.list || []).map((n) => acts.find((a) => a.n === n)).filter((a) => a && a.done);
 
@@ -7519,7 +7663,7 @@
         ? '<section class="glass acc-box"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
           esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
         : "") +
-      data + "</main></div></div>"
+      data + appLinks() + "</main></div></div>"
     );
   }
 
@@ -7990,11 +8134,19 @@
 
   // ==================== login & paywall screens ====================
 
+  // On a phone the website's footer is hidden, so its pages live here, as a
+  // grouped list like an iPhone's Settings.
+  function appLinks() {
+    const rows = [["#/about", "About CO2 Counter"], ["#/how-we-calculate", "How we calculate"], ["#/budget", "The 1.5°C budget"], ["#/switches", "Greener switches"], ["#/privacy", "Privacy"], ["#/terms", "Terms"]];
+    return '<nav class="app-links" aria-label="About CO2 Counter"><h2 class="app-links-h">About</h2><ul>' +
+      rows.map(([h, l]) => '<li><a href="' + h + '"><span>' + l + "</span>" + icon("chevronRight") + "</a></li>").join("") + "</ul></nav>";
+  }
+
   function gateShell(title, subtitle, body) {
     return (
       '<div class="gate"><div class="gate-card fade-up"><div class="gate-brand"><span class="page-badge">' + icon("leaf") +
       '</span><span class="brand-name lg">CO2 Counter</span></div><h1 class="gate-title">' + esc(title) + "</h1>" +
-      (subtitle ? '<p class="sm muted mb-5">' + esc(subtitle) + "</p>" : "") + body + "</div></div>"
+      (subtitle ? '<p class="sm muted mb-5">' + esc(subtitle) + "</p>" : "") + body + "</div>" + (currentPath() === "/account" ? appLinks() : "") + "</div>"
     );
   }
 
@@ -8208,6 +8360,7 @@
     // someone just typed.
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
     app.innerHTML = glyphify(fillTokens(html));
+    shellSync();
     countUp();
     animateMoves();
     animateProgress();
@@ -8229,6 +8382,14 @@
       if (now) now.value = el.value;
     });
     updatePasswordMatch();
+    // A screen whose data arrives a moment later gets its place back then,
+    // unless you've already started scrolling.
+    if (ui.restoreScroll && (ui.restoreScroll.path !== path || Date.now() - ui.restoreScroll.t > 2500)) ui.restoreScroll = null;
+    if (ui.restoreScroll && html !== spinner) {
+      const r = ui.restoreScroll;
+      if (document.documentElement.scrollHeight - innerHeight >= r.y - 2) { window.scrollTo(0, r.y); ui.restoreScroll = null; }
+    }
+    watchTitle();
   }
 
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
@@ -8250,8 +8411,28 @@
     ui.commuteOpen = null;
     ui.airport = null;
     if (currentPath() !== "/results") ui.selectedCategory = null;
+    // Which way are we going? Back to where we came from, into an inner
+    // screen, or across the tabs.
+    const from = lastRoute, to = currentPath();
+    if (from) scrollMem[from] = window.scrollY;
+    let dir = null;
+    if (!navTrail) navTrail = [to];
+    else if (from !== to) {
+      if (navTrail.length > 1 && navTrail[navTrail.length - 2] === to) { dir = "pop"; navTrail.pop(); }
+      else if (pathDepth(to) === 1 && pathDepth(from || "/") === 1) { dir = "tab"; navTrail = [to]; }
+      else if (pathDepth(to) === 2) { dir = "push"; navTrail.push(to); if (navTrail.length > 12) navTrail.splice(1, 1); }
+      else { dir = "pop"; navTrail = [to]; }
+    }
+    const intent = navIntent;
+    navIntent = null;
+    lastRoute = to;
     render();
-    window.scrollTo(0, 0);
+    // Tabs and Back keep your place; anything new starts at the top.
+    const keep = dir === "pop" || intent === "tab";
+    window.scrollTo(0, keep ? scrollMem[to] || 0 : 0);
+    if (keep && scrollMem[to]) ui.restoreScroll = { path: to, y: scrollMem[to], t: Date.now() };
+    // A browser's own back swipe animates by itself, so only our Back slides.
+    glide(dir === "pop" ? (intent === "back" ? "pop" : null) : dir);
   }
 
   function setPath(obj, path, value) {
@@ -8598,6 +8779,20 @@
     "open-section": (el) => {
       const parts = currentPath().split("/").filter(Boolean);
       openSectionDialog(parts[1], Number(el.dataset.index));
+    },
+    "ph-more": (el) => {
+      const li = el.closest(".ph-more-li");
+      const t = (li || el).previousElementSibling;
+      if (t) t.classList.add("open");
+      (li || el).remove();
+    },
+    // The title bar's Back: where you came from, else the screen above.
+    "nav-back": (el) => {
+      const to = el.dataset.to;
+      if (!to) return;
+      navIntent = "back";
+      if (navTrail && navTrail.length > 1 && navTrail[navTrail.length - 2] === to) history.back();
+      else location.hash = "#" + to;
     },
     "close-modal": (el, e) => {
       if (e.target === el || el.classList.contains("modal-close")) closeModal();
@@ -9199,9 +9394,12 @@
     },
   };
 
+  // A light tap of haptics (iPhone app) when you pick an answer or flip a switch.
+  const HAPTIC_SEL = ".option-card, .q-chip, .day-btn, .chip, [role=radio], [role=checkbox], [role=switch], .pi-pick-btn, .sw-toggle, .step-btn";
   document.addEventListener("click", (e) => {
     const link = e.target.closest("a[data-link]");
     if (link) recordLinkClick(link);
+    if (e.target.closest && e.target.closest(HAPTIC_SEL)) haptic();
     const el = e.target.closest("[data-action]");
     if (el && actions[el.dataset.action]) {
       actions[el.dataset.action](el, e);
@@ -9579,12 +9777,124 @@
     if (p === "/habits" || p === "/check-in") render();
   });
 
-  window.addEventListener("hashchange", onRouteChange);
+  // Tapping a tab: remember it came from the tab bar (so the tab keeps its
+  // place); tapping the tab you're on scrolls back to the top.
+  const tabbarEl = document.getElementById("tabbar");
+  if (tabbarEl) {
+    tabbarEl.addEventListener("click", (e) => {
+      const a = e.target.closest("a[data-route]");
+      if (!a) return;
+      if (a.getAttribute("data-route") === currentPath()) {
+        e.preventDefault();
+        if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+        return;
+      }
+      navIntent = "tab";
+    });
+  }
+  // Pop-up sheets on a phone: pull down to close.
+  let sheetDrag = null;
+  modalRoot.addEventListener("touchstart", (e) => {
+    if (!onPhoneScreen() || e.touches.length !== 1) return;
+    const sheet = e.target.closest(".sheet");
+    const bd = e.target.closest(".modal-backdrop");
+    if (!sheet || !bd || bd.scrollTop > 0) return;
+    if (e.target.closest(".sheet-tabs, input, textarea, select, .chip-scroll, .pi-track, .sw-offers")) return;
+    sheetDrag = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, t0: Date.now(), sheet, bd, dy: 0, on: false };
+  }, { passive: true });
+  modalRoot.addEventListener("touchmove", (e) => {
+    const d = sheetDrag;
+    if (!d) return;
+    const dy = e.touches[0].clientY - d.y0, dx = e.touches[0].clientX - d.x0;
+    if (!d.on) {
+      if (Math.abs(dx) > Math.abs(dy) || dy < -4) { sheetDrag = null; return; }
+      if (dy < 8) return;
+      d.on = true;
+      d.sheet.style.transition = "none";
+      d.sheet.style.animation = "none";
+    }
+    d.dy = Math.max(0, dy - 8);
+    d.sheet.style.transform = "translateY(" + d.dy + "px)";
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+  const sheetRelease = () => {
+    const d = sheetDrag;
+    sheetDrag = null;
+    if (!d || !d.on) return;
+    const fast = d.dy / Math.max(1, Date.now() - d.t0) > 0.55;
+    d.sheet.style.transition = "transform 0.3s cubic-bezier(0.2, 0.85, 0.25, 1)";
+    if (d.dy > 110 || (fast && d.dy > 30)) {
+      d.sheet.style.transform = "translateY(105vh)";
+      d.bd.style.transition = "opacity 0.3s";
+      d.bd.style.opacity = "0";
+      haptic();
+      setTimeout(closeModal, 260);
+    } else d.sheet.style.transform = "";
+  };
+  modalRoot.addEventListener("touchend", sheetRelease);
+  modalRoot.addEventListener("touchcancel", sheetRelease);
+  // In the iPhone app (and from the home screen), swipe in from the left
+  // edge to go back, like any iPhone app. Safari has its own swipe.
+  const swipeBackOn = () => onPhoneScreen() && (isNativeApp() || window.navigator.standalone === true || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
+  let edge = null;
+  document.addEventListener("touchstart", (e) => {
+    if (!swipeBackOn() || e.touches.length !== 1 || modalRoot.innerHTML) return;
+    const t = e.touches[0];
+    const back = document.getElementById("nav-back");
+    if (t.clientX > 22 || !back || back.hidden) return;
+    edge = { x0: t.clientX, y0: t.clientY, t0: Date.now(), dx: 0, on: false };
+  }, { passive: true });
+  document.addEventListener("touchmove", (e) => {
+    if (!edge) return;
+    const t = e.touches[0], dx = t.clientX - edge.x0, dy = t.clientY - edge.y0;
+    if (!edge.on) {
+      if (Math.abs(dy) > Math.abs(dx) || dx < 0) { edge = null; return; }
+      if (dx < 10) return;
+      edge.on = true;
+      app.style.transition = "none";
+    }
+    edge.dx = Math.max(0, dx);
+    app.style.transform = "translateX(" + edge.dx + "px)";
+    app.style.opacity = String(Math.max(0.35, 1 - edge.dx / (innerWidth * 1.4)));
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+  const edgeRelease = () => {
+    const d = edge;
+    edge = null;
+    if (!d || !d.on) return;
+    const fast = d.dx / Math.max(1, Date.now() - d.t0) > 0.5;
+    app.style.transition = "transform 0.25s cubic-bezier(0.2, 0.85, 0.25, 1), opacity 0.25s";
+    if (d.dx > innerWidth * 0.33 || (fast && d.dx > 40)) {
+      app.style.transform = "translateX(" + innerWidth + "px)";
+      app.style.opacity = "0";
+      haptic();
+      setTimeout(() => {
+        app.style.transition = app.style.transform = app.style.opacity = "";
+        const back = document.getElementById("nav-back");
+        if (back && !back.hidden) actions["nav-back"](back);
+      }, 200);
+    } else {
+      app.style.transform = "";
+      app.style.opacity = "";
+      setTimeout(() => { app.style.transition = ""; }, 260);
+    }
+  };
+  document.addEventListener("touchend", edgeRelease);
+  document.addEventListener("touchcancel", edgeRelease);
 
-  let resizeTimer = null;
+  window.addEventListener("hashchange", onRouteChange);
+  lastRoute = currentPath();
+  navTrail = [lastRoute];
+
+  // Only a real change of width redraws Results: on an iPhone the page
+  // "resizes" every time Safari's toolbar slides in or out while you scroll.
+  let resizeTimer = null, lastWidth = window.innerWidth;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      moveTabInk();
+      if (Math.abs(window.innerWidth - lastWidth) < 2) return;
+      lastWidth = window.innerWidth;
       if (currentPath() === "/results") render();
     }, 200);
   });

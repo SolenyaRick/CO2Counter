@@ -324,6 +324,17 @@ Xcode builds from the copied snapshot in `ios/App/App/public`, not live
 from the repo root, so a plain Xcode rebuild without re-syncing first will
 still show the old version.
 
+**After pulling changes that add a native plugin** (for example
+`@capacitor/haptics`, which gives the iPhone app its light taps on
+selections and badge unlocks), run `npm install` first, then
+`npm run sync:ios`. On the website the haptics simply do nothing.
+
+On an iPhone the app behaves like a native app: a title bar with Back on
+inner screens, screens that slide in and out, tabs that keep their place,
+pull-down-to-close sheets, and (in the app or from the Home Screen) swipe
+in from the left edge to go back. The iPhone app is portrait only; iPad
+keeps every orientation.
+
 **Custom domain**: the site is served from **`co2counter.co.uk`** via
 GitHub Pages (see the `CNAME` file). Sign-up and password-reset emails sent
 from inside the iOS app link to that website, where they complete in the
