@@ -6703,6 +6703,7 @@
       if (perm.display !== "granted") perm = await LN.requestPermissions();
       if (perm.display !== "granted") {
         lsSet(KEY_SUNDAY, "off");
+        ui.notifBlocked = true;
         ui.flash = NOTIF_OFF_MSG;
       } else {
         lsSet(KEY_SUNDAY, "on");
@@ -6747,6 +6748,7 @@
       if (perm.receive !== "granted") perm = await PN.requestPermissions();
       if (perm.receive !== "granted") {
         lsSet(KEY_FEEDPUSH, "off");
+        ui.notifBlocked = true;
         ui.flash = NOTIF_OFF_MSG;
       } else {
         lsSet(KEY_FEEDPUSH, "on");
@@ -6800,6 +6802,16 @@
     }
     syncSunday();
     if (currentUser && canFeedPush() && lsGet(KEY_FEEDPUSH, "") === "on") registerPush().catch(() => {});
+    // Turned down before? Show how to allow them, on the Account page.
+    const LN = plugin("LocalNotifications");
+    if (LN && LN.checkPermissions)
+      Promise.resolve(LN.checkPermissions()).then((perm) => {
+        const blocked = !!perm && perm.display === "denied";
+        if (blocked !== !!ui.notifBlocked) {
+          ui.notifBlocked = blocked;
+          if (currentPath() === "/account") render();
+        }
+      }).catch(() => {});
   }
   const notifCard = (id, title, text, onAction, onLabel, noAction) =>
     '<section class="glass notif-offer" aria-labelledby="' + id + '"><span class="notif-ic" aria-hidden="true">' + icon("bell") + '</span><div class="min0 grow"><h2 id="' + id + '" class="display">' + title + '</h2><p class="sm muted">' + text + "</p>" +
@@ -6824,6 +6836,11 @@
       '<section class="glass acc-box" aria-labelledby="acc-notif"><h2 id="acc-notif" class="display">Notifications</h2>' +
       row("Sunday reminder", "Your next big switch, each Sunday morning until all four are done.", lsGet(KEY_SUNDAY, "") === "on", "notif-sunday-toggle") +
       (canFeedPush() ? row("Friends' activity", "When friends retake the survey, cheer you on or accept your request.", lsGet(KEY_FEEDPUSH, "") === "on", "notif-feed-toggle") : "") +
+      // iPhone only asks once: if notifications were turned down, say how to allow them.
+      (ui.notifBlocked
+        ? '<div class="notif-blocked" role="status"><p class="sm">Notifications are switched off for CO2 Counter in your iPhone\'s Settings. Allow them there, then come back and switch these on.</p>' +
+          '<button type="button" class="btn btn-green btn-sm" data-action="open-app-settings">Open Settings</button></div>'
+        : "") +
       "</section>"
     );
   }
@@ -9079,6 +9096,11 @@
     "notif-sunday-no": () => {
       lsSet(KEY_SUNDAY, "off");
       render();
+    },
+    // The app's own page in the iPhone's Settings (Notifications is there).
+    "open-app-settings": () => {
+      ui.notifBlocked = false;
+      window.location.href = "app-settings:";
     },
     "notif-sunday-toggle": () => (lsGet(KEY_SUNDAY, "") === "on" ? turnOffSunday() : turnOnSunday()),
     "notif-feed-on": () => turnOnFeedPush(),

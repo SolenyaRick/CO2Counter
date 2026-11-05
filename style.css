@@ -5918,3 +5918,10 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .fr-req > :nth-child(4) { grid-column: 3; }
   .fr-req > :nth-child(5) { grid-column: 4; }
 }
+/* notifications turned down in the iPhone's Settings */
+.notif-blocked { margin-top: 12px; padding: 14px; border-radius: 16px; background: #FFF4D6; border: 1px solid rgba(217, 164, 65, 0.5); display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.notif-blocked p { margin: 0; color: #4A3308; }
+@media (max-width: 640px) {
+  /* a message stays in view, even when the button you tapped is far down the page */
+  .flash { position: sticky; top: calc(54px + env(safe-area-inset-top)); z-index: 25; box-shadow: 0 10px 24px rgba(46, 42, 34, 0.16); }
+}
