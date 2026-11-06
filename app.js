@@ -1773,7 +1773,7 @@
   }
   // On a phone, long explanations show two lines and a More button, so a
   // screen isn't a wall of text. Tapping More opens it in place.
-  const CLAMP_SEL = ".sw-fact, .cat-hero .cat-why, .act-page p.xs.muted, .act-page .act-ideas li, .ab-hero > p, .ab-founder p, .ab-note p, .ab-aff-text p, .ab-pcard p, .ab-belief p, .method > p, .method li";
+  const CLAMP_SEL = ".research-consent > span, .acc-plan-p, .sw-fact, .cat-hero .cat-why, .act-page p.xs.muted, .act-page .act-ideas li, .ab-hero > p, .ab-founder p, .ab-note p, .ab-aff-text p, .ab-pcard p, .ab-belief p, .method > p, .method li";
   function clampLongText() {
     if (!onPhoneScreen()) return;
     app.querySelectorAll(CLAMP_SEL).forEach((el) => {
@@ -1927,7 +1927,7 @@
       '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
       '<h1 class="cat-title display">Update your answers</h1><p class="cat-why">' +
       (isNaN(when) ? "" : "Last done on <strong>" + esc(longDate(when)) + "</strong>. ") +
-      "Start from your last answers and change only what's different. Your old result stays in your history.</p>" +
+      "Change only what's different.</p>" +
       '<div class="chip-row mt-4"><button type="button" class="btn btn-honey" data-action="whats-changed">Update my answers ' + icon("arrowRight") + "</button>" +
       '<button type="button" class="link-btn" data-action="new-survey">Start from scratch</button></div></div></div>' +
       '<div class="cat-figs"><div class="muted">Your last result</div><div class="cat-kg display tnum" data-countup="' + Math.round(now) + '">0</div><div class="muted">kg CO₂e a year</div>' +
