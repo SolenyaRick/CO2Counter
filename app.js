@@ -7409,7 +7409,10 @@
           "Your account",
           "<p>You must be 13 or over to create an account. You're responsible for keeping your password safe and for what happens on your account. Please give a real email address so we can contact you about your account or membership. You can delete your account at any time from the Account page.</p>",
         ],
-        [
+        // In the iPhone app: no talk of outside payments (App Store rules).
+        isNativeApp()
+          ? ["Free to use", "<p>CO2 Counter is free to use, including the survey, your full results, tips and guides. There are no ads, and we never sell your data.</p>"]
+          : [
           "Free use and optional support",
           ul([
             "CO2 Counter is free to use, including the survey, your full results, tips and guides. You can optionally support it for <strong>£2 a year</strong>, paid through Stripe. Supporting doesn't change what you can use.",
