@@ -5925,3 +5925,23 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   /* a message stays in view, even when the button you tapped is far down the page */
   .flash { position: sticky; top: calc(54px + env(safe-area-inset-top)); z-index: 25; box-shadow: 0 10px 24px rgba(46, 42, 34, 0.16); }
 }
+
+/* ---------- Phones: fewer words on the main screens ---------- */
+@media (max-width: 640px) {
+  /* Survey tab, once done */
+  .done-v2 .guide-card .row-between > .muted, .answer-tiles .answer-l2 { display: none; }
+  /* Results */
+  .res-hero-path > p.xs.muted, .pi-head p.sm.muted, .res-chart .row-between p.sm.muted, .mv3-text > span.xs.muted, .results-v2 > p.footnote { display: none; }
+  /* Friends: your friends and the feed first, then inviting and groups */
+  .fr-layout { display: flex; flex-direction: column; }
+  .fr-layout > .fr-side { display: contents; }
+  .fr-side > .fr-me { order: 0; }
+  .fr-layout > .fr-feed { order: 1; }
+  .fr-side > :not(.fr-me) { order: 2; }
+  .fr-invite > p.sm.muted, .fr-manage > p.xs.muted, .fr-side .cat-drop p.muted, .fr-feed .fr-box > p.xs.muted { display: none; }
+  /* Habits */
+  .hb3 .hb-hero .hb-lede, .hb3-ahead > span, .hb3 .hb-soon, .hb3-badges small { display: none; }
+  /* Account: the tab bar already has these shortcuts */
+  .acc-quick, .acc-plan .acc-fine { display: none; }
+}
+@media (max-width: 640px) { .res-hero-path .path-legend { display: none; } }
