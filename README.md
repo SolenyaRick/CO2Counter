@@ -324,6 +324,11 @@ Xcode builds from the copied snapshot in `ios/App/App/public`, not live
 from the repo root, so a plain Xcode rebuild without re-syncing first will
 still show the old version.
 
+**Dark mode** follows the phone or computer's setting. It's generated from
+`style.css` by `python3 scripts/build-dark-css.py` (run it after changing
+colours in `style.css`); hand-tuned dark rules sit under `DARK_TUNING` at the
+end of `style.css`.
+
 **After pulling changes that add a native plugin** (for example
 `@capacitor/haptics`, which gives the iPhone app its light taps on
 selections and badge unlocks), run `npm install` first, then
