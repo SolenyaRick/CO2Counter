@@ -5047,9 +5047,9 @@
   function travelFlow(areas, branch, ready) {
     const node = (k, title, ic) => {
       const ar = areas[k] || {}, done = ready && !!ar.done;
-      const sub = done ? "Done" : ready && ar.save >= 0.5 ? "−" + kgFmt(ar.save) + " kg a year" : ready ? "Not yet" : "Survey first";
+      const sub = done ? icon("check") + "Done" : ready && ar.save >= 0.5 ? "−" + kgFmt(ar.save) + " kg a year" : ready ? "Not yet" : "Survey first";
       return '<button type="button" class="tf-node' + (done ? " done" : "") + (branch === k ? " on" : "") + '"' + (branch !== undefined ? ' data-action="hb-branch" data-k="' + k + '" aria-pressed="' + (branch === k) + '"' : "") + ">" +
-        '<span class="tf-ic" aria-hidden="true">' + svgPath(ic, 18) + (done ? '<span class="tf-tick">' + icon("check") + "</span>" : "") + "</span>" +
+        '<span class="tf-ic" aria-hidden="true">' + svgPath(ic, 18) + "</span>" +
         '<b class="display">' + title + '</b><span class="tf-sub">' + sub + "</span></button>";
     };
     const both = ready && areas.commute && areas.flights && areas.commute.done && areas.flights.done;
