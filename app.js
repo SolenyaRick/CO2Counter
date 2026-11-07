@@ -292,8 +292,12 @@
       result.error = true;
     }
     membership = result;
+    if (!result.error) lsSet(KEY_MEMBER_CACHE, { ...result, uid: currentUser.id, until: result.until ? result.until.toISOString() : null });
     return result;
   }
+  // What this phone last knew about you, so the app can open straight away.
+  const KEY_MEMBER_CACHE = "co2_member_cache";
+  const KEY_ME_CACHE = "co2_me_cache";
 
   const isSupporter = () => !!(membership && ["active", "trialing", "past_due"].includes(membership.status));
   // Full results and guides: any signed-in user in free mode (free, but an
@@ -499,6 +503,10 @@
         if (!error && local && canSync()) saveSurveyRemote(normaliseSurvey(local));
       } catch (e) {}
     }
+    return localSurvey();
+  }
+  // The answers kept on this phone.
+  function localSurvey() {
     const local = normaliseSurvey(lsGet(KEY_SURVEY, null));
     // Finished before completedAt existed: a monthly snapshot is the tell.
     const snaps = getSnapshots();
@@ -10273,6 +10281,40 @@
     el.innerHTML = icon(el.dataset.icon);
   });
 
+  // Open straight onto your page from what this phone already has (your
+  // answers, your membership, your name); the network catches up and the
+  // page quietly refreshes. No spinner when you open the app.
+  function savedUser() {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!/^sb-.+-auth-token$/.test(k)) continue;
+        const v = JSON.parse(localStorage.getItem(k));
+        const u = v && (v.user || (v.currentSession && v.currentSession.user));
+        if (u && u.id) return u;
+      }
+    } catch (e) {}
+    return null;
+  }
+  function paintFromPhone(user, fromEmail, fromCheckout) {
+    if (!user || fromEmail || fromCheckout || ui.pendingVerify || ui.recovery) return false;
+    const m = lsGet(KEY_MEMBER_CACHE, null), me = lsGet(KEY_ME_CACHE, null);
+    if (!m || m.uid !== user.id || !lsGet(KEY_SURVEY, null)) return false;
+    if (!currentUser) currentUser = user;
+    authChecked = true;
+    membership = { ...m, until: m.until ? new Date(m.until) : null };
+    if (me && me.uid === user.id) {
+      ui.userName = me.name;
+      if (me.username) ui.username = me.username;
+    }
+    survey = localSurvey();
+    ui.history = lsGet(KEY_HISTORY, []);
+    const home = (location.pathname === "/" || /\/index\.html$/.test(location.pathname)) && /^#?$/.test(location.hash);
+    if (home && survey.completedAt) history.replaceState(null, "", location.pathname + "#/habits");
+    render();
+    return true;
+  }
+
   async function start() {
     // Links from sign-up confirmation and password-reset emails land with
     // Supabase's tokens in the hash; supabase-js consumes them on startup.
@@ -10291,7 +10333,9 @@
     }
     // Stripe sends people back to ?checkout=success after paying.
     const fromCheckout = /checkout=success/.test(location.search);
-    render();
+    // Signed in on this phone before? Draw your page in the very first frame.
+    let painted = paintFromPhone(savedUser(), fromEmail, fromCheckout);
+    if (!painted) render();
     await refreshUser();
     if (fromEmail || fromCheckout) {
       const to = fromCheckout ? "#/results" : linkParams.has("error_description") && !currentUser ? "#/account" : "#/";
@@ -10302,9 +10346,11 @@
       ui.recovery = false;
       ssSet(KEY_RECOVERY, false);
     }
+    if (!painted) painted = paintFromPhone(currentUser, fromEmail, fromCheckout);
     if (currentUser) {
       await ensureUsername();
       ui.userName = await displayName(currentUser);
+      lsSet(KEY_ME_CACHE, { uid: currentUser.id, name: ui.userName, username: ui.username || "" });
       await checkMembership();
       checkAdmin().then(() => ui.isAdmin && render());
       claimReferral();
@@ -10320,6 +10366,8 @@
     const bareHome = (location.pathname === "/" || /\/index\.html$/.test(location.pathname)) && /^#?$/.test(location.hash);
     if (bareHome && !fromEmail && !fromCheckout && survey && survey.completedAt) history.replaceState(null, "", location.pathname + (currentUser ? "#/habits" : "#/results"));
     render();
+    // Friends is ready before you tap it.
+    if (currentUser && canSync() && !friends.loaded) loadFriends();
     if (fromCheckout && FREE_MODE) {
       ui.flash = "Thank you for supporting CO2 Counter! It really helps keep it running.";
       render();
