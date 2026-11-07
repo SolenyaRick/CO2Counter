@@ -4816,7 +4816,7 @@
     const shows = (a) => ready && !a.done && a.save >= 0.5;
     const subOf = (a) => (shows(a) ? String(a.sub).replace(/ · could save [\d,]+ kg a year$/, "") : a.sub);
     const chip = (a) =>
-      a.done ? '<span class="hb3-chip done">' + icon("check") + "Banked</span>"
+      a.done ? '<span class="hb3-chip done">' + icon(hbVerified(a) ? "shield" : "check") + (hbVerified(a) ? "Verified" : "Banked") + "</span>"
         : a.pending ? '<span class="hb3-chip wait">' + icon("clock") + "Waiting</span>"
         : shows(a) ? '<span class="hb3-chip kg"><b class="tnum">−' + kgFmt(a.save) + "</b> kg</span>"
         : a.n === 7 && ui.actsInfo ? '<span class="hb3-chip">' + Math.min(7, ui.actsInfo.finished || 0) + " of 7</span>"
@@ -5004,12 +5004,14 @@
     ];
   };
 
+  // Checked by us (the MP letter, the invite link, the bill payer's confirmation), not just ticked.
+  const hbVerified = (a) => !!a.done && (!!a.verifiedTick || /^Verified/.test(a.sub || ""));
   function hbPhonePage(o) {
     const { acts, ready, made, lv, nextLv, toSave, party, shows, state } = o;
     const toNext = nextLv ? nextLv[0] - made : 0;
     const tile = (a) => '<span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + "</span>";
     const right = (a) =>
-      a.done ? '<span class="hbf-r done">' + icon("check") + "<small>Done</small></span>"
+      a.done ? '<span class="hbf-r done">' + icon(hbVerified(a) ? "shield" : "check") + "<small>" + (hbVerified(a) ? "Verified" : "Done") + "</small></span>"
         : a.pending ? '<span class="hbf-r"><b>' + icon("clock") + "</b><small>Waiting</small></span>"
         : shows(a) ? '<span class="hbf-r"><b class="tnum">−' + kgFmt(a.save) + ' kg</b><small>a year</small></span>'
         : a.n === 6 ? '<span class="hbf-r"><b>1 letter</b><small>to your MP</small></span>'
@@ -5017,7 +5019,8 @@
         : '<span class="hbf-r"><small>' + (ready || a.n > 5 ? "Ready" : "Survey first") + "</small></span>";
     const row = (a, next) =>
       '<li><button type="button" class="hbf-row ' + state(a) + (a.pending ? " pending" : "") + '" data-action="hb-open" data-n="' + a.n + '">' + tile(a) +
-      '<span class="min0 hbf-t">' + (next ? '<span class="hbf-next">Next</span>' : "") + '<b class="display">' + esc(a.name) + "</b></span>" +
+      '<span class="min0 hbf-t">' + (next ? '<span class="hbf-next">Next</span>' : "") + '<b class="display">' + esc(a.name) + "</b>" +
+      (hbVerified(a) || a.pending ? '<small class="hbf-sub' + (a.pending ? " wait" : "") + '">' + esc(String(a.sub).replace(/^Verified · /, "").replace(/ · this ticks once it arrives$/, "")) + "</small>" : "") + "</span>" +
       right(a) + '<span class="hbf-chev" aria-hidden="true">' + icon("chevronRight") + "</span></button></li>";
     const todo = acts.filter((a) => !a.done);
     const done = acts.filter((a) => a.done);
@@ -5033,7 +5036,7 @@
       (todo.length
         ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>' + todo.length + ' left</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
         : '<section class="hbf-all"><b class="display">All seven done</b><span>Keep measuring to keep your line falling.</span></section>') +
-      (done.length ? '<details class="hbf-done"' + (ui.hbDoneOpen ? " open" : "") + '><summary class="display">Done (' + done.length + ")" + icon("chevronRight") + '</summary><ul class="hbf-list">' + done.map((a) => row(a)).join("") + "</ul></details>" : "") +
+      (done.length ? '<details class="hbf-done"' + (ui.hbDoneOpen ? " open" : "") + '><summary class="display">Done (' + done.length + ")" + (done.some(hbVerified) ? '<span class="hbf-vcount">' + icon("shield") + done.filter(hbVerified).length + " verified</span>" : "") + icon("chevronRight") + '</summary><ul class="hbf-list">' + done.map((a) => row(a)).join("") + "</ul></details>" : "") +
       '<div class="hbf-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>' +
       '<p class="hb-lede xs muted">The 7 Acts are by Real Zero, used with their permission. <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p></div></div>"
     );
@@ -7958,8 +7961,13 @@
       '<main class="acc-main"><h1 class="display acc-h1">Account</h1><div class="acc-row2">' + profile + plan + "</div>" +
       aboutYouCard() + notifSettingsCard() +
       (ui.isAdmin
-        ? '<section class="glass acc-box"><span class="eyebrow">Admin</span><h2 class="display mt-2">Inputs</h2><p class="sm muted">Change the figures every footprint is worked out with, with a source for each. Figures last updated ' +
-          esc(shortDate(figuresUpdated())) + '.</p><div class="chip-row mt-4"><a class="btn btn-green" href="#/inputs">Open Inputs ' + icon("arrowRight") + '</a><a class="btn btn-outline" href="#/analytics">' + icon("chart") + " Analytics</a></div></section>"
+        ? '<section class="glass acc-box acc-owner" aria-labelledby="acc-owner-h"><span class="eyebrow">Only you see this</span><h2 id="acc-owner-h" class="display mt-2">Owner tools</h2>' +
+          // Letters to MPs arrive by BCC with a reference; verifying ticks act 6.
+          '<h3 class="display acc-owner-k">Verify a letter to an MP</h3><p class="sm muted">Letters BCC\'d to ' + MP_COPY + " carry a reference like CO2-ABC123. Enter it to verify that person's act 6, then delete the email.</p>" +
+          '<form id="verify-mp-form" class="hb-mp-form mt-2"><input class="input" id="verify-mp-code" placeholder="CO2-ABC123" maxlength="12" aria-label="Reference" autocapitalize="characters" spellcheck="false" /><button type="submit" class="btn btn-green btn-sm">Verify</button></form>' +
+          (ui.verifyMsg ? '<p class="xs mt-2 ' + (ui.verifyMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.verifyMsg.text) + "</p>" : "") +
+          '<p class="sm muted mt-4">Figures last updated ' + esc(shortDate(figuresUpdated())) + ".</p>" +
+          '<div class="chip-row mt-2"><a class="btn btn-outline btn-sm" href="#/analytics">' + icon("chart") + ' Analytics and reports</a><a class="btn btn-outline btn-sm" href="#/inputs">Inputs ' + icon("arrowRight") + "</a></div></section>"
         : "") +
       data + appLinks() + "</main></div></div>"
     );
