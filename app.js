@@ -1857,7 +1857,8 @@
   // Screens glide in: a push slides in from the right, going back slides in
   // from the left, and switching tabs is a quick fade.
   function glide(dir) {
-    if (!dir || reducedMotion() || !onPhoneScreen()) return;
+    // Tabs switch instantly, like any iPhone app; only going in and Back slide.
+    if (!dir || dir === "tab" || reducedMotion() || !onPhoneScreen()) return;
     const cls = "pg-" + dir;
     app.classList.remove("pg-push", "pg-pop", "pg-tab");
     void app.offsetWidth;
@@ -2937,11 +2938,16 @@
   }
 
   // Big totals count up from zero the first time Results is shown.
+  const countedUp = new Set();
   function countUp() {
     app.querySelectorAll("[data-countup]").forEach((el) => {
       const to = Number(el.dataset.countup);
       if (el.textContent !== "0" || !to) return;
-      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // Numbers count up the first time you see them, then just show.
+      const key = currentPath() + "|" + to;
+      const seen = countedUp.has(key);
+      countedUp.add(key);
+      if (seen || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
         el.textContent = to.toLocaleString();
         return;
       }
@@ -8699,6 +8705,9 @@
     // Re-rendering a form after an error shouldn't wipe the passwords
     // someone just typed.
     const kept = PASSWORD_IDS.map((id) => [id, document.getElementById(id)]).filter(([, el]) => el && el.value);
+    // Cards slide in the first time you see a page; after that it just shows.
+    document.body.classList.toggle("calm", seenPaths.has(path));
+    if (html !== spinner) seenPaths.add(path);
     app.innerHTML = glyphify(fillTokens(html));
     shellSync();
     countUp();
@@ -8733,6 +8742,7 @@
     watchTitle();
   }
 
+  const seenPaths = new Set();
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
 
   function onRouteChange() {
@@ -8745,9 +8755,10 @@
     ui.inputMsg = null;
     ui.switchTouched = false;
     ui.switchOn = null;
+    // Friends shows what it has straight away and refreshes in the background.
     if (currentPath() === "/friends") {
-      friends.loaded = false;
       friends.msg = "";
+      if (friends.loaded) setTimeout(() => loadFriends(), 0);
     }
     ui.commuteOpen = null;
     ui.airport = null;
@@ -8768,10 +8779,9 @@
     navIntent = null;
     lastRoute = to;
     render();
-    // Tabs and Back keep your place; anything new starts at the top.
-    const keep = dir === "pop" || intent === "tab";
-    window.scrollTo(0, keep ? scrollMem[to] || 0 : 0);
-    if (keep && scrollMem[to]) ui.restoreScroll = { path: to, y: scrollMem[to], t: Date.now() };
+    // Every page opens at the top, whether from a tab, Back or a link.
+    window.scrollTo(0, 0);
+    ui.restoreScroll = null;
     // A browser's own back swipe animates by itself, so only our Back slides.
     glide(dir === "pop" ? (intent === "back" ? "pop" : null) : dir);
   }
