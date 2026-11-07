@@ -6923,7 +6923,10 @@
         lsSet(KEY_PUSHTOKEN, t.value);
         if (currentUser && sb) sb.rpc("save_push_token", { p_token: t.value, p_platform: "ios" }).then(() => {}, () => {});
       });
-      await PN.addListener("registrationError", () => {});
+      await PN.addListener("registrationError", (err) => {
+        ui.notifTest = "Friends' notifications couldn't be set up on this phone" + (err && err.error ? " (" + err.error + ")" : "") + ". Sunday reminders still work.";
+        if (currentPath() === "/account") render();
+      });
       await PN.addListener("pushNotificationActionPerformed", (a) => {
         const d = (a && a.notification && a.notification.data) || {};
         location.hash = /^#\/[a-z]/.test(d.route || "") ? d.route : "#/friends";
@@ -7032,6 +7035,9 @@
         ? '<div class="notif-blocked" role="status"><p class="sm">Notifications are switched off for CO2 Counter in your iPhone\'s Settings. Allow them there, then come back and switch these on.</p>' +
           '<button type="button" class="btn btn-green btn-sm" data-action="open-app-settings">Open Settings</button></div>'
         : "") +
+      // A quick way to check notifications reach this phone.
+      '<div class="notif-test"><button type="button" class="btn btn-outline btn-sm" data-action="notif-test">' + icon("bell") + " Send a test notification</button>" +
+      (ui.notifTest ? '<p class="xs muted" role="status">' + esc(ui.notifTest) + "</p>" : "") + "</div>" +
       "</section>"
     );
   }
@@ -7097,10 +7103,15 @@
         (groups.length > 1
           ? '<div class="chip-row group-tabs mt-3" role="tablist" aria-label="Your groups">' + groups.map((x) => '<button type="button" role="tab" aria-selected="' + (x.id === g.id) + '" class="btn btn-sm ' + (x.id === g.id ? "btn-green" : "btn-outline") + '" data-action="select-group" data-id="' + x.id + '">' + esc(x.name) + "</button>").join("") + "</div>"
           : "") +
-        '<div class="group-head mt-4"><div class="min0"><h3 class="display group-name">' + esc(g.name) + '</h3><p class="xs muted">' + g.members + (g.members === 1 ? " member" : " members") + (g.is_owner ? " · you started it" : "") + "</p></div>" + (g.is_owner ? "" : safetyBtn("group", g.id, g.name)) +
-        '<div class="group-code"><span class="xs muted">Code</span><b class="display tnum">' + esc(g.code) + '</b><button type="button" class="btn btn-sm btn-outline" data-action="copy-group" data-link="' + esc(link) + '" data-code="' + esc(g.code) + '">' + icon("copy") + " Copy invite</button></div></div>" +
-        '<div class="stat-tiles mt-4"><div class="stat-tile"><span class="eyebrow">Average</span><b class="display tnum">' + (done.length ? (avg / 1000).toFixed(1) + " t" : "–") + '</b><span class="xs muted">a year, ' + done.length + " with results</span></div>" +
-        '<div class="stat-tile"><span class="eyebrow">Change</span><b class="display tnum ' + (change != null && change < 0 ? "green" : change > 0 ? "clay" : "") + '">' + (change == null ? "–" : (change < 0 ? "▼ " : "▲ ") + Math.abs(Math.round(change * 100)) + "%") + '</b><span class="xs muted">since members\' first surveys</span></div></div>' +
+        '<div class="group-head mt-3"><div class="min0 grow"><h3 class="display group-name">' + esc(g.name) + '</h3><p class="xs muted">' + g.members + (g.members === 1 ? " member" : " members") + (g.is_owner ? " · you started it" : "") + "</p></div>" +
+        '<button type="button" class="btn btn-sm ' + (ui.groupShare ? "btn-green" : "btn-outline") + ' group-share-btn" data-action="group-share" aria-expanded="' + !!ui.groupShare + '">' + icon("link") + " Share</button>" + (g.is_owner ? "" : safetyBtn("group", g.id, g.name)) + "</div>" +
+        (ui.groupShare
+          ? '<div class="group-code"><span class="min0"><span class="xs muted">Invite code</span><b class="display tnum">' + esc(g.code) + "</b></span>" +
+            '<button type="button" class="btn btn-sm btn-outline" data-action="copy-group" data-link="' + esc(link) + '" data-code="' + esc(g.code) + '">' + icon("copy") + " Copy</button>" +
+            '<button type="button" class="btn btn-sm btn-green" data-action="group-share-send" data-link="' + esc(link) + '" data-code="' + esc(g.code) + '">' + icon("link") + " Share</button></div>"
+          : "") +
+        '<div class="group-stats mt-3"><div><span class="eyebrow">Average</span><b class="display tnum">' + (done.length ? (avg / 1000).toFixed(1) + " t" : "–") + '</b><span class="xs muted">a year · ' + done.length + " with results</span></div>" +
+        '<div><span class="eyebrow">Change</span><b class="display tnum ' + (change != null && change < 0 ? "green" : change > 0 ? "clay" : "") + '">' + (change == null ? "–" : (change < 0 ? "▼ " : "▲ ") + Math.abs(Math.round(change * 100)) + "%") + '</b><span class="xs muted">since first surveys</span></div></div>' +
         (done.length
           ? '<ol class="board mt-4">' +
             done.map((r, i) => '<li class="' + (r.is_self ? "me" : "") + '"><span class="board-n display">' + (i + 1) + '</span><span class="board-name">' + esc(r.display_name) + (r.is_self ? " (you)" : "") + (!r.is_self && r.user_id ? safetyBtn("user", r.user_id, r.display_name) : "") + '</span><span class="board-bar"><span style="width:' + ((r.total_yearly / maxT) * 100).toFixed(1) + '%"></span></span><span class="board-t"><b class="display tnum">' + (r.total_yearly / 1000).toFixed(1) + '</b> <small class="muted">t / yr</small></span></li>').join("") +
@@ -7111,7 +7122,7 @@
         (g.is_owner ? '<button type="button" class="btn btn-sm btn-outline btn-danger" data-action="delete-group" data-id="' + g.id + '">Delete group</button>' : "") + "</div>";
     }
     return (
-      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Groups</h2><span class="muted">Teams, wards, classes, anyone</span></div>' +
+      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Groups</h2><span class="muted grp-sub">Teams, wards, classes, anyone</span></div>' +
       (friends.groupMsg ? '<p class="xs mt-2 ' + (friends.groupOk ? "green-dark" : "red") + '" role="status">' + esc(friends.groupMsg) + "</p>" : "") + body + "</section>"
     );
   }
@@ -7126,12 +7137,20 @@
 
   function groupFormsHtml() {
     const invite = (location.hash.split("?")[1] || "").match(/(?:^|&)join=([A-Za-z0-9]{6})/);
+    const open = invite ? "join" : ui.groupForm || "";
+    const tile = (k, ic, title, sub) =>
+      '<button type="button" class="gs-tile' + (open === k ? " on" : "") + '" data-action="group-form" data-form="' + k + '" aria-expanded="' + (open === k) + '"><span class="gs-ic" aria-hidden="true">' + icon(ic) + '</span><b class="display">' + title + "</b><span>" + sub + "</span></button>";
     return (
-      '<section class="glass cat-drop"><h2 class="display side-title">Start a group</h2><p class="sm muted mb-3">Give it a name, then share the code.</p>' +
-      '<form id="group-create-form" class="stack-2"><input class="input" id="group-name" maxlength="60" minlength="2" required placeholder="e.g. Ward 7, Year 10 science" aria-label="Group name" /><button type="submit" class="btn btn-green btn-block">Create group</button></form></section>' +
-      '<section class="glass cat-drop"><h2 class="display side-title">Join a group</h2>' + (invite ? '<p class="sm mb-3 green-dark fw-600">You\'ve been invited to a group. Press Join to accept.</p>' : '<p class="sm muted mb-3">Got a code? Enter it here.</p>') +
-      '<form id="group-join-form" class="stack-2"><input class="input tnum" id="group-code" maxlength="300" required placeholder="Code or invite link, e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-outline btn-block">Join</button></form>' +
-      '<p class="xs muted mt-2">Group members see your display name and yearly total.</p></section>'
+      '<section class="glass fr-box fr-gstart" aria-labelledby="gs-h"><h2 id="gs-h" class="display">' + ((friends.groups || []).length ? "Another group?" : "Groups") + "</h2>" +
+      '<p class="sm muted">Compare totals with your team, ward, class or family.</p>' +
+      '<div class="gs-tiles">' + tile("start", "plus", "Start a group", "Name it, then share the code") + tile("join", "link", "Join a group", "Got a code or a link?") + "</div>" +
+      (open === "start"
+        ? '<form id="group-create-form" class="gs-form"><input class="input" id="group-name" maxlength="60" minlength="2" required placeholder="e.g. Ward 7, Year 10 science" aria-label="Group name" /><button type="submit" class="btn btn-green">Create</button></form>'
+        : open === "join"
+          ? (invite ? '<p class="sm green-dark fw-600 mt-3">You\'ve been invited to a group. Press Join to accept.</p>' : "") +
+            '<form id="group-join-form" class="gs-form"><input class="input tnum" id="group-code" maxlength="300" required placeholder="Code or link, e.g. 5EBTF4" aria-label="Group code" autocapitalize="characters" spellcheck="false" value="' + (invite ? esc(invite[1].toUpperCase()) : "") + '" /><button type="submit" class="btn btn-green">Join</button></form>'
+          : "") +
+      "</section>"
     );
   }
 
@@ -7392,23 +7411,15 @@
       '<div class="cheers"><b class="display tnum">' + (friends.cheersGot || 0) + '</b><span class="fr-small">cheers</span></div></div>' +
       "</section>";
 
-    // Bring someone in (act 7)
-    const invite =
-      '<section class="glass fr-box fr-invite" id="fr-invite" aria-labelledby="fr-inv-h"><h2 id="fr-inv-h" class="display">Bring someone in</h2><p class="sm muted">Seven friends who take the survey ticks off Act 7.</p>' +
-      (info && info.code
-        ? '<div class="fr-code"><span><span class="fr-code-l">Invite code</span><b class="display tnum">' + esc(info.code) + '</b></span><button type="button" class="fr-btn honey" data-action="copy-code">Copy</button></div>' +
-          '<div class="fr-seven" role="img" aria-label="' + done7 + ' of 7 invited friends have taken the survey">' + Array.from({ length: 7 }, (_, i) => '<span class="' + (i < done7 ? "on" : "") + '"></span>').join("") + "</div>" +
-          '<p class="xs fw-700 muted">' + done7 + " of 7 have taken the survey</p>"
-        : "") +
-      '<div class="chip-row mt-2"><button type="button" class="hb-act-link" data-action="copy-invite">' + icon("copy") + 'Copy invite link</button><a class="hb-act-link" href="#/acts/motivate">Act 7</a></div>' +
-      (ui.shareMsg ? '<p class="xs green-dark mt-1">' + esc(ui.shareMsg) + "</p>" : "") + "</section>";
-
     // Add a friend, waiting, manage
     const manage =
       '<section class="glass fr-box fr-manage" aria-labelledby="fr-add-h"><h2 id="fr-add-h" class="display">Add a friend</h2>' +
-      '<form id="friend-form" class="fr-addform"><input class="input" type="text" id="friend-email" placeholder="Username or email" aria-label="Friend\'s username or email" required autocapitalize="none" spellcheck="false" /><button type="submit" class="btn btn-green">Send</button></form>' +
+      '<form id="friend-form" class="fr-addform fr-search" role="search"><span class="fr-search-ic" aria-hidden="true">' + icon("search") + '</span><input class="input" type="search" id="friend-email" placeholder="Search a username, or type an email" aria-label="Search for a friend by username, or type their email" required autocapitalize="none" autocomplete="off" spellcheck="false" enterkeyhint="search" /><button type="submit" class="btn btn-green">Add</button></form>' +
+      '<div id="fr-results" class="fr-results" aria-live="polite">' + frResultsHtml() + "</div>" +
+      frSuggestHtml(accepted, outgoing, incoming) +
+      (ui.username ? '<p class="xs muted mt-2 fr-myname">Friends can find you as <b>@' + esc(ui.username) + '</b> <button type="button" class="link-btn" data-action="copy-username">Copy</button></p>' : "") +
       (friends.msg ? '<p class="xs mt-2 ' + (friends.msgOk ? "green-dark fw-700" : "red") + '">' + esc(friends.msg) + "</p>" : "") +
-      '<p class="xs muted mt-2">Friends see each other\'s yearly totals, never answers.</p>' +
+      '<p class="xs muted mt-1">Friends see each other\'s yearly totals, never answers.</p>' +
       (outgoing.length
         ? '<div class="fr-label">Waiting for a reply</div>' + outgoing.map((f) => '<div class="fr-prow">' + frAv(f.otherId, f.name, 32, false, "dashed") + '<span class="grow fw-700 truncate">' + esc(f.name) + '</span><button type="button" class="fr-btn ghost" data-action="friend-remove" data-id="' + f.id + '">Cancel</button></div>').join("")
         : "") +
@@ -7435,7 +7446,7 @@
     };
     const strip =
       '<ul class="fr-strip" aria-label="Your friends">' + people.map(story).join("") +
-      '<li class="fr-story dash"><a class="fr-story-av" href="#fr-invite" data-action="fr-jump" aria-label="Invite a friend"><span class="fr-av fr-plus" style="width:62px;height:62px">' + icon("plus") + '</span></a><span class="fr-story-n">Invite</span></li></ul>';
+      '<li class="fr-story dash"><button type="button" class="fr-story-av" data-action="fr-find" aria-label="Add a friend"><span class="fr-av fr-plus" style="width:62px;height:62px">' + icon("plus") + '</span></button><span class="fr-story-n">Add</span></li></ul>';
 
     const reqs = incoming.map((f) =>
       '<div class="fr-req rise">' + frAv(f.otherId, f.name, 42) + '<span class="grow min0"><b>' + esc(f.name) + "</b> wants to be friends</span>" +
@@ -7447,16 +7458,83 @@
     const shown = ui.feedShown || 5;
     const feed =
       feedOffer() + '<div class="fr-feedhead"><h2 class="display">Feed</h2></div>' +
-      (posts.length ? stacks.slice(0, shown).map(stackHtml).join("") +
+      (posts.length && onPhoneScreen() && !ui.feedAll && posts.length > 1
+        ? '<div class="fr-stack closed fr-feedpile"><div class="fr-pile" data-n="' + Math.min(posts.length - 1, 2) + '">' + postHtml(posts[0], 0) + "</div>" +
+          '<button type="button" class="fr-stack-btn" data-action="feed-all" aria-expanded="false">See all ' + posts.length + " updates</button></div>"
+        : posts.length ? stacks.slice(0, shown).map(stackHtml).join("") + (onPhoneScreen() && ui.feedAll ? '<button type="button" class="fr-stack-btn fr-feedless" data-action="feed-all" aria-expanded="true">Show just the latest</button>' : "") +
           (stacks.length > shown ? '<button type="button" class="btn btn-outline btn-sm fr-older" data-action="feed-more">Show older posts</button>' : '<p class="center sm muted">You\'re all caught up</p>')
         : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
     return (
       '<div class="container friends-v2 fr-page">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
-      '<div class="fr-layout"><aside class="fr-side">' + me + invite + manage + groupFormsHtml() + "</aside>" +
+      '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
       '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
+  }
+
+
+  // ---------- finding friends ----------
+  // Usernames that start with what you've typed (3 letters or more), as you type.
+  const frSearch = { q: "", rows: [], busy: false, off: false };
+  let frSearchTimer = null;
+  function frResultsHtml() {
+    const q = frSearch.q.replace(/^@/, "");
+    if (q.length < 3 || q.includes("@")) return "";
+    if (frSearch.busy && !frSearch.rows.length) return '<p class="xs muted fr-res-note">Searching…</p>';
+    if (!frSearch.rows.length) return frSearch.off ? "" : '<p class="xs muted fr-res-note">No one with a username starting “' + esc(q) + '”. Try their email.</p>';
+    const rel = (id) => friends.rows.find((f) => f.otherId === id);
+    return '<ul class="fr-res">' + frSearch.rows.map((r) => {
+      const f = rel(r.id);
+      const state = f ? (f.status === "accepted" ? "Friends" : f.iAsked ? "Asked" : "") : "";
+      return '<li>' + frAv(r.id, r.display_name || r.username, 36) + '<span class="min0 grow"><b class="truncate">' + esc(r.display_name || r.username) + '</b><span class="xs muted">@' + esc(r.username) + "</span></span>" +
+        (state ? '<span class="fr-res-state">' + state + "</span>" : '<button type="button" class="fr-btn green" data-action="friend-add" data-username="' + esc(r.username) + '">' + (f ? "Accept" : "Add") + "</button>") + "</li>";
+    }).join("") + "</ul>";
+  }
+  function frPaintResults() {
+    const box = document.getElementById("fr-results");
+    if (box) box.innerHTML = glyphify(frResultsHtml());
+  }
+  function frSearchInput(v) {
+    frSearch.q = String(v || "").trim();
+    clearTimeout(frSearchTimer);
+    const q = frSearch.q.replace(/^@/, "");
+    if (q.length < 3 || q.includes("@") || !sb || frSearch.off) { frSearch.rows = []; frPaintResults(); return; }
+    frSearch.busy = true;
+    frPaintResults();
+    frSearchTimer = setTimeout(async () => {
+      const asked = q;
+      const { data, error } = await sb.rpc("search_usernames", { q: asked });
+      if (frSearch.q.replace(/^@/, "") !== asked) return;
+      frSearch.busy = false;
+      // Before the database update is run, fall back to the exact lookup on Add.
+      if (error) { frSearch.off = true; frSearch.rows = []; }
+      else frSearch.rows = data || [];
+      frPaintResults();
+    }, 250);
+  }
+  // People in your groups you're not friends with yet.
+  function frSuggestHtml(accepted, outgoing, incoming) {
+    const known = new Set([...accepted, ...outgoing, ...incoming].map((f) => f.otherId));
+    const seen = new Set(), list = [];
+    Object.values(friends.groupBoards || {}).forEach((rows) => (rows || []).forEach((r) => {
+      if (!r.user_id || r.is_self || known.has(r.user_id) || seen.has(r.user_id)) return;
+      seen.add(r.user_id);
+      list.push(r);
+    }));
+    if (!list.length) return "";
+    return '<div class="fr-label">From your groups</div><ul class="fr-res">' + list.slice(0, 5).map((r) =>
+      '<li>' + frAv(r.user_id, r.display_name, 36) + '<span class="min0 grow"><b class="truncate">' + esc(r.display_name) + "</b></span>" +
+      '<button type="button" class="fr-btn green" data-action="friend-add-id" data-id="' + esc(r.user_id) + '">Add</button></li>').join("") + "</ul>";
+  }
+  async function addFriendId(id) {
+    friends.msg = "";
+    friends.msgOk = false;
+    const { error } = await sb.from("friendships").insert({ requester_id: currentUser.id, addressee_id: id, status: "pending" });
+    friends.msg = error ? "Couldn't send the request." : "Request sent.";
+    friends.msgOk = !error;
+    friends.loaded = false;
+    await loadFriends();
   }
 
   async function addFriend(email) {
@@ -7483,6 +7561,7 @@
       friends.msg = insertError ? "Couldn't send the request." : "Request sent.";
       friends.msgOk = !insertError;
     }
+    if (friends.msgOk) { frSearch.q = ""; frSearch.rows = []; }
     friends.loaded = false;
     await loadFriends();
   }
@@ -9121,6 +9200,39 @@
       await loadGroupBoard(ui.groupSel);
       render();
     },
+    "fr-find": () => {
+      const inp = document.getElementById("friend-email");
+      if (!inp) return;
+      inp.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
+      setTimeout(() => inp.focus(), 250);
+    },
+    "friend-add": (el) => addFriend(el.dataset.username),
+    "friend-add-id": (el) => addFriendId(el.dataset.id),
+    "copy-username": async () => {
+      try { await navigator.clipboard.writeText("@" + ui.username); friends.msg = "Username copied."; friends.msgOk = true; } catch (e) { friends.msg = "Your username is @" + ui.username; friends.msgOk = true; }
+      render();
+    },
+    "group-share": () => {
+      ui.groupShare = !ui.groupShare;
+      render();
+    },
+    "group-share-send": async (el) => {
+      const text = "Join my group on CO2 Counter: " + el.dataset.link + " (code " + el.dataset.code + ")";
+      if (navigator.share) {
+        try { await navigator.share({ text }); } catch (e) {}
+        return;
+      }
+      actions["copy-group"](el);
+    },
+    "group-form": (el) => {
+      ui.groupForm = ui.groupForm === el.dataset.form ? "" : el.dataset.form;
+      render();
+      if (ui.groupForm) setTimeout(() => { const i = document.getElementById(ui.groupForm === "join" ? "group-code" : "group-name"); if (i) i.focus(); }, 60);
+    },
+    "feed-all": () => {
+      ui.feedAll = !ui.feedAll;
+      render();
+    },
     "copy-group": async (el) => {
       const text = "Join my group on CO2 Counter: " + el.dataset.link + " (code " + el.dataset.code + ")";
       try {
@@ -9296,6 +9408,24 @@
     "open-app-settings": () => {
       ui.notifBlocked = false;
       window.location.href = "app-settings:";
+    },
+    "notif-test": async () => {
+      const LN = plugin("LocalNotifications");
+      if (!LN) return;
+      try {
+        let perm = await LN.checkPermissions();
+        if (perm.display !== "granted") perm = await LN.requestPermissions();
+        if (perm.display !== "granted") {
+          ui.notifBlocked = true;
+          ui.notifTest = "Notifications are switched off for CO2 Counter, so the test can't show.";
+        } else {
+          await LN.schedule({ notifications: [{ id: 7002, title: "CO2 Counter", body: "Notifications are working. You'll get your Sunday switch here.", schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, extra: { route: "#/account" } }] });
+          ui.notifTest = "Sent. It arrives in about 5 seconds, even if you leave the app.";
+        }
+      } catch (e) {
+        ui.notifTest = "The test couldn't be sent: " + ((e && e.message) || "unknown error") + ".";
+      }
+      render();
     },
     "notif-sunday-toggle": () => (lsGet(KEY_SUNDAY, "") === "on" ? turnOffSunday() : turnOnSunday()),
     "notif-feed-on": () => turnOnFeedPush(),
@@ -9720,6 +9850,7 @@
     const t = e.target;
     if (PASSWORD_IDS.includes(t.id)) return updatePasswordMatch();
     if (t.id === "auth-username" || t.id === "choose-username") return checkUsername(t);
+    if (t.id === "friend-email") return frSearchInput(t.value);
     if (t.id === "group-code") {
       const code = groupCodeFrom(t.value);
       if (code && t.value !== code) t.value = code;
