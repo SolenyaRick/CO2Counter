@@ -2568,3 +2568,28 @@ $$;
 revoke all on function public.count_guest_survey(), public.admin_guest_surveys() from public;
 grant execute on function public.count_guest_survey() to anon, authenticated;
 grant execute on function public.admin_guest_surveys() to authenticated;
+
+-- ---------- Friend search as you type (November 2026) ----------
+-- Up to 6 people whose username starts with what you've typed (3 letters or
+-- more), leaving out you and anyone either of you has blocked. Only the
+-- username and display name come back, the same as the exact lookup shows.
+create or replace function public.search_usernames(q text)
+returns table (id uuid, username text, display_name text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.username, p.display_name
+  from public.profiles p
+  where length(ltrim(coalesce(q, ''), '@')) >= 3
+    and p.username is not null
+    and starts_with(lower(p.username), lower(ltrim(q, '@')))
+    and p.id <> auth.uid()
+    and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = p.id) or (b.blocker_id = p.id and b.blocked_id = auth.uid()))
+  order by length(p.username), lower(p.username)
+  limit 6;
+$$;
+
+revoke all on function public.search_usernames(text) from public;
+grant execute on function public.search_usernames(text) to authenticated;

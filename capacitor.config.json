@@ -8,5 +8,14 @@
   },
   "android": {
     "backgroundColor": "#EFE9DC"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
   }
 }
