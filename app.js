@@ -1728,6 +1728,7 @@
     if (path === "/account") title = currentUser ? "Account" : "Sign in";
     if (parts[0] === "explainer" && D.EXPLAINERS[parts[1]]) { title = D.EXPLAINERS[parts[1]].title; parent = "/results"; }
     if (parts[0] === "acts") { title = ACT_PAGES[parts[1]] ? "Act " + ACT_PAGES[parts[1]] + " of 7" : "The 7 Acts"; parent = "/habits"; }
+    if (path === "/habits/level") { title = "Your level"; parent = "/habits"; }
     if (path === "/switches" || path === "/example") parent = path === "/switches" ? "/habits" : "/results";
     return { title, parent };
   }
@@ -1765,7 +1766,7 @@
     const path = currentPath();
     navBar(path);
     const intro = !!app.querySelector(".intro-v2");
-    const inApp = ["/", "/results", "/friends", "/habits", "/check-in", "/account"].includes(path) || /^\/(explainer|acts)\//.test(path);
+    const inApp = ["/", "/results", "/friends", "/habits", "/check-in", "/account"].includes(path) || /^\/(explainer|acts|habits)\//.test(path);
     document.body.classList.toggle("in-app", inApp && !intro);
     document.body.classList.toggle("survey-focus", path === "/" && !!app.querySelector(".survey-v2 .step-nav-v2"));
     moveTabInk();
@@ -4887,8 +4888,20 @@
       order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
       '<li class="' + (made === 7 ? "got" : "") + '"><span>' + svgPath(HB_STAR, 22) + "</span><b>Seven strong</b><small>" + (made === 7 ? "Unlocked" : "All 7") + "</small></li></ul></section>";
 
+    const hero = '<header class="hb-hero">' +
+      '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
+      '<div class="hb3-lv">' + ring + '<div class="hb3-lvt"><span class="hb3-lvchip">Level ' + (lv + 1) + "</span>" +
+      '<div class="hb3-name"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" + hbTree(HB_LEVELS[lv][1], "now", animate) + "</div>" +
+      '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + (nextLv ? hbTree(nextLv[1], "next") : "") + toNextText + "</span></div></div>" +
+      (ready && toSave >= 0.5 ? '<p class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still up for grabs in Acts 1 to 4</span></p>" : "") +
+      '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
+      ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
+      '<div class="hb-chips">' + (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") + "</div>" + "</header>";
     // On a phone: one short to-do list, and each act opens as a full-screen
     // sheet (pick one, then step by step how to do it).
+    if (onPhoneScreen() && currentPath() === "/habits/level")
+      return '<div class="container hb-page hb2 hb3 hbf-level">' + hero +
+        '<p class="hbf-pass-k">Your passport: a stamp for each act you do</p>' + badges + "</div>";
     if (onPhoneScreen()) {
       hbSheetBuild = (fresh) => hbPhoneSheet({ acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, travelStep, banked }, fresh);
       return hbPhonePage({ acts, ready, made, lv, nextLv, toSave, party, shows, state });
@@ -4897,16 +4910,7 @@
     const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
       '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '">' +
-      party + '<div class="hb3-top-row"><header class="hb-hero">' +
-      '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
-      '<div class="hb3-lv">' + ring + '<div class="hb3-lvt"><span class="hb3-lvchip">Level ' + (lv + 1) + "</span>" +
-      '<div class="hb3-name"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" + hbTree(HB_LEVELS[lv][1], "now", animate) + "</div>" +
-      '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + (nextLv ? hbTree(nextLv[1], "next") : "") + toNextText + "</span></div></div>" +
-      (ready && toSave >= 0.5 ? '<p class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still up for grabs in Acts 1 to 4</span></p>" : "") +
-      '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
-      ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
-      '<div class="hb-chips">' + (ready ? '<a class="hb-swlink" href="/greener-switches/"><span class="hb-sw-long">See your switches</span><span class="hb-sw-short">Switches</span> ' + icon("arrowRight") + "</a>" : '<a class="hb-swlink" href="#/" data-action="start-survey">Take the survey ' + icon("arrowRight") + "</a>") + "</div>" +
-      "</header>" + spot + "</div>" + sundayOffer(acts) +
+      party + '<div class="hb3-top-row">' + hero + spot + "</div>" + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
       '<section class="hb-soon" aria-labelledby="hb-daily"><span class="hb-soon-tag">Coming soon</span><p><b id="hb-daily" class="display">Daily habits</b> streaks for small daily things, like a meat-free lunch</p>' +
@@ -5007,19 +5011,19 @@
       '<li><button type="button" class="hbf-row ' + state(a) + (a.pending ? " pending" : "") + '" data-action="hb-open" data-n="' + a.n + '">' + tile(a) +
       '<span class="min0 hbf-t">' + (next ? '<span class="hbf-next">Next</span>' : "") + '<b class="display">' + esc(a.name) + "</b></span>" +
       right(a) + '<span class="hbf-chev" aria-hidden="true">' + icon("chevronRight") + "</span></button></li>";
-    const todo = acts.filter((a) => !a.done).sort((x, y) => (x.pending ? 1 : 0) - (y.pending ? 1 : 0) || (shows(y) ? y.save : 0) - (shows(x) ? x.save : 0) || x.n - y.n);
+    const todo = acts.filter((a) => !a.done);
     const done = acts.filter((a) => a.done);
     const nextOne = todo.find((a) => !a.pending);
     const ringDeg = Math.round((made / 7) * 360);
     return (
       '<div class="container hb-page hbf">' + party +
-      '<section class="hbf-strip" aria-label="Your level"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
+      '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
       '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + "</span></div>" +
-      (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + "</section>" +
+      (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
       sundayOffer(acts) +
       (ready ? "" : '<button type="button" class="hbf-start" data-action="start-survey"><b class="display">Take the survey first</b><span>Acts 1 to 5 tick themselves from it</span>' + icon("arrowRight") + "</button>") +
       (todo.length
-        ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>Biggest first</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
+        ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>' + todo.length + ' left</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
         : '<section class="hbf-all"><b class="display">All seven done</b><span>Keep measuring to keep your line falling.</span></section>') +
       (done.length ? '<details class="hbf-done"' + (ui.hbDoneOpen ? " open" : "") + '><summary class="display">Done (' + done.length + ")" + icon("chevronRight") + '</summary><ul class="hbf-list">' + done.map((a) => row(a)).join("") + "</ul></details>" : "") +
       '<div class="hbf-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>' +
@@ -8546,13 +8550,13 @@
       location.replace("#/explainer/" + parts[1]);
       return;
     }
-    else if (path === "/check-in" || path === "/habits") html = renderHabitsPage();
+    else if (path === "/check-in" || path === "/habits" || path === "/habits/level") html = renderHabitsPage();
     else if (parts[0] === "acts" && parts[1]) html = renderActPage(parts[1]);
     else if (path === "/confirm/energy") html = renderConfirmEnergy();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
     else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
-    setNav(parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
+    setNav(path === "/habits/level" ? "/habits" : parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
     if (ui.privacyNotice && currentUser && html !== spinner && path !== "/privacy") {
       html =
         '<div class="flash privacy-note" role="status">' + icon("info") + "<span>We've updated our privacy policy, including how we use anonymised totals. " +
