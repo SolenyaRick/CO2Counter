@@ -3365,7 +3365,8 @@
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
       (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
-      '<div class="path' + (animate ? " animate" : "") + '">' +
+      // Both markers are labelled above the bar; when they're close, the UK one sits a line higher.
+      '<div class="path' + (animate ? " animate" : "") + (Math.abs(W(ukTotal) - W(budget)) < 34 ? " two-rows" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
       '<span class="path-mark uk' + edge(W(ukTotal)) + '" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
       '<span class="path-now" style="width:' + W(lifeNow) + '%"></span>' +

@@ -3155,7 +3155,9 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 .path-mark.uk { background: #6e8b5e; }
 .path-mark i { position: absolute; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .path-mark.budget i { top: -20px; color: var(--amber-700); }
-.path-mark.uk i { bottom: -20px; color: #4a453a; }
+.path-mark.uk i { top: -20px; color: #4a453a; }
+.path.two-rows { margin-top: 62px; }
+.path.two-rows .path-mark.uk i { top: -38px; }
 @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .path.animate .path-now { animation: grow 1s cubic-bezier(0.34, 1.2, 0.5, 1) 0.15s both; }
 .path.animate .path-real { animation: grow 1.1s cubic-bezier(0.34, 1.3, 0.5, 1) 0.9s both; }
