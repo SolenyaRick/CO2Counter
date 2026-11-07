@@ -5953,6 +5953,13 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .hbf-ring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(#E8C88A var(--p), rgba(246, 241, 230, 0.16) 0); -webkit-mask: radial-gradient(circle, transparent 0 21px, #000 22px); mask: radial-gradient(circle, transparent 0 21px, #000 22px); }
 .hbf-ring b { position: relative; font: 800 17px Karla, sans-serif; color: #F6F1E6; }
 .hbf-ring small { font-size: 11px; opacity: 0.7; }
+a.hbf-strip { text-decoration: none; transition: transform 0.15s; }
+a.hbf-strip:active { transform: scale(0.98); }
+.hbf-strip-go { flex: none; display: grid; margin-left: -4px; color: rgba(246, 241, 230, 0.6); }
+.hbf-strip-go .icon { width: 18px; height: 18px; }
+.hbf-level { padding-top: 12px; padding-bottom: 24px; }
+.hbf-pass-k { margin: 22px 4px 0; font-size: 13px; font-weight: 700; color: #6B6455; }
+.hbf-level .hb3-badges { margin-top: 8px; }
 .hbf-lv { flex: 1; }
 .hbf-lv h1 { margin: 0; font-size: 22px; line-height: 1.1; color: #F6F1E6; }
 .hbf-lv > span { display: block; margin-top: 3px; font-size: 13px; color: rgba(246, 241, 230, 0.75); }
@@ -6816,6 +6823,7 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 @media (prefers-color-scheme: dark) { .notif-blocked { background: #2c281f; } }
 @media (prefers-color-scheme: dark) { .notif-blocked p { color: #e8dbc2; } }
 @media (prefers-color-scheme: dark) { .hbf-ring::before { background: conic-gradient(#4a3d23 var(--p), rgba(46, 41, 32, 0.16) 0); } }
+@media (prefers-color-scheme: dark) { .hbf-pass-k { color: #c6c2b8; } }
 @media (prefers-color-scheme: dark) { .hbf-start { background: #342f24; color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-start span { color: #c6c2b8; } }
 @media (prefers-color-scheme: dark) { .hbf-h h2 { color: #cedfcb; } }
