@@ -8740,7 +8740,54 @@
       if (document.documentElement.scrollHeight - innerHeight >= r.y - 2) { window.scrollTo(0, r.y); ui.restoreScroll = null; }
     }
     watchTitle();
+    syncNextDock(path);
+    // From the Next act bar on another page: open that act once Habits is drawn.
+    if ((path === "/habits" || path === "/check-in") && ui.openActAfter && hbSheetBuild) {
+      ui.hbSheet = { n: ui.openActAfter, stage: "pick" };
+      ui.openActAfter = null;
+      paintHbSheet(true);
+    }
   }
+
+
+  // ---------- the Next act bar (phone) ----------
+  // Once you scroll down My Habits or Results, a slim bar slides up above
+  // the tab bar with the next act to do. Tap it to open that act.
+  let nextDock = null;
+  function syncNextDock(path) {
+    if (!nextDock) {
+      nextDock = document.createElement("a");
+      nextDock.id = "next-dock";
+      nextDock.className = "next-dock";
+      nextDock.href = "#/habits";
+      nextDock.setAttribute("data-action", "next-dock");
+      document.body.appendChild(nextDock);
+    }
+    let a = null;
+    if (onPhoneScreen() && (path === "/habits" || path === "/check-in" || path === "/results") && survey && survey.completedAt) {
+      try { a = habitActs().acts.find((x) => !x.done && !x.pending); } catch (e) {}
+    }
+    if (!a) {
+      nextDock.hidden = true;
+      nextDock.classList.remove("on");
+      return;
+    }
+    const save = a.save >= 0.5 && a.n <= 4 ? "−" + kgFmt(a.save) + " kg" : a.n === 6 ? "1 letter" : a.n === 7 ? "Invite 7" : "";
+    nextDock.dataset.n = a.n;
+    nextDock.setAttribute("aria-label", "Next act: " + a.name);
+    nextDock.innerHTML = glyphify('<span class="nd-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 18) + '</span><span class="min0 nd-t"><small>Next act</small><b class="display">' + esc(a.name) + "</b></span>" +
+      (save ? '<span class="nd-kg tnum">' + save + "</span>" : "") + '<span class="nd-go" aria-hidden="true">' + icon("chevronRight") + "</span>");
+    nextDock.hidden = false;
+    dockScroll();
+  }
+  function dockScroll() {
+    if (!nextDock || nextDock.hidden) return;
+    // On My Habits: once the list's own "Next" row has scrolled away.
+    const row = app.querySelector(".hbf-list .hbf-next");
+    const on = row ? row.closest(".hbf-row").getBoundingClientRect().bottom < 40 : window.scrollY > 260;
+    nextDock.classList.toggle("on", on);
+  }
+  window.addEventListener("scroll", () => requestAnimationFrame(dockScroll), { passive: true });
 
   const seenPaths = new Set();
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
@@ -9763,6 +9810,18 @@
       actions["whats-changed"]();
       actions["review-edit"](el);
       if (location.hash !== "#/") location.hash = "#/";
+    },
+    "next-dock": (el, e) => {
+      if (e) e.preventDefault();
+      const n = +el.dataset.n;
+      haptic();
+      if (["/habits", "/check-in"].includes(currentPath()) && hbSheetBuild) {
+        ui.hbSheet = { n, stage: "pick" };
+        paintHbSheet(true);
+      } else {
+        ui.openActAfter = n;
+        location.hash = "#/habits";
+      }
     },
     // On a phone, an act opens as a full-screen sheet.
     "hb-open": (el) => {
