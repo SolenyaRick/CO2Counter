@@ -4804,7 +4804,7 @@
             (ready ? '<a class="btn btn-outline btn-sm hb-more" href="#/results">Explain more ' + icon("arrowRight") + "</a>" : "")) +
           '<a class="hb-page-link xs fw-700" href="#/acts/monitor">More on this act ' + icon("arrowRight") + "</a>");
       if (a.n === 4)
-        return why + split('<div class="hb3-left">' + mini("Your travel footprint", kgOf(["commute", "flights"]), cutOf(["commute", "flights"]), true) + steps(a) + "</div>",
+        return why + travelFlow({ commute: areaOf("commute"), flights: areaOf("flights") }, undefined, ready) + split('<div class="hb3-left">' + mini("Your travel footprint", kgOf(["commute", "flights"]), cutOf(["commute", "flights"]), true) + steps(a) + "</div>",
           offers(["commute", "flights"]) + foot(banked(a, travelStep(a)) + explain([["commute", "Explain more: commute"], ["flights", "Explain more: flights"]])));
       const cat = { 1: "banking", 2: "energy", 3: "meals" }[a.n];
       const name = { 1: "Your money footprint", 2: "Your home energy footprint", 3: "Your food footprint" }[a.n];
@@ -4911,7 +4911,7 @@
       return '<div class="container hb-page hb2 hb3 hbf-level">' + hero +
         '<p class="hbf-pass-k">Your passport: a stamp for each act you do</p>' + badges + "</div>";
     if (onPhoneScreen()) {
-      hbSheetBuild = (fresh) => hbPhoneSheet({ acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, travelStep, banked }, fresh);
+      hbSheetBuild = (fresh) => hbPhoneSheet({ acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, travelStep, banked, areaOf }, fresh);
       return hbPhonePage({ acts, ready, made, lv, nextLv, toSave, party, shows, state });
     }
     hbSheetBuild = null;
@@ -5042,12 +5042,40 @@
     );
   }
 
+  // Act 4 as a little flow chart: green commute and green one-off trips,
+  // joined by a line to green travel, which lights up once both are done.
+  function travelFlow(areas, branch, ready) {
+    const node = (k, title, ic) => {
+      const ar = areas[k] || {}, done = ready && !!ar.done;
+      const sub = done ? "Done" : ready && ar.save >= 0.5 ? "−" + kgFmt(ar.save) + " kg a year" : ready ? "Not yet" : "Survey first";
+      return '<button type="button" class="tf-node' + (done ? " done" : "") + (branch === k ? " on" : "") + '"' + (branch !== undefined ? ' data-action="hb-branch" data-k="' + k + '" aria-pressed="' + (branch === k) + '"' : "") + ">" +
+        '<span class="tf-ic" aria-hidden="true">' + svgPath(ic, 18) + (done ? '<span class="tf-tick">' + icon("check") + "</span>" : "") + "</span>" +
+        '<b class="display">' + title + '</b><span class="tf-sub">' + sub + "</span></button>";
+    };
+    const both = ready && areas.commute && areas.flights && areas.commute.done && areas.flights.done;
+    return (
+      '<div class="tf" role="group" aria-label="Green travel: your commute and one-off trips">' +
+      '<div class="tf-top">' + node("commute", "Green commute", SW_ICONS.commute) + node("flights", "Green one-off trips", SW_ICONS.flights) + "</div>" +
+      '<div class="tf-lines' + (ready && areas.commute && areas.commute.done ? " c" : "") + (ready && areas.flights && areas.flights.done ? " f" : "") + (both ? " full" : "") + '" aria-hidden="true"><i class="l"></i><i class="r"></i><i class="m"></i></div>' +
+      '<div class="tf-main' + (both ? " done" : "") + '"><span class="tf-ic" aria-hidden="true">' + svgPath(HB_TRAIN, 18) + (both ? '<span class="tf-tick">' + icon("check") + "</span>" : "") + '</span><span class="min0"><b class="display">Green travel</b><span class="tf-sub">' +
+      (both ? "Done · both halves are green" : "Unlocks when both are done") + "</span></span></div></div>"
+    );
+  }
+
   function hbPhoneSheet(o, fresh) {
-    const { acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, banked } = o;
+    const { acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, banked, areaOf } = o;
     const st = ui.hbSheet;
     const a = acts.find((x) => x.n === st.n);
     if (!a) return "";
-    const keys = !a.energy && HBF_CAT[a.n];
+    // Act 4 has two halves: your commute, and one-off trips.
+    let flow = "", branch = null;
+    if (a.n === 4) {
+      const c = areaOf("commute") || {}, f = areaOf("flights") || {};
+      branch = st.branch || (ready && c.done && !f.done ? "flights" : "commute");
+      st.branch = branch;
+      flow = travelFlow({ commute: c, flights: f }, branch, ready);
+    }
+    const keys = !a.energy && (branch ? [branch] : HBF_CAT[a.n]);
     const list = keys ? offerList(keys) : [];
     const pick = st.stage === "how" ? list[st.i] : null;
     const close = '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button>";
@@ -5072,17 +5100,20 @@
     } else {
       head =
         '<div class="hbf-shead"><span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + '</span><div class="min0"><span class="hbf-k">Act ' + a.n + ' of 7</span><h2 id="sheet-title" class="display">' + esc(a.name) + "</h2></div>" + close + "</div>";
-      if (keys && list.length) {
+      if (keys && (list.length || branch)) {
         const now = kgOf(keys), cut = cutOf(keys), after = Math.max(0, now - cut);
         const pct = now ? Math.round((cut / now) * 100) : 0;
-        const lead = a.n === 1 ? "Switch to one of these banks" : a.n === 2 ? "Switch to a renewable supplier" : a.n === 3 ? "Try one of these" : "Make the switch with one of these";
-        const cats = a.n === 4 ? [["commute", "Explain more: commute"], ["flights", "Explain more: flights"]] : [[keys[0], "Explain more"]];
+        const bArea = branch ? areaOf(branch) || {} : null;
+        const lead = a.n === 1 ? "Switch to one of these banks" : a.n === 2 ? "Switch to a renewable supplier" : a.n === 3 ? "Try one of these" : branch === "flights" ? "Go by train instead" : "Make your commute greener";
+        const cats = branch ? [[branch, "Explain more"]] : [[keys[0], "Explain more"]];
         body =
-          '<p class="hbf-why">' + esc(HB_WHY[a.n]) + "</p>" +
-          (a.done ? '<p class="hbf-donenote">' + icon("check") + esc(a.sub) + "</p>" : "") +
+          '<p class="hbf-why">' + esc(HB_WHY[a.n]) + "</p>" + flow +
+          (branch
+            ? ready && bArea.done ? '<p class="hbf-donenote">' + icon("check") + esc(bArea.doneTitle || "Done") + "</p>" : ""
+            : a.done ? '<p class="hbf-donenote">' + icon("check") + esc(a.sub) + "</p>" : "") +
           (ready && now >= 0.5 && cut >= 0.5
             ? '<div class="hbf-line"><span><span class="tnum">' + kgFmt(now) + "</span> → <b class=\"tnum\">" + kgFmt(after) + '</b> kg a year</span><b class="display tnum">−' + pct + '%</b><i style="--w:' + Math.max(4, 100 - pct) + '%"></i></div>' : "") +
-          '<h3 class="display hbf-lead">' + lead + '</h3><ul class="hbf-opts">' +
+          (list.length ? '<h3 class="display hbf-lead">' + lead + "</h3>" : "") + '<ul class="hbf-opts">' +
           list.map(({ l }, i) =>
             '<li><button type="button" class="hbf-opt" data-action="hb-pick" data-i="' + i + '"><span class="display sw-mono">' + esc(monogramText(l.label)) + '</span><span class="min0"><b class="display">' + esc(l.label) + "</b><span>" + esc(l.note) + "</span></span>" + icon("chevronRight") + "</button></li>").join("") +
           "</ul>" + (a.n === 1 ? '<p class="xs muted">Chosen using the bank league table.</p>' : "") +
@@ -9732,6 +9763,13 @@
       ui.hbSheet.i = +el.dataset.i;
       haptic();
       paintHbSheet("fwd");
+    },
+    "hb-branch": (el) => {
+      if (!ui.hbSheet) return;
+      ui.hbSheet.branch = el.dataset.k;
+      ui.hbSheet.stage = "pick";
+      haptic();
+      paintHbSheet(false);
     },
     "hb-sheet-back": () => {
       if (!ui.hbSheet) return;
