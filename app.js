@@ -4899,7 +4899,7 @@
         })()
       : "";
 
-    const order = [5, 1, 3, 2, 4, 6, 7];
+    const order = [1, 2, 3, 4, 5, 6, 7];
     const badges =
       '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + " of 8</span></div><ul>" +
       order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
