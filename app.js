@@ -3365,7 +3365,8 @@
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
       (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
-      '<div class="path' + (animate ? " animate" : "") + '">' +
+      // Both markers are labelled above the bar; when they're close, the UK one sits a line higher.
+      '<div class="path' + (animate ? " animate" : "") + (Math.abs(W(ukTotal) - W(budget)) < 34 ? " two-rows" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
       '<span class="path-mark uk' + edge(W(ukTotal)) + '" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
       '<span class="path-now" style="width:' + W(lifeNow) + '%"></span>' +
@@ -5089,7 +5090,42 @@
     const pick = st.stage === "how" ? list[st.i] : null;
     const close = '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button>";
     let head, body, foot = "";
-    if (pick) {
+    if (a.energy) {
+      const asking = st.stage === "ask" && !energyVerified();
+      const now = kgOf(["energy"]), cut = cutOf(["energy"]), after = Math.max(0, now - cut);
+      const pct = now ? Math.round((cut / now) * 100) : 0;
+      const status = a.sub && (a.pending || a.done) ? '<p class="hbf-status' + (a.done ? " done" : a.pending ? " wait" : "") + '">' + icon(a.done ? "check" : a.pending ? "clock" : "info") + "<span>" + esc(a.sub) + "</span></p>" : "";
+      if (asking) {
+        const who = askWho() === "home" ? "them" : "your landlord";
+        head = '<div class="hbf-shead"><button type="button" class="hbf-back" data-action="hb-sheet-back">' + icon("chevronLeft") + "Back</button>" + close + "</div>";
+        const sent = !!actsTicked().energyAsked || !!energyVerified(), conf = !!energyVerified();
+        const step = (t, d, extra, done) => '<li' + (done ? ' class="done"' : "") + '><span class="hbf-sn display"></span><div class="min0"><b class="display">' + t + "</b><p>" + d + "</p>" + (extra || "") + "</div></li>";
+        body =
+          '<div class="hbf-prov"><span class="hbf-ic" style="background:' + HB_COL[2] + '" aria-hidden="true">' + svgPath(a.icon, 22) + '</span><div class="min0"><span class="hbf-k">Act 2 of 7 · Move your energy</span><h2 id="sheet-title" class="display">How to ask ' + who + "</h2></div></div>" +
+          '<ol class="hbf-steps numbered">' +
+          step("Send them our message", "It has your home's numbers in it" + (ui.energyToken ? ", and a link for them to tap once they've switched." : "."), energyAskTiles(), sent) +
+          step("They switch online", "About 10 minutes with Good Energy, Ecotricity or Octopus Energy. The power never goes off.", "", conf) +
+          step("They tap the link in your message", "It tells us they've switched. They don't need an account.", "", conf) +
+          step("It ticks itself", "Act 2 is verified, then you update your survey so your results show it.", "", !!a.done) +
+          "</ol>";
+        foot = a.pending ? '<div class="hbf-foot"><p>' + icon("clock") + " Asked · waiting for them to confirm they've switched</p></div>" : "";
+      } else {
+        head =
+          '<div class="hbf-shead"><span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + '</span><div class="min0"><span class="hbf-k">Act 2 of 7</span><h2 id="sheet-title" class="display">' + esc(a.name) + "</h2></div>" + close + "</div>";
+        body =
+          '<p class="hbf-why">' + esc(HB_WHY[2]) + "</p>" + status +
+          (ready && now >= 0.5 && cut >= 0.5
+            ? '<div class="hbf-line"><span><span class="tnum">' + kgFmt(now) + "</span> → <b class=\"tnum\">" + kgFmt(after) + '</b> kg a year</span><b class="display tnum">−' + pct + '%</b><i style="--w:' + Math.max(4, 100 - pct) + '%"></i></div>' : "") +
+          '<section class="hbf-act" aria-labelledby="hbf-ask-h"><span class="hbf-k">Your act</span><h3 id="hbf-ask-h" class="display">Ask them to switch</h3>' +
+          (energyVerified()
+            ? '<div class="hb2 hb3">' + energyAskBox() + "</div>"
+            : '<p class="sm">Someone else chooses your supplier, so your part is asking them. Who is it?</p><ul class="hbf-opts">' +
+              [["landlord", "My landlord", "We'll write it for a landlord, about the property"], ["home", "Someone at home", "A friendly message to whoever pays the bills"]].map(([k, l, d]) =>
+                '<li><button type="button" class="hbf-opt" data-action="hb-ask" data-who="' + k + '"><span class="hbf-ic" style="background:' + HB_COL[2] + '" aria-hidden="true">' + svgPath(k === "home" ? SW_ICONS.motivate : SW_ICONS.energy, 20) + '</span><span class="min0"><b class="display">' + l + "</b><span>" + d + "</span></span>" + icon("chevronRight") + "</button></li>").join("") + "</ul>") +
+          "</section>" +
+          '<div class="hbf-more">' + explain([["energy", "Explain more"]]) + "</div>";
+      }
+    } else if (pick) {
       const { k, l } = pick;
       const name = l.label.replace(/^The /, "");
       const verb = k === "banking" || k === "energy" ? "switch to " + name : "get started with " + name;
@@ -5460,12 +5496,48 @@
       "</p>" +
       '<div class="ask-who mt-2" role="radiogroup" aria-label="Who is it to?"><span class="xs fw-700">Who\'s it to?</span>' +
       [["landlord", "My landlord"], ["home", "Someone at home"]].map(([k, l]) => '<button type="button" class="chip' + (askWho() === k ? " on" : "") + '" role="radio" aria-checked="' + (askWho() === k) + '" data-action="ask-who" data-who="' + k + '">' + l + "</button>").join("") + "</div>" +
+      energyAskButtons() + "</div>"
+    );
+  }
+  // On a phone: one big Email button, then a tile for each app.
+  function energyAskTiles() {
+    const t = energyAskText();
+    const m = { subject: t.subject, body: t.body };
+    const asked = actsTicked().energyAsked;
+    const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
+    const mark = (bg, inner) => '<span class="send-ic" style="background:' + bg + '" aria-hidden="true">' + inner + "</span>";
+    const tile = (attrs, ic, label) => '<a class="send-tile" ' + attrs + ">" + ic + "<span>" + label + "</span></a>";
+    const MAIL = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+    const CHAT = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z"/></svg>';
+    return (
+      '<a class="send-main" href="' + esc(href) + '" data-action="energy-asked">' + MAIL + (asked ? "Email them again" : "Email them") + "</a>" +
+      '<div class="send-grid">' +
+      tile('href="' + esc(gmailLink(m)) + '" target="_blank" rel="noopener" data-action="energy-asked" data-mail="gmail"', mark("#EA4335", "G"), "Gmail") +
+      (onPhone()
+        ? tile('href="' + esc(outlookAppLink(m)) + '" data-action="energy-asked" data-mail="outlook-app"', mark("#0F6CBD", "O"), "Outlook")
+        : tile('href="' + esc(outlookLink(m)) + '" target="_blank" rel="noopener" data-action="energy-asked" data-mail="outlook"', mark("#0F6CBD", "O"), "Outlook")) +
+      tile('href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked"', mark("#25D366", CHAT), "WhatsApp") +
+      '<button type="button" class="send-tile" data-action="copy-energy-ask">' + mark("#6B6455", icon("copy")) + "<span>Copy</span></button>" +
+      "</div>" +
+      '<p class="send-more">Or in a browser: ' +
+      (onPhone() ? '<a href="' + esc(outlookLink(m)) + '" target="_blank" rel="noopener" data-action="energy-asked" data-mail="outlook">Outlook.com</a> · ' : "") +
+      '<a href="' + esc(outlookWorkLink(m)) + '" target="_blank" rel="noopener" data-action="energy-asked" data-mail="outlook-work">Work Outlook</a></p>' +
+      (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
+      '<p class="xs muted mt-2">Add their email address' + (askWho() === "home" ? "" : ", and your address") + ". Sending from your own email means it lands in their inbox, not junk.</p>"
+    );
+  }
+  // Email them, the webmail apps, copy and WhatsApp, with the ready message.
+  function energyAskButtons() {
+    const t = energyAskText();
+    const asked = actsTicked().energyAsked;
+    const href = "mailto:?subject=" + encodeURIComponent(t.subject) + "&body=" + encodeURIComponent(t.body);
+    return (
       '<div class="hb-share mt-2"><a class="btn btn-green btn-sm" href="' + esc(href) + '" data-action="energy-asked">' + (asked ? "Email them again " : "Email them ") + icon("arrowRight") + "</a>" +
       webmailButtons({ subject: t.subject, body: t.body }, "energy-asked") +
       '<button type="button" class="hb-act-link" data-action="copy-energy-ask">' + icon("copy") + "Copy message</button>" +
       '<a class="hb-act-link" href="https://wa.me/?text=' + encodeURIComponent(t.body) + '" target="_blank" rel="noopener" data-action="energy-asked">WhatsApp</a></div>' +
       (ui.askMsg ? '<p class="xs green-dark mt-2">' + esc(ui.askMsg) + "</p>" : "") +
-      '<p class="xs muted mt-2">Your email app, Gmail or Outlook opens with the message ready: add their email address, and your address if it\'s your landlord. Sending from your own email means it lands in their inbox, not junk.</p></div>'
+      '<p class="xs muted mt-2">Your email app, Gmail or Outlook opens with the message ready: add their email address, and your address if it\'s your landlord. Sending from your own email means it lands in their inbox, not junk.</p>'
     );
   }
 
@@ -9833,6 +9905,13 @@
       if (!ui.hbSheet) return;
       ui.hbSheet.stage = "how";
       ui.hbSheet.i = +el.dataset.i;
+      haptic();
+      paintHbSheet("fwd");
+    },
+    "hb-ask": (el) => {
+      if (!ui.hbSheet) return;
+      ui.askWho = el.dataset.who;
+      ui.hbSheet.stage = "ask";
       haptic();
       paintHbSheet("fwd");
     },
