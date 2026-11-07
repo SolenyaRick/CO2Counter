@@ -6827,6 +6827,7 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 @media (prefers-color-scheme: dark) { .hbf-row.done { background: rgba(52, 47, 36, 0.6); } }
 @media (prefers-color-scheme: dark) { .hbf-all { background: #342f24; } }
 @media (prefers-color-scheme: dark) { .hbf-done summary { background: rgba(236, 235, 233, 0.06); color: #c4dbc1; } }
+@media (prefers-color-scheme: dark) { .hbf-credit .hb-lede { color: #c6c2b8; } }
 @media (prefers-color-scheme: dark) { .hbf-shead h2 { color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-k { color: #c6c2b8; } }
 @media (prefers-color-scheme: dark) { .hbf-back { color: #c4dbc1; } }
@@ -6837,6 +6838,9 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 @media (prefers-color-scheme: dark) { .hbf-lead { color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-opt { border: 1px solid rgba(236, 235, 233, 0.1); background: #342f24; color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-opt .min0 > span { color: #c6c2b8; } }
+@media (prefers-color-scheme: dark) { .hbf-status { background: rgba(236, 235, 233, 0.05); color: #d8d4c9; } }
+@media (prefers-color-scheme: dark) { .hbf-status.done { color: #c4dbc1; } }
+@media (prefers-color-scheme: dark) { .hbf-status.wait { color: #b5d3dc; } }
 @media (prefers-color-scheme: dark) { .hbf-prov h2 { color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-steps b { color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .hbf-steps p { color: #d0ccc3; } }
