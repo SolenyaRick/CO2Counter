@@ -308,6 +308,9 @@
   const canSync = () => !!currentUser && (FREE_MODE || !!(membership && membership.access));
 
   const isNativeApp = () => !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  // The iPhone app fills the whole screen; the page keeps clear of the notch
+  // and home bar itself, and doesn't bounce past its top or bottom.
+  if (isNativeApp()) document.documentElement.classList.add("native-app");
 
   async function displayName(user) {
     const meta = (user && user.user_metadata) || {};
