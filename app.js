@@ -4688,13 +4688,17 @@
     let areas = [];
     try { areas = switchAreas(ready ? { s: survey, mine: true } : { s: switchBaseTypical(), mine: false }); } catch (e) {}
     const areaOf = (k) => areas.find((x) => x.key === k);
-    const offers = (keys) => {
+    const offerList = (keys) => {
       const seen = {}, list = [];
       keys.forEach((k) => {
         const ar = areaOf(k);
         if (!ar || ar.askHtml) return;
         (ar.links || []).forEach((l) => { if (!seen[l.label]) { seen[l.label] = 1; list.push({ k, ar, l }); } });
       });
+      return list;
+    };
+    const offers = (keys) => {
+      const list = offerList(keys);
       if (!list.length) return "";
       const paid = list.some((x) => x.l.ref);
       const bank = keys.includes("banking");
@@ -4883,6 +4887,13 @@
       order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
       '<li class="' + (made === 7 ? "got" : "") + '"><span>' + svgPath(HB_STAR, 22) + "</span><b>Seven strong</b><small>" + (made === 7 ? "Unlocked" : "All 7") + "</small></li></ul></section>";
 
+    // On a phone: one short to-do list, and each act opens as a full-screen
+    // sheet (pick one, then step by step how to do it).
+    if (onPhoneScreen()) {
+      hbSheetBuild = (fresh) => hbPhoneSheet({ acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, travelStep, banked }, fresh);
+      return hbPhonePage({ acts, ready, made, lv, nextLv, toSave, party, shows, state });
+    }
+    hbSheetBuild = null;
     const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
       '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '">' +
@@ -4902,6 +4913,181 @@
       '<span class="hb-soon-ics" aria-hidden="true">' + DAILY.map((d) => "<i>" + svgPath(d, 16) + "</i>").join("") + "</span></section>" +
       '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
     );
+  }
+  // ---------- My Habits on a phone ----------
+  let hbSheetBuild = null;
+  const HBF_CAT = { 1: ["banking"], 2: ["energy"], 3: ["meals"], 4: ["commute", "flights"] };
+  // Step by step, for each place we send you. [title, detail, the step with the link?]
+  const hbHowTo = (k, l) => {
+    const name = l.label.replace(/^The /, "");
+    const L = l.label;
+    if (k === "banking")
+      return [
+        ["Apply online with " + name, "About 15 minutes. Have photo ID and your addresses for the last 3 years ready.", 1],
+        ["Choose to switch your account", "Say yes to the Current Account Switch Service and give your old bank's sort code and account number."],
+        ["Pick a switch date", "Your salary, direct debits and standing orders all move across in 7 working days. It's free and guaranteed."],
+        ["That's it", "Your old account closes on the switch date, and payments sent to it are passed on to " + name + "."],
+      ];
+    if (k === "energy")
+      return [
+        ["Find a recent bill", "You'll need your postcode and how much you use a year in kWh. It's on the bill or in your supplier's app."],
+        ["Get a quote from " + name, "Pick their 100% renewable tariff.", 1],
+        ["Sign up", "Give a meter reading on the day you switch, or a smart meter sends it for you."],
+        [name + " does the rest", "They tell your old supplier. It takes about 5 working days and your power never goes off."],
+      ];
+    if (k === "meals" && L === "Fork Ranger")
+      return [
+        ["Open Fork Ranger", "Browse quick vegetarian recipes.", 1],
+        ["Pick two or three for this week", "Start with meals you already like, made without meat."],
+        ["Shop with its list", "It builds the shopping list for you."],
+        ["Add a day each week", "One more plant-based day a week until it's just how you eat."],
+      ];
+    if (k === "meals")
+      return [
+        ["Choose a box from " + name, "A veg box or a plant-based recipe box.", 1],
+        ["Pick a delivery day", "Every week or every other week. You can pause or skip any time."],
+        ["Plan meals around what arrives", "Two or three plant-based dinners from each box is a good start."],
+        ["Add a day each week", "One more plant-based day a week until it's just how you eat."],
+      ];
+    if (k === "commute" && l.when === "train")
+      return [
+        ["Search your commute on " + name, "Put in your home and work stations.", 1],
+        ["Compare the cost", "Look at a season ticket or a flexi season against what driving costs you, parking included."],
+        ["Try it one day a week", "See how the journey fits your day before you commit."],
+        ["Make it your usual way in", "Once it works, swap more car days for the train."],
+      ];
+    if (k === "commute" && l.when === "ev")
+      return [
+        ["Check your employer offers " + name, "Ask HR or look on your staff benefits site.", 1],
+        ["Choose an electric car", "Get a quote. The lease comes out of your salary before tax."],
+        ["Sort out charging", "A home charger, or charging at work, before the car arrives."],
+        ["Swap your old car for it", "Every mile you drive now runs on electricity."],
+      ];
+    if (k === "commute")
+      return [
+        ["Check your employer is signed up with " + name, "Ask HR if you're not sure.", 1],
+        ["Choose a bike or e-bike", "From one of their partner shops, and get a quote."],
+        ["Apply through work", "It's paid from your salary before tax, usually over 12 months, which saves you about a third or more."],
+        ["Swap a car day for the bike", "Start with one day a week, then add more."],
+      ];
+    if (L === "Eurostar")
+      return [
+        ["Search your trip on Eurostar", "London to Paris, Brussels or Amsterdam.", 1],
+        ["Book early", "The cheapest seats go first."],
+        ["Leave time for checks", "Security and passports are done before you board, at St Pancras."],
+        ["Carry on by train", "From Paris, Brussels or Amsterdam, trains go on across Europe."],
+      ];
+    if (L === "The Man in Seat 61")
+      return [
+        ["Find your destination on Seat 61", "It has a guide for almost everywhere.", 1],
+        ["Follow its route", "It tells you which trains to take, and where to change."],
+        ["Book each part where it says", "Often the train company's own site is cheapest."],
+        ["Enjoy the journey", "Next time you'd fly, check Seat 61 first."],
+      ];
+    return [
+      ["Search your trip on " + name, "Door to door, with the stations nearest to you.", 1],
+      ["Compare it with flying", "Count the trip to the airport and getting there early."],
+      ["Book ahead", "Advance tickets are usually the cheapest."],
+      ["Check the train first next time", "For the UK and nearby Europe it's often as quick."],
+    ];
+  };
+
+  function hbPhonePage(o) {
+    const { acts, ready, made, lv, nextLv, toSave, party, shows, state } = o;
+    const toNext = nextLv ? nextLv[0] - made : 0;
+    const tile = (a) => '<span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + "</span>";
+    const right = (a) =>
+      a.done ? '<span class="hbf-r done">' + icon("check") + "<small>Done</small></span>"
+        : a.pending ? '<span class="hbf-r"><b>' + icon("clock") + "</b><small>Waiting</small></span>"
+        : shows(a) ? '<span class="hbf-r"><b class="tnum">−' + kgFmt(a.save) + ' kg</b><small>a year</small></span>'
+        : a.n === 6 ? '<span class="hbf-r"><b>1 letter</b><small>to your MP</small></span>'
+        : a.n === 7 && ui.actsInfo ? '<span class="hbf-r"><b class="tnum">' + Math.min(7, ui.actsInfo.finished || 0) + ' of 7</b><small>friends joined</small></span>'
+        : '<span class="hbf-r"><small>' + (ready || a.n > 5 ? "Ready" : "Survey first") + "</small></span>";
+    const row = (a, next) =>
+      '<li><button type="button" class="hbf-row ' + state(a) + (a.pending ? " pending" : "") + '" data-action="hb-open" data-n="' + a.n + '">' + tile(a) +
+      '<span class="min0 hbf-t">' + (next ? '<span class="hbf-next">Next</span>' : "") + '<b class="display">' + esc(a.name) + "</b></span>" +
+      right(a) + '<span class="hbf-chev" aria-hidden="true">' + icon("chevronRight") + "</span></button></li>";
+    const todo = acts.filter((a) => !a.done).sort((x, y) => (x.pending ? 1 : 0) - (y.pending ? 1 : 0) || (shows(y) ? y.save : 0) - (shows(x) ? x.save : 0) || x.n - y.n);
+    const done = acts.filter((a) => a.done);
+    const nextOne = todo.find((a) => !a.pending);
+    const ringDeg = Math.round((made / 7) * 360);
+    return (
+      '<div class="container hb-page hbf">' + party +
+      '<section class="hbf-strip" aria-label="Your level"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
+      '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + "</span></div>" +
+      (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + "</section>" +
+      sundayOffer(acts) +
+      (ready ? "" : '<button type="button" class="hbf-start" data-action="start-survey"><b class="display">Take the survey first</b><span>Acts 1 to 5 tick themselves from it</span>' + icon("arrowRight") + "</button>") +
+      (todo.length
+        ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>Biggest first</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
+        : '<section class="hbf-all"><b class="display">All seven done</b><span>Keep measuring to keep your line falling.</span></section>') +
+      (done.length ? '<details class="hbf-done"' + (ui.hbDoneOpen ? " open" : "") + '><summary class="display">Done (' + done.length + ")" + icon("chevronRight") + '</summary><ul class="hbf-list">' + done.map((a) => row(a)).join("") + "</ul></details>" : "") +
+      '<div class="hbf-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>' +
+      '<p class="hb-lede xs muted">The 7 Acts are by Real Zero, used with their permission. <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p></div></div>"
+    );
+  }
+
+  function hbPhoneSheet(o, fresh) {
+    const { acts, ready, inside, offerList, kgOf, cutOf, explain, stepOf, banked } = o;
+    const st = ui.hbSheet;
+    const a = acts.find((x) => x.n === st.n);
+    if (!a) return "";
+    const keys = !a.energy && HBF_CAT[a.n];
+    const list = keys ? offerList(keys) : [];
+    const pick = st.stage === "how" ? list[st.i] : null;
+    const close = '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button>";
+    let head, body, foot = "";
+    if (pick) {
+      const { k, l } = pick;
+      const name = l.label.replace(/^The /, "");
+      const verb = k === "banking" || k === "energy" ? "switch to " + name : "get started with " + name;
+      head = '<div class="hbf-shead"><button type="button" class="hbf-back" data-action="hb-sheet-back">' + icon("chevronLeft") + "Back</button>" + close + "</div>";
+      body =
+        '<div class="hbf-prov"><span class="display sw-mono">' + esc(monogramText(l.label)) + '</span><div class="min0"><span class="hbf-k">Act ' + a.n + " of 7 · " + esc(a.name) + '</span><h2 id="sheet-title" class="display">How to ' + esc(verb) + "</h2></div></div>" +
+        '<ol class="hbf-steps">' +
+        hbHowTo(k, l).map((s, i) =>
+          '<li><span class="hbf-sn display">' + (i + 1) + '</span><div class="min0"><b class="display">' + esc(s[0]) + "</b><p>" + esc(s[1]) + "</p>" +
+          (s[2] ? '<a class="btn btn-green btn-sm hbf-open" ' + linkAttrs(k, l, "habits") + ">Open " + esc(name) + " " + icon("link") + "</a>" : "") + "</div></li>").join("") +
+        "</ol>" +
+        (l.ref ? '<p class="xs muted">This is a referral link: if you switch, CO2 Counter may get a reward at no cost to you.</p>' : "");
+      const won = banked(a, k);
+      foot = won
+        ? '<div class="hbf-foot"><p>Done it? This opens that question in your survey so it counts.</p>' + won.replace("I've switched · update my survey", "I've switched").replace('class="hb3-win-btn"', 'class="hb3-win-btn hbf-cta"') + "</div>"
+        : !ready ? '<div class="hbf-foot"><button type="button" class="btn btn-green hbf-cta" data-action="start-survey">Take the survey first ' + icon("arrowRight") + "</button></div>" : "";
+    } else {
+      head =
+        '<div class="hbf-shead"><span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + '</span><div class="min0"><span class="hbf-k">Act ' + a.n + ' of 7</span><h2 id="sheet-title" class="display">' + esc(a.name) + "</h2></div>" + close + "</div>";
+      if (keys && list.length) {
+        const now = kgOf(keys), cut = cutOf(keys), after = Math.max(0, now - cut);
+        const pct = now ? Math.round((cut / now) * 100) : 0;
+        const lead = a.n === 1 ? "Switch to one of these banks" : a.n === 2 ? "Switch to a renewable supplier" : a.n === 3 ? "Try one of these" : "Make the switch with one of these";
+        const cats = a.n === 4 ? [["commute", "Explain more: commute"], ["flights", "Explain more: flights"]] : [[keys[0], "Explain more"]];
+        body =
+          '<p class="hbf-why">' + esc(HB_WHY[a.n]) + "</p>" +
+          (a.done ? '<p class="hbf-donenote">' + icon("check") + esc(a.sub) + "</p>" : "") +
+          (ready && now >= 0.5 && cut >= 0.5
+            ? '<div class="hbf-line"><span><span class="tnum">' + kgFmt(now) + "</span> → <b class=\"tnum\">" + kgFmt(after) + '</b> kg a year</span><b class="display tnum">−' + pct + '%</b><i style="--w:' + Math.max(4, 100 - pct) + '%"></i></div>' : "") +
+          '<h3 class="display hbf-lead">' + lead + '</h3><ul class="hbf-opts">' +
+          list.map(({ l }, i) =>
+            '<li><button type="button" class="hbf-opt" data-action="hb-pick" data-i="' + i + '"><span class="display sw-mono">' + esc(monogramText(l.label)) + '</span><span class="min0"><b class="display">' + esc(l.label) + "</b><span>" + esc(l.note) + "</span></span>" + icon("chevronRight") + "</button></li>").join("") +
+          "</ul>" + (a.n === 1 ? '<p class="xs muted">Chosen using the bank league table.</p>' : "") +
+          '<div class="hbf-more">' + explain(cats) + "</div>";
+      } else body = '<div class="hb2 hb3 hbf-inside" style="--c:' + HB_COL[a.n] + '">' + (a.sub ? '<p class="hbf-status' + (a.done ? " done" : a.pending ? " wait" : "") + '">' + icon(a.done ? "check" : a.pending ? "clock" : "info") + "<span>" + esc(a.sub) + "</span></p>" : "") + inside(a) + "</div>";
+    }
+    return (
+      '<div class="modal-backdrop sheet-backdrop hbf-bd" data-action="close-modal"><div class="sheet hbf-sheet' + (fresh === true ? "" : " hbf-still") + '" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
+      '<div class="sheet-body hbf-body' + (fresh === "fwd" ? " hbf-fwd" : fresh === "back" ? " hbf-bk" : "") + '" id="hb-act-' + a.n + '">' + head + body + "</div>" + foot + "</div></div>"
+    );
+  }
+  // Draws the open act's sheet. fresh: true (slides up), "fwd"/"back" (a new page), or false (a redraw).
+  function paintHbSheet(fresh) {
+    if (!hbSheetBuild || !ui.hbSheet) return;
+    const bd = modalRoot.querySelector(".hbf-bd");
+    const y = bd && !fresh ? bd.scrollTop : 0;
+    modalRoot.innerHTML = glyphify(fillTokens(hbSheetBuild(fresh)));
+    document.body.classList.add("modal-open");
+    const nb = modalRoot.querySelector(".hbf-bd");
+    if (nb) nb.scrollTop = y;
   }
   const ACT_SHORT = { 1: "Money", 2: "Energy", 3: "Food", 4: "Travel", 5: "Measure", 6: "Your MP", 7: "Invite 7" };
   const HB_TRAIN = "M6 4h12a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2ZM4 11h16M8 21l2-3M16 21l-2-3M8.5 14.5v.01M15.5 14.5v.01";
@@ -5396,6 +5582,7 @@
   }
 
   function closeModal() {
+    ui.hbSheet = null;
     modalRoot.innerHTML = "";
     document.body.classList.remove("modal-open");
   }
@@ -8391,6 +8578,7 @@
       ui.openSheet = null;
       setTimeout(() => openSectionDialog(o.cat, o.index), 30);
     }
+    if ((path === "/habits" || path === "/check-in") && ui.hbSheet && hbSheetBuild) paintHbSheet(false);
     if (path === "/switches" && app.querySelector(".sw-board")) startSwitchDemo();
     if (path === "/switches" && ui.jumpSwitch) {
       const card = document.getElementById("switch-" + ui.jumpSwitch);
@@ -9382,6 +9570,24 @@
       actions["review-edit"](el);
       if (location.hash !== "#/") location.hash = "#/";
     },
+    // On a phone, an act opens as a full-screen sheet.
+    "hb-open": (el) => {
+      ui.hbSheet = { n: +el.dataset.n, stage: "pick" };
+      haptic();
+      paintHbSheet(true);
+    },
+    "hb-pick": (el) => {
+      if (!ui.hbSheet) return;
+      ui.hbSheet.stage = "how";
+      ui.hbSheet.i = +el.dataset.i;
+      haptic();
+      paintHbSheet("fwd");
+    },
+    "hb-sheet-back": () => {
+      if (!ui.hbSheet) return;
+      ui.hbSheet.stage = "pick";
+      paintHbSheet("back");
+    },
     // Your next best act: open it and bring it into view.
     "hb-go": (el) => {
       const d = app.querySelector('#hb-act-' + el.dataset.n + ' details');
@@ -9817,6 +10023,10 @@
       navIntent = "tab";
     });
   }
+  // My Habits on a phone: remember whether Done is folded open.
+  document.addEventListener("toggle", (e) => {
+    if (e.target.classList && e.target.classList.contains("hbf-done")) ui.hbDoneOpen = e.target.open;
+  }, true);
   // Pop-up sheets on a phone: pull down to close.
   let sheetDrag = null;
   modalRoot.addEventListener("touchstart", (e) => {
