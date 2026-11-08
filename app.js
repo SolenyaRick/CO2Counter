@@ -1697,7 +1697,26 @@
     );
   }
 
-  const spinner = '<div class="center-pad"><div class="spinner"></div></div>';
+  // One look for every empty, loading and error state: a soft round icon,
+  // a clear title, a line of help, and what to do next.
+  function stateCard(o) {
+    const art = o.kind === "loading" ? '<span class="spinner"></span>' : icon(o.icon || "info");
+    const acts = (o.actions || []).map(([label, attrs, primary]) => (attrs.startsWith("href") ? "<a " : '<button type="button" ') + 'class="btn ' + (primary ? "btn-green" : "btn-outline") + ' btn-sm" ' + attrs + ">" + label + (attrs.startsWith("href") ? "</a>" : "</button>")).join("");
+    return (
+      '<section class="state-card ' + (o.kind || "empty") + (o.inline ? " inline" : "") + '" role="' + (o.kind === "error" ? "alert" : "status") + '"' + (o.kind === "loading" ? ' aria-busy="true"' : "") + ">" +
+      '<span class="state-art" aria-hidden="true">' + art + "</span>" +
+      (o.title ? '<h2 class="display">' + o.title + "</h2>" : "") + (o.text ? "<p>" + o.text + "</p>" : "") +
+      (acts ? '<div class="state-actions">' + acts + "</div>" : "") + "</section>"
+    );
+  }
+  const spinner = '<div class="container">' + stateCard({ kind: "loading", title: "One moment", text: "Getting your footprint ready." }) + "</div>";
+  const notFound = (home) => '<div class="container">' + stateCard({ icon: "search", title: "We couldn't find that page", text: "The link may be old, or the page has moved.", actions: [[home ? "Back to My Habits" : "Go to my results", 'href="' + (home ? "#/habits" : "#/results") + '"', true], ["Take the survey", 'href="#/" data-action="start-survey"']] }) + "</div>";
+  // Results before the survey's finished: nothing made up, just the way in.
+  function noResultsYet() {
+    const started = !!(survey && (survey.meals || survey.commute) && lsGet(KEY_SURVEY, null));
+    return '<div class="container">' + stateCard({ icon: "chart", title: "Your results will appear here", text: started ? "Finish the survey to see your footprint, where it comes from and your biggest moves." : "Take the 5-minute survey to see your footprint, where it comes from and your biggest moves.", actions: [[started ? "Continue the survey" : "Take the survey", 'href="#/" data-action="start-survey"', true], ["See an example", 'href="/example/"']] }) + "</div>";
+  }
+  const adminsOnly = (what) => '<div class="container">' + stateCard({ icon: "lock", title: "Only for the owner", text: "Sign in with the owner's account to see " + what + ".", actions: [["Go to my account", 'href="#/account"', true]] }) + "</div>";
 
   function setNav(path) {
     document.querySelectorAll("#nav a, #nav-avatar, #tabbar a").forEach((a) => {
@@ -1858,13 +1877,16 @@
   // from the left, and switching tabs is a quick fade.
   function glide(dir) {
     // Tabs switch instantly, like any iPhone app; only going in and Back slide.
-    if (!dir || dir === "tab" || reducedMotion() || !onPhoneScreen()) return;
+    if (!dir || reducedMotion()) return;
+    // A computer gets a quick fade between pages; a phone slides in and back.
+    if (!onPhoneScreen()) dir = "fade";
+    else if (dir === "tab") return;
     const cls = "pg-" + dir;
-    app.classList.remove("pg-push", "pg-pop", "pg-tab");
+    app.classList.remove("pg-push", "pg-pop", "pg-tab", "pg-fade");
     void app.offsetWidth;
     app.classList.add(cls);
     clearTimeout(glide.t);
-    glide.t = setTimeout(() => app.classList.remove(cls), 420);
+    glide.t = setTimeout(() => app.classList.remove(cls), 240);
   }
 
   // "Alex Green" -> "AG", "sam_green" -> "SG", "sam@x.com" -> "S".
@@ -4500,7 +4522,7 @@
 
   function renderActPage(key) {
     const n = ACT_PAGES[key];
-    if (!n) return '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/habits">Back to My Habits</a></div></div>';
+    if (!n) return notFound(true);
     const ready = survey && survey.completedAt;
     const ticked = actsTicked();
     const info = ui.actsInfo;
@@ -6004,7 +6026,7 @@
       .join("");
     if (!defs.length) html += '<p class="muted center mt-4">No inputs match “' + esc(q) + "”.</p>";
     html += '<section class="glass inp-group"><h2 class="card-title">Change log</h2>';
-    if (!inputLog.loaded) html += '<p class="sm muted">Loading…</p>';
+    if (!inputLog.loaded) html += stateCard({ kind: "loading", inline: true, title: "", text: "Loading the change log…" });
     else if (!inputLog.rows.length) html += '<p class="sm muted">No changes yet. Everything is on the built-in figures.</p>';
     else {
       html +=
@@ -6788,8 +6810,8 @@
   function renderAnalytics() {
     if (!analytics.loaded) loadAnalytics();
     let html = '<div class="container analytics-page">' + pageHeader("Analytics", "How people use CO2 Counter", "chart");
-    if (!analytics.loaded) return html + '<section class="glass an-card"><p class="muted">Loading…</p></section></div>';
-    if (analytics.error) return html + '<section class="glass an-card"><p class="fw-700">Couldn\'t load the analytics</p><p class="sm muted">' + esc(analytics.error) + '</p><button type="button" class="btn btn-outline btn-sm mt-3" data-action="refresh-analytics">Try again</button></section></div>';
+    if (!analytics.loaded) return html + stateCard({ kind: "loading", title: "Loading the analytics", text: "Adding up everyone's latest surveys." }) + "</div>";
+    if (analytics.error) return html + stateCard({ kind: "error", icon: "refresh", title: "Couldn't load the analytics", text: esc(analytics.error), actions: [["Try again", 'data-action="refresh-analytics"', true]] }) + "</div>";
     // Letters to MPs arrive by BCC with a reference; verifying ticks act 6.
     html +=
       '<section class="glass an-card"><h2 class="card-title">Verify a letter to an MP</h2><p class="sm muted">Letters BCC\'d to ' + MP_COPY + " carry a reference like CO2-ABC123. Enter it to verify that person's act 6, then delete the email.</p>" +
@@ -7502,15 +7524,21 @@
       (rows.length
         ? '<ol class="fr-stand">' + rows.map((r, i) => '<li class="' + (r.self ? "me" : "") + '"><span class="fr-n' + (r.first && tab === "board" ? " gold" : "") + '">' + (i + 1) + "</span>" + frAv(r.id, r.self ? myName : r.name, 34, r.self) +
             '<span class="min0"><span class="fr-sname">' + esc(r.name) + '</span><span class="fr-sbar ' + r.cls + '"><span style="width:' + r.w.toFixed(1) + '%"></span></span></span><b class="display tnum fr-sval ' + r.cls + '">' + r.val + "</b></li>").join("") + "</ol>"
-        : '<p class="sm muted mt-3">' + (tab === "board" ? "Add friends to compare yearly totals. Lowest wins." : "Retake the survey every few months. The biggest cut wins.") + "</p>") +
+        : tab === "board"
+          ? stateCard({ inline: true, icon: "chart", title: "No one to compare with yet", text: "Add friends to compare yearly totals. Lowest wins.", actions: [["Find a friend", 'data-action="fr-find"', true]] })
+          : stateCard({ inline: true, icon: "trendDown", title: "No changes yet", text: "Retake the survey every few months. The biggest cut wins.", actions: [["Update my survey", 'href="#/" data-action="whats-changed"', true]] })) +
       (rows.length ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
     );
   }
   function renderFriends() {
     if (!friends.loaded) {
       loadFriends();
-      return spinner;
+      if (friends.error) return '<div class="container">' + stateCard({ kind: "error", icon: "refresh", title: "Couldn't load your friends", text: "Check your connection, then try again.", actions: [["Try again", 'data-action="friends-retry"', true]] }) + "</div>";
+      return '<div class="container">' + stateCard({ kind: "loading", title: "Loading your friends", text: "Their totals, your groups and the feed." }) + "</div>";
     }
+    // Nothing to show at all: say what went wrong and how to fix it.
+    if (friends.error && !(friends.rows || []).length && !(friends.board || []).length)
+      return '<div class="container">' + stateCard({ kind: "error", icon: "refresh", title: "Couldn't load your friends", text: "Check your connection, then try again. Your own results are safe on this phone.", actions: [["Try again", 'data-action="friends-retry"', true], ["Go to my results", 'href="#/results"']] }) + "</div>";
     const incoming = friends.rows.filter((f) => f.status === "pending" && !f.iAsked);
     const outgoing = friends.rows.filter((f) => f.status === "pending" && f.iAsked);
     const accepted = friends.rows.filter((f) => f.status === "accepted");
@@ -7586,11 +7614,13 @@
           '<button type="button" class="fr-stack-btn" data-action="feed-all" aria-expanded="false">See all ' + posts.length + " updates</button></div>"
         : posts.length ? stacks.slice(0, shown).map(stackHtml).join("") + (onPhoneScreen() && ui.feedAll ? '<button type="button" class="fr-stack-btn fr-feedless" data-action="feed-all" aria-expanded="true">Show just the latest</button>' : "") +
           (stacks.length > shown ? '<button type="button" class="btn btn-outline btn-sm fr-older" data-action="feed-more">Show older posts</button>' : '<p class="center sm muted">You\'re all caught up</p>')
-        : '<div class="glass fr-post"><p class="fr-ptext">' + (accepted.length ? "No news yet. When friends retake the survey, it shows up here." : "Add friends to see their retakes and cheer them on. Lowest footprint wins.") + "</p></div>") +
+        : accepted.length
+          ? stateCard({ inline: true, icon: "calendar", title: "No news yet", text: "When friends retake the survey, it shows up here. Retake yours to get things going.", actions: [["Update my survey", 'href="#/" data-action="whats-changed"', true]] })
+          : stateCard({ inline: true, icon: "user", title: "Your feed is empty", text: "Add friends to see their retakes and cheer them on. Lowest footprint wins.", actions: [["Find a friend", 'data-action="fr-find"', true]] })) +
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
     return (
-      '<div class="container friends-v2 fr-page">' + (friends.error ? '<p class="sm red mb-4">' + esc(friends.error) + "</p>" : "") +
+      '<div class="container friends-v2 fr-page">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
       '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
@@ -7857,9 +7887,7 @@
 
     if (!active.length) {
       html +=
-        '<div class="empty-card"><div class="emoji-xl mb-3">🌱</div><h2 class="fw-600 mb-1">No habits yet</h2>' +
-        '<p class="sm muted mb-5 max-sm center-block">Explore your results and commit to habits that fit your life — they\'ll show up here.</p>' +
-        '<a class="btn btn-green" href="#/results">See my results ' + icon("arrowRight") + "</a></div>";
+        stateCard({ icon: "leaf", title: "No habits yet", text: "Your 7 Acts live in My Habits.", actions: [["Go to My Habits", 'href="#/habits"', true]] });
     } else {
       html += '<div class="stack-5">';
       html += active
@@ -7901,9 +7929,7 @@
     if (!all.length) {
       return (
         '<div class="container narrow">' + checkInHeader() +
-        '<div class="empty-card"><div class="emoji-xl mb-3">📋</div><h2 class="fw-600 mb-1">Nothing to check in yet</h2>' +
-        '<p class="sm muted mb-5 max-sm center-block">Commit to some habits from your results first — then come back here each day to build your streaks.</p>' +
-        '<a class="btn btn-green" href="#/results">See my results ' + icon("arrowRight") + "</a></div></div>"
+        stateCard({ icon: "calendar", title: "Nothing to check in yet", text: "Your 7 Acts live in My Habits.", actions: [["Go to My Habits", 'href="#/habits"', true]] }) + "</div>"
       );
     }
     const active = all.filter((h) => h.stage.active);
@@ -8746,9 +8772,10 @@
     else if (path === "/about") html = renderAbout();
     else if (path === "/switches") html = renderSwitches();
     else if (path === "/analytics")
-      html = ui.isAdmin ? renderAnalytics() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to see the analytics.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
+      html = ui.isAdmin ? renderAnalytics() : adminsOnly("the analytics");
     else if (path === "/inputs")
-      html = ui.isAdmin ? renderInputs() : '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Admins only</h2><p class="sm muted">Sign in with an admin account to change the figures.</p><a class="btn btn-green mt-4" href="#/account">Go to my account</a></div></div>';
+      html = ui.isAdmin ? renderInputs() : adminsOnly("the figures");
+    else if ((path === "/results" || (parts[0] === "explainer" && parts[1])) && !survey.completedAt) html = noResultsYet();
     else if (path === "/results") html = full ? renderResults() : renderResultsPreview();
     else if (parts[0] === "explainer" && parts[1]) html = full ? renderExplainer(parts[1]) : renderLocked();
     else if (parts[0] === "guide" && parts[1]) {
@@ -8762,13 +8789,16 @@
     else if (path === "/confirm/energy") html = renderConfirmEnergy();
     else if (path === "/friends") html = member ? renderFriends() : renderLocked();
     else if (path === "/account") html = member ? renderAccount() : renderLocked();
-    else html = '<div class="container"><div class="empty-card"><h2 class="fw-600 mb-1">Page not found</h2><a class="btn btn-green mt-4" href="#/">Go to the survey</a></div></div>';
+    else html = notFound(false);
     setNav(path === "/habits/level" ? "/habits" : parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
     if (ui.privacyNotice && currentUser && html !== spinner && path !== "/privacy") {
       html =
         '<div class="flash privacy-note" role="status">' + icon("info") + "<span>We've updated our privacy policy, including how we use anonymised totals. " +
         '<a class="link-btn" href="/privacy/">Read it</a></span><button type="button" class="btn btn-green btn-sm" data-action="accept-privacy">OK</button></div>' + html;
     }
+    // Offline: say so, and that the page is what's saved on this phone.
+    if (!navigator.onLine && html !== spinner)
+      html = '<div class="offline-note" role="status">' + icon("info") + "<span><b>You're offline.</b> Showing what's saved on this phone. Changes save when you're back online.</span></div>" + html;
     if (ui.flash && html !== spinner) {
       html =
         '<div class="flash" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
@@ -8862,6 +8892,8 @@
   window.addEventListener("scroll", () => requestAnimationFrame(dockScroll), { passive: true });
 
   const seenPaths = new Set();
+  window.addEventListener("online", () => render());
+  window.addEventListener("offline", () => render());
   const PASSWORD_IDS = ["auth-password", "auth-password2", "new-password", "new-password2"];
 
   function onRouteChange() {
@@ -9377,6 +9409,11 @@
       ui.groupSel = el.dataset.id;
       friends.groupMsg = "";
       await loadGroupBoard(ui.groupSel);
+      render();
+    },
+    "friends-retry": () => {
+      friends.error = "";
+      friends.loaded = false;
       render();
     },
     "fr-find": () => {

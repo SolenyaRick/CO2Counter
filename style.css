@@ -3738,7 +3738,7 @@ body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: 
 
 /* ---------- Section pop-ups as sheets (Glass v2) ---------- */
 .sheet-backdrop { background: rgba(46, 42, 34, 0.32); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); align-items: flex-start; padding: 32px 16px; overflow-y: auto; }
-.sheet { position: relative; width: min(920px, 100%); margin: 0 auto; border-radius: 28px; background: #f4efe4; box-shadow: 0 40px 80px rgba(46, 42, 34, 0.3); overflow: hidden; animation: sheet-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sheet { position: relative; width: min(920px, 100%); margin: 0 auto; border-radius: 28px; background: #f4efe4; box-shadow: 0 40px 80px rgba(46, 42, 34, 0.3); overflow: hidden; animation: sheet-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: none; } }
 .sheet-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 14px 18px 0; background: rgba(63, 91, 58, 0.08); border-bottom: 1px solid rgba(46, 42, 34, 0.1); }
 .sheet-tabs::-webkit-scrollbar { display: none; }
@@ -5771,8 +5771,8 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .tabbar a:active { transform: scale(0.9); }
 
   /* screens glide in */
-  #app.pg-push { animation: pg-push 0.36s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
-  #app.pg-pop { animation: pg-pop 0.36s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
+  #app.pg-push { animation: pg-push 0.2s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
+  #app.pg-pop { animation: pg-pop 0.2s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
   #app.pg-tab { animation: pg-tab 0.22s ease-out both; }
 
   /* the website's footer isn't part of the app: its links live in Account */
@@ -5787,7 +5787,7 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 @keyframes pg-tab { from { opacity: 0.3; } to { opacity: 1; } }
 @media (max-width: 600px) {
   /* sheets rise from the bottom with a grab handle; pull down to close */
-  .sheet { animation: sheet-up 0.42s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
+  .sheet { animation: sheet-up 0.2s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
   .sheet::before { content: ""; position: absolute; z-index: 3; top: 7px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: rgba(46, 42, 34, 0.22); }
 }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
@@ -6015,8 +6015,8 @@ a.hbf-strip:active { transform: scale(0.98); }
 .hbf-sheet { display: flex; flex-direction: column; overflow: clip; }
 .hbf-sheet.hbf-still { animation: none; }
 .hbf-body { flex: 1; padding: 18px 18px 24px; }
-.hbf-fwd { animation: hbf-in 0.32s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
-.hbf-bk { animation: hbf-out 0.32s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
+.hbf-fwd { animation: hbf-in 0.18s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
+.hbf-bk { animation: hbf-out 0.18s cubic-bezier(0.2, 0.85, 0.25, 1) both; }
 @keyframes hbf-in { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
 @keyframes hbf-out { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
 .hbf-shead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
@@ -6172,7 +6172,7 @@ body.calm .rise, body.calm .fr-post, body.calm .bar-you, body.calm .bar-uk { ani
 /* The Next act bar: slides up above the tab bar once you scroll (phone) */
 .next-dock { display: none; }
 @media (max-width: 640px) {
-  .next-dock { position: fixed; z-index: 35; left: 12px; right: 12px; bottom: calc(68px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 8px; border-radius: 18px; background: #22331F; color: #F6F1E6; text-decoration: none; box-shadow: 0 10px 26px rgba(34, 51, 31, 0.3); transform: translateY(calc(100% + 90px)); opacity: 0; transition: transform 0.42s cubic-bezier(0.2, 0.85, 0.25, 1), opacity 0.25s; pointer-events: none; }
+  .next-dock { position: fixed; z-index: 35; left: 12px; right: 12px; bottom: calc(68px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 8px; border-radius: 18px; background: #22331F; color: #F6F1E6; text-decoration: none; box-shadow: 0 10px 26px rgba(34, 51, 31, 0.3); transform: translateY(calc(100% + 90px)); opacity: 0; transition: transform 0.2s cubic-bezier(0.2, 0.85, 0.25, 1), opacity 0.16s; pointer-events: none; }
   .next-dock.on { transform: none; opacity: 1; pointer-events: auto; }
   .next-dock[hidden] { display: none; }
   .next-dock:active { transform: scale(0.98); }
@@ -6216,6 +6216,50 @@ body.calm .rise, body.calm .fr-post, body.calm .bar-you, body.calm .bar-uk { ani
 .send-ic svg, .send-ic .icon { width: 18px; height: 18px; }
 .send-more { margin: 10px 0 0; font-size: 12.5px; color: #6B6455; }
 .send-more a { color: #2F4A2B; font-weight: 700; }
+
+/* ---------- micro-interactions: quick, quiet feedback (all under 200ms) ---------- */
+:root { --tap-ease: cubic-bezier(0.2, 0.8, 0.2, 1); }
+:where(.btn, .chip, .mail-chip, .hb-act-link, .acc-btn, .fr-btn, .fr-cheer, .fr-stack-btn, .send-tile, .send-main, .gs-tile, .hbf-opt, .hbf-row, .tf-node, .res-tag, .sheet-close, .icon-btn, .hbf-back, .notif-switch, .tabbar a, .fr-story-av, .pi-chip, .sw-offer, .hb-offer, .offer, .move, .res-next-go, .hbf-strip, .next-dock) {
+  transition: transform 0.12s var(--tap-ease), box-shadow 0.16s var(--tap-ease), background-color 0.16s, border-color 0.16s, color 0.16s, opacity 0.16s;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.btn, .chip, .mail-chip, .hb-act-link, .acc-btn, .fr-btn, .fr-cheer, .fr-stack-btn, .res-tag, .sheet-close, .icon-btn, .hbf-back, .pi-chip):active { transform: scale(0.96); }
+:where(.send-tile, .send-main, .gs-tile, .hbf-opt, .hbf-row, .tf-node, .sw-offer, .hb-offer, .offer, .move, .res-next-go, .hbf-strip):active { transform: scale(0.985); }
+@media (hover: hover) and (pointer: fine) {
+  :where(.btn-green, .btn-outline):hover { transform: translateY(-1px); }
+  :where(a.card, .offer, .sw-offer, .hb-offer, .move, .res-next-go, .hbf-row, .hbf-opt, .gs-tile, button.tf-node[data-action], .send-tile, .fr-post, .acc-box a.acc-row):hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(46, 42, 34, 0.1); }
+}
+:where(a, button, [role="button"], summary, input, select, textarea):focus-visible { outline: 2px solid #3F5B3A; outline-offset: 2px; }
+/* a quick fade between pages on a computer */
+#app.pg-fade { animation: pg-fade 0.15s ease-out both; }
+@keyframes pg-fade { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.modal-backdrop { animation: bd-in 0.16s ease-out both; }
+@keyframes bd-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  :where(*) { transition-duration: 0.01ms !important; }
+  :where(*):active, :where(*):hover { transform: none !important; }
+  #app.pg-fade, .modal-backdrop { animation: none; }
+}
+
+/* ---------- empty, loading and error states ---------- */
+.state-card { max-width: 460px; margin: 40px auto; padding: 30px 22px 24px; border-radius: 26px; text-align: center; background: rgba(255, 252, 245, 0.88); border: 1px solid rgba(46, 42, 34, 0.08); box-shadow: 0 12px 30px rgba(46, 42, 34, 0.06); animation: state-in 0.2s ease-out both; }
+.state-card.inline { margin: 12px 0 0; padding: 22px 18px 18px; box-shadow: none; }
+@keyframes state-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.state-art { position: relative; width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; background: #DCE6D3; color: #2F4A2B; box-shadow: 0 0 0 10px rgba(220, 230, 211, 0.45); }
+.state-card.inline .state-art { width: 56px; height: 56px; margin-bottom: 10px; box-shadow: 0 0 0 7px rgba(220, 230, 211, 0.45); }
+.state-art .icon { width: 30px; height: 30px; }
+.state-card.inline .state-art .icon { width: 24px; height: 24px; }
+.state-card.error .state-art { background: #F3DCCD; color: #9A4A28; box-shadow: 0 0 0 10px rgba(243, 220, 205, 0.45); }
+.state-card.loading .state-art { background: #EFE9DC; box-shadow: 0 0 0 10px rgba(239, 233, 220, 0.5); }
+.state-card.loading .spinner { width: 30px; height: 30px; margin: 0; }
+.state-card h2 { margin: 0 0 6px; font-size: 21px; line-height: 1.2; color: #22331F; }
+.state-card.inline h2 { font-size: 17px; }
+.state-card p { margin: 0 auto; max-width: 36ch; font-size: 15px; line-height: 1.5; color: #5C5649; }
+.state-card.inline p { font-size: 14px; }
+.state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.offline-note { display: flex; gap: 10px; align-items: flex-start; margin: 10px auto 0; max-width: 1160px; padding: 10px 14px; border-radius: 14px; background: #FFF4D6; color: #5A4310; font-size: 14px; line-height: 1.4; box-sizing: border-box; }
+.offline-note .icon { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+@media (max-width: 640px) { .offline-note { margin: 8px 16px 0; } }
 
 /* ===== dark mode: generated by scripts/build-dark-css.py, do not edit ===== */
 :root { color-scheme: light dark; }
@@ -7049,6 +7093,13 @@ body.calm .rise, body.calm .fr-post, body.calm .bar-you, body.calm .bar-uk { ani
 @media (prefers-color-scheme: dark) { .send-tile { border: 1px solid rgba(236, 235, 233, 0.1); background: #342f24; color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .send-more { color: #c6c2b8; } }
 @media (prefers-color-scheme: dark) { .send-more a { color: #c4dbc1; } }
+@media (prefers-color-scheme: dark) { .state-card { background: rgba(52, 47, 36, 0.88); border: 1px solid rgba(236, 235, 233, 0.08); } }
+@media (prefers-color-scheme: dark) { .state-art { background: #1f251a; color: #c4dbc1; } }
+@media (prefers-color-scheme: dark) { .state-card.error .state-art { background: #27201b; color: #dcb3a2; } }
+@media (prefers-color-scheme: dark) { .state-card.loading .state-art { background: #2a261d; } }
+@media (prefers-color-scheme: dark) { .state-card h2 { color: #cedfcb; } }
+@media (prefers-color-scheme: dark) { .state-card p { color: #cbc7be; } }
+@media (prefers-color-scheme: dark) { .offline-note { background: #2c281f; color: #e5d8bb; } }
 /* ===== end of generated dark mode ===== */
 /* DARK_TUNING: hand-tuned dark mode, after the generated block */
 @media (prefers-color-scheme: dark) {
