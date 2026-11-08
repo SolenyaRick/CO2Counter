@@ -3327,6 +3327,14 @@
     io.observe(el);
   }
 
+  // The one main thing to do from Results: your next act, as the primary button.
+  function heroNextAct() {
+    let a = null;
+    try { a = habitActs().acts.find((x) => !x.done && !x.pending); } catch (e) {}
+    if (!a) return "";
+    const save = a.save >= 0.5 && a.n <= 4 ? '<span class="res-cta-kg tnum">−' + kgFmt(a.save) + " kg</span>" : "";
+    return '<a class="btn btn-green res-cta" href="#/habits" data-action="hero-next" data-n="' + a.n + '"><span class="min0"><small>Your next act</small><b>' + esc(a.name) + "</b></span>" + save + icon("arrowRight") + "</a>";
+  }
   function renderResults() {
     const fp = footprint(survey);
     const tips = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) }));
@@ -3397,7 +3405,7 @@
       '<div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">' + kgFmt(afterMax) + "</b></span>" +
       '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
       '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(lifeNow) + "</b></span></div>" +
-      '<p class="xs muted mt-2">Compared like for like. <a class="link-btn" href="#/budget">How we compare</a></p></div></section>';
+      '<p class="xs muted mt-2">Compared like for like. <a class="link-btn" href="#/budget">How we compare</a></p></div>' + heroNextAct() + "</section>";
 
     html +=
       '<div class="res-grid">' + (ui.exampleMode ? "" : pictureItHtml()) + '<section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
@@ -8885,8 +8893,11 @@
   function dockScroll() {
     if (!nextDock || nextDock.hidden) return;
     // On My Habits: once the list's own "Next" row has scrolled away.
-    const row = app.querySelector(".hbf-list .hbf-next");
-    const on = row ? row.closest(".hbf-row").getBoundingClientRect().bottom < 40 : window.scrollY > 260;
+    // Shown once the page's own next-act button (the Next row, or the button
+    // on Results) has scrolled away, so the two never show at once.
+    const mark = app.querySelector(".hbf-list .hbf-next");
+    const own = mark ? mark.closest(".hbf-row") : app.querySelector(".res-cta");
+    const on = own ? own.getBoundingClientRect().bottom < 40 : window.scrollY > 260;
     nextDock.classList.toggle("on", on);
   }
   window.addEventListener("scroll", () => requestAnimationFrame(dockScroll), { passive: true });
@@ -9919,6 +9930,13 @@
       actions["whats-changed"]();
       actions["review-edit"](el);
       if (location.hash !== "#/") location.hash = "#/";
+    },
+    "hero-next": (el, e) => {
+      if (e) e.preventDefault();
+      const n = +el.dataset.n;
+      if (onPhoneScreen()) return actions["next-dock"](el, e);
+      ui.hbOpen = { [n]: true };
+      location.hash = "#/habits";
     },
     "next-dock": (el, e) => {
       if (e) e.preventDefault();
