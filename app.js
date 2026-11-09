@@ -3260,13 +3260,15 @@
     { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
     { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: ".step-body .q, .step-body > :not(ol):not(ul):not(.q-list)" },
     { name: "survey-done", paths: ["/"], page: ".done-v2", hero: ".cat-hero", items: ".guide-card > .row-between, .answer-tile" },
+    { name: "friends", paths: ["/friends"], page: ".fr-page", hero: ".fr-h1", items: ".fr-side > :not(.fr-me), .fr-feed > :not(h1)" },
+    { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
     { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: ".acc-quick, .acc-main > :not(h1):not(.acc-row2), .acc-row2 > *" },
   ];
   let fsObs = null, fsPath = "", fsTick = false, fsHero = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   function freshSpin(path) {
     const bar = document.querySelector(".topbar");
-    const cfg = FS_PAGES.find((c) => c.paths.includes(path) && app.querySelector(c.page));
+    const cfg = FS_PAGES.find((c) => (c.prefix ? path.startsWith(c.prefix) : c.paths.includes(path)) && app.querySelector(c.page));
     const page = cfg && app.querySelector(cfg.page);
     const hero = page && page.querySelector(cfg.hero);
     const on = !!hero;
@@ -3669,7 +3671,7 @@
       '<div><div class="row-between"><span>' + label + '</span><b class="display tnum">' + kgFmt(v) + ' kg</b></div><div class="drop-track"><span class="' + cls + '" style="width:' + Math.max(0, (v / sMax) * 100).toFixed(1) + '%"></span></div></div>';
 
     let html =
-      '<div class="container cat-v2">' + resultTabs(fp, cat) +
+      '<div class="container cat-v2" data-fs-pill="' + esc(CAT_SHORT[cat] || ex.title) + '" data-fs-unit="' + kgFmt(item.yearly) + ' kg">' + resultTabs(fp, cat) +
       '<a class="back-overview" href="#/results">' + icon("chevronLeft") + " Back to overview</a>" +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
       '<div class="cat-hero-main"><div class="label-row"><span class="cat-badge">' + ex.icon + '</span><span class="eyebrow">' + rank + "</span></div>" +
@@ -7866,7 +7868,7 @@
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
     return (
-      '<div class="container friends-v2 fr-page">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
+      '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
       '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
