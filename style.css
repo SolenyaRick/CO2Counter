@@ -7403,6 +7403,12 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .story-intro { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 10vh max(24px, 8vw); }
 .story-intro h2 { margin: 16px 0 0; font-size: clamp(48px, 8.4vw, 132px); line-height: 0.92; letter-spacing: -0.045em; font-weight: 800; transform: translateY(calc(var(--ip, 0) * -12vh)) scale(calc(1 - var(--ip, 0) * 0.08)); transform-origin: 0 50%; opacity: calc(1 - var(--ip, 0) * 0.9); }
 .story-intro h2 b { color: var(--clay-hue); }
+.story-intro-go { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; margin-top: 36px; }
+.story-intro-go .btn { min-height: 52px; padding: 0 24px; font-size: 16px; }
+.story-skip { font-weight: 700; color: inherit; opacity: 0.75; }
+.story.in .story-intro .story-intro-go { animation: story-up var(--dur-slow) var(--ease-out) 420ms both; }
+.story-intro h2 b + b { color: var(--clay-hue); }
+
 .story-intro p { margin: 28px 0 0; font: 500 clamp(18px, 1.7vw, 24px)/1.4 var(--font); opacity: calc(0.8 - var(--ip, 0)); }
 .story.in .story-intro > * { animation: story-up var(--dur-slow) var(--ease-out) both; }
 .story.in .story-intro h2 { animation-delay: 160ms; }

@@ -2083,6 +2083,8 @@
     // nothing about the person or their answers (those stay on the device).
     if (!currentUser && sb) sb.rpc("count_guest_survey").then(() => {}, () => {});
     ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
+    // Picture your year opens over Results, once, as the payoff for finishing.
+    ui.revealStory = hasFullAccess();
     location.hash = "#/results";
   }
 
@@ -3378,9 +3380,14 @@
       '<div class="story-line" aria-hidden="true"><i></i></div>' +
       '<button type="button" class="story-close" data-story-close aria-label="Close">' + icon("x") + "</button>" +
       '<div class="story-scroll" tabindex="0" aria-label="Picture your year. Scroll to move through it.">' +
-      '<section class="story-intro"><span class="story-k">Picture it</span>' +
-      '<h2 id="story-h" class="display">This is your year.<br><b class="tnum">' + kgFmt(d.total) + " kg</b> of CO₂.</h2>" +
-      "<p>Scroll, and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>" +
+      (d.reveal
+        ? '<section class="story-intro"><span class="story-k">Your results are in</span>' +
+          '<h2 id="story-h" class="display">This is your year.<br><b class="tnum story-count">' + kgFmt(d.total) + "</b><b> kg</b> of CO₂.</h2>" +
+          '<div class="story-intro-go"><button type="button" class="btn btn-honey" data-story-next>Watch it shrink ' + icon("arrowRight") + "</button>" +
+          '<button type="button" class="link-btn story-skip" data-story-close>Skip to my results</button></div></section>'
+        : '<section class="story-intro"><span class="story-k">Picture it</span>' +
+          '<h2 id="story-h" class="display">This is your year.<br><b class="tnum">' + kgFmt(d.total) + " kg</b> of CO₂.</h2>" +
+          "<p>Scroll, and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>") +
       '<section class="story-track" style="--n:' + n + '">' +
       '<div class="story-stage">' +
       '<div class="story-orb" aria-hidden="true" style="--b:' + r(d.budget) + '">' +
@@ -3523,9 +3530,10 @@
     if (el._cap !== cap) { el._cap = cap; el.querySelectorAll(".warm-caps li").forEach((li, i) => { li.classList.toggle("on", i === cap); li.classList.toggle("past", i < cap); }); }
   }
 
-  function openStory(from) {
+  function openStory(from, opts) {
     if (storyEl || !survey) return;
     const d = storyData();
+    d.reveal = !!(opts && opts.reveal);
     storyFrom = from || document.activeElement;
     document.body.insertAdjacentHTML("beforeend", storyHtml(d));
     storyEl = document.body.lastElementChild;
@@ -3574,6 +3582,7 @@
     window.addEventListener("resize", paint);
     storyEl.addEventListener("click", (e) => {
       if (e.target.closest("[data-story-close]")) return closeStory();
+      if (e.target.closest("[data-story-next]")) return sc.scrollTo({ top: track.offsetTop, behavior: fsReduce() ? "auto" : "smooth" });
       const pick = e.target.closest("[data-warm-mode]");
       if (pick) {
         warmMode = pick.dataset.warmMode;
@@ -3596,6 +3605,19 @@
     storyEl._unresize = () => window.removeEventListener("resize", paint);
     paint();
     sc.focus({ preventScroll: true });
+    // After the survey: the total counts up once, then waits for them.
+    const count = storyEl.querySelector(".story-count");
+    if (count && !fsReduce()) {
+      count.textContent = "0";
+      const t0 = performance.now() + 450;
+      const tick = (t) => {
+        if (!count.isConnected) return;
+        const k = Math.min(1, Math.max(0, (t - t0) / 1400));
+        count.textContent = kgFmt(d.total * (1 - Math.pow(2, -10 * k)) * (k >= 1 ? 1 : 1));
+        if (k < 1) requestAnimationFrame(tick); else count.textContent = kgFmt(d.total);
+      };
+      requestAnimationFrame(tick);
+    }
   }
   function closeStory(leaving) {
     if (!storyEl) return;
@@ -9445,6 +9467,10 @@
     animateMoves();
     animateProgress();
     freshSpin(path);
+    if (ui.revealStory && path === "/results" && app.querySelector(".results-v2 .res-hero")) {
+      ui.revealStory = false;
+      setTimeout(() => openStory(null, { reveal: true }), 350);
+    }
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
