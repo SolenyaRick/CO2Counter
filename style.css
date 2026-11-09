@@ -7275,3 +7275,72 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
   .tabbar a.active svg { background: #3B4A33; color: #DCEBCB; }
   body.in-app .topbar:not(.has-back) { background: rgba(38, 35, 28, 0.9); }
 }
+
+/* =====================================================================
+   Fresh spin: motion and scroll on Results. Values come from the CO2
+   Counter design system (motion tokens, canopy and sprout). The script is
+   freshSpin() in app.js: it writes --rp (how far down the page you are)
+   and --hp (how far the hero has scrolled away) on <body>, and adds .is-in
+   to each .cc-rv section as it scrolls into view.
+   ===================================================================== */
+:root {
+  --sprout: #c4e57d;
+  --dur-instant: 120ms; --dur-quick: 200ms; --dur-base: 320ms; --dur-slow: 640ms; --dur-story: 900ms; --stagger: 70ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --shadow-lift: 0 24px 48px -20px rgba(46, 42, 34, 0.36);
+}
+/* The sage and honey light drifts as you read down the page. */
+body.fs-results::before { transform: translate3d(calc(var(--rp, 0) * 8vw), calc(var(--rp, 0) * 30vh), 0) scale(calc(1 + var(--rp, 0) * 0.25)); }
+body.fs-results::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(--rp, 0) * -40vh), 0); }
+
+/* Reading line under the top bar, with a leaf riding its tip. */
+.read-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; pointer-events: none; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
+.fs-results .read-line { opacity: 1; }
+.read-line i { position: absolute; inset: 0; background: var(--primary); transform-origin: 0 50%; transform: scaleX(var(--rp, 0)); border-radius: 0 999px 999px 0; }
+.read-line b { position: absolute; top: 50%; left: calc(var(--rp, 0) * 100%); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 0 999px 999px 999px; background: var(--primary); box-shadow: 0 0 0 2px var(--bg); transform: rotate(calc(var(--rp, 0) * 360deg - 45deg)); }
+
+/* The total hands itself to the top bar as the hero scrolls away. */
+.nav-total { display: none; align-items: baseline; gap: 4px; margin-left: 12px; padding: 6px 10px; border-radius: 999px; background: var(--primary); color: var(--primary-ink); font: 800 14px/1 var(--display); letter-spacing: -0.01em; white-space: nowrap; pointer-events: none; opacity: var(--hp, 0); transform: translateY(calc((1 - var(--hp, 0)) * 10px)) scale(calc(0.85 + var(--hp, 0) * 0.15)); }
+.nav-total small { font: 700 11px/1 var(--font); opacity: 0.85; }
+.fs-results .nav-total { display: inline-flex; }
+.fs-results .res-hero-main { transform-origin: 0 0; transform: translateY(calc(var(--hp, 0) * -28px)) scale(calc(1 - var(--hp, 0) * 0.14)); opacity: calc(1 - var(--hp, 0) * 0.7); }
+.fs-results .res-hero-path { transform: translateY(calc(var(--hp, 0) * -14px)); opacity: calc(1 - var(--hp, 0) * 0.45); }
+
+/* A bigger hero number: it is the point of the page. */
+.results-v2 .res-total .display { font-size: clamp(72px, 10vw, 132px); line-height: 0.9; letter-spacing: -0.05em; }
+@media (max-width: 640px) { .results-v2 .res-total .display { font-size: 76px; } }
+
+/* Sections rise into place as they scroll into view, siblings in turn. */
+.cc-rv { opacity: 0; transform: translateY(40px) scale(0.98); transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); transition-delay: calc(var(--i, 0) * var(--stagger) * 2); }
+.cc-rv.is-in { opacity: 1; transform: none; }
+/* Inside a section, its pieces follow it in. */
+.cc-rv .donut-legend li, .cc-rv .pi-tab, .cc-rv .res-next > * { opacity: 0; transform: translateY(14px); transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-spring); }
+.cc-rv.is-in .donut-legend li, .cc-rv.is-in .pi-tab, .cc-rv.is-in .res-next > * { opacity: 1; transform: none; }
+.cc-rv .donut-legend li:nth-child(1), .cc-rv .pi-tab:nth-child(1), .cc-rv .res-next > :nth-child(1) { transition-delay: calc(var(--dur-base) + 1 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(2), .cc-rv .pi-tab:nth-child(2), .cc-rv .res-next > :nth-child(2) { transition-delay: calc(var(--dur-base) + 2 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(3), .cc-rv .pi-tab:nth-child(3) { transition-delay: calc(var(--dur-base) + 3 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(4), .cc-rv .pi-tab:nth-child(4) { transition-delay: calc(var(--dur-base) + 4 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(5), .cc-rv .pi-tab:nth-child(5) { transition-delay: calc(var(--dur-base) + 5 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(6), .cc-rv .pi-tab:nth-child(6) { transition-delay: calc(var(--dur-base) + 6 * var(--stagger)); }
+.cc-rv .donut-legend li:nth-child(n+7), .cc-rv .pi-tab:nth-child(n+7) { transition-delay: calc(var(--dur-base) + 7 * var(--stagger)); }
+/* The donut sweeps round and the bars wait until the chart is on screen. */
+.cc-rv .donut svg { transform: rotate(-120deg) scale(0.86); opacity: 0; transition: transform var(--dur-story) var(--ease-out) var(--dur-quick), opacity var(--dur-base) var(--ease-out) var(--dur-quick); }
+.cc-rv.is-in .donut svg { transform: none; opacity: 1; }
+.cc-rv:not(.is-in) .bar-you, .cc-rv:not(.is-in) .bar-uk { animation-play-state: paused; }
+
+/* Touch feedback: lift on hover, squish on press. */
+.results-v2 .btn, .results-v2 .res-next-go { transition: transform var(--dur-quick) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out), background-color var(--dur-quick) var(--ease-out); }
+@media (hover: hover) {
+  .results-v2 .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+  .results-v2 .res-next-go:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+}
+.results-v2 .btn:active, .results-v2 .res-next-go:active { transform: scale(0.97); transition-duration: var(--dur-instant); }
+
+@media (prefers-reduced-motion: reduce) {
+  body.fs-results::before, body.fs-results::after { transform: none; }
+  .cc-rv, .cc-rv .donut-legend li, .cc-rv .pi-tab, .cc-rv .res-next > *, .cc-rv .donut svg { opacity: 1; transform: none; transition: none; }
+  .fs-results .res-hero-main, .fs-results .res-hero-path { transform: none; opacity: 1; }
+  .nav-total { transform: none; }
+  .read-line b { transform: rotate(-45deg); }
+  .results-v2 .btn:hover, .results-v2 .res-next-go:hover, .results-v2 .btn:active, .results-v2 .res-next-go:active { transform: none; }
+}

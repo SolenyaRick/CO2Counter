@@ -3246,6 +3246,71 @@
       "</section>"
     );
   }
+  // ===== Fresh spin: scroll-linked motion on Results =====
+  // Sections after the hero rise in as they reach the screen; the hero's
+  // total hands itself to the top bar as it scrolls away; a reading line
+  // fills under the top bar. CSS reads --rp and --hp (see style.css).
+  let fsObs = null, fsPath = "", fsTick = false;
+  const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  function freshSpin(path) {
+    const bar = document.querySelector(".topbar");
+    const on = path === "/results" && !!app.querySelector(".results-v2 .res-hero");
+    if (fsObs) { fsObs.disconnect(); fsObs = null; }
+    document.body.classList.toggle("fs-results", on);
+    if (bar && !bar.querySelector(".read-line")) {
+      bar.insertAdjacentHTML("beforeend", '<span class="read-line" aria-hidden="true"><i></i><b></b></span>');
+      const brand = bar.querySelector(".brand");
+      if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"></span>');
+    }
+    const fresh = fsPath !== path;
+    fsPath = path;
+    if (!on) return;
+    const n = app.querySelector(".res-total [data-countup]");
+    const mini = bar && bar.querySelector(".nav-total");
+    if (n && mini) mini.innerHTML = kgFmt(Number(n.dataset.countup)) + " <small>kg</small>";
+    // Everything after the hero; the two cards side by side arrive in turn.
+    const targets = [];
+    let past = false;
+    app.querySelectorAll(".results-v2 > *").forEach((el) => {
+      if (el.classList.contains("res-hero")) return void (past = true);
+      if (!past) return;
+      if (el.classList.contains("res-grid")) [...el.children].forEach((c, i) => { c.style.setProperty("--i", i); targets.push(c); });
+      else targets.push(el);
+    });
+    targets.forEach((el) => el.classList.add("cc-rv"));
+    // A redraw of the same page (a chart toggle) just shows everything.
+    if (!fresh || fsReduce() || !("IntersectionObserver" in window)) targets.forEach((el) => el.classList.add("is-in"));
+    else {
+      fsObs = new IntersectionObserver((es) => es.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("is-in"); fsObs.unobserve(e.target); }
+      }), { rootMargin: "0px 0px -12% 0px", threshold: 0.06 });
+      targets.forEach((el) => fsObs.observe(el));
+    }
+    fsScroll();
+  }
+  function fsScroll() {
+    if (!document.body.classList.contains("fs-results")) return;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    const hero = app.querySelector(".res-hero");
+    const bar = document.querySelector(".topbar");
+    let hp = 0;
+    if (hero) {
+      const r = hero.getBoundingClientRect();
+      const top = bar ? bar.getBoundingClientRect().bottom : 0;
+      hp = Math.min(1, Math.max(0, (top + 40 - r.top) / (r.height * 0.7)));
+    }
+    if (fsReduce()) hp = hp > 0.5 ? 1 : 0;
+    document.body.style.setProperty("--rp", rp.toFixed(4));
+    document.body.style.setProperty("--hp", hp.toFixed(4));
+  }
+  window.addEventListener("scroll", () => {
+    if (fsTick) return;
+    fsTick = true;
+    requestAnimationFrame(() => { fsTick = false; fsScroll(); });
+  }, { passive: true });
+  window.addEventListener("resize", fsScroll);
+
   // Plays once per visit, when it scrolls into view.
   function animateProgress() {
     const el = app.querySelector(".pg:not(.pg-seen)");
@@ -8960,6 +9025,7 @@
     countUp();
     animateMoves();
     animateProgress();
+    freshSpin(path);
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
