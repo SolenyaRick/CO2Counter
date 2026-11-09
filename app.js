@@ -3246,39 +3246,51 @@
       "</section>"
     );
   }
-  // ===== Fresh spin: scroll-linked motion on Results =====
-  // Sections after the hero rise in as they reach the screen; the hero's
-  // total hands itself to the top bar as it scrolls away; a reading line
-  // fills under the top bar. CSS reads --rp and --hp (see style.css).
-  let fsObs = null, fsPath = "", fsTick = false;
+  // ===== Fresh spin: scroll-linked motion =====
+  // On these pages, sections after the hero rise in as they reach the
+  // screen, the hero hands a short summary (data-fs-pill on the page) to
+  // the top bar as it scrolls away, and a reading line fills under the top
+  // bar. CSS reads --rp and --hp (see style.css).
+  const FS_PAGES = [
+    { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
+    { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
+  ];
+  let fsObs = null, fsPath = "", fsTick = false, fsHero = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   function freshSpin(path) {
     const bar = document.querySelector(".topbar");
-    const on = path === "/results" && !!app.querySelector(".results-v2 .res-hero");
+    const cfg = FS_PAGES.find((c) => c.paths.includes(path));
+    const page = cfg && app.querySelector(cfg.page);
+    const hero = page && page.querySelector(cfg.hero);
+    const on = !!hero;
     if (fsObs) { fsObs.disconnect(); fsObs = null; }
-    document.body.classList.toggle("fs-results", on);
+    fsHero = on ? hero : null;
+    document.body.classList.toggle("fs-on", on);
+    FS_PAGES.forEach((c) => document.body.classList.toggle("fs-" + c.name, on && c === cfg));
     if (bar && !bar.querySelector(".read-line")) {
       bar.insertAdjacentHTML("beforeend", '<span class="read-line" aria-hidden="true"><i></i><b></b></span>');
       const brand = bar.querySelector(".brand");
-      if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"></span>');
+      if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"><span></span> <small></small></span>');
     }
     const fresh = fsPath !== path;
     fsPath = path;
     if (!on) return;
-    const n = app.querySelector(".res-total [data-countup]");
     const mini = bar && bar.querySelector(".nav-total");
-    if (n && mini) mini.innerHTML = kgFmt(Number(n.dataset.countup)) + " <small>kg</small>";
-    // Everything after the hero; the two cards side by side arrive in turn.
+    if (mini) {
+      mini.firstChild.textContent = page.dataset.fsPill || "";
+      mini.lastChild.textContent = page.dataset.fsUnit || "";
+    }
+    // Everything after the hero; cards side by side arrive in turn.
     const targets = [];
     let past = false;
-    app.querySelectorAll(".results-v2 > *").forEach((el) => {
-      if (el.classList.contains("res-hero")) return void (past = true);
+    [...page.children].forEach((el) => {
+      if (el === hero || el.contains(hero)) return void (past = true);
       if (!past) return;
       if (el.classList.contains("res-grid")) [...el.children].forEach((c, i) => { c.style.setProperty("--i", i); targets.push(c); });
       else targets.push(el);
     });
     targets.forEach((el) => el.classList.add("cc-rv"));
-    // A redraw of the same page (a chart toggle) just shows everything.
+    // A redraw of the same page (a chart toggle, a tick) just shows everything.
     if (!fresh || fsReduce() || !("IntersectionObserver" in window)) targets.forEach((el) => el.classList.add("is-in"));
     else {
       fsObs = new IntersectionObserver((es) => es.forEach((e) => {
@@ -3289,14 +3301,15 @@
     fsScroll();
   }
   function fsScroll() {
-    if (!document.body.classList.contains("fs-results")) return;
+    if (!fsHero || !document.body.classList.contains("fs-on")) return;
     const max = document.documentElement.scrollHeight - innerHeight;
     const rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
-    const hero = app.querySelector(".res-hero");
     const bar = document.querySelector(".topbar");
-    let hp = 0;
-    if (hero) {
-      const r = hero.getBoundingClientRect();
+    let hp;
+    // A hero that sticks (the phone's level strip) tightens over the first 140px.
+    if (getComputedStyle(fsHero).position === "sticky") hp = Math.min(1, scrollY / 140);
+    else {
+      const r = fsHero.getBoundingClientRect();
       const top = bar ? bar.getBoundingClientRect().bottom : 0;
       hp = Math.min(1, Math.max(0, (top + 40 - r.top) / (r.height * 0.7)));
     }
@@ -3508,7 +3521,7 @@
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
-    let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
+    let html = '<div class="container results-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
     if (ui.exampleMode) {
       html +=
         '<div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident\'s footprint, worked out the same way as yours will be.</p></div>' +
@@ -5098,7 +5111,7 @@
     hbSheetBuild = null;
     const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
-      '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '">' +
+      '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' +
       party + '<div class="hb3-top-row">' + hero + spot + "</div>" + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
@@ -5208,7 +5221,7 @@
     const nextOne = todo.find((a) => !a.pending);
     const ringDeg = Math.round((made / 7) * 360);
     return (
-      '<div class="container hb-page hbf">' + party +
+      '<div class="container hb-page hbf" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' + party +
       '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
       '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + "</span></div>" +
       (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
