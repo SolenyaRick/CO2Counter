@@ -1436,8 +1436,9 @@
     { key: "phone", short: "Phone charges" },
     { key: "target", short: "Fair share" },
   ];
-  const piFour = () => (D.EVERYDAY_COMPARISONS.mascots || []).map((k) => piItems().find((x) => x.key === k)).filter(Boolean);
-  const piViews = () => PI_REAL.concat(piFour().map((x) => ({ key: x.key, short: x.short, mascot: x })));
+  // Your mascot: the one you picked, or the default until you do.
+  const piMine = () => piItems().find((x) => x.key === (piMascot() || D.EVERYDAY_COMPARISONS.defaultMascot)) || piItems()[0];
+  const piViews = () => { const m = piMine(); return PI_REAL.concat([{ key: "mascot", short: m.short, mascot: m }]); };
   const piView = () => {
     const k = ui.piView || lsGet(KEY_PI_VIEW, "tree");
     return piViews().find((v) => v.key === k) || piViews()[0];
@@ -1517,16 +1518,21 @@
         foot(ba.after <= B ? "The 7 Acts would bring you inside the 1.5°C budget." : "The 7 Acts would close " + Math.round(((ba.now - ba.after) / Math.max(1, ba.now - B)) * 100) + "% of the gap to it.",
           "The 1.5°C budget: about 2.5 t per person a year by 2030 (Hot or Cool Institute, 2021).");
     }
+    // Change mascot: every drawing, one tap to pick.
+    if (ui.piPicking)
+      return '<div class="pi-mrow"><b>Pick your mascot</b><button type="button" class="link-btn" data-action="pi-mascot-pick">Cancel</button></div><div class="pi-pick-grid">' +
+        piItems().map((x) => '<button type="button" class="pi-pick-btn' + (x.key === v.key ? " on" : "") + '" data-action="pi-mascot-set" data-key="' + x.key + '" aria-pressed="' + (x.key === v.key) + '">' + piIcon(x.key, 48) + '<span class="pi-pick-name">' + esc(x.short) + "</span></button>").join("") + "</div>";
     const it = v.mascot, a = ba.now / it.size, b = ba.after / it.size;
+    const mrow = '<div class="pi-mrow"><span class="sm">Your mascot: <b>' + esc(it.short) + '</b></span><button type="button" class="link-btn" data-action="pi-mascot-pick" aria-label="Change your mascot">Change</button></div>';
     const fun = it.source + " For fun and scale, not precision.";
     if (it.type === "w" && a >= 1) {
       const g = piIconGrid(it, a, b, it.one, it.many, ["After the 7 Acts", "Cut by them"]);
-      return stat(piNum(a), piNum(b), "the weight of your CO₂ a year, in " + it.many) + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
+      return mrow + stat(piNum(a), piNum(b), "the weight of your CO₂ a year, in " + it.many) + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
         foot("The 7 Acts would cut " + howMany(a - b, it) + " a year.", fun);
     }
     const m = piModel(it, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + v.key });
     const [x, y] = m.headline.split(" → ");
-    return stat(x, y, m.unitWord) + '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + foot(m.caption, fun);
+    return mrow + stat(x, y, m.unitWord) + '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + foot(m.caption, fun);
   }
   function pictureItHtml() {
     const ba = actsBeforeAfter();
@@ -1534,7 +1540,7 @@
     const v = piView();
     const tab = (x) =>
       '<button type="button" role="tab" class="pi-tab' + (x.key === v.key ? " on" : "") + '" aria-selected="' + (x.key === v.key) + '" data-action="pi-view" data-key="' + x.key + '">' +
-      '<span class="pi-tab-ic">' + (x.mascot ? piIcon(x.key, 26) : piGlyph(x.key, 18)) + "</span>" + esc(x.short) + "</button>";
+      '<span class="pi-tab-ic">' + (x.mascot ? piIcon(x.mascot.key, 26) : piGlyph(x.key, 18)) + "</span>" + esc(x.short) + "</button>";
     return (
       '<section class="glass picture-it pi-wrap pi-v2" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
       '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' +
@@ -9840,16 +9846,26 @@
     },
     "pi-view": (el) => {
       ui.piView = el.dataset.key;
+      ui.piPicking = false;
       lsSet(KEY_PI_VIEW, el.dataset.key);
       const tabs = document.querySelector(".pi-tabs"), left = tabs ? tabs.scrollLeft : null;
       render();
       const t2 = document.querySelector(".pi-tabs");
       if (t2 && left != null) t2.scrollLeft = left;
     },
-    // Share: the card shows the mascot you're on, or your usual one.
+    "pi-mascot-pick": () => {
+      ui.piPicking = !ui.piPicking;
+      render();
+    },
+    "pi-mascot-set": (el) => {
+      lsSet(KEY_MASCOT, el.dataset.key);
+      ui.piPicking = false;
+      render();
+    },
+    // Share: the card opens on your mascot.
     "pi-share": () => {
       const v = piView();
-      const k = v.mascot ? v.key : piMascot() || (piFour()[0] || piItems()[0]).key;
+      const k = piMine().key;
       ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === k));
       openShareCard();
     },

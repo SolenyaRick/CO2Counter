@@ -164,8 +164,8 @@
     // it into CO2 with the UK grid factor (ELECTRICITY_FACTOR, DESNZ).
     phoneKwh: 0.019,
     phoneSource: "A full smartphone charge uses about 0.019 kWh (US EPA, Greenhouse Gas Equivalencies Calculator).",
-    // Four mascots sit after them in Picture it.
-    mascots: ["kakapo", "pangolin", "capybara", "narwhal"],
+    // Then your mascot (you can change it), this one until you pick.
+    defaultMascot: "capybara",
   };
   const FUN_COMPARISONS = {
     co2Density: 1.87,

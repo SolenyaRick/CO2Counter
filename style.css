@@ -6367,6 +6367,9 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
 .pi-v2 .pi-vis { height: 196px; }
 .pi-v2 .pi-cap { font-size: 15px; }
 .pi-src { margin: -4px 0 0; }
+.pi-mrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 -4px; }
+.pi-v2 .pi-pick-grid { grid-auto-flow: row; grid-template-rows: none; grid-auto-columns: auto; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.pi-v2 .pi-pick-btn .pi-ic { width: 48px; height: 48px; margin: 0; }
 .pi-bars { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .pi-bar-row { display: grid; grid-template-columns: 48px 1fr 52px; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #4A453A; }
 .pi-bar-row b { text-align: right; color: #2E2A22; }
