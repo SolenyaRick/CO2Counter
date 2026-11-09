@@ -1433,12 +1433,12 @@
   const KEY_PI_VIEW = "co2_pi_view";
   const PI_REAL = [
     { key: "tree", short: "Trees" },
-    { key: "phone", short: "Phone charges" },
+    { key: "phone", short: "Phone charges", tab: "Phones" },
     { key: "target", short: "Fair share" },
   ];
   // Your mascot: the one you picked, or the default until you do.
   const piMine = () => piItems().find((x) => x.key === (piMascot() || D.EVERYDAY_COMPARISONS.defaultMascot)) || piItems()[0];
-  const piViews = () => { const m = piMine(); return PI_REAL.concat([{ key: "mascot", short: m.short, mascot: m }]); };
+  const piViews = () => { const m = piMine(); return PI_REAL.concat([{ key: "mascot", short: m.short, tab: "Mascot", mascot: m }]); };
   const piView = () => {
     const k = ui.piView || lsGet(KEY_PI_VIEW, "tree");
     return piViews().find((v) => v.key === k) || piViews()[0];
@@ -1540,13 +1540,12 @@
     const v = piView();
     const tab = (x) =>
       '<button type="button" role="tab" class="pi-tab' + (x.key === v.key ? " on" : "") + '" aria-selected="' + (x.key === v.key) + '" data-action="pi-view" data-key="' + x.key + '">' +
-      '<span class="pi-tab-ic">' + (x.mascot ? piIcon(x.mascot.key, 26) : piGlyph(x.key, 18)) + "</span>" + esc(x.short) + "</button>";
+      '<span class="pi-tab-ic">' + (x.mascot ? piIcon(x.mascot.key, 24) : piGlyph(x.key, 20)) + '</span><span class="pi-tab-l">' + esc(x.tab || x.short) + "</span></button>";
     return (
       '<section class="glass picture-it pi-wrap pi-v2" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
       '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' +
       '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div>" +
-      '<div class="pi-tabs" role="tablist" aria-label="Compare with">' + PI_REAL.map(tab).join("") + '<span class="pi-tabs-gap" aria-hidden="true"></span>' +
-      piViews().filter((x) => x.mascot).map(tab).join("") + "</div>" +
+      '<div class="pi-tabs" role="tablist" aria-label="Compare with">' + PI_REAL.map(tab).join("") +       piViews().filter((x) => x.mascot).map(tab).join("") + "</div>" +
       '<div class="pi-panel" role="tabpanel" aria-label="' + esc(v.short) + '">' + piPanel(v, ba) + "</div></section>"
     );
   }
