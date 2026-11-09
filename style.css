@@ -7277,7 +7277,7 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
 }
 
 /* =====================================================================
-   Fresh spin: motion and scroll on Results and My Habits. Values come from the CO2
+   Fresh spin: motion and scroll on Results, My Habits, Survey and Account. Values come from the CO2
    Counter design system (motion tokens, canopy and sprout). The script is
    freshSpin() in app.js: it writes --rp (how far down the page you are)
    and --hp (how far the hero has scrolled away) on <body>, and adds .is-in
@@ -7361,6 +7361,15 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
   .fs-habits .hbf-lv > span { opacity: calc(1 - var(--hp, 0) * 0.5); }
 }
 
+
+/* ---------- Survey ---------- */
+/* The step card shrinks away; the question cards wait until they are on screen. */
+.fs-survey .step-hero-main, .fs-survey-done .cat-hero-main { transform-origin: 0 0; transform: translateY(calc(var(--hp, 0) * -24px)) scale(calc(1 - var(--hp, 0) * 0.1)); opacity: calc(1 - var(--hp, 0) * 0.65); }
+.fs-survey .cat-hero-side, .fs-survey-done .cat-figs { transform: translateY(calc(var(--hp, 0) * -40px)); }
+.fs-survey .cat-watermark, .fs-survey-done .cat-watermark { rotate: calc(var(--hp, 0) * -14deg); scale: calc(1 + var(--hp, 0) * 0.15); }
+.q.q-in.cc-rv:not(.is-in) { animation-play-state: paused; }
+.cc-rv.answer-tile { transition-delay: calc(var(--i, 0) * var(--stagger)); }
+
 @media (prefers-reduced-motion: reduce) {
   body.fs-on::before, body.fs-on::after { transform: none; }
   .cc-rv, .cc-rv .donut-legend li, .cc-rv .pi-tab, .cc-rv .res-next > *, .cc-rv .donut svg { opacity: 1; transform: none; transition: none; }
@@ -7369,6 +7378,8 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
   .fs-habits .hb-hero .hb3-lv, .fs-habits .hb3-top-row .hb3-spot { transform: none; opacity: 1; }
   .cc-rv .hb3-grid > .hb-item, .cc-rv .hbf-list > li, .cc-rv.hb3-badges li { opacity: 1; translate: none; scale: none; transition: none; }
   .fs-habits .hbf-strip, .fs-habits .hbf-ring { scale: none; }
+  .fs-survey .step-hero-main, .fs-survey-done .cat-hero-main, .fs-survey .cat-hero-side, .fs-survey-done .cat-figs { transform: none; opacity: 1; }
+  .fs-survey .cat-watermark, .fs-survey-done .cat-watermark { rotate: none; scale: none; }
   .read-line b { transform: rotate(-45deg); }
   .results-v2 .btn:hover, .results-v2 .res-next-go:hover, .results-v2 .btn:active, .results-v2 .res-next-go:active { transform: none; }
 }

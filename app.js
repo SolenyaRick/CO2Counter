@@ -2033,7 +2033,7 @@
     const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
     const now = footprint(survey).totalYearly;
     return (
-      '<div class="container done-v2">' +
+      '<div class="container done-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg last time">' +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("clipboard") + "</span>" +
       '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
       '<h1 class="cat-title display">Update your answers</h1><p class="cat-why">' +
@@ -2368,7 +2368,8 @@
         '<button type="button" class="btn btn-outline btn-sm" data-action="cancel-new-survey">' + icon("x") + " Cancel new survey</button></div>"
       : "";
     return (
-      '<div class="container survey-v2">' + newBanner +
+      '<div class="container survey-v2" data-fs-key="' + qKey + '" data-fs-from="' + (ui.step / n).toFixed(4) + '" data-fs-to="' + ((ui.step + 1) / n).toFixed(4) +
+      '" data-fs-pill="Step ' + (ui.step + 1) + " of " + n + " · " + kgFmt(kg) + '" data-fs-unit="kg">' + newBanner +
       '<nav class="section-tabs" aria-label="Survey steps">' + tabs + "</nav>" +
       '<header class="glass step-hero' + (qAnimate ? " rise" : "") + '"><span class="cat-watermark" aria-hidden="true">' + step.icon + "</span>" +
       '<div class="step-hero-main"><span class="eyebrow">Step ' + (ui.step + 1) + " of " + n + "</span>" +
@@ -3251,15 +3252,21 @@
   // screen, the hero hands a short summary (data-fs-pill on the page) to
   // the top bar as it scrolls away, and a reading line fills under the top
   // bar. CSS reads --rp and --hp (see style.css).
+  // items: what rises in (default: everything after the hero). A page can
+  // set data-fs-key (redraws with a new key replay the reveal) and
+  // data-fs-from/-to (the reading line shows that span of a longer journey).
   const FS_PAGES = [
     { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
     { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
+    { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: ".step-body .q, .step-body > :not(ol):not(ul):not(.q-list)" },
+    { name: "survey-done", paths: ["/"], page: ".done-v2", hero: ".cat-hero", items: ".guide-card > .row-between, .answer-tile" },
+    { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: ".acc-quick, .acc-main > :not(h1):not(.acc-row2), .acc-row2 > *" },
   ];
   let fsObs = null, fsPath = "", fsTick = false, fsHero = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   function freshSpin(path) {
     const bar = document.querySelector(".topbar");
-    const cfg = FS_PAGES.find((c) => c.paths.includes(path));
+    const cfg = FS_PAGES.find((c) => c.paths.includes(path) && app.querySelector(c.page));
     const page = cfg && app.querySelector(cfg.page);
     const hero = page && page.querySelector(cfg.hero);
     const on = !!hero;
@@ -3272,22 +3279,33 @@
       const brand = bar.querySelector(".brand");
       if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"><span></span> <small></small></span>');
     }
-    const fresh = fsPath !== path;
-    fsPath = path;
+    const key = path + "|" + ((page && page.dataset.fsKey) || "");
+    const fresh = fsPath !== key;
+    fsPath = key;
     if (!on) return;
     const mini = bar && bar.querySelector(".nav-total");
     if (mini) {
       mini.firstChild.textContent = page.dataset.fsPill || "";
       mini.lastChild.textContent = page.dataset.fsUnit || "";
     }
-    // Everything after the hero; cards side by side arrive in turn.
+    // Everything after the hero (or the page's own items); cards that sit
+    // side by side arrive in turn.
     const targets = [];
-    let past = false;
-    [...page.children].forEach((el) => {
-      if (el === hero || el.contains(hero)) return void (past = true);
-      if (!past) return;
-      if (el.classList.contains("res-grid")) [...el.children].forEach((c, i) => { c.style.setProperty("--i", i); targets.push(c); });
-      else targets.push(el);
+    if (cfg.items) targets.push(...page.querySelectorAll(cfg.items));
+    else {
+      let past = false;
+      [...page.children].forEach((el) => {
+        if (el === hero || el.contains(hero)) return void (past = true);
+        if (!past) return;
+        if (el.classList.contains("res-grid")) targets.push(...el.children);
+        else targets.push(el);
+      });
+    }
+    const seen = new Map();
+    targets.forEach((el) => {
+      const k = seen.get(el.parentNode) || 0;
+      seen.set(el.parentNode, k + 1);
+      if (k) el.style.setProperty("--i", Math.min(k, 3));
     });
     targets.forEach((el) => el.classList.add("cc-rv"));
     // A redraw of the same page (a chart toggle, a tick) just shows everything.
@@ -3303,7 +3321,12 @@
   function fsScroll() {
     if (!fsHero || !document.body.classList.contains("fs-on")) return;
     const max = document.documentElement.scrollHeight - innerHeight;
-    const rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    let rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    const page = fsHero.closest("[data-fs-from]");
+    if (page) {
+      const from = Number(page.dataset.fsFrom), to = Number(page.dataset.fsTo);
+      rp = from + (to - from) * (max > 0 ? rp : 1);
+    }
     const bar = document.querySelector(".topbar");
     let hp;
     // A hero that sticks (the phone's level strip) tightens over the first 140px.
@@ -8318,7 +8341,7 @@
       '<div class="acc-delete"><div class="acc-row"><span class="acc-row-text"><b class="display">Delete account</b>Permanently deletes your account, survey answers and any support record.</span>' + del + "</div>" + confirm + "</div></section>";
 
     return (
-      '<div class="container account-v2 acc-page"><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
+      '<div class="container account-v2 acc-page" data-fs-pill="' + esc(name) + '" data-fs-unit=""><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
       '<main class="acc-main"><h1 class="display acc-h1">Account</h1><div class="acc-row2">' + profile + plan + "</div>" +
       aboutYouCard() + notifSettingsCard() +
       (ui.isAdmin
