@@ -1544,7 +1544,8 @@
     return (
       '<section class="glass picture-it pi-wrap pi-v2" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
       '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' +
-      '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div>" +
+      '<div class="pi-acts"><button type="button" class="pi-play" data-action="pi-story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Watch it shrink</button>' +
+      '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div></div>" +
       '<div class="pi-tabs" role="tablist" aria-label="Compare with">' + PI_REAL.map(tab).join("") +       piViews().filter((x) => x.mascot).map(tab).join("") + "</div>" +
       '<div class="pi-panel" role="tabpanel" aria-label="' + esc(v.short) + '">' + piPanel(v, ba) + "</div></section>"
     );
@@ -3247,6 +3248,133 @@
       "</section>"
     );
   }
+  // ===== Picture your year: a full-screen scroll story =====
+  // Opens from the Picture it card. Your year is a disc whose area is your
+  // kg; scrolling walks through your three biggest moves and the disc
+  // shrinks towards the dashed 1.5°C budget ring.
+  let storyEl = null, storyFrom = null;
+  function storyData() {
+    const fp = footprint(survey);
+    const tree = (D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22;
+    const moves = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) })).filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
+    const total = Math.max(1, fp.totalYearly);
+    let left = total;
+    const steps = [{ kg: total, k: "Today", h: "Your year: " + kgFmt(total) + " kg", p: "That's what <em>" + kgFmt(total / tree) + " mature trees</em> soak up in a year." }];
+    moves.forEach((x, i) => {
+      left = Math.max(0, left - x.t.saving);
+      steps.push({ kg: left, k: "Move " + (i + 1) + " · " + esc(CAT_SHORT[x.b.key] || x.b.label), h: esc(capFirst(x.t.realisticLabel || x.t.title)), p: "Saves about <em>" + kgFmt(x.t.saving) + " kg</em> a year. You're down to " + kgFmt(left) + " kg." });
+    });
+    return { total, steps, moves, left, budget: D.BUDGET_YEARLY, tree };
+  }
+  function storyHtml(d) {
+    const n = d.steps.length;
+    const saved = d.total - d.left;
+    const gap = d.left - d.budget;
+    const r = (kg) => Math.sqrt(Math.max(0, kg) / d.total).toFixed(4);
+    const first = d.moves[0];
+    return (
+      '<div class="story" role="dialog" aria-modal="true" aria-labelledby="story-h">' +
+      '<div class="story-line" aria-hidden="true"><i></i></div>' +
+      '<button type="button" class="story-close" data-story-close aria-label="Close">' + icon("x") + "</button>" +
+      '<div class="story-scroll" tabindex="0" aria-label="Picture your year. Scroll to move through it.">' +
+      '<section class="story-intro"><span class="story-k">Picture it</span>' +
+      '<h2 id="story-h" class="display">This is your year.<br><b class="tnum">' + kgFmt(d.total) + " kg</b> of CO₂.</h2>" +
+      "<p>Scroll, and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>" +
+      '<section class="story-track" style="--n:' + n + '">' +
+      '<div class="story-stage">' +
+      '<div class="story-orb" aria-hidden="true" style="--b:' + r(d.budget) + '">' +
+      '<i class="story-ghost"></i><i class="story-disc"></i><i class="story-budget"></i>' +
+      '<span class="story-saved"><b class="tnum">0</b> kg saved</span>' +
+      '<span class="story-budget-l">1.5°C budget · ' + kgFmt(d.budget) + " kg</span>" +
+      '<span class="story-read"><b class="display tnum story-kg">' + kgFmt(d.total) + "</b><small>kg a year</small></span></div>" +
+      '<ol class="story-steps">' + d.steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + st.k + '</span><h3 class="display">' + st.h + "</h3><p>" + st.p + "</p></li>").join("") + "</ol>" +
+      '<div class="story-ticks" aria-hidden="true">' + d.steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
+      "</div></section>" +
+      '<section class="story-end"><span class="story-k">' + (d.moves.length ? d.moves.length + (d.moves.length === 1 ? " move" : " moves") : "Your year") + "</span>" +
+      '<h2 class="display">' + (saved >= 0.5 ? "<b class=\"tnum\">" + kgFmt(saved) + " kg</b> lighter, every year." : "You're already lean.") + "</h2>" +
+      "<p>" + (gap > 0 ? "That leaves you " + kgFmt(gap) + " kg above the 1.5°C budget. The 7 Acts close more of the gap." : "That puts you inside the 1.5°C budget of " + kgFmt(d.budget) + " kg.") + "</p>" +
+      '<div class="story-go">' + (first ? '<a class="btn btn-honey" href="' + catHref(first.b.key) + '">Start with ' + esc(CAT_SHORT[first.b.key] || first.b.label) + " " + icon("arrowRight") + "</a>" : "") +
+      '<a class="btn story-ghost-btn" href="#/habits">Open My Habits</a>' +
+      '<button type="button" class="link-btn story-back" data-story-close>Back to my results</button></div></section>' +
+      "</div></div>"
+    );
+  }
+  function openStory(from) {
+    if (storyEl || !survey) return;
+    const d = storyData();
+    storyFrom = from || document.activeElement;
+    document.body.insertAdjacentHTML("beforeend", storyHtml(d));
+    storyEl = document.body.lastElementChild;
+    document.body.classList.add("modal-open", "story-open");
+    // It opens out of the button that was pressed.
+    const b = from && from.getBoundingClientRect();
+    if (b) { storyEl.style.setProperty("--ox", Math.round(b.left + b.width / 2) + "px"); storyEl.style.setProperty("--oy", Math.round(b.top + b.height / 2) + "px"); }
+    requestAnimationFrame(() => requestAnimationFrame(() => storyEl && storyEl.classList.add("in")));
+    const sc = storyEl.querySelector(".story-scroll");
+    const track = storyEl.querySelector(".story-track");
+    const kgEl = storyEl.querySelector(".story-kg");
+    const savedEl = storyEl.querySelector(".story-saved b");
+    const items = [...storyEl.querySelectorAll(".story-steps li")];
+    const n = d.steps.length;
+    let tick = false, shown = -1;
+    const ease = (t) => t * t * (3 - 2 * t);
+    const paint = () => {
+      tick = false;
+      if (!storyEl) return;
+      const vh = sc.clientHeight;
+      const max = Math.max(1, sc.scrollHeight - vh);
+      const ip = Math.min(1, sc.scrollTop / (vh * 0.8));
+      const tp = Math.min(1, Math.max(0, (sc.scrollTop - track.offsetTop) / Math.max(1, track.offsetHeight - vh)));
+      const f = Math.min(n - 1, Math.max(0, tp * n - 0.5));
+      const i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      const kg = fsReduce() ? d.steps[Math.round(f)].kg : d.steps[i0].kg + (d.steps[i1].kg - d.steps[i0].kg) * ease(f - i0);
+      const active = Math.min(n - 1, Math.floor(tp * n));
+      storyEl.style.setProperty("--ip", ip.toFixed(4));
+      storyEl.style.setProperty("--tp", tp.toFixed(4));
+      storyEl.style.setProperty("--sp", (sc.scrollTop / max).toFixed(4));
+      storyEl.style.setProperty("--s", Math.sqrt(kg / d.total).toFixed(4));
+      storyEl.style.setProperty("--q", (1 - kg / d.total).toFixed(4));
+      storyEl.classList.toggle("under", kg <= d.budget);
+      kgEl.textContent = kgFmt(kg);
+      savedEl.textContent = "−" + kgFmt(d.total - kg);
+      storyEl.classList.toggle("saving", d.total - kg >= 1);
+      if (active !== shown) {
+        shown = active;
+        items.forEach((li, i) => { li.classList.toggle("on", i === active); li.classList.toggle("past", i < active); });
+      }
+    };
+    sc.addEventListener("scroll", () => { if (!tick) { tick = true; requestAnimationFrame(paint); } }, { passive: true });
+    window.addEventListener("resize", paint);
+    storyEl.addEventListener("click", (e) => {
+      if (e.target.closest("[data-story-close]")) return closeStory();
+      if (e.target.closest("a[href]")) closeStory(true);
+    });
+    storyEl.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); return closeStory(); }
+      if (e.key !== "Tab") return;
+      // Keep focus inside while it's open.
+      const f = [...storyEl.querySelectorAll("button, a[href], [tabindex='0']")];
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    });
+    storyEl._unresize = () => window.removeEventListener("resize", paint);
+    paint();
+    sc.focus({ preventScroll: true });
+  }
+  function closeStory(leaving) {
+    if (!storyEl) return;
+    const el = storyEl;
+    storyEl = null;
+    el._unresize();
+    el.classList.remove("in");
+    el.classList.add("out");
+    document.body.classList.remove("modal-open", "story-open");
+    setTimeout(() => el.remove(), fsReduce() ? 0 : 420);
+    if (!leaving && storyFrom && storyFrom.isConnected) storyFrom.focus({ preventScroll: true });
+    storyFrom = null;
+  }
+
   // ===== Fresh spin: scroll-linked motion =====
   // On these pages, sections after the hero rise in as they reach the
   // screen, the hero hands a short summary (data-fs-pill on the page) to
@@ -10022,6 +10150,8 @@
       ui.piPicking = false;
       render();
     },
+    // Picture your year: the full-screen story.
+    "pi-story": (el) => openStory(el),
     // Share: the card opens on your mascot.
     "pi-share": () => {
       const v = piView();
