@@ -3644,11 +3644,13 @@
     { name: "welcome", paths: ["/", "/welcome"], page: ".intro-v2", hero: ".wl", items: ".intro-mission .intro-sec-head, .mission > li, .intro-split > *, .intro-cards > *, .intro-faq > *", onScroll: () => paintWelcome() },
     { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
     { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
-    { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: ".step-body .q, .step-body > :not(ol):not(ul):not(.q-list)" },
-    { name: "survey-done", paths: ["/"], page: ".done-v2", hero: ".cat-hero", items: ".guide-card > .row-between, .answer-tile" },
+    // Pages where people are filling things in stay calm: no rise-ins, only
+    // the reading line and the top-bar pill.
+    { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: null },
+    { name: "survey-done", paths: ["/"], page: ".done-v2", hero: ".cat-hero", items: null },
     { name: "friends", paths: ["/friends"], page: ".fr-page", hero: ".fr-h1", items: ".fr-side > :not(.fr-me), .fr-feed > :not(h1)" },
     { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
-    { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: ".acc-quick, .acc-main > :not(h1):not(.acc-row2), .acc-row2 > *" },
+    { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: null },
   ];
   let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -3682,7 +3684,7 @@
     // Everything after the hero (or the page's own items); cards that sit
     // side by side arrive in turn.
     const targets = [];
-    if (cfg.items) targets.push(...page.querySelectorAll(cfg.items));
+    if (cfg.items !== undefined) { if (cfg.items) targets.push(...page.querySelectorAll(cfg.items)); }
     else {
       let past = false;
       [...page.children].forEach((el) => {
