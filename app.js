@@ -3530,6 +3530,50 @@
     if (el._cap !== cap) { el._cap = cap; el.querySelectorAll(".warm-caps li").forEach((li, i) => { li.classList.toggle("on", i === cap); li.classList.toggle("past", i < cap); }); }
   }
 
+  // ===== Level up: a short full-screen moment on My Habits =====
+  // The new level's tree draws itself, the acts you've banked fill in, and
+  // it waits for "Keep going" (or Esc). Shown once per level reached.
+  function openLevelUp(l) {
+    if (storyEl || document.querySelector(".lvup")) return;
+    const name = HB_LEVELS[l.to][1], prev = HB_LEVELS[l.from][1], next = HB_LEVELS[l.to + 1];
+    const toNext = next ? next[0] - l.made : 0;
+    const fresh = HB_LEVELS[l.from][0];
+    const from = document.activeElement;
+    const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < l.made ? (i >= fresh ? "got new" : "got") : "") + '" style="--k:' + Math.max(0, i - fresh) + '"></span>').join("");
+    const leaves = Array.from({ length: 14 }, (_, i) => '<i style="--x:' + Math.round(8 + ((i * 53) % 84)) + "%;--d:" + ((i % 7) * 0.12).toFixed(2) + "s;--r:" + ((i * 47) % 160 - 80) + 'deg"></i>').join("");
+    document.body.insertAdjacentHTML("beforeend",
+      '<div class="lvup" role="dialog" aria-modal="true" aria-labelledby="lvup-h">' +
+      '<span class="lvup-leaves" aria-hidden="true">' + leaves + "</span>" +
+      '<button type="button" class="story-close" data-lv-close aria-label="Close">' + icon("x") + "</button>" +
+      '<div class="lvup-in">' +
+      '<span class="story-k">Level up · Level ' + (l.to + 1) + "</span>" +
+      '<div class="lvup-tree">' + hbTree(name, "lv", true) + "</div>" +
+      '<p class="lvup-from" aria-hidden="true"><s>' + esc(prev) + "</s></p>" +
+      '<h2 id="lvup-h" class="display">' + esc(name) + "</h2>" +
+      '<div class="lvup-dots" role="img" aria-label="' + l.made + ' of the 7 Acts banked">' + dots + "</div>" +
+      '<p class="lvup-sub">' + l.made + " of the 7 Acts banked. " + (next ? toNext + (toNext === 1 ? " more act" : " more acts") + " to " + esc(next[1]) + "." : "That's all seven. Keep measuring to keep your line falling.") + "</p>" +
+      '<button type="button" class="btn btn-honey lvup-go" data-lv-close>Keep going ' + icon("arrowRight") + "</button>" +
+      "</div></div>");
+    const el = document.body.lastElementChild;
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("in")));
+    setTimeout(() => haptic("success"), 600);
+    const close = () => {
+      if (!el.isConnected || el.classList.contains("out")) return;
+      el.classList.remove("in");
+      el.classList.add("out");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => el.remove(), fsReduce() ? 0 : 420);
+      if (from && from.isConnected) from.focus({ preventScroll: true });
+    };
+    el.addEventListener("click", (e) => { if (e.target.closest("[data-lv-close]")) close(); });
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      if (e.key === "Tab") { const f = [...el.querySelectorAll("button")]; const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+    });
+    setTimeout(() => { const b = el.querySelector(".lvup-go"); if (b) b.focus({ preventScroll: true }); }, 50);
+  }
+
   function openStory(from, opts) {
     if (storyEl || !survey) return;
     const d = storyData();
@@ -5266,6 +5310,7 @@
     '<svg class="hb3-tree ' + (cls || "") + (draw ? " draw" : "") + '" viewBox="0 0 120 110" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     HB_TREES[name.toLowerCase()].map(([d, t], i) => '<path class="tr-' + t + '" d="' + d + '" pathLength="1" style="--n:' + i + '"></path>').join("") + "</svg>";
   const KEY_HB_WON = "co2_hb_won"; // acts already celebrated, per account
+  const KEY_HB_LEVEL = "co2_hb_level"; // highest level already celebrated, per account
 
   function renderHabitsPage() {
     const { acts, ready } = habitActs();
@@ -5283,6 +5328,13 @@
     const lvPct = nextLv ? Math.max(8, Math.round(((made - HB_LEVELS[lv][0]) / (nextLv[0] - HB_LEVELS[lv][0])) * 100)) : 100;
     const toNextText = nextLv ? toNext + (toNext === 1 ? " act" : " acts") + " to " + nextLv[1] : "Top level";
 
+    // Reaching a new level gets a full-screen moment, once (see openLevelUp).
+    const lvKey = KEY_HB_LEVEL + (currentUser ? ":" + currentUser.id : "");
+    if (ui.hbLvKey !== lvKey) {
+      ui.hbLvKey = lvKey;
+      const seenLv = lsGet(lvKey, 0);
+      if (lv > seenLv) { lsSet(lvKey, lv); ui.levelUp = { from: seenLv, to: lv, made }; }
+    }
     // Newly banked acts get a party, once (the first visit counts too).
     const wonKey = KEY_HB_WON + (currentUser ? ":" + currentUser.id : "");
     if (!ui.hbWin || ui.hbWin.key !== wonKey) {
@@ -9469,6 +9521,11 @@
     animateMoves();
     animateProgress();
     freshSpin(path);
+    if (ui.levelUp && (path === "/habits" || path === "/check-in") && app.querySelector(".hb-page")) {
+      const l = ui.levelUp;
+      ui.levelUp = null;
+      setTimeout(() => openLevelUp(l), 500);
+    }
     if (ui.revealStory && path === "/results" && app.querySelector(".results-v2 .res-hero")) {
       ui.revealStory = false;
       setTimeout(() => openStory(null, { reveal: true }), 350);

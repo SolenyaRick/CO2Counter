@@ -7669,6 +7669,47 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .hb3 .hb-hero { background: radial-gradient(120% 90% at 100% 0%, rgba(232, 200, 138, 0.2), transparent 55%), var(--canopy); }
 .hbf-strip { background: var(--canopy); }
 
+
+/* ---------- Level up on My Habits: a short full-screen moment ---------- */
+.lvup { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; overflow: hidden; background: radial-gradient(70% 60% at 50% 40%, rgba(196, 229, 125, 0.14), transparent 70%), var(--canopy); color: var(--on-canopy); clip-path: circle(0 at 50% 45%); transition: clip-path var(--dur-story) var(--ease-out); }
+.lvup.in { clip-path: circle(150% at 50% 45%); }
+.lvup.out { clip-path: circle(0 at 50% 45%); transition-duration: 420ms; transition-timing-function: var(--ease-exit); }
+.lvup :focus-visible { outline: 3px solid var(--sprout); outline-offset: 3px; }
+.lvup-in { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 72px 24px 40px; max-width: 560px; }
+.lvup-in > * { opacity: 0; translate: 0 24px; }
+.lvup.in .lvup-in > * { animation: lvup-up var(--dur-slow) var(--ease-out) forwards; }
+.lvup.in .lvup-in > :nth-child(2) { animation-delay: 80ms; }
+.lvup.in .lvup-in > :nth-child(3) { animation-delay: 380ms; }
+.lvup.in .lvup-in > :nth-child(4) { animation-delay: 460ms; }
+.lvup.in .lvup-in > :nth-child(5) { animation-delay: 540ms; }
+.lvup.in .lvup-in > :nth-child(6) { animation-delay: 620ms; }
+.lvup.in .lvup-in > :nth-child(7) { animation-delay: 700ms; }
+@keyframes lvup-up { to { opacity: 1; translate: none; } }
+.lvup .story-k { color: var(--sprout); opacity: 1; }
+.lvup-tree .hb3-tree.lv { width: min(300px, 62vw); height: auto; margin: 8px 0 -4px; overflow: visible; }
+.lvup-tree .hb3-tree.lv path { stroke-width: 2.2; }
+.lvup-tree .hb3-tree.draw path { animation-delay: calc(0.25s + var(--n) * 0.05s); animation-duration: 0.7s; }
+.lvup-from { margin: 4px 0 0; font: 700 16px/1 var(--font); color: var(--on-canopy-muted); }
+.lvup-from s { text-decoration-thickness: 2px; text-decoration-color: rgba(231, 162, 127, 0.8); }
+.lvup h2 { margin: 10px 0 0; font-size: clamp(44px, 7vw, 88px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 800; }
+.lvup-dots { display: flex; gap: 10px; margin-top: 26px; }
+.lvup-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(241, 237, 228, 0.3); }
+.lvup-dots span.got { background: var(--sprout); border-color: var(--sprout); }
+.lvup.in .lvup-dots span.new { animation: lvup-pop var(--dur-slow) var(--ease-spring) both; animation-delay: calc(900ms + var(--k) * 120ms); }
+@keyframes lvup-pop { from { scale: 0; background: var(--honey, #d9a441); } 60% { scale: 1.5; } to { scale: 1; } }
+.lvup-sub { margin: 18px 0 0; font: 500 clamp(16px, 1.4vw, 19px)/1.5 var(--font); color: var(--on-canopy-muted); max-width: 36ch; }
+.lvup-go { margin-top: 30px; min-height: 52px; padding: 0 26px; font-size: 16px; }
+.lvup-leaves { position: absolute; inset: 0; pointer-events: none; }
+.lvup-leaves i { position: absolute; left: var(--x); bottom: -24px; width: 12px; height: 12px; border-radius: 0 999px 0 999px; background: var(--sprout); opacity: 0; }
+.lvup-leaves i:nth-child(3n) { background: var(--honey, #d9a441); }
+.lvup.in .lvup-leaves i { animation: lvup-leaf 2.4s var(--ease-out) forwards; animation-delay: calc(0.5s + var(--d)); }
+@keyframes lvup-leaf { 0% { opacity: 0; transform: translateY(0) rotate(0); } 15% { opacity: 0.9; } 100% { opacity: 0; transform: translateY(-75vh) rotate(var(--r)); } }
+@media (prefers-reduced-motion: reduce) {
+  .lvup, .lvup.in, .lvup.out { clip-path: none; transition: none; }
+  .lvup-in > *, .lvup.in .lvup-in > * { opacity: 1; translate: none; animation: none; }
+  .lvup.in .lvup-dots span.new, .lvup.in .lvup-leaves i { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.fs-on::before, body.fs-on::after { transform: none; }
   .cc-rv, .cc-rv .donut-legend li, .cc-rv .pi-tab, .cc-rv .res-next > *, .cc-rv .donut svg { opacity: 1; transform: none; transition: none; }
