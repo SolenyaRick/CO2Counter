@@ -155,6 +155,17 @@
   // Fun ways to picture a footprint. CO2 is a gas: a tonne fills about
   // 535 m³ (1.87 kg/m³ at 15 °C at sea level), so a footprint makes a cube we
   // can measure in heights. Weights are typical adults; heights are published.
+  // Picture it's everyday comparisons (the fun ones below are for sharing).
+  const EVERYDAY_COMPARISONS = {
+    // A mature tree soaks up about 22 kg of CO2 a year.
+    treeKgYear: 22,
+    treeSource: "A mature tree absorbs about 22 kg (48 lb) of CO₂ a year (Arbor Day Foundation).",
+    // One full smartphone charge uses about 0.019 kWh (US EPA), on the UK grid.
+    phoneKwh: 0.019,
+    phoneSource: "A full smartphone charge uses about 0.019 kWh (US EPA greenhouse gas equivalencies), at the UK grid's CO₂ per kWh.",
+    // Four mascots sit after them in Picture it.
+    mascots: ["kakapo", "pangolin", "capybara", "narwhal"],
+  };
   const FUN_COMPARISONS = {
     co2Density: 1.87,
     // type "w": by weight (size in kg); "h": by height (size in m), measured
@@ -1966,7 +1977,7 @@
     CAR_TYPES, CAR_SIZES, KM_PER_MILE,
     DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT, ASSUMED_SHOPPING,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
-    FUN_COMPARISONS, WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
+    FUN_COMPARISONS, EVERYDAY_COMPARISONS, WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,

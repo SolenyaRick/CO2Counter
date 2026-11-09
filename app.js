@@ -139,6 +139,7 @@
     more: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
     pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/>',
     link: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    share: '<path d="M12 3v12"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/><path d="M8 10H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-2"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     chevronRight: '<path d="m9 18 6-6-6-6"/>',
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
@@ -1426,55 +1427,117 @@
       ? '<div class="pi-legend">' + m.legend.map((l) => '<span class="' + (l[0] ? "" : "muted") + '">' + (l[0] ? '<i class="pi-key ' + l[0] + '" style="--c:' + l[1] + '"></i>' : "") + esc(l[2]) + "</span>").join("") + "</div>"
       : "";
 
+  // Picture it: your footprint now and after the 7 Acts, in trees, phone
+  // charges and your fair share of 2.5 t, then four mascots. The rest of
+  // the mascots are for the share card.
+  const KEY_PI_VIEW = "co2_pi_view";
+  const PI_REAL = [
+    { key: "tree", short: "Trees" },
+    { key: "phone", short: "Phone charges" },
+    { key: "target", short: "Fair share" },
+  ];
+  const piFour = () => (D.EVERYDAY_COMPARISONS.mascots || []).map((k) => piItems().find((x) => x.key === k)).filter(Boolean);
+  const piViews = () => PI_REAL.concat(piFour().map((x) => ({ key: x.key, short: x.short, mascot: x })));
+  const piView = () => {
+    const k = ui.piView || lsGet(KEY_PI_VIEW, "tree");
+    return piViews().find((v) => v.key === k) || piViews()[0];
+  };
+  // Simple flat glyphs, 24 x 24, drawn in the current colour.
+  const PI_GLYPH = {
+    tree: '<circle cx="12" cy="7.6" r="5.4"/><circle cx="7.6" cy="11.6" r="4.4"/><circle cx="16.4" cy="11.6" r="4.4"/><rect x="7.6" y="10" width="8.8" height="6" rx="3"/><rect x="10.9" y="13" width="2.2" height="9" rx="1.1"/>',
+    phone: '<path fill-rule="evenodd" d="M8.6 2h6.8A2.6 2.6 0 0 1 18 4.6v14.8a2.6 2.6 0 0 1-2.6 2.6H8.6A2.6 2.6 0 0 1 6 19.4V4.6A2.6 2.6 0 0 1 8.6 2zm4.6 4.6-3.6 6.1h2.5l-1.3 4.7 3.6-6.1h-2.5z"/>',
+    target: '<path fill-rule="evenodd" d="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zm0 2.2a6.8 6.8 0 1 0 0 13.6 6.8 6.8 0 0 0 0-13.6zm0 3a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6z"/>',
+  };
+  const piGlyph = (key, size) => '<svg class="pi-gl" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="currentColor" aria-hidden="true" focusable="false">' + PI_GLYPH[key] + "</svg>";
+  // 2.3m · 480k · 1,200 · 480 · 12
+  function piNum(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "m";
+    if (n >= 1e5) return Math.round(n / 1000) + "k";
+    return funNum(n);
+  }
+  // A grid of icons, one per tree (or 10, 100, ...), the ones the 7 Acts
+  // would save in a pale tint.
+  // draw: a glyph key, or a mascot (its own drawing, in a 48 box).
+  function piIconGrid(draw, nNow, nAft, oneWord, manyWord, words) {
+    let u = 1;
+    for (const x of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6]) {
+      u = x;
+      if (Math.ceil(nNow / x) <= 60) break;
+    }
+    const total = Math.max(1, Math.ceil(nNow / u)), kept = Math.min(total, Math.round(nAft / u));
+    const cols = Math.min(10, total), cell = 28, rows = Math.ceil(total / cols);
+    const art = typeof draw === "string" ? PI_GLYPH[draw] : null;
+    let g = "";
+    for (let i = 0; i < total; i++) {
+      const x = (i % cols) * cell + 2, y = Math.floor(i / cols) * cell + 2;
+      g += art
+        ? '<g class="' + (i < kept ? "k" : "s") + '" transform="translate(' + x + " " + y + ')">' + art + "</g>"
+        : '<svg x="' + (x - 1) + '" y="' + (y - 1) + '" width="26" height="26" viewBox="0 0 48 48" overflow="visible"' + (i < kept ? "" : ' class="s"') + ">" +
+          (i < kept ? piArt(draw.key, false, true) : '<g filter="url(#pi-grey)">' + piArt(draw.key, false, true) + "</g>") + "</svg>";
+    }
+    const w = words || ["Still needed", "Saved by the 7 Acts"];
+    const each = u === 1 ? "Each is one " + oneWord : "Each is " + piNum(u) + " " + manyWord;
+    return {
+      html: '<svg class="pi-icons" viewBox="0 0 ' + cols * cell + " " + rows * cell + '" style="max-width:' + cols * (total <= 10 ? 60 : 34) + 'px" role="img" aria-label="' + esc(each + ": " + kept + " " + w[0].toLowerCase() + ", " + (total - kept) + " " + w[1].toLowerCase()) + '">' + g + "</svg>",
+      legend: '<div class="pi-legend"><span><i class="pi-key k' + (art ? "" : " m") + '"' + (art ? "" : ' style="--c:' + draw.dot + '"') + "></i>" + esc(w[0]) + '</span><span><i class="pi-key s"></i>' + esc(w[1]) + '</span><span class="muted">' + esc(each) + "</span></div>",
+    };
+  }
+  // Now and after, as two bars against the 2.5 t line.
+  function piTargetBars(now, after) {
+    const B = D.BUDGET_YEARLY, max = Math.max(now, B) * 1.08;
+    const pct = (v) => ((v / max) * 100).toFixed(1) + "%";
+    const row = (label, v, cls) =>
+      '<div class="pi-bar-row"><span class="pi-bar-l">' + label + '</span><div class="pi-bar"><i class="' + cls + '" style="width:' + pct(v) + '"></i><em style="left:' + pct(B) + '"></em></div><b class="tnum">' + (v / 1000).toFixed(1) + " t</b></div>";
+    return '<div class="pi-bars"><div class="pi-bar-row pi-bar-top"><span class="pi-bar-l"></span><div class="pi-bar-mark"><span style="left:' + pct(B) + (B / max > 0.7 ? ';transform:translateX(-100%)' : '') + '">' + (B / 1000).toFixed(1) + " t fair share</span></div><b></b></div>" +
+      row("Now", now, "now") + row("After", after, "aft") + "</div>";
+  }
+  function piPanel(v, ba) {
+    const E = D.EVERYDAY_COMPARISONS;
+    const stat = (a, b, unit) =>
+      '<div class="pi-stat"><div><span class="pi-when">Now</span><b class="display tnum">' + esc(a) + '</b></div><span class="pi-arr" aria-hidden="true">→</span>' +
+      '<div><span class="pi-when">After the 7 Acts</span><b class="display tnum">' + esc(b) + "</b></div></div>" + '<p class="pi-unit">' + esc(unit) + "</p>";
+    const foot = (cap, src) => '<p class="pi-cap">' + esc(cap) + '</p><p class="xs muted pi-src">' + esc(src) + "</p>";
+    if (v.key === "tree") {
+      const a = ba.now / E.treeKgYear, b = ba.after / E.treeKgYear, g = piIconGrid("tree", a, b, "tree", "trees");
+      return stat(piNum(a), piNum(b), "trees, each growing for a year, to soak up your CO₂") + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
+        foot("The 7 Acts would save the work of " + piNum(a - b) + " trees, every year.", E.treeSource);
+    }
+    if (v.key === "phone") {
+      const per = E.phoneKwh * D.ELECTRICITY_FACTOR, a = ba.now / per, b = ba.after / per, g = piIconGrid("phone", a, b, "charge", "charges", ["After the 7 Acts", "Cut by them"]);
+      return stat(piNum(a), piNum(b), "phone charges' worth of CO₂ a year") + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
+        foot("Like charging a phone every day for " + funNum(a / 365) + " years. After the 7 Acts, " + funNum(b / 365) + " years.", E.phoneSource);
+    }
+    if (v.key === "target") {
+      const B = D.BUDGET_YEARLY, r = (x) => (x / B).toFixed(1).replace(/\.0$/, "") + "×";
+      return stat(r(ba.now), r(ba.after), "your fair share of " + (B / 1000).toFixed(1) + " t a year") + '<div class="pi-vis2">' + piTargetBars(ba.now, ba.after) + "</div>" +
+        foot(ba.after <= B ? "The 7 Acts would bring you inside the 1.5°C budget." : "The 7 Acts would close " + Math.round(((ba.now - ba.after) / Math.max(1, ba.now - B)) * 100) + "% of the gap to it.",
+          "The 1.5°C budget: about 2.5 t per person a year by 2030 (Hot or Cool Institute, 2021).");
+    }
+    const it = v.mascot, a = ba.now / it.size, b = ba.after / it.size;
+    const fun = it.source + " For fun and scale, not precision.";
+    if (it.type === "w" && a >= 1) {
+      const g = piIconGrid(it, a, b, it.one, it.many, ["After the 7 Acts", "Cut by them"]);
+      return stat(piNum(a), piNum(b), "the weight of your CO₂ a year, in " + it.many) + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
+        foot("The 7 Acts would cut " + howMany(a - b, it) + " a year.", fun);
+    }
+    const m = piModel(it, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + v.key });
+    const [x, y] = m.headline.split(" → ");
+    return stat(x, y, m.unitWord) + '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + foot(m.caption, fun);
+  }
   function pictureItHtml() {
     const ba = actsBeforeAfter();
     if (!ba) return "";
-    const items = piItems();
-    const mascot = piMascot();
-    const head = (extra) =>
-      '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' + (extra || "") + "</div>";
-    // First look: pick a mascot. It leads the slideshow and the share card.
-    if (!mascot || ui.piPicking) {
-      return (
-        '<section class="glass picture-it pi-wrap" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head() +
-        '<div class="pi-pick"><p class="pi-pick-q display">Pick your mascot</p><p class="xs muted pi-pick-sub">Your footprint now → after the 7 Acts. Tap one to see it.</p><div class="pi-pick-grid">' +
-        items.map((x) => {
-          // How many of it your footprint is, now and after the 7 Acts.
-          let n = "";
-          try { const m = piModel(x, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "k" + x.key }); n = '<span class="pi-pick-n"><b class="tnum">' + esc(m.headline) + "</b><small>" + esc(m.unitWord) + "</small></span>"; } catch (e) {}
-          return '<button type="button" class="pi-pick-btn' + (x.key === mascot ? " on" : "") + '" data-action="pi-mascot" data-key="' + x.key + '" aria-label="' + esc(x.short) + ". See the picture\">" + piIcon(x.key, 72) + '<span class="pi-pick-name">' + esc(x.short) + "</span>" + n + "</button>";
-        }).join("") +
-        "</div></div></section>"
-      );
-    }
-    const idx = piIndex();
-    const it = items[idx];
-    const badge =
-      '<button type="button" class="pi-mascot" data-action="pi-mascot-change" aria-label="Your mascot: ' + esc(items.find((x) => x.key === mascot).short) + '. Change it">' + piIcon(mascot, 34) + "</button>";
-    if (ui.piOpen) {
-      const wide = window.innerWidth >= 760;
-      const m = piModel(it, ba.now, ba.after, { w: wide ? 620 : 330, h: wide ? 360 : 250, minPitch: wide ? 6 : 5, minCell: wide ? 28 : 22, maxCell: wide ? 120 : 90, uid: "o" });
-      return (
-        '<section class="glass picture-it pi-wrap open" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
-        head(badge + '<button type="button" class="pi-close" data-action="pi-close" aria-label="Back to your mascot">' + icon("x") + "</button>") +
-        '<div class="pi-chips" role="tablist" aria-label="Compare with">' +
-        items.map((x, i) => '<button type="button" role="tab" class="pi-chip' + (i === idx ? " on" : "") + '" aria-selected="' + (i === idx) + '" data-action="pi-pick" data-i="' + i + '"><span class="pi-chip-ic">' + piIcon(x.key, 28) + "</span>" + esc(x.short) + "</button>").join("") +
-        '</div><div class="pi-open-body"><div class="pi-open-vis">' + piSvg(m) + piLegend(m) + "</div>" +
-        '<div class="pi-open-side"><div class="pi-nums"><div><span class="pi-when">Now → after the 7 Acts</span><b class="display tnum">' + esc(m.headline) + '</b><span class="sm muted">' + esc(m.unitWord) + "</span></div>" +
-        '<div class="pi-t display tnum"><span class="clay">' + (ba.now / 1000).toFixed(1) + " t</span> → <span class=\"green-dark\">" + (ba.after / 1000).toFixed(1) + " t</span></div></div>" +
-        '<p class="pi-cap">' + esc(m.caption) + '</p><p class="xs muted">' + esc(it.source) + " For fun and scale, not precision.</p>" +
-        '<div class="chip-row"><button type="button" class="btn btn-green btn-sm" data-action="share-card">' + icon("link") + " Share this picture</button></div></div></div></section>"
-      );
-    }
-    // On the page: just your mascot. Tap it to see the others.
-    const mi = Math.max(0, items.findIndex((x) => x.key === mascot)), mine = items[mi];
-    const m = piModel(mine, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + mine.key });
+    const v = piView();
+    const tab = (x) =>
+      '<button type="button" role="tab" class="pi-tab' + (x.key === v.key ? " on" : "") + '" aria-selected="' + (x.key === v.key) + '" data-action="pi-view" data-key="' + x.key + '">' +
+      '<span class="pi-tab-ic">' + (x.mascot ? piIcon(x.key, 26) : piGlyph(x.key, 18)) + "</span>" + esc(x.short) + "</button>";
     return (
-      '<section class="glass picture-it pi-wrap pi-one" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head(badge) +
-      '<div class="pi-square"><button type="button" class="pi-opener" data-action="pi-open" aria-label="Picture it in ' + esc(mine.many) + ". Tap to see it bigger, and the other mascots\">" +
-      '<div class="pi-slide"><div class="pi-slide-head">' + piIcon(mine.key, 44) + '<div class="min0"><span class="pi-slide-t">' + esc(m.title) + '</span><b class="display tnum">' + esc(m.headline) + "</b></div></div>" +
-      '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + "</div></button></div>" +
-      '<p class="xs muted pi-hint">Tap to see it bigger, and the other mascots</p></section>'
+      '<section class="glass picture-it pi-wrap pi-v2" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
+      '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' +
+      '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div>" +
+      '<div class="pi-tabs" role="tablist" aria-label="Compare with">' + PI_REAL.map(tab).join("") + '<span class="pi-tabs-gap" aria-hidden="true"></span>' +
+      piViews().filter((x) => x.mascot).map(tab).join("") + "</div>" +
+      '<div class="pi-panel" role="tabpanel" aria-label="' + esc(v.short) + '">' + piPanel(v, ba) + "</div></section>"
     );
   }
   // Move the slideshow without re-rendering the page.
@@ -5839,8 +5902,14 @@
           'Your bank and pension are shown on their own. <a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
       ) +
       section(
+        "Picture it: trees, phones and your fair share",
+        "<p>Picture it on the results page shows your footprint now and after the 7 Acts in three everyday ways. <strong>Trees:</strong> " + esc(D.EVERYDAY_COMPARISONS.treeSource) +
+          " We count the trees that, each growing for a year, would soak up your CO₂. <strong>Phone charges:</strong> " + esc(D.EVERYDAY_COMPARISONS.phoneSource) +
+          " <strong>Fair share:</strong> your footprint against the 1.5°C budget of about 2.5 t per person a year.</p>"
+      ) +
+      section(
         "Fun comparisons",
-        "<p>To make tonnes easier to picture, the results page compares your footprint with everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adults of some unusual animals, from a 100 g axolotl to a 1.3-tonne narwhal, plus an Argentinosaurus (an estimated 70 tonnes). " +
+        "<p>To make tonnes easier to picture, Picture it and the share card also compare your footprint with some less everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adults of some unusual animals, from a 100 g axolotl to a 1.3-tonne narwhal, plus an Argentinosaurus (an estimated 70 tonnes). " +
           "As a gas: CO₂ weighs about 1.87 kg a cubic metre (at 15°C at sea level), so a tonne fills a cube about 8 m tall, which we measure in published heights: Danny DeVito (1.47 m), Abraham Lincoln (1.93 m), a London double-decker bus (4.38 m) and a giraffe (about 5.5 m). They're for fun and scale, not precision.</p>"
       ) +
       section(
@@ -9760,38 +9829,20 @@
       ui.shareTheme = el.dataset.v;
       openShareCard();
     },
-    "pi-open": () => {
-      if (piSwipe && piSwipe.moved) return;
-      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === piMascot()));
-      ui.piOpen = true;
+    "pi-view": (el) => {
+      ui.piView = el.dataset.key;
+      lsSet(KEY_PI_VIEW, el.dataset.key);
+      const tabs = document.querySelector(".pi-tabs"), left = tabs ? tabs.scrollLeft : null;
       render();
+      const t2 = document.querySelector(".pi-tabs");
+      if (t2 && left != null) t2.scrollLeft = left;
     },
-    "pi-close": () => {
-      ui.piOpen = false;
-      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === piMascot()));
-      render();
-      const el = document.getElementById("picture-it");
-      if (el) el.scrollIntoView({ block: "nearest" });
-    },
-    "pi-pick": (el) => {
-      ui.piIdx = Number(el.dataset.i);
-      const left = (document.querySelector(".pi-chips") || {}).scrollLeft;
-      render();
-      const ch = document.querySelector(".pi-chips");
-      if (ch && left != null) ch.scrollLeft = left;
-    },
-    "pi-go": (el) => piGo(Number(el.dataset.i)),
-    "pi-mascot": (el) => {
-      lsSet(KEY_MASCOT, el.dataset.key);
-      ui.piPicking = false;
-      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === el.dataset.key));
-      // Straight to its picture.
-      ui.piOpen = true;
-      render();
-    },
-    "pi-mascot-change": () => {
-      ui.piPicking = true;
-      render();
+    // Share: the card shows the mascot you're on, or your usual one.
+    "pi-share": () => {
+      const v = piView();
+      const k = v.mascot ? v.key : piMascot() || (piFour()[0] || piItems()[0]).key;
+      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === k));
+      openShareCard();
     },
     "share-card-send": async () => {
       const sc = ui.shareCard;
