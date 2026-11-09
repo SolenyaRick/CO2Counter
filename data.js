@@ -155,6 +155,18 @@
   // Fun ways to picture a footprint. CO2 is a gas: a tonne fills about
   // 535 m³ (1.87 kg/m³ at 15 °C at sea level), so a footprint makes a cube we
   // can measure in heights. Weights are typical adults; heights are published.
+  // Picture it's everyday comparisons (the fun ones below are for sharing).
+  const EVERYDAY_COMPARISONS = {
+    // A mature tree soaks up about 22 kg of CO2 a year.
+    treeKgYear: 22,
+    treeSource: "A mature tree absorbs about 22 kg (48 lb) of CO₂ a year (Arbor Day Foundation).",
+    // One full smartphone charge uses about 0.019 kWh (US EPA); the app turns
+    // it into CO2 with the UK grid factor (ELECTRICITY_FACTOR, DESNZ).
+    phoneKwh: 0.019,
+    phoneSource: "A full smartphone charge uses about 0.019 kWh (US EPA, Greenhouse Gas Equivalencies Calculator).",
+    // Then your mascot (you can change it), this one until you pick.
+    defaultMascot: "capybara",
+  };
   const FUN_COMPARISONS = {
     co2Density: 1.87,
     // type "w": by weight (size in kg); "h": by height (size in m), measured
@@ -1845,6 +1857,8 @@
   const PN2018 = "Poore & Nemecek (2018), Science 360:987, global mean per kg of product (via Our World in Data)";
   const CR2025 = "Choręziak & Rzymski (2025), Nutrients 17:1377: measured daily footprint of the diet group";
   const INPUT_DEFS = [
+    { group: "Picture it", key: "pi_tree", label: "CO₂ a mature tree absorbs", unit: "kg CO₂ a year", path: "EVERYDAY_COMPARISONS.treeKgYear", source: "Arbor Day Foundation: about 48 lb (22 kg) a year", asOf: "2026-11", every: 24 },
+    { group: "Picture it", key: "pi_phone", label: "Electricity for one full phone charge", unit: "kWh", path: "EVERYDAY_COMPARISONS.phoneKwh", source: "US EPA, Greenhouse Gas Equivalencies Calculator: calculations and references", asOf: "2026-11", every: 24 },
     { group: "Benchmark", key: "budget", label: "1.5°C budget per person", unit: "kg CO₂e a year", path: "BUDGET_YEARLY", source: "About 2.5 t per person per year by 2030 (Hot or Cool Institute, 1.5-Degree Lifestyles, 2021)" },
     { group: "Food", key: "food_vegan_day", label: "Vegan day", unit: "kg CO₂e a day", path: "MEAL_OPTIONS[vegan].factor", source: CR2025, asOf: "2025-04", every: 36 },
     { group: "Food", key: "food_veggie_day", label: "Vegetarian day", unit: "kg CO₂e a day", path: "MEAL_OPTIONS[veggie].factor", source: CR2025 + ". Meat days are this plus a portion of meat.", asOf: "2025-04", every: 36 },
@@ -1966,7 +1980,7 @@
     CAR_TYPES, CAR_SIZES, KM_PER_MILE,
     DEFAULT_SURVEY, DAYS, WEEKS_PER_YEAR, UK_TYPICAL_SURVEY, UK_COMPARISON_KEYS, SHARED_FOOTPRINT, ASSUMED_SHOPPING,
     BUDGET_YEARLY, ELECTRICITY_FACTOR, GREEN_ELECTRICITY_FACTOR, GAS_FACTOR,
-    FUN_COMPARISONS, WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
+    FUN_COMPARISONS, EVERYDAY_COMPARISONS, WATER_FACTOR, DOG_YEARLY, CAT_YEARLY, HORSE_YEARLY, SMALL_PET_YEARLY, EAT_OUT_MULTIPLIER, PORTION,
     MEAT_PER_KG, DIETS, MEAL_OPTIONS, EAT_OUT_OPTIONS, FOOD_WASTE,
     COMMUTE_MODES, TRAVEL_MODES, CABINS, BANK_RATING_BANDS, WHICH_BANK_RATINGS, PENSION_CLIMATE_RANKING, CASS_URL, USEFUL_LINKS, FLIGHT_DOMESTIC_FACTOR, FLIGHT_LONG_HAUL_KM, FLIGHT_DISTANCE_UPLIFT, AIRPORTS, BANKS, PENSION_PROVIDERS,
     GREEN_PENSION_T_PER_MILLION, EXPLAINERS, FLIGHT_TIERS,
