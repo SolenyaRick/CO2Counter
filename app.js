@@ -7096,6 +7096,7 @@
   const SUNDAY_ID = 7001;
   const NOTIF_OFF_MSG = "Notifications are off for CO2 Counter. To allow them, open your phone's Settings, then Notifications, then CO2 Counter.";
   const nativePlugins = {};
+  const NO_PLUGIN_MSG = "This build of the app can't reach your phone's notifications. Please update the app.";
   const plugin = (name) => {
     if (!isNativeApp() || !window.Capacitor.registerPlugin) return null;
     return nativePlugins[name] || (nativePlugins[name] = window.Capacitor.registerPlugin(name));
@@ -7128,7 +7129,7 @@
   }
   async function turnOnSunday() {
     const LN = plugin("LocalNotifications");
-    if (!LN) return;
+    if (!LN) { ui.flash = NO_PLUGIN_MSG; render(); return; }
     try {
       let perm = await LN.checkPermissions();
       if (perm.display !== "granted") perm = await LN.requestPermissions();
@@ -7225,7 +7226,7 @@
   }
   async function turnOnFeedPush() {
     const PN = plugin("PushNotifications");
-    if (!PN) return;
+    if (!PN) { ui.flash = NO_PLUGIN_MSG; render(); return; }
     try {
       let perm = await PN.checkPermissions();
       if (perm.receive !== "granted") perm = await PN.requestPermissions();
@@ -9774,7 +9775,7 @@
     },
     "notif-test": async () => {
       const LN = plugin("LocalNotifications");
-      if (!LN) return;
+      if (!LN) { ui.notifTest = NO_PLUGIN_MSG; render(); return; }
       try {
         let perm = await LN.checkPermissions();
         if (perm.display !== "granted") perm = await LN.requestPermissions();
