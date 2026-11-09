@@ -1456,7 +1456,7 @@
       const m = piModel(it, ba.now, ba.after, { w: wide ? 620 : 330, h: wide ? 360 : 250, minPitch: wide ? 6 : 5, minCell: wide ? 28 : 22, maxCell: wide ? 120 : 90, uid: "o" });
       return (
         '<section class="glass picture-it pi-wrap open" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
-        head(badge + '<button type="button" class="pi-close" data-action="pi-close" aria-label="Back to the slideshow">' + icon("x") + "</button>") +
+        head(badge + '<button type="button" class="pi-close" data-action="pi-close" aria-label="Back to your mascot">' + icon("x") + "</button>") +
         '<div class="pi-chips" role="tablist" aria-label="Compare with">' +
         items.map((x, i) => '<button type="button" role="tab" class="pi-chip' + (i === idx ? " on" : "") + '" aria-selected="' + (i === idx) + '" data-action="pi-pick" data-i="' + i + '"><span class="pi-chip-ic">' + piIcon(x.key, 28) + "</span>" + esc(x.short) + "</button>").join("") +
         '</div><div class="pi-open-body"><div class="pi-open-vis">' + piSvg(m) + piLegend(m) + "</div>" +
@@ -1466,21 +1466,15 @@
         '<div class="chip-row"><button type="button" class="btn btn-green btn-sm" data-action="share-card">' + icon("link") + " Share this picture</button></div></div></div></section>"
       );
     }
-    // The square slideshow: slides on by itself; tap to see them all.
-    const slides = items
-      .map((x) => {
-        const m = piModel(x, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + x.key });
-        return '<div class="pi-slide"><div class="pi-slide-head">' + piIcon(x.key, 40) + '<div class="min0"><span class="pi-slide-t">' + esc(m.title) + '</span><b class="display tnum">' + esc(m.headline) + "</b></div></div>" +
-          '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + "</div>";
-      })
-      .join("");
+    // On the page: just your mascot. Tap it to see the others.
+    const mi = Math.max(0, items.findIndex((x) => x.key === mascot)), mine = items[mi];
+    const m = piModel(mine, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "s" + mine.key });
     return (
-      '<section class="glass picture-it pi-wrap" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head(badge) +
-      '<div class="pi-square"><button type="button" class="pi-opener" data-action="pi-open" aria-label="Picture it: ' + esc(it.short) + ". Tap to see every comparison\">" +
-      '<span class="pi-track" style="transform:translateX(' + -idx * 100 + '%)">' + slides + "</span></button>" +
-      '<span class="pi-count tnum" aria-hidden="true">' + (idx + 1) + "/" + items.length + "</span>" +
-      '<div class="pi-dots">' + items.map((x, i) => '<button type="button" class="pi-dot' + (i === idx ? " on" : "") + '" data-action="pi-go" data-i="' + i + '" aria-label="' + esc(x.short) + '"' + (i === idx ? ' aria-current="true"' : "") + "></button>").join("") + "</div></div>" +
-      '<p class="xs muted pi-hint">Tap the picture to see them all</p></section>'
+      '<section class="glass picture-it pi-wrap pi-one" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head(badge) +
+      '<div class="pi-square"><button type="button" class="pi-opener" data-action="pi-open" aria-label="Picture it in ' + esc(mine.many) + ". Tap to see it bigger, and the other mascots\">" +
+      '<div class="pi-slide"><div class="pi-slide-head">' + piIcon(mine.key, 44) + '<div class="min0"><span class="pi-slide-t">' + esc(m.title) + '</span><b class="display tnum">' + esc(m.headline) + "</b></div></div>" +
+      '<div class="pi-vis">' + piSvg(m) + "</div>" + piLegend(m) + "</div></button></div>" +
+      '<p class="xs muted pi-hint">Tap to see it bigger, and the other mascots</p></section>'
     );
   }
   // Move the slideshow without re-rendering the page.
@@ -1503,7 +1497,7 @@
   // Every few seconds, unless it's off screen, in use or motion is reduced.
   setInterval(() => {
     const sq = document.querySelector(".pi-square");
-    if (!sq || document.hidden || ui.piOpen || sq.matches(":hover") || sq.querySelector(":focus-visible")) return;
+    if (!sq || !sq.querySelector(".pi-track") || document.hidden || ui.piOpen || sq.matches(":hover") || sq.querySelector(":focus-visible")) return;
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const r = sq.getBoundingClientRect();
     if (r.bottom < 0 || r.top > window.innerHeight) return;
@@ -1512,7 +1506,7 @@
   // Swipe the square left or right.
   let piSwipe = null;
   document.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".pi-opener")) piSwipe = { x: e.clientX, y: e.clientY, moved: false };
+    if (e.target.closest(".pi-opener") && document.querySelector(".pi-track")) piSwipe = { x: e.clientX, y: e.clientY, moved: false };
   });
   document.addEventListener("pointerup", (e) => {
     if (!piSwipe) return;
@@ -9768,11 +9762,13 @@
     },
     "pi-open": () => {
       if (piSwipe && piSwipe.moved) return;
+      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === piMascot()));
       ui.piOpen = true;
       render();
     },
     "pi-close": () => {
       ui.piOpen = false;
+      ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === piMascot()));
       render();
       const el = document.getElementById("picture-it");
       if (el) el.scrollIntoView({ block: "nearest" });
