@@ -3264,8 +3264,44 @@
       left = Math.max(0, left - x.t.saving);
       steps.push({ kg: left, k: "Move " + (i + 1) + " · " + esc(CAT_SHORT[x.b.key] || x.b.label), h: esc(capFirst(x.t.realisticLabel || x.t.title)), p: "Saves about <em>" + kgFmt(x.t.saving) + " kg</em> a year. You're down to " + kgFmt(left) + " kg." });
     });
-    return { total, steps, moves, left, budget: D.BUDGET_YEARLY, tree };
+    const bb = budgetBasis(fp, null);
+    const warm = D.WARMING ? warmModel(Math.max(0, bb.life) + D.SHARED_FOOTPRINT.totalKg) : null;
+    return { total, steps, moves, left, budget: D.BUDGET_YEARLY, tree, warm };
   }
+  // What if everyone lived like you? Observed warming to today, then two
+  // futures to 2100 (see WARMING in data.js for the sources and method).
+  function warmModel(fullKg) {
+    const W = D.WARMING;
+    const obs = W.observed, f0 = W.observedFrom, Y = W.startYear;
+    const at = (pts, y) => {
+      for (let i = 1; i < pts.length; i++) if (y <= pts[i][0]) { const [x0, v0] = pts[i - 1], [x1, v1] = pts[i]; return v0 + ((v1 - v0) * (y - x0)) / (x1 - x0); }
+      return pts[pts.length - 1][1];
+    };
+    // Today: the 20-year trend at the start year.
+    const last = obs.slice(-20).map((v, i) => [Y - 19 + i, v]);
+    const mx = last.reduce((t, p) => t + p[0], 0) / 20, my = last.reduce((t, p) => t + p[1], 0) / 20;
+    const slope = last.reduce((t, p) => t + (p[0] - mx) * (p[1] - my), 0) / last.reduce((t, p) => t + (p[0] - mx) ** 2, 0);
+    const t0 = my + slope * (Y - mx);
+    // The bold line: an 11-year average, easing into today's trend.
+    const smooth = obs.map((_, i) => {
+      const y = f0 + i;
+      if (y > Y - 5) { const a = smoothAt(Y - 5); return a + ((t0 - a) * (y - (Y - 5))) / 5; }
+      return smoothAt(y);
+    });
+    function smoothAt(y) { const i = y - f0, lo = Math.max(0, i - 5), hi = Math.min(obs.length - 1, i + 5); let t = 0; for (let j = lo; j <= hi; j++) t += obs[j]; return t / (hi - lo + 1); }
+    let cumCp = 0, cumYou = 0;
+    const cpCum = [0], youCum = [0];
+    for (let y = Y + 1; y <= 2100; y++) {
+      cumCp += at(W.currentPoliciesGt, y - 0.5);
+      cumYou += (at(W.populationBn, y - 0.5) * fullKg) / 1000; // billions of people x kg = Mt; / 1000 = Gt
+      cpCum.push(cumCp); youCum.push(cumYou);
+    }
+    const k = (W.currentPolicies2100 - t0) / cumCp;
+    const cp = cpCum.map((c) => t0 + k * c), you = youCum.map((c) => t0 + k * c);
+    return { f0, Y, obs, smooth, t0, cp, you, fullKg, worldKg: (W.emissionsNowGt / at(W.populationBn, Y)) * 1000, people: at(W.populationBn, Y) };
+  }
+  const degC = (v) => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(1) + "°C";
+
   function storyHtml(d) {
     const n = d.steps.length;
     const saved = d.total - d.left;
@@ -3289,7 +3325,7 @@
       '<span class="story-read"><b class="display tnum story-kg">' + kgFmt(d.total) + "</b><small>kg a year</small></span></div>" +
       '<ol class="story-steps">' + d.steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + st.k + '</span><h3 class="display">' + st.h + "</h3><p>" + st.p + "</p></li>").join("") + "</ol>" +
       '<div class="story-ticks" aria-hidden="true">' + d.steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
-      "</div></section>" +
+      "</div></section>" + (d.warm ? warmHtml(d.warm) : "") +
       '<section class="story-end"><span class="story-k">' + (d.moves.length ? d.moves.length + (d.moves.length === 1 ? " move" : " moves") : "Your year") + "</span>" +
       '<h2 class="display">' + (saved >= 0.5 ? "<b class=\"tnum\">" + kgFmt(saved) + " kg</b> lighter, every year." : "You're already lean.") + "</h2>" +
       "<p>" + (gap > 0 ? "That leaves you " + kgFmt(gap) + " kg above the 1.5°C budget. The 7 Acts close more of the gap." : "That puts you inside the 1.5°C budget of " + kgFmt(d.budget) + " kg.") + "</p>" +
@@ -3299,6 +3335,99 @@
       "</div></div>"
     );
   }
+  function warmHtml(w) {
+    const youEnd = w.you[w.you.length - 1], cpEnd = w.cp[w.cp.length - 1];
+    const t = (kg) => (kg / 1000).toFixed(1);
+    const caps = [
+      ["1850", "The industrial age gets going", "Each year's global temperature, measured, compared with the late 1800s."],
+      ["1950s", "Then the line turns upward", "Coal, oil and gas burn faster every decade, and the heat builds."],
+      ["Today", "About " + degC(w.t0) + " already", "The last ten years were the ten warmest on record."],
+      ["If the world carries on", "About " + degC(cpEnd) + " by 2100", "Where today's policies are heading, by Climate Action Tracker's estimate."],
+      ["If everyone lived like you", "About " + degC(youEnd) + " by 2100", youEnd > cpEnd + 0.05 ? "Hotter than the world is heading for. Your biggest moves pull this line down." : youEnd < 1.6 ? "Close to the 1.5°C limit. A world of you would be a cooler one." : "Cooler than the world is heading for. Your biggest moves pull it lower still."],
+    ];
+    const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ". By 2100: about " + degC(cpEnd) + " if the world carries on as it is, and about " + degC(youEnd) + " if everyone lived like you.";
+    return (
+      '<section class="warm-intro"><span class="story-k">Now picture everyone</span>' +
+      '<h2 class="display">What if all ' + w.people.toFixed(1) + " billion of us lived like you?</h2>" +
+      "<p>Your full footprint, with shopping and your share of public services, is <b>" + t(w.fullKg) + " t</b> a year. The world averages about <b>" + t(w.worldKg) + " t</b>.</p></section>" +
+      '<section class="warm-track"><div class="warm-stage">' +
+      '<ol class="warm-caps">' + caps.map((c, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(c[0]) + '</span><h3 class="display">' + esc(c[1]) + "</h3><p>" + esc(c[2]) + "</p></li>").join("") + "</ol>" +
+      '<div class="warm-read" aria-hidden="true"><b class="display tnum warm-yr">1850</b><span class="warm-t tnum">+0.0°C</span></div>' +
+      '<div class="warm-chart" role="img" aria-label="' + esc(summary) + '">' +
+      '<div class="warm-grid" aria-hidden="true"></div>' +
+      '<svg viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true"><path class="w-raw" vector-effect="non-scaling-stroke"></path><path class="w-obs" vector-effect="non-scaling-stroke"></path>' +
+      '<path class="w-cp" vector-effect="non-scaling-stroke"></path><path class="w-you' + (youEnd > cpEnd + 0.05 ? " hot" : "") + '" vector-effect="non-scaling-stroke"></path></svg>' +
+      '<span class="w-head" aria-hidden="true"></span>' +
+      '<span class="w-end w-end-cp" aria-hidden="true"><b class="tnum">' + degC(cpEnd) + "</b>Carries on</span>" +
+      '<span class="w-end w-end-you' + (youEnd > cpEnd + 0.05 ? " hot" : "") + '" aria-hidden="true"><b class="tnum">' + degC(youEnd) + "</b>Everyone like you</span>" +
+      '<div class="warm-x" aria-hidden="true"></div></div>' +
+      '<p class="warm-note">An illustration, not a climate model. It holds everyone at your footprint today until 2100. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
+      "</div></section>"
+    );
+  }
+  // Draws the chart for a scroll position (0 to 1 through its track).
+  function paintWarm(el, w, p) {
+    const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+    const cl = (a, b) => Math.min(1, Math.max(0, (p - a) / (b - a)));
+    const ph = { hist: cl(0.04, 0.5), zoom: ease(cl(0.52, 0.62)), cp: cl(0.62, 0.78), you: cl(0.8, 0.95) };
+    const end = w.f0 + w.obs.length - 1;
+    const histMax = 1.8, yMin = -0.5;
+    const fullMax = Math.max(3, w.you[w.you.length - 1], w.cp[w.cp.length - 1]) + 0.4;
+    const x1 = end + (2100 - end) * ph.zoom, y1 = histMax + (fullMax - histMax) * ph.zoom;
+    const X = (yr) => ((yr - w.f0) / (x1 - w.f0)) * 1000;
+    const Yv = (v) => 500 - ((v - yMin) / (y1 - yMin)) * 500;
+    const pct = (yr, v) => [(X(yr) / 10).toFixed(3) + "%", ((Yv(v) / 500) * 100).toFixed(3) + "%"];
+    const line = (from, vals, upto) => {
+      let d = "";
+      const n = Math.floor(upto);
+      for (let i = 0; i <= Math.min(n, vals.length - 1); i++) d += (i ? "L" : "M") + X(from + i).toFixed(2) + " " + Yv(vals[i]).toFixed(2);
+      if (n < vals.length - 1 && upto > n) { const v = vals[n] + (vals[n + 1] - vals[n]) * (upto - n); d += "L" + X(from + upto).toFixed(2) + " " + Yv(v).toFixed(2); }
+      return d;
+    };
+    const valAt = (vals, upto) => { const n = Math.min(vals.length - 1, Math.floor(upto)); return n >= vals.length - 1 ? vals[n] : vals[n] + (vals[n + 1] - vals[n]) * (upto - n); };
+    const histUpto = ph.hist * (w.obs.length - 1);
+    const fut = 2100 - w.Y;
+    const q = (s) => el.querySelector(s);
+    q(".w-raw").setAttribute("d", line(w.f0, w.obs, histUpto));
+    q(".w-obs").setAttribute("d", line(w.f0, w.smooth, histUpto));
+    q(".w-cp").setAttribute("d", ph.cp > 0 ? line(w.Y, w.cp, ph.cp * fut) : "");
+    q(".w-you").setAttribute("d", ph.you > 0 ? line(w.Y, w.you, ph.you * fut) : "");
+    // The moving tip, the year and the temperature.
+    let yr, v;
+    if (ph.you > 0) { yr = w.Y + ph.you * fut; v = valAt(w.you, ph.you * fut); }
+    else if (ph.cp > 0) { yr = w.Y + ph.cp * fut; v = valAt(w.cp, ph.cp * fut); }
+    else { yr = w.f0 + histUpto; v = valAt(w.smooth, histUpto); }
+    const [hx, hy] = pct(yr, v);
+    const head = q(".w-head");
+    head.style.left = hx; head.style.top = hy;
+    head.className = "w-head" + (ph.you > 0 ? " you" + (q(".w-you").classList.contains("hot") ? " hot" : "") : ph.cp > 0 ? " cp" : "");
+    q(".warm-yr").textContent = Math.round(yr);
+    q(".warm-t").textContent = degC(v);
+    q(".warm-read").className = "warm-read " + (ph.you > 0 ? (q(".w-you").classList.contains("hot") ? "hot" : "you") : ph.cp > 0 ? "cp" : "");
+    const endCp = pct(2100, w.cp[fut]), endYou = pct(2100, w.you[fut]);
+    const ec = q(".w-end-cp"), ey = q(".w-end-you");
+    ec.style.left = endCp[0]; ec.style.top = endCp[1]; ec.classList.toggle("on", ph.cp >= 1);
+    ey.style.left = endYou[0]; ey.style.top = endYou[1]; ey.classList.toggle("on", ph.you >= 1);
+    // Grid: a line per whole degree, and the 1.5°C and 2°C limits.
+    const grid = q(".warm-grid");
+    const top = Math.floor(y1);
+    if (grid.dataset.top !== String(top) || grid.dataset.y1 !== y1.toFixed(3)) {
+      grid.dataset.top = String(top); grid.dataset.y1 = y1.toFixed(3);
+      let g = "";
+      for (let t = 0; t <= top; t++) g += '<span class="wg" style="top:' + pct(w.f0, t)[1] + '"><i>' + (t ? "+" + t : "0") + "°C</i></span>";
+      g += '<span class="wg lim" style="top:' + pct(w.f0, 1.5)[1] + '"><i>1.5°C limit</i></span>';
+      if (2 <= y1) g += '<span class="wg lim two" style="top:' + pct(w.f0, 2)[1] + '"><i>2°C</i></span>';
+      grid.innerHTML = g;
+    }
+    const xs = q(".warm-x");
+    const ticks = [1850, 1900, 1950, 2000, 2025, 2050, 2100].filter((t) => t <= x1 + 0.5);
+    const key = ticks.join() + x1.toFixed(1);
+    if (xs.dataset.k !== key) { xs.dataset.k = key; xs.innerHTML = ticks.map((t) => '<span data-y="' + t + '" style="left:' + pct(t, 0)[0] + '">' + t + "</span>").join(""); }
+    // Which caption is showing.
+    const cap = ph.you > 0.02 ? 4 : ph.cp > 0.02 || ph.zoom > 0.4 ? 3 : ph.hist >= 0.98 ? 2 : ph.hist > 0.55 ? 1 : 0;
+    if (el._cap !== cap) { el._cap = cap; el.querySelectorAll(".warm-caps li").forEach((li, i) => { li.classList.toggle("on", i === cap); li.classList.toggle("past", i < cap); }); }
+  }
+
   function openStory(from) {
     if (storyEl || !survey) return;
     const d = storyData();
@@ -3314,6 +3443,7 @@
     const track = storyEl.querySelector(".story-track");
     const kgEl = storyEl.querySelector(".story-kg");
     const savedEl = storyEl.querySelector(".story-saved b");
+    const warmTrack = storyEl.querySelector(".warm-track");
     const items = [...storyEl.querySelectorAll(".story-steps li")];
     const n = d.steps.length;
     let tick = false, shown = -1;
@@ -3335,6 +3465,7 @@
       storyEl.style.setProperty("--s", Math.sqrt(kg / d.total).toFixed(4));
       storyEl.style.setProperty("--q", (1 - kg / d.total).toFixed(4));
       storyEl.classList.toggle("under", kg <= d.budget);
+      if (warmTrack) paintWarm(warmTrack, d.warm, Math.min(1, Math.max(0, (sc.scrollTop - warmTrack.offsetTop) / Math.max(1, warmTrack.offsetHeight - vh))));
       kgEl.textContent = kgFmt(kg);
       savedEl.textContent = "−" + kgFmt(d.total - kg);
       storyEl.classList.toggle("saving", d.total - kg >= 1);
@@ -6151,6 +6282,18 @@
           '<a href="https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator-calculations-and-references" target="_blank" rel="noopener">US EPA, Greenhouse Gas Equivalencies: calculations and references</a> · ' +
           '<a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK Government GHG conversion factors (DESNZ)</a> · ' +
           '<a href="' + BUDGET_SOURCE_URL + '" target="_blank" rel="noopener">Hot or Cool Institute, 1.5-Degree Lifestyles</a></p>'
+      ) +
+      section(
+        "Picture your year, and what if everyone lived like you?",
+        "<p>Watch it shrink, on Picture it, shows your footprint as a disc whose area is your kilograms, shrinking as your three biggest moves are taken off.</p>" +
+          "<p>It then asks what would happen if all 8.2 billion people lived like you. This is an illustration, not a climate model:</p>" +
+          list([
+            "<strong>The past</strong> is measured: the Met Office's HadCRUT5 global temperature for each year since 1850, shown against the 1850 to 1900 average, with an 11-year average drawn over it.",
+            "<strong>Today</strong> is the 20-year trend, about 1.4°C, rather than one year's figure, which jumps around.",
+            "<strong>If the world carries on</strong> follows Climate Action Tracker's estimate for today's policies: about 2.7°C by 2100. World emissions start at about 57 billion tonnes a year (UNEP Emissions Gap Report 2024).",
+            "<strong>If everyone lived like you</strong> takes your full footprint (your survey without money, plus assumed shopping and your shared footprint), multiplies it by the world's population each year (UN World Population Prospects 2024) and holds it there until 2100. Extra warming is taken as proportional to the emissions added, on the same scale that takes today's policies to 2.7°C. That scale, about 0.36°C per 1,000 billion tonnes, is close to the IPCC's estimate for CO₂.",
+          ]) +
+          "<p>Because your shared footprint is in it, even a very small personal footprint doesn't reach zero. And the 1.5°C budget is meant to keep falling after 2030, so holding today's 2.5 tonnes flat until 2100 would still pass 2°C.</p>"
       ) +
       section(
         "Fun comparisons",
