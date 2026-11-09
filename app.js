@@ -1491,6 +1491,10 @@
     return '<div class="pi-bars"><div class="pi-bar-row pi-bar-top"><span class="pi-bar-l"></span><div class="pi-bar-mark"><span style="left:' + pct(B) + (B / max > 0.7 ? ';transform:translateX(-100%)' : '') + '">' + (B / 1000).toFixed(1) + " t fair share</span></div><b></b></div>" +
       row("Now", now, "now") + row("After", after, "aft") + "</div>";
   }
+  // One phone charge on the UK grid: kWh x the grid factor, in grams.
+  const phoneChargeG = () => D.EVERYDAY_COMPARISONS.phoneKwh * D.ELECTRICITY_FACTOR * 1000;
+  const phoneWorking = () =>
+    D.EVERYDAY_COMPARISONS.phoneKwh + " kWh × " + D.ELECTRICITY_FACTOR.toFixed(3) + " kg CO₂e per kWh on the UK grid (DESNZ) = " + phoneChargeG().toFixed(1) + " g CO₂e a charge";
   function piPanel(v, ba) {
     const E = D.EVERYDAY_COMPARISONS;
     const stat = (a, b, unit) =>
@@ -1505,7 +1509,7 @@
     if (v.key === "phone") {
       const per = E.phoneKwh * D.ELECTRICITY_FACTOR, a = ba.now / per, b = ba.after / per, g = piIconGrid("phone", a, b, "charge", "charges", ["After the 7 Acts", "Cut by them"]);
       return stat(piNum(a), piNum(b), "phone charges' worth of CO₂ a year") + '<div class="pi-vis2">' + g.html + "</div>" + g.legend +
-        foot("Like charging a phone every day for " + funNum(a / 365) + " years. After the 7 Acts, " + funNum(b / 365) + " years.", E.phoneSource);
+        foot("Like charging a phone every day for " + funNum(a / 365) + " years. After the 7 Acts, " + funNum(b / 365) + " years.", E.phoneSource + " " + phoneWorking() + ".");
     }
     if (v.key === "target") {
       const B = D.BUDGET_YEARLY, r = (x) => (x / B).toFixed(1).replace(/\.0$/, "") + "×";
@@ -5904,8 +5908,13 @@
       section(
         "Picture it: trees, phones and your fair share",
         "<p>Picture it on the results page shows your footprint now and after the 7 Acts in three everyday ways. <strong>Trees:</strong> " + esc(D.EVERYDAY_COMPARISONS.treeSource) +
-          " We count the trees that, each growing for a year, would soak up your CO₂. <strong>Phone charges:</strong> " + esc(D.EVERYDAY_COMPARISONS.phoneSource) +
-          " <strong>Fair share:</strong> your footprint against the 1.5°C budget of about 2.5 t per person a year.</p>"
+          " We count the trees that, each growing for a year, would soak up your CO₂: your footprint ÷ " + D.EVERYDAY_COMPARISONS.treeKgYear + " kg. <strong>Phone charges:</strong> " + esc(D.EVERYDAY_COMPARISONS.phoneSource) +
+          " We work out its CO₂ with the same UK grid figure as your home electricity: " + esc(phoneWorking()) + ", then divide your footprint by it." +
+          " <strong>Fair share:</strong> your footprint ÷ the 1.5°C budget of about 2.5 t per person a year (Hot or Cool Institute, 2021).</p>" +
+          '<p class="xs">Sources: <a href="https://www.arborday.org/" target="_blank" rel="noopener">Arbor Day Foundation</a> · ' +
+          '<a href="https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator-calculations-and-references" target="_blank" rel="noopener">US EPA, Greenhouse Gas Equivalencies: calculations and references</a> · ' +
+          '<a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK Government GHG conversion factors (DESNZ)</a> · ' +
+          '<a href="' + BUDGET_SOURCE_URL + '" target="_blank" rel="noopener">Hot or Cool Institute, 1.5-Degree Lifestyles</a></p>'
       ) +
       section(
         "Fun comparisons",
