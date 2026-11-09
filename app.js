@@ -1898,7 +1898,7 @@
           li.className = "ph-more-li";
           li.appendChild(more);
           el.after(li);
-        } else el.after(more);
+        } else (el.closest("label") || el).after(more); // outside a label, or iPhones tick its box too
       });
     });
   }
@@ -9432,7 +9432,8 @@
     },
     "ph-more": (el) => {
       const li = el.closest(".ph-more-li");
-      const t = (li || el).previousElementSibling;
+      const prev = (li || el).previousElementSibling;
+      const t = prev && (prev.classList.contains("ph-clamp") ? prev : prev.querySelector(".ph-clamp"));
       if (t) t.classList.add("open");
       (li || el).remove();
     },
