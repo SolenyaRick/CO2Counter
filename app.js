@@ -1544,7 +1544,8 @@
     return (
       '<section class="glass picture-it pi-wrap pi-v2" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() +
       '<div class="pi-head"><div class="min0"><h2 id="pi-h" class="card-title">Picture it</h2><p class="sm muted">Your footprint now, and after the 7 Acts</p></div>' +
-      '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div>" +
+      '<div class="pi-acts"><button type="button" class="pi-play" data-action="pi-story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Watch it shrink</button>' +
+      '<button type="button" class="icon-btn pi-share" data-action="pi-share" aria-label="Share your before and after">' + icon("share") + "</button></div></div>" +
       '<div class="pi-tabs" role="tablist" aria-label="Compare with">' + PI_REAL.map(tab).join("") +       piViews().filter((x) => x.mascot).map(tab).join("") + "</div>" +
       '<div class="pi-panel" role="tabpanel" aria-label="' + esc(v.short) + '">' + piPanel(v, ba) + "</div></section>"
     );
@@ -2033,7 +2034,7 @@
     const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
     const now = footprint(survey).totalYearly;
     return (
-      '<div class="container done-v2">' +
+      '<div class="container done-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg last time">' +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("clipboard") + "</span>" +
       '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
       '<h1 class="cat-title display">Update your answers</h1><p class="cat-why">' +
@@ -2082,6 +2083,8 @@
     // nothing about the person or their answers (those stay on the device).
     if (!currentUser && sb) sb.rpc("count_guest_survey").then(() => {}, () => {});
     ui.celebrate = base && base.completedAt ? celebration(base, survey) : null;
+    // Picture your year opens over Results, once, as the payoff for finishing.
+    ui.revealStory = hasFullAccess();
     location.hash = "#/results";
   }
 
@@ -2163,6 +2166,72 @@
     ["leaf", "Build habits", "Turn the changes you choose into habits, and watch your footprint fall over time.", true],
   ];
 
+  // The welcome page opens with a scroll story: the typical UK footprint as
+  // a disc (area to scale), what it means, where it comes from, and the
+  // 1.5°C budget it needs to shrink to. Painted by paintWelcome on scroll.
+  function welcomeStory(cta) {
+    const uk = ukComparison(footprint(D.UK_TYPICAL_SURVEY)).uk + D.ASSUMED_SHOPPING.totalKg;
+    const tree = (D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22;
+    const t = (kg) => (kg / 1000).toFixed(1);
+    const cats = ["Meals", "Travel", "Flights", "Home", "Pets", "Money"];
+    const steps = [
+      ["The typical UK footprint", "About " + t(uk) + " tonnes of CO₂e a year", "What a year of everyday life adds up to: food, travel, home, pets, money and shopping."],
+      ["Picture it", kgFmt(uk / tree) + " mature trees", "That's how many trees it takes, working all year, to soak up one person's footprint."],
+      ["Where it comes from", "Six parts of everyday life", "Meals, travel, flights, home, pets, and one most calculators miss: where your money sits."],
+      ["The 1.5°C budget", "About " + t(D.BUDGET_YEARLY) + " t each", "To stay on track for 1.5°C, footprints like this need to fall to about " + t(D.BUDGET_YEARLY) + " t by 2030. Find your biggest levers in six short steps."],
+    ];
+    return (
+      '<div class="wl" data-step="0" style="--b:' + Math.sqrt(D.BUDGET_YEARLY / uk).toFixed(4) + '" data-uk="' + Math.round(uk) + '">' +
+      '<section class="wl-open"><span class="story-k">Free for everyone · no ads</span>' +
+      '<h1 class="display wl-title">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
+      '<p class="wl-lead">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
+      '<div class="wl-ctas">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + '<a class="btn wl-ghost" href="/example/">See an example result</a></div>' +
+      '<div class="wl-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((x) => "<span>" + icon("check") + x + "</span>").join("") + "</div>" +
+      '<span class="story-cue" aria-hidden="true"><i></i></span></section>' +
+      '<section class="wl-track" style="--n:' + steps.length + '"><div class="story-stage wl-stage">' +
+      '<div class="story-orb wl-orb" aria-hidden="true"><i class="story-ghost"></i><i class="story-disc"></i><i class="story-budget"></i>' +
+      '<span class="story-budget-l">1.5°C budget · ' + t(D.BUDGET_YEARLY) + " t</span>" +
+      '<span class="story-read"><b class="display tnum wl-kg">' + t(uk) + " t</b><small>a year</small></span>" +
+      cats.map((c, i) => { const a = (i / cats.length) * Math.PI * 2 - Math.PI / 2; return '<span class="wl-cat" style="--cx:' + Math.cos(a).toFixed(3) + ";--cy:" + Math.sin(a).toFixed(3) + ";--k:" + i + '">' + c + "</span>"; }).join("") +
+      "</div>" +
+      '<ol class="story-steps wl-steps">' + steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(st[0]) + '</span><h2 class="display">' + esc(st[1]) + "</h2><p>" + esc(st[2]) + "</p>" + (i === steps.length - 1 ? '<div class="wl-ctas">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + "</div>" : "") + "</li>").join("") + "</ol>" +
+      '<div class="story-ticks" aria-hidden="true">' + steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
+      "</div></section></div>"
+    );
+  }
+  function paintWelcome() {
+    const wl = app.querySelector(".wl");
+    if (!wl) return;
+    const track = wl.querySelector(".wl-track");
+    const open = wl.querySelector(".wl-open");
+    const r = track.getBoundingClientRect();
+    const n = 4;
+    const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
+    const ip = Math.min(1, Math.max(0, -open.getBoundingClientRect().top / (open.offsetHeight * 0.8)));
+    const step = Math.min(n - 1, Math.floor(tp * n));
+    // The disc holds at the UK size, then shrinks to the budget in the last step.
+    const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.2) / 0.7);
+    const shrink = fsReduce() ? (step === n - 1 ? 1 : 0) : f * f * (3 - 2 * f);
+    const uk = Number(wl.dataset.uk), b = D.BUDGET_YEARLY;
+    const kg = uk + (b - uk) * shrink;
+    wl.style.setProperty("--ip", ip.toFixed(4));
+    wl.style.setProperty("--tp", tp.toFixed(4));
+    wl.style.setProperty("--s", Math.sqrt(kg / uk).toFixed(4));
+    wl.style.setProperty("--q", (1 - kg / uk).toFixed(4));
+    wl.classList.toggle("under", shrink > 0.98);
+    wl.querySelector(".wl-kg").textContent = (kg / 1000).toFixed(1) + " t";
+    // While the story fills the screen, the top bar goes dark and the phone's
+    // sticky "Start the survey" bar waits (the story has its own buttons).
+    const wr = wl.getBoundingClientRect();
+    const bar = document.querySelector(".topbar");
+    if (bar) bar.classList.toggle("on-dark", wr.top < 40 && wr.bottom > 64);
+    document.body.classList.toggle("wl-in", wr.bottom > innerHeight * 0.6);
+    if (wl.dataset.step !== String(step)) {
+      wl.dataset.step = String(step);
+      wl.querySelectorAll(".wl-steps li").forEach((li, i) => { li.classList.toggle("on", i === step); li.classList.toggle("past", i < step); });
+    }
+  }
+
   function renderIntro() {
     const cta = (label) => '<button type="button" class="btn btn-green intro-cta" data-action="start-survey">' + label + " " + icon("arrowRight") + "</button>";
     const faq = [
@@ -2172,15 +2241,7 @@
     ];
     return (
       '<div class="container intro-v2">' +
-      '<header class="intro-hero"><div class="intro-hero-main">' +
-      '<span class="eyebrow rise">Free for everyone · no ads</span>' +
-      '<h1 class="display intro-title rise" style="animation-delay:.08s">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
-      '<p class="intro-lead rise" style="animation-delay:.16s">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
-      '<div class="chip-row rise" style="animation-delay:.24s">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") +
-      '<a class="btn btn-outline" href="/example/">See an example result</a></div>' +
-      '<div class="intro-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((t) => "<span>" + icon("check") + t + "</span>").join("") + "</div></div>" +
-      '<div class="intro-floaty" aria-hidden="true"><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect class="ib1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect class="ib2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect class="ib3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg>' +
-      '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">{{budget_t}} t <small>a person, a year</small></span></div></div></header>' +
+      welcomeStory(cta) +
       '<section class="intro-mission"><div class="intro-sec-head"><div><span class="eyebrow">Our mission</span><h2 class="display">From "what\'s my footprint?" to habits that stick</h2></div>' +
       "<p>Most people don't know where their emissions really come from. We make it clear, then make it doable.</p></div>" +
       '<ol class="mission">' +
@@ -2368,7 +2429,8 @@
         '<button type="button" class="btn btn-outline btn-sm" data-action="cancel-new-survey">' + icon("x") + " Cancel new survey</button></div>"
       : "";
     return (
-      '<div class="container survey-v2">' + newBanner +
+      '<div class="container survey-v2" data-fs-key="' + qKey + '" data-fs-from="' + (ui.step / n).toFixed(4) + '" data-fs-to="' + ((ui.step + 1) / n).toFixed(4) +
+      '" data-fs-pill="Step ' + (ui.step + 1) + " of " + n + " · " + kgFmt(kg) + '" data-fs-unit="kg">' + newBanner +
       '<nav class="section-tabs" aria-label="Survey steps">' + tabs + "</nav>" +
       '<header class="glass step-hero' + (qAnimate ? " rise" : "") + '"><span class="cat-watermark" aria-hidden="true">' + step.icon + "</span>" +
       '<div class="step-hero-main"><span class="eyebrow">Step ' + (ui.step + 1) + " of " + n + "</span>" +
@@ -3246,6 +3308,483 @@
       "</section>"
     );
   }
+  // ===== Picture your year: a full-screen scroll story =====
+  // Opens from the Picture it card. Your year is a disc whose area is your
+  // kg; scrolling walks through your three biggest moves and the disc
+  // shrinks towards the dashed 1.5°C budget ring.
+  let storyEl = null, storyFrom = null;
+  function storyData() {
+    const fp = footprint(survey);
+    const tree = (D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22;
+    const moves = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) })).filter((x) => x.t.saving >= 0.5).sort((a, b) => b.t.saving - a.t.saving).slice(0, 3);
+    const total = Math.max(1, fp.totalYearly);
+    let left = total;
+    const steps = [{ kg: total, k: "Today", h: "Your year: " + kgFmt(total) + " kg", p: "That's what <em>" + kgFmt(total / tree) + " mature trees</em> soak up in a year." }];
+    moves.forEach((x, i) => {
+      left = Math.max(0, left - x.t.saving);
+      steps.push({ kg: left, k: "Move " + (i + 1) + " · " + esc(CAT_SHORT[x.b.key] || x.b.label), h: esc(capFirst(x.t.realisticLabel || x.t.title)), p: "Saves about <em>" + kgFmt(x.t.saving) + " kg</em> a year. You're down to " + kgFmt(left) + " kg." });
+    });
+    // Your full footprint now, and if you made every change you could
+    // (the "All the way" figure on Results), each with the shared share.
+    const allTips = fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) }));
+    const bb = budgetBasis(fp, allTips);
+    const maxCut = Math.max(0, allTips.reduce((t, x) => t + x.t.maxSaving, 0) - bb.moneyMax);
+    const shared = D.SHARED_FOOTPRINT.totalKg;
+    const warm = D.WARMING ? warmModel(Math.max(0, bb.life) + shared, Math.max(0, bb.life - maxCut) + shared) : null;
+    return { total, steps, moves, left, budget: D.BUDGET_YEARLY, tree, warm };
+  }
+  // What if everyone lived like you? Observed warming to today, then two
+  // futures to 2100 (see WARMING in data.js for the sources and method).
+  function warmModel(fullKg, allKg) {
+    const W = D.WARMING;
+    const obs = W.observed, f0 = W.observedFrom, Y = W.startYear;
+    const at = (pts, y) => {
+      for (let i = 1; i < pts.length; i++) if (y <= pts[i][0]) { const [x0, v0] = pts[i - 1], [x1, v1] = pts[i]; return v0 + ((v1 - v0) * (y - x0)) / (x1 - x0); }
+      return pts[pts.length - 1][1];
+    };
+    // Today: the 20-year trend at the start year.
+    const last = obs.slice(-20).map((v, i) => [Y - 19 + i, v]);
+    const mx = last.reduce((t, p) => t + p[0], 0) / 20, my = last.reduce((t, p) => t + p[1], 0) / 20;
+    const slope = last.reduce((t, p) => t + (p[0] - mx) * (p[1] - my), 0) / last.reduce((t, p) => t + (p[0] - mx) ** 2, 0);
+    const t0 = my + slope * (Y - mx);
+    // The bold line: an 11-year average, easing into today's trend.
+    const smooth = obs.map((_, i) => {
+      const y = f0 + i;
+      if (y > Y - 5) { const a = smoothAt(Y - 5); return a + ((t0 - a) * (y - (Y - 5))) / 5; }
+      return smoothAt(y);
+    });
+    function smoothAt(y) { const i = y - f0, lo = Math.max(0, i - 5), hi = Math.min(obs.length - 1, i + 5); let t = 0; for (let j = lo; j <= hi; j++) t += obs[j]; return t / (hi - lo + 1); }
+    let cumCp = 0, cumYou = 0, cumAll = 0;
+    const cpCum = [0], youCum = [0], allCum = [0];
+    for (let y = Y + 1; y <= 2100; y++) {
+      const bn = at(W.populationBn, y - 0.5);
+      cumCp += at(W.currentPoliciesGt, y - 0.5);
+      cumYou += (bn * fullKg) / 1000; // billions of people x kg = Mt; / 1000 = Gt
+      cumAll += (bn * allKg) / 1000;
+      cpCum.push(cumCp); youCum.push(cumYou); allCum.push(cumAll);
+    }
+    const k = (W.currentPolicies2100 - t0) / cumCp;
+    const cp = cpCum.map((c) => t0 + k * c), you = youCum.map((c) => t0 + k * c), all = allCum.map((c) => t0 + k * c);
+    return { f0, Y, obs, smooth, t0, cp, you, all, fullKg, allKg, worldKg: (W.emissionsNowGt / at(W.populationBn, Y)) * 1000, people: at(W.populationBn, Y) };
+  }
+  const degC = (v) => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(1) + "°C";
+
+  function storyHtml(d) {
+    const n = d.steps.length;
+    const saved = d.total - d.left;
+    const gap = d.left - d.budget;
+    const r = (kg) => Math.sqrt(Math.max(0, kg) / d.total).toFixed(4);
+    const first = d.moves[0];
+    return (
+      '<div class="story" role="dialog" aria-modal="true" aria-labelledby="story-h">' +
+      '<div class="story-line" aria-hidden="true"><i></i></div>' +
+      '<button type="button" class="story-close" data-story-close aria-label="Close">' + icon("x") + "</button>" +
+      '<div class="story-scroll" tabindex="0" aria-label="Picture your year. Scroll to move through it.">' +
+      (d.reveal
+        ? '<section class="story-intro"><span class="story-k">Your results are in</span>' +
+          '<h2 id="story-h" class="display">This is your year.<br><b class="tnum story-count">' + kgFmt(d.total) + "</b><b> kg</b> of CO₂.</h2>" +
+          '<div class="story-intro-go"><button type="button" class="btn btn-honey" data-story-next>Watch it shrink ' + icon("arrowRight") + "</button>" +
+          '<button type="button" class="link-btn story-skip" data-story-close>Skip to my results</button></div></section>'
+        : '<section class="story-intro"><span class="story-k">Picture it</span>' +
+          '<h2 id="story-h" class="display">This is your year.<br><b class="tnum">' + kgFmt(d.total) + " kg</b> of CO₂.</h2>" +
+          "<p>Scroll, and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>") +
+      '<section class="story-track" style="--n:' + n + '">' +
+      '<div class="story-stage">' +
+      '<div class="story-orb" aria-hidden="true" style="--b:' + r(d.budget) + '">' +
+      '<i class="story-ghost"></i><i class="story-disc"></i><i class="story-budget"></i>' +
+      '<span class="story-saved"><b class="tnum">0</b> kg saved</span>' +
+      '<span class="story-budget-l">1.5°C budget · ' + kgFmt(d.budget) + " kg</span>" +
+      '<span class="story-read"><b class="display tnum story-kg">' + kgFmt(d.total) + "</b><small>kg a year</small></span></div>" +
+      '<ol class="story-steps">' + d.steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + st.k + '</span><h3 class="display">' + st.h + "</h3><p>" + st.p + "</p></li>").join("") + "</ol>" +
+      '<div class="story-ticks" aria-hidden="true">' + d.steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
+      "</div></section>" + (d.warm ? warmHtml(d.warm) : "") +
+      '<section class="story-end"><span class="story-k">' + (d.moves.length ? d.moves.length + (d.moves.length === 1 ? " move" : " moves") : "Your year") + "</span>" +
+      '<h2 class="display">' + (saved >= 0.5 ? "<b class=\"tnum\">" + kgFmt(saved) + " kg</b> lighter, every year." : "You're already lean.") + "</h2>" +
+      "<p>" + (gap > 0 ? "That leaves you " + kgFmt(gap) + " kg above the 1.5°C budget. The 7 Acts close more of the gap." : "That puts you inside the 1.5°C budget of " + kgFmt(d.budget) + " kg.") + "</p>" +
+      '<div class="story-go">' + (first ? '<a class="btn btn-honey" href="' + catHref(first.b.key) + '">Start with ' + esc(CAT_SHORT[first.b.key] || first.b.label) + " " + icon("arrowRight") + "</a>" : "") +
+      '<a class="btn story-ghost-btn" href="#/habits">Open My Habits</a>' +
+      '<button type="button" class="link-btn story-back" data-story-close>Back to my results</button></div></section>' +
+      "</div></div>"
+    );
+  }
+  const WARM_MODES = [["both", "Both"], ["now", "As I live now"], ["all", "If I made every change I could"]];
+  function warmHtml(w) {
+    const end = (a) => a[a.length - 1];
+    const cpEnd = end(w.cp), youEnd = end(w.you), allEnd = end(w.all);
+    const hot = youEnd > cpEnd + 0.05, allHot = allEnd > cpEnd + 0.05;
+    const t = (kg) => (kg / 1000).toFixed(1);
+    const vs = (v) => (v > cpEnd + 0.05 ? "Hotter than the world is heading for." : v < 1.6 ? "Close to the 1.5°C limit." : "Cooler than the world is heading for.");
+    const caps = [
+      ["1850", "The industrial age gets going", "Each year's global temperature, measured, compared with the late 1800s."],
+      ["1950s", "Then the line turns upward", "Coal, oil and gas burn faster every decade, and the heat builds."],
+      ["Today", "About " + degC(w.t0) + " already", "The last ten years were the ten warmest on record."],
+      ["If the world carries on", "About " + degC(cpEnd) + " by 2100", "Where today's policies are heading, by Climate Action Tracker's estimate."],
+      ["If everyone lived like you do now", "About " + degC(youEnd) + " by 2100", vs(youEnd) + " Everyone at " + t(w.fullKg) + " t a year."],
+      ["If everyone made every change you could", "About " + degC(allEnd) + " by 2100", vs(allEnd) + " Everyone at " + t(w.allKg) + " t a year" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
+    ];
+    const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ". By 2100: about " + degC(cpEnd) + " if the world carries on as it is, about " + degC(youEnd) +
+      " if everyone lived like you do now, and about " + degC(allEnd) + " if everyone made every change you could.";
+    const modes = (cls) => '<div class="warm-modes ' + cls + '" role="radiogroup" aria-label="Which version of you?">' +
+      WARM_MODES.map(([k, l]) => '<button type="button" role="radio" aria-checked="' + (k === "both") + '" data-warm-mode="' + k + '">' + esc(l) +
+        (k === "now" ? "<small>" + t(w.fullKg) + " t a year</small>" : k === "all" ? "<small>" + t(w.allKg) + " t a year</small>" : "<small>Then and after</small>") + "</button>").join("") + "</div>";
+    return (
+      '<section class="warm-intro"><span class="story-k">Now picture everyone</span>' +
+      '<h2 class="display">What if all ' + w.people.toFixed(1) + " billion of us lived like you?</h2>" +
+      "<p>Your full footprint, with shopping and your share of public services, is <b>" + t(w.fullKg) + " t</b> a year. Make every change you could and it's <b>" + t(w.allKg) + " t</b>. The world averages about <b>" + t(w.worldKg) + " t</b>.</p>" +
+      '<p class="warm-q">Which version of you should everyone live like?</p>' + modes("big") +
+      '<span class="warm-go" aria-hidden="true">Scroll to play</span></section>' +
+      '<section class="warm-track"><div class="warm-stage">' +
+      '<ol class="warm-caps">' + caps.map((c, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(c[0]) + '</span><h3 class="display">' + esc(c[1]) + "</h3><p>" + esc(c[2]) + "</p></li>").join("") + "</ol>" +
+      '<div class="warm-read" aria-hidden="true"><b class="display tnum warm-yr">1850</b><span class="warm-t tnum">+0.0°C</span></div>' + modes("small") +
+      '<div class="warm-chart" role="img" aria-label="' + esc(summary) + '">' +
+      '<div class="warm-grid" aria-hidden="true"></div>' +
+      '<svg viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true"><path class="w-raw" vector-effect="non-scaling-stroke"></path><path class="w-obs" vector-effect="non-scaling-stroke"></path>' +
+      '<path class="w-cp" vector-effect="non-scaling-stroke"></path><path class="w-you' + (hot ? " hot" : "") + '" vector-effect="non-scaling-stroke"></path>' +
+      '<path class="w-all' + (allHot ? " hot" : "") + '" vector-effect="non-scaling-stroke"></path></svg>' +
+      '<span class="w-head" aria-hidden="true"></span>' +
+      '<span class="w-end w-end-cp" aria-hidden="true"><b class="tnum">' + degC(cpEnd) + "</b>Carries on</span>" +
+      '<span class="w-end w-end-you' + (hot ? " hot" : "") + '" aria-hidden="true"><b class="tnum">' + degC(youEnd) + "</b>Everyone like you now</span>" +
+      '<span class="w-end w-end-all' + (allHot ? " hot" : "") + '" aria-hidden="true"><b class="tnum">' + degC(allEnd) + "</b>After every change</span>" +
+      '<div class="warm-x" aria-hidden="true"></div></div>' +
+      '<div class="warm-key" aria-hidden="true"><span class="k-you' + (hot ? " hot" : "") + '"><i></i><b>' + degC(youEnd) + "</b> Like you now</span>" +
+      '<span class="k-cp"><i></i><b>' + degC(cpEnd) + "</b> Carries on</span>" +
+      '<span class="k-all' + (allHot ? " hot" : "") + '"><i></i><b>' + degC(allEnd) + "</b> Every change</span></div>" +
+      '<p class="warm-note">An illustration, not a climate model. It holds everyone at that footprint until 2100. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
+      "</div></section>"
+    );
+  }
+  // Draws the chart for a scroll position (0 to 1 through its track) and
+  // the chosen version of you: "now", "all" (every change) or "both".
+  function paintWarm(el, w, p, mode) {
+    const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+    const cl = (a, b) => Math.min(1, Math.max(0, (p - a) / (b - a)));
+    // Your lines share the last stretch of the scroll, one after another.
+    const mine = mode === "now" ? ["you"] : mode === "all" ? ["all"] : ["you", "all"];
+    const span = (0.96 - 0.72) / mine.length;
+    const ph = { hist: cl(0.04, 0.46), zoom: ease(cl(0.48, 0.56)), cp: cl(0.56, 0.7), you: 0, all: 0 };
+    mine.forEach((k, i) => (ph[k] = cl(0.72 + i * span, 0.72 + (i + 1) * span - 0.02)));
+    const end = w.f0 + w.obs.length - 1;
+    const histMax = 1.8, yMin = -0.5;
+    const fullMax = Math.max(3, w.you[w.you.length - 1], w.cp[w.cp.length - 1]) + 0.4;
+    const x1 = end + (2100 - end) * ph.zoom, y1 = histMax + (fullMax - histMax) * ph.zoom;
+    const X = (yr) => ((yr - w.f0) / (x1 - w.f0)) * 1000;
+    const Yv = (v) => 500 - ((v - yMin) / (y1 - yMin)) * 500;
+    const pct = (yr, v) => [(X(yr) / 10).toFixed(3) + "%", ((Yv(v) / 500) * 100).toFixed(3) + "%"];
+    const line = (from, vals, upto) => {
+      let d = "";
+      const n = Math.floor(upto);
+      for (let i = 0; i <= Math.min(n, vals.length - 1); i++) d += (i ? "L" : "M") + X(from + i).toFixed(2) + " " + Yv(vals[i]).toFixed(2);
+      if (n < vals.length - 1 && upto > n) { const v = vals[n] + (vals[n + 1] - vals[n]) * (upto - n); d += "L" + X(from + upto).toFixed(2) + " " + Yv(v).toFixed(2); }
+      return d;
+    };
+    const valAt = (vals, upto) => { const n = Math.min(vals.length - 1, Math.floor(upto)); return n >= vals.length - 1 ? vals[n] : vals[n] + (vals[n + 1] - vals[n]) * (upto - n); };
+    const histUpto = ph.hist * (w.obs.length - 1);
+    const fut = 2100 - w.Y;
+    const q = (s) => el.querySelector(s);
+    q(".w-raw").setAttribute("d", line(w.f0, w.obs, histUpto));
+    q(".w-obs").setAttribute("d", line(w.f0, w.smooth, histUpto));
+    ["cp", "you", "all"].forEach((k) => q(".w-" + k).setAttribute("d", ph[k] > 0 ? line(w.Y, w[k], ph[k] * fut) : ""));
+    // The moving tip, the year and the temperature: whichever line is drawing.
+    const drawing = ph.all > 0 && (ph.all < 1 || mine[mine.length - 1] === "all") ? "all" : ph.you > 0 ? "you" : ph.cp > 0 ? "cp" : "hist";
+    let yr, v;
+    if (drawing === "hist") { yr = w.f0 + histUpto; v = valAt(w.smooth, histUpto); }
+    else { yr = w.Y + ph[drawing] * fut; v = valAt(w[drawing], ph[drawing] * fut); }
+    const [hx, hy] = pct(yr, v);
+    const head = q(".w-head");
+    head.style.left = hx; head.style.top = hy;
+    const hotOf = (k) => (k === "you" || k === "all") && q(".w-" + k).classList.contains("hot");
+    const tone = drawing === "hist" ? "" : drawing === "cp" ? "cp" : hotOf(drawing) ? "hot" : drawing;
+    head.className = "w-head " + tone;
+    q(".warm-yr").textContent = Math.round(yr);
+    q(".warm-t").textContent = degC(v);
+    q(".warm-read").className = "warm-read " + tone;
+    // End labels at 2100, nudged apart so they never sit on top of each other.
+    const chartH = q(".warm-chart").clientHeight || 1;
+    const gapPx = innerWidth < 760 ? 30 : 38;
+    const ends = ["cp", "you", "all"].filter((k) => ph[k] >= 1).map((k) => ({ k, y: (Yv(w[k][fut]) / 500) * chartH })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < gapPx) ends[i].y = ends[i - 1].y + gapPx;
+    ["cp", "you", "all"].forEach((k) => {
+      const e = q(".w-end-" + k), at = ends.find((x) => x.k === k);
+      e.style.left = pct(2100, 0)[0];
+      if (at) e.style.top = at.y.toFixed(1) + "px";
+      e.classList.toggle("on", !!at);
+      q(".k-" + k).classList.toggle("on", !!at);
+    });
+    // Grid: a line per whole degree, and the 1.5°C and 2°C limits.
+    const grid = q(".warm-grid");
+    const top = Math.floor(y1);
+    if (grid.dataset.y1 !== y1.toFixed(3)) {
+      grid.dataset.y1 = y1.toFixed(3);
+      let g = "";
+      for (let t = 0; t <= top; t++) g += '<span class="wg" style="top:' + pct(w.f0, t)[1] + '"><i>' + (t ? "+" + t : "0") + "°C</i></span>";
+      g += '<span class="wg lim" style="top:' + pct(w.f0, 1.5)[1] + '"><i>1.5°C limit</i></span>';
+      if (2 <= y1) g += '<span class="wg lim two" style="top:' + pct(w.f0, 2)[1] + '"><i>2°C</i></span>';
+      grid.innerHTML = g;
+    }
+    const xs = q(".warm-x");
+    const ticks = [1850, 1900, 1950, 2000, 2025, 2050, 2100].filter((t) => t <= x1 + 0.5);
+    const key = ticks.join() + x1.toFixed(1);
+    if (xs.dataset.k !== key) { xs.dataset.k = key; xs.innerHTML = ticks.map((t) => '<span data-y="' + t + '" style="left:' + pct(t, 0)[0] + '">' + t + "</span>").join(""); }
+    // Which caption is showing.
+    const cap = drawing === "all" && ph.all > 0.02 ? 5 : drawing === "you" && ph.you > 0.02 ? 4 : ph.cp > 0.02 || ph.zoom > 0.4 ? 3 : ph.hist >= 0.98 ? 2 : ph.hist > 0.55 ? 1 : 0;
+    if (el._cap !== cap) { el._cap = cap; el.querySelectorAll(".warm-caps li").forEach((li, i) => { li.classList.toggle("on", i === cap); li.classList.toggle("past", i < cap); }); }
+  }
+
+  // ===== Level up: a short full-screen moment on My Habits =====
+  // The new level's tree draws itself, the acts you've banked fill in, and
+  // it waits for "Keep going" (or Esc). Shown once per level reached.
+  function openLevelUp(l) {
+    if (storyEl || document.querySelector(".lvup")) return;
+    const name = HB_LEVELS[l.to][1], prev = HB_LEVELS[l.from][1], next = HB_LEVELS[l.to + 1];
+    const toNext = next ? next[0] - l.made : 0;
+    const fresh = HB_LEVELS[l.from][0];
+    const from = document.activeElement;
+    const dots = Array.from({ length: 7 }, (_, i) => '<span class="' + (i < l.made ? (i >= fresh ? "got new" : "got") : "") + '" style="--k:' + Math.max(0, i - fresh) + '"></span>').join("");
+    const leaves = Array.from({ length: 14 }, (_, i) => '<i style="--x:' + Math.round(8 + ((i * 53) % 84)) + "%;--d:" + ((i % 7) * 0.12).toFixed(2) + "s;--r:" + ((i * 47) % 160 - 80) + 'deg"></i>').join("");
+    document.body.insertAdjacentHTML("beforeend",
+      '<div class="lvup" role="dialog" aria-modal="true" aria-labelledby="lvup-h">' +
+      '<span class="lvup-leaves" aria-hidden="true">' + leaves + "</span>" +
+      '<button type="button" class="story-close" data-lv-close aria-label="Close">' + icon("x") + "</button>" +
+      '<div class="lvup-in">' +
+      '<span class="story-k">Level up · Level ' + (l.to + 1) + "</span>" +
+      '<div class="lvup-tree">' + hbTree(name, "lv", true) + "</div>" +
+      '<p class="lvup-from" aria-hidden="true"><s>' + esc(prev) + "</s></p>" +
+      '<h2 id="lvup-h" class="display">' + esc(name) + "</h2>" +
+      '<div class="lvup-dots" role="img" aria-label="' + l.made + ' of the 7 Acts banked">' + dots + "</div>" +
+      '<p class="lvup-sub">' + l.made + " of the 7 Acts banked. " + (next ? toNext + (toNext === 1 ? " more act" : " more acts") + " to " + esc(next[1]) + "." : "That's all seven. Keep measuring to keep your line falling.") + "</p>" +
+      '<button type="button" class="btn btn-honey lvup-go" data-lv-close>Keep going ' + icon("arrowRight") + "</button>" +
+      "</div></div>");
+    const el = document.body.lastElementChild;
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("in")));
+    setTimeout(() => haptic("success"), 600);
+    const close = () => {
+      if (!el.isConnected || el.classList.contains("out")) return;
+      el.classList.remove("in");
+      el.classList.add("out");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => el.remove(), fsReduce() ? 0 : 420);
+      if (from && from.isConnected) from.focus({ preventScroll: true });
+    };
+    el.addEventListener("click", (e) => { if (e.target.closest("[data-lv-close]")) close(); });
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      if (e.key === "Tab") { const f = [...el.querySelectorAll("button")]; const i = f.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); } }
+    });
+    setTimeout(() => { const b = el.querySelector(".lvup-go"); if (b) b.focus({ preventScroll: true }); }, 50);
+  }
+
+  function openStory(from, opts) {
+    if (storyEl || !survey) return;
+    const d = storyData();
+    d.reveal = !!(opts && opts.reveal);
+    storyFrom = from || document.activeElement;
+    document.body.insertAdjacentHTML("beforeend", storyHtml(d));
+    storyEl = document.body.lastElementChild;
+    document.body.classList.add("modal-open", "story-open");
+    // It opens out of the button that was pressed.
+    const b = from && from.getBoundingClientRect();
+    if (b) { storyEl.style.setProperty("--ox", Math.round(b.left + b.width / 2) + "px"); storyEl.style.setProperty("--oy", Math.round(b.top + b.height / 2) + "px"); }
+    requestAnimationFrame(() => requestAnimationFrame(() => storyEl && storyEl.classList.add("in")));
+    const sc = storyEl.querySelector(".story-scroll");
+    const track = storyEl.querySelector(".story-track");
+    const kgEl = storyEl.querySelector(".story-kg");
+    const savedEl = storyEl.querySelector(".story-saved b");
+    const warmTrack = storyEl.querySelector(".warm-track");
+    let warmMode = "both";
+    const items = [...storyEl.querySelectorAll(".story-steps li")];
+    const n = d.steps.length;
+    let tick = false, shown = -1;
+    const ease = (t) => t * t * (3 - 2 * t);
+    const paint = () => {
+      tick = false;
+      if (!storyEl) return;
+      const vh = sc.clientHeight;
+      const max = Math.max(1, sc.scrollHeight - vh);
+      const ip = Math.min(1, sc.scrollTop / (vh * 0.8));
+      const tp = Math.min(1, Math.max(0, (sc.scrollTop - track.offsetTop) / Math.max(1, track.offsetHeight - vh)));
+      const f = Math.min(n - 1, Math.max(0, tp * n - 0.5));
+      const i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      const kg = fsReduce() ? d.steps[Math.round(f)].kg : d.steps[i0].kg + (d.steps[i1].kg - d.steps[i0].kg) * ease(f - i0);
+      const active = Math.min(n - 1, Math.floor(tp * n));
+      storyEl.style.setProperty("--ip", ip.toFixed(4));
+      storyEl.style.setProperty("--tp", tp.toFixed(4));
+      storyEl.style.setProperty("--sp", (sc.scrollTop / max).toFixed(4));
+      storyEl.style.setProperty("--s", Math.sqrt(kg / d.total).toFixed(4));
+      storyEl.style.setProperty("--q", (1 - kg / d.total).toFixed(4));
+      storyEl.classList.toggle("under", kg <= d.budget);
+      if (warmTrack) paintWarm(warmTrack, d.warm, Math.min(1, Math.max(0, (sc.scrollTop - warmTrack.offsetTop) / Math.max(1, warmTrack.offsetHeight - vh))), warmMode);
+      kgEl.textContent = kgFmt(kg);
+      savedEl.textContent = "−" + kgFmt(d.total - kg);
+      storyEl.classList.toggle("saving", d.total - kg >= 1);
+      if (active !== shown) {
+        shown = active;
+        items.forEach((li, i) => { li.classList.toggle("on", i === active); li.classList.toggle("past", i < active); });
+      }
+    };
+    sc.addEventListener("scroll", () => { if (!tick) { tick = true; requestAnimationFrame(paint); } }, { passive: true });
+    window.addEventListener("resize", paint);
+    storyEl.addEventListener("click", (e) => {
+      if (e.target.closest("[data-story-close]")) return closeStory();
+      if (e.target.closest("[data-story-next]")) return sc.scrollTo({ top: track.offsetTop, behavior: fsReduce() ? "auto" : "smooth" });
+      const pick = e.target.closest("[data-warm-mode]");
+      if (pick) {
+        warmMode = pick.dataset.warmMode;
+        storyEl.querySelectorAll("[data-warm-mode]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.warmMode === warmMode)));
+        storyEl.dataset.warm = warmMode;
+        warmTrack._cap = -1;
+        return paint();
+      }
+      if (e.target.closest("a[href]")) closeStory(true);
+    });
+    storyEl.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); return closeStory(); }
+      if (e.key !== "Tab") return;
+      // Keep focus inside while it's open.
+      const f = [...storyEl.querySelectorAll("button, a[href], [tabindex='0']")];
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    });
+    storyEl._unresize = () => window.removeEventListener("resize", paint);
+    paint();
+    sc.focus({ preventScroll: true });
+    // After the survey: the total counts up once, then waits for them.
+    const count = storyEl.querySelector(".story-count");
+    if (count && !fsReduce()) {
+      count.textContent = "0";
+      const t0 = performance.now() + 450;
+      const tick = (t) => {
+        if (!count.isConnected) return;
+        const k = Math.min(1, Math.max(0, (t - t0) / 1400));
+        count.textContent = kgFmt(d.total * (1 - Math.pow(2, -10 * k)) * (k >= 1 ? 1 : 1));
+        if (k < 1) requestAnimationFrame(tick); else count.textContent = kgFmt(d.total);
+      };
+      requestAnimationFrame(tick);
+    }
+  }
+  function closeStory(leaving) {
+    if (!storyEl) return;
+    const el = storyEl;
+    storyEl = null;
+    el._unresize();
+    el.classList.remove("in");
+    el.classList.add("out");
+    document.body.classList.remove("modal-open", "story-open");
+    setTimeout(() => el.remove(), fsReduce() ? 0 : 420);
+    if (!leaving && storyFrom && storyFrom.isConnected) storyFrom.focus({ preventScroll: true });
+    storyFrom = null;
+  }
+
+  // ===== Fresh spin: scroll-linked motion =====
+  // On these pages, sections after the hero rise in as they reach the
+  // screen, the hero hands a short summary (data-fs-pill on the page) to
+  // the top bar as it scrolls away, and a reading line fills under the top
+  // bar. CSS reads --rp and --hp (see style.css).
+  // items: what rises in (default: everything after the hero). A page can
+  // set data-fs-key (redraws with a new key replay the reveal) and
+  // data-fs-from/-to (the reading line shows that span of a longer journey).
+  const FS_PAGES = [
+    { name: "welcome", paths: ["/", "/welcome"], page: ".intro-v2", hero: ".wl", items: ".intro-mission .intro-sec-head, .mission > li, .intro-split > *, .intro-cards > *, .intro-faq > *", onScroll: () => paintWelcome() },
+    { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
+    { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
+    // Pages where people are filling things in stay calm: no rise-ins, only
+    // the reading line and the top-bar pill.
+    { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: null },
+    { name: "survey-done", paths: ["/"], page: ".done-v2", hero: ".cat-hero", items: null },
+    { name: "friends", paths: ["/friends"], page: ".fr-page", hero: ".fr-h1", items: ".fr-side > :not(.fr-me), .fr-feed > :not(h1)" },
+    { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
+    { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: null },
+  ];
+  let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null;
+  const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  function freshSpin(path) {
+    const bar = document.querySelector(".topbar");
+    const cfg = FS_PAGES.find((c) => (c.prefix ? path.startsWith(c.prefix) : c.paths.includes(path)) && app.querySelector(c.page));
+    const page = cfg && app.querySelector(cfg.page);
+    const hero = page && page.querySelector(cfg.hero);
+    const on = !!hero;
+    if (fsObs) { fsObs.disconnect(); fsObs = null; }
+    fsHero = on ? hero : null;
+    fsCfg = on ? cfg : null;
+    document.body.classList.toggle("fs-on", on);
+    if (!on || cfg.name !== "welcome") { document.body.classList.remove("wl-in"); const tb = document.querySelector(".topbar"); if (tb) tb.classList.remove("on-dark"); }
+    FS_PAGES.forEach((c) => document.body.classList.toggle("fs-" + c.name, on && c === cfg));
+    if (bar && !bar.querySelector(".read-line")) {
+      bar.insertAdjacentHTML("beforeend", '<span class="read-line" aria-hidden="true"><i></i><b></b></span>');
+      const brand = bar.querySelector(".brand");
+      if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"><span></span> <small></small></span>');
+    }
+    const key = path + "|" + ((page && page.dataset.fsKey) || "");
+    const fresh = fsPath !== key;
+    fsPath = key;
+    if (!on) return;
+    const mini = bar && bar.querySelector(".nav-total");
+    if (mini) {
+      mini.classList.toggle("none", !page.dataset.fsPill);
+      mini.firstChild.textContent = page.dataset.fsPill || "";
+      mini.lastChild.textContent = page.dataset.fsUnit || "";
+    }
+    // Everything after the hero (or the page's own items); cards that sit
+    // side by side arrive in turn.
+    const targets = [];
+    if (cfg.items !== undefined) { if (cfg.items) targets.push(...page.querySelectorAll(cfg.items)); }
+    else {
+      let past = false;
+      [...page.children].forEach((el) => {
+        if (el === hero || el.contains(hero)) return void (past = true);
+        if (!past) return;
+        if (el.classList.contains("res-grid")) targets.push(...el.children);
+        else targets.push(el);
+      });
+    }
+    const seen = new Map();
+    targets.forEach((el) => {
+      const k = seen.get(el.parentNode) || 0;
+      seen.set(el.parentNode, k + 1);
+      if (k) el.style.setProperty("--i", Math.min(k, 3));
+    });
+    targets.forEach((el) => el.classList.add("cc-rv"));
+    // A redraw of the same page (a chart toggle, a tick) just shows everything.
+    if (!fresh || fsReduce() || !("IntersectionObserver" in window)) targets.forEach((el) => el.classList.add("is-in"));
+    else {
+      fsObs = new IntersectionObserver((es) => es.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("is-in"); fsObs.unobserve(e.target); }
+      }), { rootMargin: "0px 0px -12% 0px", threshold: 0.06 });
+      targets.forEach((el) => fsObs.observe(el));
+    }
+    fsScroll();
+  }
+  function fsScroll() {
+    if (!fsHero || !document.body.classList.contains("fs-on")) return;
+    if (fsCfg && fsCfg.onScroll) fsCfg.onScroll();
+    const max = document.documentElement.scrollHeight - innerHeight;
+    let rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
+    const page = fsHero.closest("[data-fs-from]");
+    if (page) {
+      const from = Number(page.dataset.fsFrom), to = Number(page.dataset.fsTo);
+      rp = from + (to - from) * (max > 0 ? rp : 1);
+    }
+    const bar = document.querySelector(".topbar");
+    let hp;
+    // A hero that sticks (the phone's level strip) tightens over the first 140px.
+    if (getComputedStyle(fsHero).position === "sticky") hp = Math.min(1, scrollY / 140);
+    else {
+      const r = fsHero.getBoundingClientRect();
+      const top = bar ? bar.getBoundingClientRect().bottom : 0;
+      hp = Math.min(1, Math.max(0, (top + 40 - r.top) / (r.height * 0.7)));
+    }
+    if (fsReduce()) hp = hp > 0.5 ? 1 : 0;
+    document.body.style.setProperty("--rp", rp.toFixed(4));
+    document.body.style.setProperty("--hp", hp.toFixed(4));
+  }
+  window.addEventListener("scroll", () => {
+    if (fsTick) return;
+    fsTick = true;
+    requestAnimationFrame(() => { fsTick = false; fsScroll(); });
+  }, { passive: true });
+  window.addEventListener("resize", fsScroll);
+
   // Plays once per visit, when it scrolls into view.
   function animateProgress() {
     const el = app.querySelector(".pg:not(.pg-seen)");
@@ -3443,7 +3982,7 @@
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
-    let html = '<div class="container results-v2">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
+    let html = '<div class="container results-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
     if (ui.exampleMode) {
       html +=
         '<div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident\'s footprint, worked out the same way as yours will be.</p></div>' +
@@ -3568,7 +4107,7 @@
       '<div><div class="row-between"><span>' + label + '</span><b class="display tnum">' + kgFmt(v) + ' kg</b></div><div class="drop-track"><span class="' + cls + '" style="width:' + Math.max(0, (v / sMax) * 100).toFixed(1) + '%"></span></div></div>';
 
     let html =
-      '<div class="container cat-v2">' + resultTabs(fp, cat) +
+      '<div class="container cat-v2" data-fs-pill="' + esc(CAT_SHORT[cat] || ex.title) + '" data-fs-unit="' + kgFmt(item.yearly) + ' kg">' + resultTabs(fp, cat) +
       '<a class="back-overview" href="#/results">' + icon("chevronLeft") + " Back to overview</a>" +
       '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + ex.icon + "</span>" +
       '<div class="cat-hero-main"><div class="label-row"><span class="cat-badge">' + ex.icon + '</span><span class="eyebrow">' + rank + "</span></div>" +
@@ -4771,6 +5310,7 @@
     '<svg class="hb3-tree ' + (cls || "") + (draw ? " draw" : "") + '" viewBox="0 0 120 110" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     HB_TREES[name.toLowerCase()].map(([d, t], i) => '<path class="tr-' + t + '" d="' + d + '" pathLength="1" style="--n:' + i + '"></path>').join("") + "</svg>";
   const KEY_HB_WON = "co2_hb_won"; // acts already celebrated, per account
+  const KEY_HB_LEVEL = "co2_hb_level"; // highest level already celebrated, per account
 
   function renderHabitsPage() {
     const { acts, ready } = habitActs();
@@ -4788,6 +5328,13 @@
     const lvPct = nextLv ? Math.max(8, Math.round(((made - HB_LEVELS[lv][0]) / (nextLv[0] - HB_LEVELS[lv][0])) * 100)) : 100;
     const toNextText = nextLv ? toNext + (toNext === 1 ? " act" : " acts") + " to " + nextLv[1] : "Top level";
 
+    // Reaching a new level gets a full-screen moment, once (see openLevelUp).
+    const lvKey = KEY_HB_LEVEL + (currentUser ? ":" + currentUser.id : "");
+    if (ui.hbLvKey !== lvKey) {
+      ui.hbLvKey = lvKey;
+      const seenLv = lsGet(lvKey, 0);
+      if (lv > seenLv) { lsSet(lvKey, lv); ui.levelUp = { from: seenLv, to: lv, made }; }
+    }
     // Newly banked acts get a party, once (the first visit counts too).
     const wonKey = KEY_HB_WON + (currentUser ? ":" + currentUser.id : "");
     if (!ui.hbWin || ui.hbWin.key !== wonKey) {
@@ -5033,7 +5580,7 @@
     hbSheetBuild = null;
     const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
-      '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '">' +
+      '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' +
       party + '<div class="hb3-top-row">' + hero + spot + "</div>" + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
@@ -5143,7 +5690,7 @@
     const nextOne = todo.find((a) => !a.pending);
     const ringDeg = Math.round((made / 7) * 360);
     return (
-      '<div class="container hb-page hbf">' + party +
+      '<div class="container hb-page hbf" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' + party +
       '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
       '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + "</span></div>" +
       (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
@@ -5920,6 +6467,19 @@
           '<a href="https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator-calculations-and-references" target="_blank" rel="noopener">US EPA, Greenhouse Gas Equivalencies: calculations and references</a> · ' +
           '<a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK Government GHG conversion factors (DESNZ)</a> · ' +
           '<a href="' + BUDGET_SOURCE_URL + '" target="_blank" rel="noopener">Hot or Cool Institute, 1.5-Degree Lifestyles</a></p>'
+      ) +
+      section(
+        "Picture your year, and what if everyone lived like you?",
+        "<p>Watch it shrink, on Picture it, shows your footprint as a disc whose area is your kilograms, shrinking as your three biggest moves are taken off.</p>" +
+          "<p>It then asks what would happen if all 8.2 billion people lived like you. This is an illustration, not a climate model:</p>" +
+          list([
+            "<strong>The past</strong> is measured: the Met Office's HadCRUT5 global temperature for each year since 1850, shown against the 1850 to 1900 average, with an 11-year average drawn over it.",
+            "<strong>Today</strong> is the 20-year trend, about 1.4°C, rather than one year's figure, which jumps around.",
+            "<strong>If the world carries on</strong> follows Climate Action Tracker's estimate for today's policies: about 2.7°C by 2100. World emissions start at about 57 billion tonnes a year (UNEP Emissions Gap Report 2024).",
+            "<strong>If everyone lived like you</strong> takes your full footprint (your survey without money, plus assumed shopping and your shared footprint), multiplies it by the world's population each year (UN World Population Prospects 2024) and holds it there until 2100. Extra warming is taken as proportional to the emissions added, on the same scale that takes today's policies to 2.7°C. That scale, about 0.36°C per 1,000 billion tonnes, is close to the IPCC's estimate for CO₂.",
+            "<strong>If everyone made every change you could</strong> does the same with your footprint after every change on Results (the All the way figure), plus the same shopping and shared footprint. You choose which to see, or both, before the chart plays.",
+          ]) +
+          "<p>Because your shared footprint is in it, even a very small personal footprint doesn't reach zero. And the 1.5°C budget is meant to keep falling after 2030, so holding today's 2.5 tonnes flat until 2100 would still pass 2°C.</p>"
       ) +
       section(
         "Fun comparisons",
@@ -7765,7 +8325,7 @@
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
     return (
-      '<div class="container friends-v2 fr-page">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
+      '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
       '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
@@ -8240,7 +8800,7 @@
       '<div class="acc-delete"><div class="acc-row"><span class="acc-row-text"><b class="display">Delete account</b>Permanently deletes your account, survey answers and any support record.</span>' + del + "</div>" + confirm + "</div></section>";
 
     return (
-      '<div class="container account-v2 acc-page"><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
+      '<div class="container account-v2 acc-page" data-fs-pill="' + esc(name) + '" data-fs-unit=""><div class="acc-layout"><aside class="acc-side">' + me + quick + "</aside>" +
       '<main class="acc-main"><h1 class="display acc-h1">Account</h1><div class="acc-row2">' + profile + plan + "</div>" +
       aboutYouCard() + notifSettingsCard() +
       (ui.isAdmin
@@ -8960,6 +9520,16 @@
     countUp();
     animateMoves();
     animateProgress();
+    freshSpin(path);
+    if (ui.levelUp && (path === "/habits" || path === "/check-in") && app.querySelector(".hb-page")) {
+      const l = ui.levelUp;
+      ui.levelUp = null;
+      setTimeout(() => openLevelUp(l), 500);
+    }
+    if (ui.revealStory && path === "/results" && app.querySelector(".results-v2 .res-hero")) {
+      ui.revealStory = false;
+      setTimeout(() => openStory(null, { reveal: true }), 350);
+    }
     // A link straight to one step (a "biggest move" on Results, or an old
     // guide link) opens its pop-up once the category page is drawn.
     if (ui.openSheet && parts[0] === "explainer" && parts[1] === ui.openSheet.cat) {
@@ -9918,6 +10488,8 @@
       ui.piPicking = false;
       render();
     },
+    // Picture your year: the full-screen story.
+    "pi-story": (el) => openStory(el),
     // Share: the card opens on your mascot.
     "pi-share": () => {
       const v = piView();
