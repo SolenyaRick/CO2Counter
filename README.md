@@ -404,8 +404,13 @@ One-off setup for friends' activity:
 4. Deploy the function: Edge Functions → **Deploy a new function** → name it
    `push-notify` and paste `supabase/functions/push-notify/index.ts`, or
    `npx supabase functions deploy push-notify --project-ref fbgfylfnbtxzbwgilktt`.
-5. In Xcode: App target → **Signing & Capabilities** → **+ Capability** →
-   **Push Notifications**. Then archive and upload as usual.
+5. The Push Notifications entitlement is already in the project
+   (`ios/App/App/App.entitlements`). In Xcode, check App target → **Signing &
+   Capabilities** shows **Push Notifications** (with automatic signing Xcode
+   turns it on for the App ID). Then archive and upload as usual.
+6. Test it: in the app, Account → **Send a test notification**. It sends a
+   Sunday-style reminder from the phone and a real push from the server, and
+   says which step failed if the push doesn't arrive.
 
 Until the secrets are set the function quietly sends nothing, so the app keeps
 working.

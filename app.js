@@ -7160,10 +7160,12 @@
     if (!pushListening) {
       pushListening = true;
       await PN.addListener("registration", (t) => {
+        ui.pushRegErr = "";
         lsSet(KEY_PUSHTOKEN, t.value);
         if (currentUser && sb) sb.rpc("save_push_token", { p_token: t.value, p_platform: "ios" }).then(() => {}, () => {});
       });
       await PN.addListener("registrationError", (err) => {
+        ui.pushRegErr = (err && err.error) || "unknown error";
         ui.notifTest = "Friends' notifications couldn't be set up on this phone" + (err && err.error ? " (" + err.error + ")" : "") + ". Sunday reminders still work.";
         if (currentPath() === "/account") render();
       });
@@ -7173,6 +7175,53 @@
       });
     }
     await PN.register();
+  }
+  // Ask our server to push to this phone through Apple, and say plainly
+  // which step failed if it doesn't arrive.
+  async function testRemotePush() {
+    const PN = plugin("PushNotifications");
+    if (!PN) return "not available in this version of the app.";
+    let perm = await PN.checkPermissions();
+    if (perm.receive !== "granted") perm = await PN.requestPermissions();
+    if (perm.receive !== "granted") return "switched off for CO2 Counter in Settings.";
+    ui.pushRegErr = "";
+    await registerPush();
+    for (let i = 0; i < 20 && !ui.pushRegErr && !lsGet(KEY_PUSHTOKEN, ""); i++) await new Promise((r) => setTimeout(r, 250));
+    if (ui.pushRegErr)
+      return "this phone couldn't get a push address from Apple (" + ui.pushRegErr + "). " +
+        (/aps-environment|entitlement/i.test(ui.pushRegErr) ? "The app needs rebuilding with Push Notifications switched on in Xcode." : "");
+    const token = lsGet(KEY_PUSHTOKEN, "");
+    if (!token) return "this phone hasn't had a push address from Apple yet. Rebuild the app with Push Notifications switched on in Xcode, then try again.";
+    if (lsGet(KEY_FEEDPUSH, "") !== "on") lsSet(KEY_FEEDPUSH, "on");
+    try {
+      const { error } = await sb.rpc("save_push_token", { p_token: token, p_platform: "ios" });
+      if (error) return "couldn't save this phone on our server (" + error.message + "). Is the push SQL from schema.sql run in Supabase?";
+    } catch (e) {}
+    try {
+      const { data } = await sb.auth.getSession();
+      const jwt = data && data.session && data.session.access_token;
+      const res = await fetch(SUPABASE_URL + "/functions/v1/push-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + jwt },
+        body: JSON.stringify({ kind: "test" }),
+      });
+      if (res.status === 404) return "our push-notify server function isn't deployed.";
+      const out = await res.json().catch(() => ({}));
+      if (out.error === "Unknown kind") return "our push-notify server function is an old version. Redeploy it from supabase/functions/push-notify.";
+      if (out.error) return "the server said: " + out.error;
+      if (out.problem === "server") return "the Apple push key isn't set up on our server yet (APNS_KEY_ID, APNS_TEAM_ID and APNS_PRIVATE_KEY secrets in Supabase).";
+      if (out.problem === "wait") return "wait a few seconds between tests.";
+      if (out.problem === "no-token") return "our server has no push address for you yet. Try again in a moment.";
+      if (out.ok) return "sent. It should arrive in a few seconds.";
+      const why = String((out.results || []).find((r) => r !== "ok") || "");
+      const hint = /InvalidProviderToken/.test(why) ? " The APNs Key ID, Team ID or .p8 key on the server don't match."
+        : /DeviceTokenNotForTopic|TopicDisallowed/.test(why) ? " The app's bundle ID doesn't match APNS_BUNDLE_ID."
+        : /gone/.test(why) ? " Apple didn't recognise this phone's address; reopen the app and try again."
+        : "";
+      return "Apple refused it (" + why.replace(/^error /, "") + ")." + hint;
+    } catch (e) {
+      return "couldn't reach our server (" + ((e && e.message) || "network") + ").";
+    }
   }
   async function turnOnFeedPush() {
     const PN = plugin("PushNotifications");
@@ -9735,6 +9784,12 @@
         } else {
           await LN.schedule({ notifications: [{ id: 7002, title: "CO2 Counter", body: "Notifications are working. You'll get your Sunday switch here.", schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }, extra: { route: "#/account" } }] });
           ui.notifTest = "Sent. It arrives in about 5 seconds, even if you leave the app.";
+          // Friends' notifications come from our server through Apple: test that too.
+          if (canFeedPush() && currentUser) {
+            ui.notifTest += " Checking friends' notifications…";
+            render();
+            ui.notifTest = "Sunday reminders work (a test arrives in about 5 seconds). Friends' notifications: " + (await testRemotePush());
+          }
         }
       } catch (e) {
         ui.notifTest = "The test couldn't be sent: " + ((e && e.message) || "unknown error") + ".";

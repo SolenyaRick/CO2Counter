@@ -124,6 +124,23 @@ export async function handler(req: Request): Promise<Response> {
     if (!me) return json({ error: "Please sign in again." }, 401);
     const body = await req.json().catch(() => ({}));
 
+    // A test push to your own phone, saying what went wrong if it fails.
+    if (body.kind === "test") {
+      if (!env("APNS_PRIVATE_KEY") || !env("APNS_KEY_ID") || !env("APNS_TEAM_ID")) return json({ ok: false, problem: "server" });
+      if (!(await claim("test:" + me + ":" + Math.floor(Date.now() / 20000)))) return json({ ok: false, problem: "wait" });
+      const tokens = await db("push_tokens?select=token&platform=eq.ios&user_id=eq." + me);
+      if (!tokens.length) return json({ ok: false, problem: "no-token" });
+      const results: string[] = [];
+      for (const t of tokens) {
+        try {
+          results.push(await sendApns(t.token, { aps: { alert: { title: "CO2 Counter", body: "Push notifications are working. You'll hear when friends cheer you on." }, sound: "default" }, route: "#/account" }));
+        } catch (e) {
+          results.push("error " + String((e as any)?.message || e));
+        }
+      }
+      return json({ ok: results.includes("ok"), sent: results.filter((r) => r === "ok").length, results });
+    }
+
     if (body.kind === "survey") {
       const rows = await db("survey_history?select=id,total_yearly,completed_at&user_id=eq." + me + "&total_yearly=not.is.null&order=completed_at.desc&limit=2");
       const latest = rows[0];
