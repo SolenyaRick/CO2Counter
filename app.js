@@ -1258,16 +1258,21 @@
     '<feComposite in="SourceAlpha" in2="up" operator="out" result="edge"/><feGaussianBlur in="edge" stdDeviation=".5" result="edgeSoft"/>' +
     '<feFlood flood-color="#000000" flood-opacity=".26"/><feComposite in2="edgeSoft" operator="in" result="shade"/>' +
     '<feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shade"/><feMergeNode in="hi"/></feMerge></filter>' +
+    // A vector sheen for sharp icons: light from the top left, a soft shade low down.
+    '<linearGradient id="pi-sheen" x1="0" y1="0" x2=".55" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".2"/></linearGradient>' +
     '<filter id="pi-grey" color-interpolation-filters="sRGB"><feColorMatrix type="saturate" values="0"/></filter>';
   const piDefsSvg = () => '<svg class="pi-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>' + PI_DEFS + "</defs></svg>";
   // One drawing, in a 48 x 48 box.
-  function piArt(key, shadow) {
+  // crisp: no blur filter (iPhones draw filters at low resolution), a
+  // vector sheen on each shape instead, so icons stay sharp at any size.
+  function piArt(key, shadow, crisp) {
     const parts = (D.FUN_COMPARISONS.art[key] || [])
-      .map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"/>')
+      .map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+        (crisp && p[1] && p[1] !== "none" ? '<path d="' + p[0] + '" fill="url(#pi-sheen)" stroke="none"/>' : ""))
       .join("");
-    return (shadow ? '<path d="M24 46.4m-15 0a15 2.1 0 1 0 30 0a15 2.1 0 1 0 -30 0" fill="rgba(46,42,34,.14)"/>' : "") + '<g filter="url(#pi-clay)">' + parts + "</g>";
+    return (shadow ? '<path d="M24 46.4m-15 0a15 2.1 0 1 0 30 0a15 2.1 0 1 0 -30 0" fill="rgba(46,42,34,.14)"/>' : "") + (crisp ? "<g>" + parts + "</g>" : '<g filter="url(#pi-clay)">' + parts + "</g>");
   }
-  const piIcon = (key, size) => '<svg class="pi-ic" viewBox="0 0 48 48" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' + piArt(key, true) + "</svg>";
+  const piIcon = (key, size) => '<svg class="pi-ic" viewBox="0 0 48 48" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false">' + piArt(key, true, true) + "</svg>";
   const f1 = (v) => (Math.round(v * 10) / 10).toString();
 
   // The picture for one comparison, as a single SVG W x H (it scales to fit).
@@ -1293,7 +1298,7 @@
         let s = "";
         for (let j = 0; j < n; j++)
           s += '<svg x="' + f1(x) + '" y="' + f1(ground - (j + 1) * fh / 2) + '" width="' + f1(colW) + '" height="' + f1(fh / 2) + '" viewBox="' + (j % 2 === 0 ? "0 24 48 24" : "0 0 48 24") +
-            '" preserveAspectRatio="xMidYMid meet" overflow="hidden"' + (j < solid ? "" : ' opacity=".2"') + ">" + piArt(it.key, false) + "</svg>";
+            '" preserveAspectRatio="xMidYMid meet" overflow="hidden"' + (j < solid ? "" : ' opacity=".2"') + ">" + piArt(it.key, false, true) + "</svg>";
         return s;
       };
       const step = sNow * k > 260 ? 1 : 2;
@@ -1327,7 +1332,7 @@
         const stripes = Array.from({ length: years }, (_, i) =>
           '<rect x="' + (11.6 + i * 33.4 / years).toFixed(2) + '" y="18" width="' + Math.max(0.3, 33.4 / years - 0.5).toFixed(2) + '" height="20" fill="' + (i === 0 ? col : "rgba(255,255,255,.5)") + '" opacity=".85"/>').join("");
         return '<svg x="' + f1(x) + '" y="0" width="' + gs + '" height="' + gs + '" viewBox="0 0 48 48" overflow="visible"><defs><clipPath id="pi-cl-' + uid + n + '"><path d="' + (D.FUN_COMPARISONS.body[it.key] || "") + '"/></clipPath></defs>' +
-          piArt(it.key, true) + '<g clip-path="url(#pi-cl-' + uid + n + ')">' + stripes + "</g></svg>" +
+          piArt(it.key, true, true) + '<g clip-path="url(#pi-cl-' + uid + n + ')">' + stripes + "</g></svg>" +
           '<text x="' + f1(x) + '" y="' + f1(gs + fs(40, 18)) + '" font-size="' + fs(40, 15) + '" font-weight="800" fill="' + labelCol + '">' + years + " years of you</text>" +
           '<text x="' + f1(x) + '" y="' + f1(gs + fs(70, 31)) + '" font-size="' + fs(18, 9) + '" font-weight="800" fill="#2E2A22">' + label + "</text>";
       };
@@ -1360,7 +1365,7 @@
         const cut = i >= kept;
         cells += (cut ? '<rect x="' + f1(x) + '" y="' + f1(y) + '" width="' + cell + '" height="' + cell + '" rx="' + f1(cell * 0.14) + '" fill="none" stroke="#B8653D" stroke-width="' + fs(2.4, 1.2) + '" stroke-dasharray="' + fs("8 6", "4 3") + '"/>' : "") +
           '<svg x="' + f1(x) + '" y="' + f1(y) + '" width="' + cell + '" height="' + cell + '" viewBox="0 0 48 48" overflow="visible"' + (cut ? ' opacity=".3"' : "") + ">" +
-          (cut ? '<g filter="url(#pi-grey)">' + piArt(it.key, false) + "</g>" : piArt(it.key, false)) + "</svg>";
+          (cut ? '<g filter="url(#pi-grey)">' + piArt(it.key, false, true) + "</g>" : piArt(it.key, false, true)) + "</svg>";
       }
       return { ...base, mode: "grid", svg: cells, vh: gh,
         headline, unitWord: it.many, title: "In " + it.many,
@@ -1432,8 +1437,13 @@
     if (!mascot || ui.piPicking) {
       return (
         '<section class="glass picture-it pi-wrap" id="picture-it" aria-labelledby="pi-h">' + piDefsSvg() + head() +
-        '<div class="pi-pick"><p class="pi-pick-q display">Pick your mascot</p><div class="pi-pick-grid">' +
-        items.map((x) => '<button type="button" class="pi-pick-btn' + (x.key === mascot ? " on" : "") + '" data-action="pi-mascot" data-key="' + x.key + '">' + piIcon(x.key, 52) + "<span>" + esc(x.short) + "</span></button>").join("") +
+        '<div class="pi-pick"><p class="pi-pick-q display">Pick your mascot</p><p class="xs muted pi-pick-sub">Your footprint now → after the 7 Acts. Tap one to see it.</p><div class="pi-pick-grid">' +
+        items.map((x) => {
+          // How many of it your footprint is, now and after the 7 Acts.
+          let n = "";
+          try { const m = piModel(x, ba.now, ba.after, { w: 320, h: 196, minPitch: 5, minCell: 18, maxCell: 90, uid: "k" + x.key }); n = '<span class="pi-pick-n"><b class="tnum">' + esc(m.headline) + "</b><small>" + esc(m.unitWord) + "</small></span>"; } catch (e) {}
+          return '<button type="button" class="pi-pick-btn' + (x.key === mascot ? " on" : "") + '" data-action="pi-mascot" data-key="' + x.key + '" aria-label="' + esc(x.short) + ". See the picture\">" + piIcon(x.key, 72) + '<span class="pi-pick-name">' + esc(x.short) + "</span>" + n + "</button>";
+        }).join("") +
         "</div></div></section>"
       );
     }
@@ -3222,8 +3232,8 @@
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
       '<defs><clipPath id="mv3-sil">' + parts + "</clipPath>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
-      '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true) + "</g>" +
-      slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g filter="url(#pi-clay)"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect></g></g><g class="mv3-shade">' + piArt(pal.key, false) + "</g></g>").join("") +
+      '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true, true) + "</g>" +
+      slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect><rect x="0" y="-6" width="48" height="56" fill="url(#pi-sheen)"></rect></g><g class="mv3-shade">' + piArt(pal.key, false, true) + "</g></g>").join("") +
       '<g clip-path="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
       slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
       "</svg>";
@@ -4307,7 +4317,7 @@
     x.font = "800 " + (story ? 64 : 50) + "px " + DISP;
     x.fillText(m.headline, PAD + cp + iconS + 20, cardY + cp + iconS / 2 + (story ? 48 : 38));
     if (!plain) {
-      const icon = await svgImage('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="' + iconS + '" height="' + iconS + '"><defs>' + PI_DEFS + "</defs>" + piArt(it.key, true) + "</svg>");
+      const icon = await svgImage('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="' + iconS + '" height="' + iconS + '"><defs>' + PI_DEFS + "</defs>" + piArt(it.key, true, true) + "</svg>");
       x.drawImage(icon, PAD + cp, cardY + cp, iconS, iconS);
       const pic = await svgImage(piSvg(m, true));
       const ph = pic.height || vh;
@@ -9779,6 +9789,8 @@
       lsSet(KEY_MASCOT, el.dataset.key);
       ui.piPicking = false;
       ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === el.dataset.key));
+      // Straight to its picture.
+      ui.piOpen = true;
       render();
     },
     "pi-mascot-change": () => {
