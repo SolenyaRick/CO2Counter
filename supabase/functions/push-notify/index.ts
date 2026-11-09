@@ -13,7 +13,8 @@
 //   optionally APNS_BUNDLE_ID (default com.solenyarick.co2tracker).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
 
-const env = (k: string) => (globalThis as any).Deno.env.get(k);
+// Trimmed: a stray space or line break pasted into a secret breaks Apple's check.
+const env = (k: string) => { const v = (globalThis as any).Deno.env.get(k); return typeof v === "string" ? v.trim() : v; };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
