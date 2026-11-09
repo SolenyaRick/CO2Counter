@@ -2164,6 +2164,72 @@
     ["leaf", "Build habits", "Turn the changes you choose into habits, and watch your footprint fall over time.", true],
   ];
 
+  // The welcome page opens with a scroll story: the typical UK footprint as
+  // a disc (area to scale), what it means, where it comes from, and the
+  // 1.5°C budget it needs to shrink to. Painted by paintWelcome on scroll.
+  function welcomeStory(cta) {
+    const uk = ukComparison(footprint(D.UK_TYPICAL_SURVEY)).uk + D.ASSUMED_SHOPPING.totalKg;
+    const tree = (D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22;
+    const t = (kg) => (kg / 1000).toFixed(1);
+    const cats = ["Meals", "Travel", "Flights", "Home", "Pets", "Money"];
+    const steps = [
+      ["The typical UK footprint", "About " + t(uk) + " tonnes of CO₂e a year", "What a year of everyday life adds up to: food, travel, home, pets, money and shopping."],
+      ["Picture it", kgFmt(uk / tree) + " mature trees", "That's how many trees it takes, working all year, to soak up one person's footprint."],
+      ["Where it comes from", "Six parts of everyday life", "Meals, travel, flights, home, pets, and one most calculators miss: where your money sits."],
+      ["The 1.5°C budget", "About " + t(D.BUDGET_YEARLY) + " t each", "To stay on track for 1.5°C, footprints like this need to fall to about " + t(D.BUDGET_YEARLY) + " t by 2030. Find your biggest levers in six short steps."],
+    ];
+    return (
+      '<div class="wl" data-step="0" style="--b:' + Math.sqrt(D.BUDGET_YEARLY / uk).toFixed(4) + '" data-uk="' + Math.round(uk) + '">' +
+      '<section class="wl-open"><span class="story-k">Free for everyone · no ads</span>' +
+      '<h1 class="display wl-title">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
+      '<p class="wl-lead">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
+      '<div class="wl-ctas">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + '<a class="btn wl-ghost" href="/example/">See an example result</a></div>' +
+      '<div class="wl-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((x) => "<span>" + icon("check") + x + "</span>").join("") + "</div>" +
+      '<span class="story-cue" aria-hidden="true"><i></i></span></section>' +
+      '<section class="wl-track" style="--n:' + steps.length + '"><div class="story-stage wl-stage">' +
+      '<div class="story-orb wl-orb" aria-hidden="true"><i class="story-ghost"></i><i class="story-disc"></i><i class="story-budget"></i>' +
+      '<span class="story-budget-l">1.5°C budget · ' + t(D.BUDGET_YEARLY) + " t</span>" +
+      '<span class="story-read"><b class="display tnum wl-kg">' + t(uk) + " t</b><small>a year</small></span>" +
+      cats.map((c, i) => { const a = (i / cats.length) * Math.PI * 2 - Math.PI / 2; return '<span class="wl-cat" style="--cx:' + Math.cos(a).toFixed(3) + ";--cy:" + Math.sin(a).toFixed(3) + ";--k:" + i + '">' + c + "</span>"; }).join("") +
+      "</div>" +
+      '<ol class="story-steps wl-steps">' + steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(st[0]) + '</span><h2 class="display">' + esc(st[1]) + "</h2><p>" + esc(st[2]) + "</p>" + (i === steps.length - 1 ? '<div class="wl-ctas">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + "</div>" : "") + "</li>").join("") + "</ol>" +
+      '<div class="story-ticks" aria-hidden="true">' + steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
+      "</div></section></div>"
+    );
+  }
+  function paintWelcome() {
+    const wl = app.querySelector(".wl");
+    if (!wl) return;
+    const track = wl.querySelector(".wl-track");
+    const open = wl.querySelector(".wl-open");
+    const r = track.getBoundingClientRect();
+    const n = 4;
+    const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
+    const ip = Math.min(1, Math.max(0, -open.getBoundingClientRect().top / (open.offsetHeight * 0.8)));
+    const step = Math.min(n - 1, Math.floor(tp * n));
+    // The disc holds at the UK size, then shrinks to the budget in the last step.
+    const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.2) / 0.7);
+    const shrink = fsReduce() ? (step === n - 1 ? 1 : 0) : f * f * (3 - 2 * f);
+    const uk = Number(wl.dataset.uk), b = D.BUDGET_YEARLY;
+    const kg = uk + (b - uk) * shrink;
+    wl.style.setProperty("--ip", ip.toFixed(4));
+    wl.style.setProperty("--tp", tp.toFixed(4));
+    wl.style.setProperty("--s", Math.sqrt(kg / uk).toFixed(4));
+    wl.style.setProperty("--q", (1 - kg / uk).toFixed(4));
+    wl.classList.toggle("under", shrink > 0.98);
+    wl.querySelector(".wl-kg").textContent = (kg / 1000).toFixed(1) + " t";
+    // While the story fills the screen, the top bar goes dark and the phone's
+    // sticky "Start the survey" bar waits (the story has its own buttons).
+    const wr = wl.getBoundingClientRect();
+    const bar = document.querySelector(".topbar");
+    if (bar) bar.classList.toggle("on-dark", wr.top < 40 && wr.bottom > 64);
+    document.body.classList.toggle("wl-in", wr.bottom > innerHeight * 0.6);
+    if (wl.dataset.step !== String(step)) {
+      wl.dataset.step = String(step);
+      wl.querySelectorAll(".wl-steps li").forEach((li, i) => { li.classList.toggle("on", i === step); li.classList.toggle("past", i < step); });
+    }
+  }
+
   function renderIntro() {
     const cta = (label) => '<button type="button" class="btn btn-green intro-cta" data-action="start-survey">' + label + " " + icon("arrowRight") + "</button>";
     const faq = [
@@ -2173,15 +2239,7 @@
     ];
     return (
       '<div class="container intro-v2">' +
-      '<header class="intro-hero"><div class="intro-hero-main">' +
-      '<span class="eyebrow rise">Free for everyone · no ads</span>' +
-      '<h1 class="display intro-title rise" style="animation-delay:.08s">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
-      '<p class="intro-lead rise" style="animation-delay:.16s">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
-      '<div class="chip-row rise" style="animation-delay:.24s">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") +
-      '<a class="btn btn-outline" href="/example/">See an example result</a></div>' +
-      '<div class="intro-trust">' + ["No account needed to start", "Answers save as you go", "We never sell your data"].map((t) => "<span>" + icon("check") + t + "</span>").join("") + "</div></div>" +
-      '<div class="intro-floaty" aria-hidden="true"><svg viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect class="ib1" x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect class="ib2" x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect class="ib3" x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg>' +
-      '<div class="glass intro-budget"><span class="xs muted">1.5°C budget</span><span class="display">{{budget_t}} t <small>a person, a year</small></span></div></div></header>' +
+      welcomeStory(cta) +
       '<section class="intro-mission"><div class="intro-sec-head"><div><span class="eyebrow">Our mission</span><h2 class="display">From "what\'s my footprint?" to habits that stick</h2></div>' +
       "<p>Most people don't know where their emissions really come from. We make it clear, then make it doable.</p></div>" +
       '<ol class="mission">' +
@@ -3561,6 +3619,7 @@
   // set data-fs-key (redraws with a new key replay the reveal) and
   // data-fs-from/-to (the reading line shows that span of a longer journey).
   const FS_PAGES = [
+    { name: "welcome", paths: ["/", "/welcome"], page: ".intro-v2", hero: ".wl", items: ".intro-mission .intro-sec-head, .mission > li, .intro-split > *, .intro-cards > *, .intro-faq > *", onScroll: () => paintWelcome() },
     { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
     { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
     { name: "survey", paths: ["/"], page: ".survey-v2", hero: ".step-hero", items: ".step-body .q, .step-body > :not(ol):not(ul):not(.q-list)" },
@@ -3569,7 +3628,7 @@
     { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
     { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: ".acc-quick, .acc-main > :not(h1):not(.acc-row2), .acc-row2 > *" },
   ];
-  let fsObs = null, fsPath = "", fsTick = false, fsHero = null;
+  let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   function freshSpin(path) {
     const bar = document.querySelector(".topbar");
@@ -3579,7 +3638,9 @@
     const on = !!hero;
     if (fsObs) { fsObs.disconnect(); fsObs = null; }
     fsHero = on ? hero : null;
+    fsCfg = on ? cfg : null;
     document.body.classList.toggle("fs-on", on);
+    if (!on || cfg.name !== "welcome") { document.body.classList.remove("wl-in"); const tb = document.querySelector(".topbar"); if (tb) tb.classList.remove("on-dark"); }
     FS_PAGES.forEach((c) => document.body.classList.toggle("fs-" + c.name, on && c === cfg));
     if (bar && !bar.querySelector(".read-line")) {
       bar.insertAdjacentHTML("beforeend", '<span class="read-line" aria-hidden="true"><i></i><b></b></span>');
@@ -3592,6 +3653,7 @@
     if (!on) return;
     const mini = bar && bar.querySelector(".nav-total");
     if (mini) {
+      mini.classList.toggle("none", !page.dataset.fsPill);
       mini.firstChild.textContent = page.dataset.fsPill || "";
       mini.lastChild.textContent = page.dataset.fsUnit || "";
     }
@@ -3627,6 +3689,7 @@
   }
   function fsScroll() {
     if (!fsHero || !document.body.classList.contains("fs-on")) return;
+    if (fsCfg && fsCfg.onScroll) fsCfg.onScroll();
     const max = document.documentElement.scrollHeight - innerHeight;
     let rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     const page = fsHero.closest("[data-fs-from]");
