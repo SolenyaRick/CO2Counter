@@ -148,10 +148,36 @@
   // Categories used in the UK comparison (everything except banking).
   const UK_COMPARISON_KEYS = ["meals", "commute", "flights", "energy", "water", "pets"];
   const BUDGET_YEARLY = 2500; // 1.5°C budget, kg CO2e / year
-  const ELECTRICITY_FACTOR = 0.22687; // kg / kWh, standard grid
-  const GREEN_ELECTRICITY_FACTOR = 0.04;
-  const GAS_FACTOR = 0.21317;
-  const WATER_FACTOR = 0.36218; // kg / 1000 L
+  // DESNZ 2026 conversion factors (full set), kg CO2e per kWh. UK grid
+  // electricity: generated 0.13096 + transmission & distribution losses
+  // 0.01299 + well-to-tank for generation 0.03682 + well-to-tank for T&D
+  // 0.00359 = 0.18436.
+  const ELECTRICITY_FACTOR = 0.13096 + 0.01299 + 0.03682 + 0.00359;
+  // Renewable tariff: the lifecycle emissions (making, building, running and
+  // dismantling) of UK wind, solar and hydro, weighted by what each made in
+  // 2025, plus network losses. GWh: DESNZ Energy Trends table 6.1 (Sept
+  // 2026), electricity generated in 2025. kg CO2e per kWh: IPCC AR5 WGIII
+  // Annex III lifecycle medians (solar is the midpoint of rooftop 0.041 and
+  // utility-scale 0.048; wave and tidal, 0.01% of the mix, take offshore
+  // wind's figure). Bioenergy (27% of UK renewable electricity) is left out:
+  // most "100% renewable" tariffs are wind and solar backed, and its
+  // lifecycle figure is uncertain (see How we calculate). Losses use the
+  // DESNZ 2026 ratio of T&D to generation (0.01299 / 0.13096).
+  const RENEWABLE_MIX_2025 = [
+    // [GWh in 2025, lifecycle kg CO2e per kWh]
+    [52020.69, 0.012], // offshore wind
+    [34419.45, 0.011], // onshore wind
+    [20124.56, (0.041 + 0.048) / 2], // solar photovoltaics
+    [5386.02, 0.024], // hydro
+    [15.98, 0.012], // shoreline wave and tidal
+  ];
+  const GREEN_ELECTRICITY_FACTOR =
+    (RENEWABLE_MIX_2025.reduce((t, [gwh, f]) => t + gwh * f, 0) / RENEWABLE_MIX_2025.reduce((t, [gwh]) => t + gwh, 0)) * (1 + 0.01299 / 0.13096);
+  // Natural gas, gross CV: burning 0.18231 + well-to-tank 0.03021 = 0.21252.
+  const GAS_FACTOR = 0.18231 + 0.03021;
+  // Water, kg per 1,000 litres (a cubic metre): supply 0.1913 + treatment
+  // 0.17088 = 0.36218 (the same in 2025 and 2026).
+  const WATER_FACTOR = 0.1913 + 0.17088;
   // Fun ways to picture a footprint. CO2 is a gas: a tonne fills about
   // 535 m³ (1.87 kg/m³ at 15 °C at sea level), so a footprint makes a cube we
   // can measure in heights. Weights are typical adults; heights are published.
@@ -1897,9 +1923,9 @@
     { group: "Flights", key: "fly_uplift", label: "Routing uplift on flight distance", unit: "×", path: "FLIGHT_DISTANCE_UPLIFT", source: "DESNZ guidance: add 8% for indirect routes and holding" },
     { group: "Flights", key: "paris_plane", label: "London–Paris return by plane", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_FLIGHT_KG", source: "Eurostar (independently commissioned figures)" },
     { group: "Flights", key: "paris_train", label: "London–Paris return by Eurostar", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_TRAIN_KG", source: "Eurostar (independently commissioned figures). The train-vs-plane ratio for other trips comes from these two." },
-    { group: "Home", key: "electricity", label: "Grid electricity", unit: "kg CO₂e per kWh", path: "ELECTRICITY_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ): generation + transmission & distribution + well-to-tank", asOf: "2025-06", every: 12 },
-    { group: "Home", key: "electricity_green", label: "Renewable tariff electricity", unit: "kg CO₂e per kWh", path: "GREEN_ELECTRICITY_FACTOR", source: "No source recorded yet" },
-    { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ), gross CV + well-to-tank", asOf: "2025-06", every: 12 },
+    { group: "Home", key: "electricity", label: "Grid electricity", unit: "kg CO₂e per kWh", path: "ELECTRICITY_FACTOR", source: "UK Government GHG conversion factors 2026 (DESNZ, full set): generated 0.13096 + transmission & distribution 0.01299 + well-to-tank generation 0.03682 + well-to-tank T&D 0.00359", asOf: "2026-06", every: 12 },
+    { group: "Home", key: "electricity_green", label: "Renewable tariff electricity", unit: "kg CO₂e per kWh", path: "GREEN_ELECTRICITY_FACTOR", source: "Lifecycle emissions of UK wind, solar and hydro (IPCC AR5 WGIII Annex III medians), weighted by 2025 generation (DESNZ Energy Trends 6.1: offshore wind 52,021 GWh, onshore wind 34,419, solar 20,125, hydro 5,386), plus network losses at the DESNZ 2026 ratio. Excludes bioenergy.", asOf: "2026-09", every: 12 },
+    { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2026 (DESNZ, full set): natural gas, gross CV 0.18231 + well-to-tank 0.03021", asOf: "2026-06", every: 12 },
     { group: "Home", key: "water", label: "Mains water", unit: "kg CO₂e per 1,000 L", path: "WATER_FACTOR", source: DESNZ_2026 + ": supply + treatment", asOf: "2026-06", every: 12 },
     { group: "Home", key: "heat_pump_cop", label: "Heat pump efficiency (COP)", unit: "kWh heat per kWh", path: "ASSUMPTIONS.HEAT_PUMP_COP", source: "App assumption for the “going all the way” saving" },
     { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "Average-sized dog, Mike Berners-Lee, How Bad Are Bananas? (2020 edition)" },

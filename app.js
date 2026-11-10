@@ -6471,6 +6471,13 @@
           '<a href="' + BUDGET_SOURCE_URL + '" target="_blank" rel="noopener">Hot or Cool Institute, 1.5-Degree Lifestyles</a></p>'
       ) +
       section(
+        "Electricity: normal and renewable tariffs",
+        "<p><strong>A normal tariff</strong> uses the UK grid average from the government's 2026 conversion factors (DESNZ): about " + D.ELECTRICITY_FACTOR.toFixed(3) + " kg CO₂e per kWh. That adds four parts: the electricity generated, what's lost on the way through the network, and the emissions of getting the fuel to the power stations for both.</p>" +
+          "<p><strong>A 100% renewable tariff</strong> uses about " + D.GREEN_ELECTRICITY_FACTOR.toFixed(3) + " kg CO₂e per kWh. Wind, solar and hydro don't burn fuel, so what's left is making, building, running and dismantling the turbines, panels and dams. We take the IPCC's lifecycle figures for each and weight them by how much each made in the UK in 2025 (DESNZ Energy Trends), then add network losses.</p>" +
+          "<p>Over a quarter of UK renewable electricity comes from bioenergy, mostly burning wood pellets. We leave it out: most renewable tariffs are backed by wind and solar, and how much bioenergy really emits is disputed. A tariff backed largely by biomass would be higher than our figure.</p>" +
+          "<p>Some renewable tariffs only buy certificates (REGOs) for renewable power that would have been made anyway, and do less to grow renewables than tariffs that buy directly from generators.</p>"
+      ) +
+      section(
         "Picture your year, and what if everyone lived like you?",
         "<p>Watch it shrink, on Picture it, shows your footprint as a disc whose area is your kilograms, shrinking as your three biggest moves are taken off.</p>" +
           "<p>It then asks what would happen if all 8.2 billion people lived like you. This is an illustration, not a climate model:</p>" +
