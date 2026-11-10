@@ -5669,7 +5669,7 @@
     const ring =
       '<div class="hb-ring-box"><svg class="hb-ring" width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="' + made + " of 7 acts done" + (waiting ? ", " + waiting + " waiting for confirmation" : "") + '">' +
       segs.map((s) => s.path).join("") + segs.map((s) => s.label).join("") + "</svg>" +
-      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + "<small>/7</small></b><span>done" + (waiting ? " · " + waiting + " waiting" : "") + "</span></div></div></div>";
+      '<div class="hb-ring-mid"><div><b class="display tnum">' + made + "<small>/7</small></b><span>done</span></div></div></div>";
 
     // Your next best act: the biggest saving still to bank.
     const best = acts.slice(0, 4).filter((a) => shows(a) && !a.pending).sort((x, y) => y.save - x.save)[0] || acts.find((a) => !a.done && !a.pending);
