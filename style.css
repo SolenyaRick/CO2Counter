@@ -7797,3 +7797,12 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
   .warm-beta-stage { top: 22px; left: 16px; }
   .warm-guess { margin-top: 14px !important; padding: 10px 12px; font-size: 14px !important; }
 }
+
+/* Tap-through stories on touch screens: a tap moves on, so the stages are
+   tappable (iOS only sends taps to things that look tappable). */
+@media (pointer: coarse) {
+  .story-scroll, .wl-open, .wl-track { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+}
+.native-app .story-scroll, .native-app .wl-open, .native-app .wl-track { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.story-taphint { position: fixed; z-index: 3; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); translate: -50% 0; padding: 7px 14px; border-radius: 999px; background: rgba(23, 36, 26, 0.82); border: 1px solid rgba(241, 237, 228, 0.18); color: var(--on-canopy, #f1ede4); font: 600 12px/16px var(--font); white-space: nowrap; pointer-events: none; transition: opacity var(--dur-base, 0.3s) ease; }
+.story.tapped .story-taphint { opacity: 0; }
