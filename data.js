@@ -2031,10 +2031,11 @@
   //  - current policies: about 2.7°C by 2100 (Climate Action Tracker,
   //    current policies and action). The emissions path is a simplified
   //    shape: about 57 Gt CO2e a year now (UNEP Emissions Gap Report 2024),
-  //    flat to 2030 and easing after. Warming is taken as proportional to
-  //    cumulative emissions from 2025, scaled so this path reaches 2.7°C;
-  //    that is about 0.36°C per 1,000 Gt, close to the IPCC's 0.45°C per
-  //    1,000 Gt CO2 (AR6 WG1).
+  //    flat to 2030 and easing after. Each year's warming blends today's
+  //    measured rate into one proportional to that year's emissions over
+  //    momentumYears, scaled so this path reaches 2.7°C; that comes to
+  //    about 0.32°C per 1,000 Gt, near the IPCC's 0.45°C per 1,000 Gt CO2
+  //    (AR6 WG1).
   //  - everyone like you: world emissions = people x your full footprint
   //    (survey, without money, plus assumed shopping and the shared public
   //    services share), on the same response. Population: UN World
@@ -2043,6 +2044,10 @@
     observedFrom: 1850,
     observed: [-0.06,0.12,0.13,0.09,0.06,0.06,0.04,-0.11,-0.03,0.08,-0.03,-0.07,-0.18,0.01,-0.11,0.02,0.02,-0.0,0.0,0.04,0.03,-0.01,0.03,0.02,-0.02,-0.02,-0.07,0.26,0.35,0.05,0.04,0.12,0.06,0.01,-0.14,-0.11,-0.06,-0.14,-0.02,0.11,-0.15,-0.04,-0.15,-0.14,-0.13,-0.09,0.07,0.1,-0.13,0.0,0.12,0.06,-0.08,-0.18,-0.24,-0.05,0.04,-0.15,-0.16,-0.18,-0.17,-0.18,-0.12,-0.11,0.09,0.16,-0.06,-0.19,-0.07,0.03,0.06,0.12,0.02,0.04,0.04,0.07,0.23,0.13,0.15,-0.04,0.18,0.25,0.21,0.03,0.18,0.15,0.19,0.34,0.34,0.32,0.43,0.39,0.36,0.36,0.5,0.4,0.24,0.27,0.23,0.21,0.13,0.3,0.37,0.43,0.24,0.16,0.09,0.32,0.34,0.31,0.24,0.34,0.29,0.32,0.05,0.15,0.21,0.24,0.19,0.33,0.27,0.15,0.26,0.41,0.18,0.25,0.14,0.46,0.36,0.45,0.55,0.61,0.39,0.58,0.4,0.41,0.45,0.6,0.64,0.54,0.72,0.7,0.48,0.52,0.59,0.73,0.63,0.78,0.93,0.68,0.69,0.85,0.9,0.9,0.82,0.96,0.93,0.95,0.82,0.95,1.04,0.89,0.93,0.98,1.03,1.18,1.29,1.2,1.12,1.25,1.28,1.12,1.16,1.46,1.54,1.55],
     startYear: 2025,
+    // Warming has momentum (ocean heat, falling air pollution): each future
+    // line starts at today's measured rate and hands over to its emissions-
+    // driven rate over this many years, along a smooth S-curve.
+    momentumYears: 20,
     currentPolicies2100: 2.7,
     emissionsNowGt: 57.1,
     currentPoliciesGt: [[2025, 57.1], [2030, 57], [2050, 50], [2075, 43], [2100, 37]],
