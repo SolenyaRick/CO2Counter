@@ -6839,7 +6839,13 @@
     const diet = dietType(s);
     const foodDone = base.mine && (diet === "vegan" || diet === "veggie");
     const myFlights = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
-    const flightsDone = base.mine && !myFlights.length;
+    // Act 4's one-off trips half clears once a year has passed since the last
+    // flight. A flight with no date counts from when the survey was finished.
+    const YEAR_MS = 365 * 864e5;
+    const flownAt = (f) => { const t = Date.parse(f.date || s.completedAt || ""); return isNaN(t) ? Date.now() : t; };
+    const recentFlights = myFlights.filter((f) => Date.now() - flownAt(f) < YEAR_MS);
+    const flightsDone = base.mine && !recentFlights.length;
+    const clearsOn = recentFlights.length ? new Date(Math.max(...recentFlights.map(flownAt)) + YEAR_MS) : null;
     // Commute: green when every commuting day is on foot, by bike or from
     // home, or by train, Tube or bus on a commute longer than
     // ACTIVE_TRAVEL_MAX_KM each way (too far to walk or cycle). Owning a car
@@ -6919,10 +6925,13 @@
         afterLabel: commuteDone && !noCommute && allActive ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute && allActive ? 0 : dist * 2 * train },
       { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 59, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
         done: flightsDone,
-        doneTitle: "No flights to switch",
-        why: base.mine && myFlights.length ? "Not yet: " + myFlights.length + (myFlights.length === 1 ? " flight" : " flights") + " in your survey. This half is done with none in a year." : "",
+        doneTitle: myFlights.length ? "No flights in the last year" : "No flights to switch",
+        why: base.mine && clearsOn ? "Not yet: " + recentFlights.length + (recentFlights.length === 1 ? " flight" : " flights") + " in the last 12 months. This half clears on " +
+          clearsOn.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) + ", a year after your last flight, if you don't fly before then." : "",
         fact: flightsDone
-          ? "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+          ? myFlights.length
+            ? "Your last flight was over a year ago, so there's nothing to switch right now. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+            : "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
           : base.mine && myFlights.length && myFlights.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM)
             ? "Your flights are too far for the train to be realistic. The switches here are flying a little less often and choosing economy, which shares the plane's emissions between more people."
             : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
