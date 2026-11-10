@@ -9448,14 +9448,22 @@
   // Email links carry a one-time code that the page only uses when the
   // person taps the button. Email scanners (Outlook's, for one) open links
   // to check them, which would use up a link that verified straight away.
+  // Wording for each kind of email link (the emails in supabase/email-templates).
+  const VERIFY_COPY = {
+    signup: ["Confirm your email", "One last step: tap below to confirm your email and sign in.", "Confirm my email", "Your email is confirmed and you're signed in."],
+    recovery: ["Reset your password", "Tap below to choose a new password.", "Choose a new password", ""],
+    magiclink: ["Sign in", "Tap below to sign in to CO2 Counter.", "Sign me in", "You're signed in."],
+    email: ["Sign in", "Tap below to sign in to CO2 Counter.", "Sign me in", "You're signed in."],
+    email_change: ["Confirm your new email", "Tap below to move your account to this email address.", "Confirm my new email", "Your email address has been updated."],
+    invite: ["You're invited", "Tap below to accept your invitation and sign in.", "Accept and sign in", "You're signed in."],
+  };
   function renderVerify() {
-    const recovery = ui.pendingVerify.type === "recovery";
+    const c = VERIFY_COPY[ui.pendingVerify.type] || VERIFY_COPY.signup;
     return gateShell(
-      recovery ? "Reset your password" : "Confirm your email",
-      recovery ? "Tap below to choose a new password." : "One last step: tap below to confirm your email and sign in.",
+      c[0],
+      c[1],
       '<div class="auth-form">' + authNotes() +
-        '<button type="button" class="btn btn-green btn-block" data-action="verify-link">' +
-        (recovery ? "Choose a new password" : "Confirm my email") + "</button></div>"
+        '<button type="button" class="btn btn-green btn-block" data-action="verify-link">' + c[2] + "</button></div>"
     );
   }
 
@@ -10204,6 +10212,12 @@
       el.textContent = "One moment…";
       const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
       ui.pendingVerify = null;
+      // A change of email confirmed from the old address's side leaves no new session yet.
+      if (!error && type === "email_change" && !(data && data.session)) {
+        ui.flash = "Confirmed. Now tap the link we sent to your other address to finish the change.";
+        location.hash = "#/account";
+        return render();
+      }
       if (error || !data || !data.session) {
         ui.authMode = "signin";
         ui.authErr =
@@ -10221,7 +10235,7 @@
         await checkMembership();
         return render();
       }
-      ui.flash = "Your email is confirmed and you're signed in.";
+      ui.flash = (VERIFY_COPY[type] || VERIFY_COPY.signup)[3];
       await afterSignIn();
       render();
     },
@@ -11427,7 +11441,7 @@
     const linkParams = new URLSearchParams((location.hash.replace(/^#/, "") + "&" + location.search.replace(/^\?/, "")));
     const fromEmail = linkParams.has("access_token") || linkParams.has("error_description") || linkParams.has("token_hash");
     const linkType = linkParams.get("type");
-    if (linkParams.get("token_hash")) ui.pendingVerify = { tokenHash: linkParams.get("token_hash"), type: linkType === "recovery" ? "recovery" : linkType || "signup" };
+    if (linkParams.get("token_hash")) ui.pendingVerify = { tokenHash: linkParams.get("token_hash"), type: VERIFY_COPY[linkType] ? linkType : "signup" };
     if (linkType === "recovery" || ssGet(KEY_RECOVERY)) ui.recovery = true;
     if (linkType === "recovery") ssSet(KEY_RECOVERY, true);
     if (linkType === "signup" && linkParams.has("access_token")) ui.flash = "Your email is confirmed and you're signed in.";
