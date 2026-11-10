@@ -7733,3 +7733,9 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
   .read-line b { transform: rotate(-45deg); }
   .btn, .res-next-go, .hb3-go, .plan-go, .fr-btn, .acc-btn, .cat-step, .pi-play { transform: none !important; }
 }
+
+/* Account: change email */
+.acc-dl .acc-edit { flex: none; font-size: 13px; }
+.acc-email { margin-top: 14px; display: grid; gap: 8px; }
+.acc-email .input { flex: 1 1 220px; min-width: 0; }
+.acc-email + .auth-note, .acc-dl + .auth-note { margin-top: 12px; }
