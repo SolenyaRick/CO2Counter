@@ -1831,7 +1831,7 @@
     PARIS_TRAIN_KG: 4, // London–Paris return by Eurostar, per person (Eurostar)
     TREE_KG: 20, // CO2 a mature tree absorbs in a year
     PHONE_KG: 61, // making a smartphone and charging it for a year
-    ACTIVE_TRAVEL_MAX_KM: 10, // one way; beyond this, train or bus is the realistic swap
+    ACTIVE_TRAVEL_MAX_KM: 10, // one way; beyond this, train or bus is the realistic swap (and counts as a green commute)
     SHORT_HAUL_KM: 1500, // flight tiers: short-haul is under this
     TRAIN_SWAP_MAX_KM: 700, // flights up to this can realistically go by train
     MEDIUM_HAUL_MAX_KM: 4000, // flight tiers: medium-haul is up to this, long-haul beyond
@@ -1922,7 +1922,7 @@
     { group: "Shared and assumed", key: "shared_services", label: "Shared: public services", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.publicServicesKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
     { group: "Shared and assumed", key: "shared_infra", label: "Shared: infrastructure and investment", unit: "kg CO₂e a year", path: "SHARED_FOOTPRINT.infrastructureKg", source: DEFRA_FOOTPRINT, asOf: "2026-06", every: 12 },
     { group: "Benchmark", key: "uk_total", label: "Full UK footprint per person", unit: "kg CO₂e a year", path: "ASSUMPTIONS.UK_TOTAL_KG", source: DEFRA_FOOTPRINT + ": total 699,201.9 kt", asOf: "2026-06", every: 12 },
-    { group: "Savings assumptions", key: "active_max_km", label: "Walk or cycle commutes up to", unit: "km one way", path: "ASSUMPTIONS.ACTIVE_TRAVEL_MAX_KM", source: "App assumption: beyond this, the train or bus is the realistic swap" },
+    { group: "Savings assumptions", key: "active_max_km", label: "Walk or cycle commutes up to", unit: "km one way", path: "ASSUMPTIONS.ACTIVE_TRAVEL_MAX_KM", source: "App assumption: beyond this, the train or bus is the realistic swap. Also the green commute rule for Act 4: train, Tube and bus days count as green only on commutes longer than this" },
     { group: "Savings assumptions", key: "train_swap_km", label: "Train can replace flights up to", unit: "km", path: "ASSUMPTIONS.TRAIN_SWAP_MAX_KM", source: "App assumption: up to about 700 km the train is often as quick door to door. Used for the realistic flights saving and the train comparison." },
     { group: "Savings assumptions", key: "medium_haul_km", label: "Medium-haul flights go up to", unit: "km", path: "ASSUMPTIONS.MEDIUM_HAUL_MAX_KM", source: "App assumption for the flight tiers and the realistic flights saving (beyond this counts as long-haul)" },
     { group: "Savings assumptions", key: "short_haul_km", label: "Short-haul flights are under", unit: "km", path: "ASSUMPTIONS.SHORT_HAUL_KM", source: "App assumption for the flight tiers" },
