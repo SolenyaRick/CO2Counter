@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<title>Your CO2 Counter code</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Karla:wght@400;700&amp;display=swap" rel="stylesheet">
+<!--[if mso]><style>table,td,a,p,h1,center{font-family:Segoe UI,Arial,sans-serif !important;}</style><![endif]-->
+<style>
+  :root { color-scheme: light only; }
+  @media (max-width: 620px) {
+    .card { width: 100% !important; border-radius: 20px !important; }
+    .pad { padding-left: 24px !important; padding-right: 24px !important; }
+    .h1 { font-size: 30px !important; line-height: 34px !important; }
+  }
+  a { color: #3F5B3A; }
+</style>
+</head>
+<body style="margin:0;padding:0;background-color:#EFE9DC;-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">Enter this code to confirm it's you.&#8202;&#847;&#8202;&#847;&#8202;&#847;&#8202;&#847;&#8202;&#847;&#8202;&#847;&#8202;&#847;&#8202;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#EFE9DC;">
+  <tr><td align="center" style="padding:32px 12px;">
+    <table role="presentation" class="card" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;background-color:#FFFCF5;border-radius:28px;overflow:hidden;box-shadow:0 1px 2px rgba(46,42,34,0.06),0 8px 24px rgba(46,42,34,0.06);">
+      <tr><td class="pad" bgcolor="#17241a" style="background-color:#17241a;padding:28px 40px 40px 40px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="padding-right:12px;"><img src="https://co2counter.co.uk/icons/email-mark.png" width="36" height="36" alt="" style="display:block;border:0;"></td>
+          <td style="font-family:'Bricolage Grotesque', 'Trebuchet MS', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:19px;line-height:24px;font-weight:800;color:#F1EDE4;letter-spacing:-0.4px;">CO2 Counter</td>
+        </tr></table>
+        <p style="margin:40px 0 10px 0;font-family:Karla, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:12px;line-height:16px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:#C4E57D;">Confirm it's you</p>
+        <h1 class="h1" style="margin:0 0 14px 0;font-family:'Bricolage Grotesque', 'Trebuchet MS', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:36px;line-height:40px;font-weight:800;letter-spacing:-1px;color:#F1EDE4;">Your one-time code</h1>
+        <p style="margin:0 0 28px 0;font-family:Karla, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:17px;line-height:26px;color:#B7C2AE;">Enter this code in CO2 Counter to confirm it's you. It works once and expires soon.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="padding:14px 26px;border:1px solid #3a4d3a;border-radius:20px;font-family:'Bricolage Grotesque', 'Trebuchet MS', 'Segoe UI', Helvetica, Arial, sans-serif;font-size:48px;line-height:56px;font-weight:800;letter-spacing:8px;color:#C4E57D;">{{ .Token }}</td>
+        </tr></table>
+      </td></tr>
+      
+      <tr><td class="pad" style="padding:26px 40px 34px 40px;">
+        
+        <p style="margin:0;font-family:Karla, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:14px;line-height:21px;color:#4A453A;">Didn't ask for a code? You can ignore this email. Nobody can use it without signing in as you.</p>
+      </td></tr>
+    </table>
+    <table role="presentation" class="card" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;">
+      <tr><td align="center" style="padding:24px 24px 0 24px;font-family:Karla, 'Segoe UI', Helvetica, Arial, sans-serif;font-size:12px;line-height:19px;color:#6B6455;">
+        <strong style="font-family:'Bricolage Grotesque', 'Trebuchet MS', 'Segoe UI', Helvetica, Arial, sans-serif;color:#3F5B3A;">CO2 Counter</strong> &middot; Know your footprint, then watch it shrink.<br>
+        <a href="https://co2counter.co.uk" style="color:#6B6455;text-decoration:underline;">co2counter.co.uk</a> &middot;
+        <a href="mailto:CO2counter@outlook.com" style="color:#6B6455;text-decoration:underline;">CO2counter@outlook.com</a><br>
+        This email was sent to {{ .Email }}.
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>
