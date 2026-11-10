@@ -3451,7 +3451,12 @@
     for (let y = Y + 1; y <= 2100; y++) ys.push(y);
     const wAt = (y) => { const x = Math.min(1, Math.max(0, (y - 0.5 - Y) / (W.momentumYears || 20))); return 1 - x * x * (3 - 2 * x); };
     const eCp = ys.map((y) => at(W.currentPoliciesGt, y - 0.5));
-    const eOf = (kg) => ys.map((y) => (at(W.populationBn, y - 0.5) * kg) / 1000); // billions of people x kg = Mt; / 1000 = Gt
+    // "Everyone like you" follows the same policy path as the world, scaled by
+    // how your footprint compares with today's world average: your lines get
+    // the same cuts as "carries on", so the three stay comparable and never
+    // cross (a higher footprint is always the faster, warmer line).
+    const worldKgNow = (W.emissionsNowGt / at(W.populationBn, Y)) * 1000;
+    const eOf = (kg) => eCp.map((e) => (e * kg) / worldKgNow);
     const k = (W.currentPolicies2100 - t0 - slope * ys.reduce((t, y) => t + wAt(y), 0)) / ys.reduce((t, y, i) => t + (1 - wAt(y)) * eCp[i], 0);
     const path = (e) => { let T = t0; const out = [t0]; ys.forEach((y, i) => { T += wAt(y) * slope + (1 - wAt(y)) * k * e[i]; out.push(T); }); return out; };
     const cp = path(eCp), you = path(eOf(fullKg)), all = path(eOf(allKg));
@@ -3520,8 +3525,8 @@
       ["1950s", "Then the line turns upward", "Coal, oil and gas burn faster every decade, and the heat builds."],
       ["Today", "About " + degC(w.t0) + " already", "The last ten years were the ten warmest on record."],
       ["If the world carries on", "About " + degC(cpEnd) + " by 2100", "Where today's policies are heading, by Climate Action Tracker's estimate."],
-      ["If everyone lived like you do now", "About " + degC(youEnd) + " by 2100", vs(youEnd) + " Everyone at " + t(w.fullKg) + " t a year."],
-      ["If everyone made every change you could", "About " + degC(allEnd) + " by 2100", vs(allEnd) + " Everyone at " + t(w.allKg) + " t a year" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
+      ["If everyone lived like you do now", "About " + degC(youEnd) + " by 2100", vs(youEnd) + " Everyone at " + t(w.fullKg) + " t a year today, cutting as today's policies do."],
+      ["If everyone made every change you could", "About " + degC(allEnd) + " by 2100", vs(allEnd) + " Everyone at " + t(w.allKg) + " t a year today, cutting as today's policies do" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
     ];
     // The same story as a rate of warming (the "How fast" view).
     const r = w.rate, rEnd = (k) => end(r[k]);
@@ -3530,8 +3535,8 @@
       ["1950s", "A pause, then it speeds up", "Air pollution briefly masked the warming mid-century. Since the 1970s it has sped up as coal, oil and gas burn faster."],
       ["Today", "About " + perDecade(r.t0), "The fastest in the record: about " + (r.t0 / 10).toFixed(3) + "°C every year."],
       ["If the world carries on", "Slowing to " + perDecade(rEnd("cp")) + " by 2100", "Warming keeps its pace for a while, then slows as emissions ease under today's policies. About " + degC(cpEnd) + " warmer by then."],
-      ["If everyone lived like you do now", perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year. Held at this footprint, the pace barely eases, and creeps up as the population grows. About " + degC(youEnd) + " warmer by then."],
-      ["If everyone made every change you could", perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year. The pace eases for 20 years or so, then creeps back up a little as the population grows. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
+      ["If everyone lived like you do now", perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(youEnd) + " warmer by then."],
+      ["If everyone made every change you could", perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
     ];
     const capList = (list, view) => '<ol class="warm-caps" data-view="' + view + '">' + list.map((c, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(c[0]) + '</span><h3 class="display">' + esc(c[1]) + "</h3><p>" + esc(c[2]) + "</p></li>").join("") + "</ol>";
     const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ", warming now at about " + perDecade(r.t0) + ". By 2100: about " + degC(cpEnd) + " if the world carries on as it is, about " + degC(youEnd) +
@@ -3564,7 +3569,7 @@
       '<div class="warm-key" aria-hidden="true"><span class="k-you' + (hot ? " hot" : "") + '"><i></i><b>' + degC(youEnd) + "</b> Like you now</span>" +
       '<span class="k-cp"><i></i><b>' + degC(cpEnd) + "</b> Carries on</span>" +
       '<span class="k-all' + (allHot ? " hot" : "") + '"><i></i><b>' + degC(allEnd) + "</b> Every change</span></div>" +
-      '<p class="warm-note">An illustration, not a climate model. It holds everyone at that footprint until 2100, starting from today\'s pace of warming. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
+      '<p class="warm-note">An illustration, not a climate model. Everyone starts at that footprint and cuts it at the same pace as today\'s policies, starting from today\'s pace of warming. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
       "</div></section>"
     );
   }
@@ -3638,7 +3643,7 @@
       if (R) {
         // A line every 0.1°C a decade, and where warming would stop.
         for (let t = 1; t <= Math.floor(y1 * 10 + 1e-9); t++) g += '<span class="wg" style="top:' + pct(w.f0, t / 10)[1] + '"><i>+' + (t / 10).toFixed(1) + "°C</i></span>";
-        g += '<span class="wg lim" style="top:' + pct(w.f0, 0)[1] + '"><i>No warming</i></span>';
+        g += '<span class="wg lim zero" style="top:' + pct(w.f0, 0)[1] + '"><i>No warming</i></span>';
       } else {
         for (let t = 0; t <= top; t++) g += '<span class="wg" style="top:' + pct(w.f0, t)[1] + '"><i>' + (t ? "+" + t : "0") + "°C</i></span>";
         g += '<span class="wg lim" style="top:' + pct(w.f0, 1.5)[1] + '"><i>1.5°C limit</i></span>';
@@ -3646,6 +3651,9 @@
       }
       grid.innerHTML = g;
     }
+    // "No warming" sits over 1990, where the measured pace is well above zero.
+    const zero = grid.querySelector(".wg.zero i");
+    if (zero) zero.style.left = pct(1990, 0)[0];
     const xs = q(".warm-x");
     const ticks = [1850, 1900, 1950, 2000, 2025, 2050, 2100].filter((t) => t <= x1 + 0.5);
     const key = ticks.join() + x1.toFixed(1);
