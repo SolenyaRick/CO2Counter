@@ -3534,23 +3534,25 @@
       ["1850", "Warming barely moves", "How fast the world was warming each decade, from measured temperatures (the trend over 21 years)."],
       ["1950s", "A pause, then it speeds up", "Air pollution briefly masked the warming mid-century. Since the 1970s it has sped up as coal, oil and gas burn faster."],
       ["Today", "About " + perDecade(r.t0), "The fastest in the record: about " + (r.t0 / 10).toFixed(3) + "°C every year."],
-      ["If the world carries on", "Slowing to " + perDecade(rEnd("cp")) + " by 2100", "Warming keeps its pace for a while, then slows as emissions ease under today's policies. About " + degC(cpEnd) + " warmer by then."],
-      ["If everyone lived like you do now", perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(youEnd) + " warmer by then."],
-      ["If everyone made every change you could", perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
+      ["If the world carries on", "Slowing to about " + perDecade(rEnd("cp")) + " by 2100", "Warming keeps its pace for a while, then slows as emissions ease under today's policies. About " + degC(cpEnd) + " warmer by then."],
+      ["If everyone lived like you do now", "About " + perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(youEnd) + " warmer by then."],
+      ["If everyone made every change you could", "About " + perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year today, then cutting at the same pace as today's policies. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
     ];
     const capList = (list, view) => '<ol class="warm-caps" data-view="' + view + '">' + list.map((c, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(c[0]) + '</span><h3 class="display">' + esc(c[1]) + "</h3><p>" + esc(c[2]) + "</p></li>").join("") + "</ol>";
-    const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ", warming now at about " + perDecade(r.t0) + ". By 2100: about " + degC(cpEnd) + " if the world carries on as it is, about " + degC(youEnd) +
+    const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ", warming now at about " + perDecade(r.t0) + ". A rough guess, in beta, by 2100: about " + degC(cpEnd) + " if the world carries on as it is, about " + degC(youEnd) +
       " if everyone lived like you do now, and about " + degC(allEnd) + " if everyone made every change you could.";
     const modes = (cls) => '<div class="warm-modes ' + cls + '" role="radiogroup" aria-label="Which version of you?">' +
       WARM_MODES.map(([k, l]) => '<button type="button" role="radio" aria-checked="' + (k === "both") + '" data-warm-mode="' + k + '">' + esc(l) +
         (k === "now" ? "<small>" + t(w.fullKg) + " t a year</small>" : k === "all" ? "<small>" + t(w.allKg) + " t a year</small>" : "<small>Then and after</small>") + "</button>").join("") + "</div>";
     return (
-      '<section class="warm-intro"><span class="story-k">Now picture everyone</span>' +
+      '<section class="warm-intro"><span class="story-k">Now picture everyone <span class="warm-beta">Beta</span></span>' +
       '<h2 class="display">What if all ' + w.people.toFixed(1) + " billion of us lived like you?</h2>" +
+      '<p class="warm-guess"><b>This is a rough guess, not a forecast.</b> Real warming depends on much more than footprints: forests, oceans, other gases, and what the world actually does next. We\'ve simplified all of that a lot. Read the lines as a rough direction, not as predictions.</p>' +
       "<p>Your full footprint, with shopping and your share of public services, is <b>" + t(w.fullKg) + " t</b> a year. Make every change you could and it's <b>" + t(w.allKg) + " t</b>. The world averages about <b>" + t(w.worldKg) + " t</b>.</p>" +
       '<p class="warm-q">Which version of you should everyone live like?</p>' + modes("big") +
       '<span class="warm-go" aria-hidden="true">Scroll to play</span></section>' +
       '<section class="warm-track view-rate"><div class="warm-stage">' +
+      '<span class="warm-beta warm-beta-stage" title="An early, simplified illustration">Beta · rough guess</span>' +
       capList(caps, "level") + capList(rateCaps, "rate") +
       '<div class="warm-read" aria-hidden="true"><b class="display tnum warm-yr">1850</b><span class="warm-t tnum">+0.0°C</span></div>' +
       '<div class="warm-ctrls"><div class="warm-modes small warm-view" role="radiogroup" aria-label="Show">' +
@@ -3569,7 +3571,7 @@
       '<div class="warm-key" aria-hidden="true"><span class="k-you' + (hot ? " hot" : "") + '"><i></i><b>' + degC(youEnd) + "</b> Like you now</span>" +
       '<span class="k-cp"><i></i><b>' + degC(cpEnd) + "</b> Carries on</span>" +
       '<span class="k-all' + (allHot ? " hot" : "") + '"><i></i><b>' + degC(allEnd) + "</b> Every change</span></div>" +
-      '<p class="warm-note">An illustration, not a climate model. Everyone starts at that footprint and cuts it at the same pace as today\'s policies, starting from today\'s pace of warming. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
+      '<p class="warm-note"><b>Beta: a rough guess, not a forecast or a climate model.</b> Everyone starts at that footprint and cuts it at the same pace as today\'s policies, starting from today\'s pace of warming. Measured: Met Office HadCRUT5. Ahead: Climate Action Tracker, UNEP, UN population. <a class="link-btn" href="/how-we-calculate/">How we calculate</a></p>' +
       "</div></section>"
     );
   }

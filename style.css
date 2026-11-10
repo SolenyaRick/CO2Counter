@@ -7784,3 +7784,16 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 /* "No warming" sits inside the chart over 1990 (placed by paintWarm), where
    the measured line is well above it, so it never meets the end labels. */
 .wg.lim.zero i, .warm-stage .wg.lim.zero i { left: 60%; right: auto; top: -22px; }
+
+/* Warming chapter is in beta and a rough guess: a badge on the intro and
+   on the chart, a plain warning, and ≈ on every value ahead of today. */
+.warm-beta { display: inline-block; vertical-align: 2px; margin-left: 8px; padding: 2px 8px; border-radius: 6px; background: var(--honey, #d9a441); color: #2a1f08; font: 800 11px/16px var(--font); letter-spacing: 0.08em; text-transform: uppercase; }
+.warm-beta-stage { position: absolute; z-index: 2; top: 24px; left: max(24px, 5vw); margin: 0; }
+.warm-guess { margin-top: 20px !important; padding: 14px 16px; border-radius: 16px; border: 1.5px dashed rgba(217, 164, 65, 0.6); background: rgba(217, 164, 65, 0.08); font-size: clamp(15px, 1.2vw, 18px) !important; max-width: 52ch !important; }
+.warm-guess b { color: var(--honey, #d9a441) !important; }
+.warm-note b { color: var(--honey, #d9a441); font-weight: 700; }
+.w-end b::before, .warm-key b::before, .warm-read:is(.cp, .you, .all, .hot) .warm-t::before { content: "≈ "; }
+@media (max-width: 760px) {
+  .warm-beta-stage { top: 22px; left: 16px; }
+  .warm-guess { margin-top: 14px !important; padding: 10px 12px; font-size: 14px !important; }
+}
