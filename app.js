@@ -3485,7 +3485,8 @@
       '<div class="story" role="dialog" aria-modal="true" aria-labelledby="story-h">' +
       '<div class="story-line" aria-hidden="true"><i></i></div>' +
       '<button type="button" class="story-close" data-story-close aria-label="Close">' + icon("x") + "</button>" +
-      '<div class="story-scroll" tabindex="0" aria-label="Picture your year. Scroll to move through it.">' +
+      '<div class="story-scroll" tabindex="0" aria-label="Picture your year. ' + (tapNav() ? "Tap" : "Scroll") + ' to move through it.">' +
+      (tapNav() ? '<span class="story-taphint" aria-hidden="true">Tap to go on · tap the left edge to go back</span>' : "") +
       (d.reveal
         ? '<section class="story-intro"><span class="story-k">Your results are in</span>' +
           '<h2 id="story-h" class="display">This is your year.<br><b class="tnum story-count">' + kgFmt(d.total) + "</b><b> kg</b> of CO₂.</h2>" +
@@ -3493,7 +3494,7 @@
           '<button type="button" class="link-btn story-skip" data-story-close>Skip to my results</button></div></section>'
         : '<section class="story-intro"><span class="story-k">Picture it</span>' +
           '<h2 id="story-h" class="display">This is your year.<br><b class="tnum">' + kgFmt(d.total) + " kg</b> of CO₂.</h2>" +
-          "<p>Scroll, and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>") +
+          "<p>" + (tapNav() ? "Tap" : "Scroll") + ", and watch it shrink.</p><span class=\"story-cue\" aria-hidden=\"true\"><i></i></span></section>") +
       '<section class="story-track" style="--n:' + n + '">' +
       '<div class="story-stage">' +
       '<div class="story-orb" aria-hidden="true" style="--b:' + r(d.budget) + '">' +
@@ -3550,7 +3551,7 @@
       '<p class="warm-guess"><b>This is a rough guess, not a forecast.</b> Real warming depends on much more than footprints: forests, oceans, other gases, and what the world actually does next. We\'ve simplified all of that a lot. Read the lines as a rough direction, not as predictions.</p>' +
       "<p>Your full footprint, with shopping and your share of public services, is <b>" + t(w.fullKg) + " t</b> a year. Make every change you could and it's <b>" + t(w.allKg) + " t</b>. The world averages about <b>" + t(w.worldKg) + " t</b>.</p>" +
       '<p class="warm-q">Which version of you should everyone live like?</p>' + modes("big") +
-      '<span class="warm-go" aria-hidden="true">Scroll to play</span></section>' +
+      '<span class="warm-go" aria-hidden="true">' + (tapNav() ? "Tap to play" : "Scroll to play") + "</span></section>" +
       '<section class="warm-track view-rate"><div class="warm-stage">' +
       '<span class="warm-beta warm-beta-stage" title="An early, simplified illustration">Beta · rough guess</span>' +
       capList(caps, "level") + capList(rateCaps, "rate") +
@@ -3778,8 +3779,31 @@
         warmTrack._cap = -1;
         return paint();
       }
-      if (e.target.closest("a[href]")) closeStory(true);
+      if (e.target.closest("a[href]")) return closeStory(true);
+      if (tapNav() && !e.target.closest("button, a, input, select, textarea, label")) {
+        storyEl.classList.add("tapped");
+        tapStep(sc, storyStops(), e.clientX < innerWidth * 0.22);
+      }
     });
+    // Where a tap stops: the opening, each step of your year, the warming
+    // intro, each chapter of the chart, and the end.
+    const storyStops = () => {
+      const vh = sc.clientHeight, max = sc.scrollHeight - vh, out = [0];
+      const tl = track.offsetHeight - vh;
+      for (let i = 0; i < n; i++) out.push(track.offsetTop + ((i + 0.5) / n) * tl);
+      const wi = storyEl.querySelector(".warm-intro");
+      if (wi) out.push(wi.offsetTop);
+      if (warmTrack) {
+        const wl = warmTrack.offsetHeight - vh;
+        const parts = warmMode === "both" ? 2 : 1, span = (0.96 - 0.72) / parts;
+        const ps = [0.2, 0.4, 0.47, 0.71];
+        for (let i = 0; i < parts; i++) ps.push(0.72 + (i + 1) * span - 0.02);
+        ps.forEach((p) => out.push(warmTrack.offsetTop + p * wl));
+      }
+      const end = storyEl.querySelector(".story-end");
+      if (end) out.push(end.offsetTop);
+      return out.map((v) => Math.round(Math.min(max, v))).sort((a, b) => a - b);
+    };
     storyEl.addEventListener("keydown", (e) => {
       if (e.key === "Escape") { e.preventDefault(); return closeStory(); }
       if (e.key !== "Tab") return;
@@ -3841,6 +3865,54 @@
   ];
   let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  // Tap-through stories: on touch screens (and always in the app) a tap moves
+  // the full-screen stories on to their next stage, and a tap on the left
+  // edge goes back. Scrolling still works. The glide is a timed scroll, so
+  // everything scrubbed by scroll (discs, counts, the chart) plays on its way.
+  const tapNav = () => isNativeApp() || !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  const tapGlide = { raf: 0, target: 0 };
+  function glideTo(sc, top) {
+    const get = () => (sc ? sc.scrollTop : window.scrollY);
+    const set = (v) => (sc ? (sc.scrollTop = v) : window.scrollTo({ top: v, behavior: "instant" }));
+    cancelAnimationFrame(tapGlide.raf);
+    tapGlide.raf = 0;
+    const from = get(), dist = top - from;
+    if (fsReduce() || Math.abs(dist) < 2) return set(top);
+    const vh = sc ? sc.clientHeight : innerHeight;
+    const dur = Math.min(1800, Math.max(550, (Math.abs(dist) / vh) * 380));
+    const t0 = performance.now();
+    tapGlide.target = top;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      set(from + dist * (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2));
+      tapGlide.raf = k < 1 ? requestAnimationFrame(step) : 0;
+    };
+    tapGlide.raf = requestAnimationFrame(step);
+  }
+  // Moves to the next (or previous) stop; false when there isn't one.
+  function tapStep(sc, stops, back) {
+    const cur = tapGlide.raf ? tapGlide.target : sc ? sc.scrollTop : window.scrollY;
+    const to = back ? stops.filter((s) => s < cur - 4).pop() : stops.find((s) => s > cur + 4);
+    if (to == null) return false;
+    glideTo(sc, to);
+    return true;
+  }
+  // The welcome page's story: a tap on the opening or the pinned stage moves
+  // to the next step, then on past the story.
+  document.addEventListener("click", (e) => {
+    if (!tapNav() || storyEl || e.target.closest("button, a, input, select, textarea, label")) return;
+    const wl = e.target.closest(".wl");
+    if (!wl) return;
+    const track = wl.querySelector(".wl-track"), vh = innerHeight, n = 4;
+    const top = track.getBoundingClientRect().top + window.scrollY, tl = track.offsetHeight - vh;
+    const wlTop = wl.getBoundingClientRect().top + window.scrollY;
+    const stops = [wlTop < 120 ? 0 : wlTop];
+    for (let i = 0; i < n; i++) stops.push(top + ((i + 0.5) / n) * tl);
+    stops.push(top + track.offsetHeight - 64);
+    tapStep(null, stops.map(Math.round), e.clientX < innerWidth * 0.22);
+  });
+  // Stops the glide when someone takes over by dragging.
+  document.addEventListener("touchstart", () => { if (tapGlide.raf) { cancelAnimationFrame(tapGlide.raf); tapGlide.raf = 0; } }, { passive: true });
   function freshSpin(path) {
     const bar = document.querySelector(".topbar");
     const cfg = FS_PAGES.find((c) => (c.prefix ? path.startsWith(c.prefix) : c.paths.includes(path)) && app.querySelector(c.page));
