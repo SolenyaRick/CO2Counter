@@ -408,20 +408,26 @@
     "factor": 0.118
   }
 ];
-  // Cars someone owns or leases. "drive" is kg CO2e per km by size: DESNZ
-  // 2026 cars by size, tailpipe (or UK electricity for EVs, incl. T&D) plus
-  // well-to-tank. "make" is kg CO2e to make the car by size, from ICCT
+  // Cars someone owns or leases. "drive" is kg CO2e per km: DESNZ 2026
+  // "Cars (by market segment)", the same segments ICCT uses for making the
+  // car: small = Supermini, medium = Lower medium, large or SUV = Dual
+  // purpose 4X4. Petrol and diesel: tailpipe ('Passenger vehicles') plus
+  // well-to-tank ('WTT- pass vehs & travel- land'). Plug-in hybrids: their
+  // petrol, plus UK electricity for EVs, its T&D, plus well-to-tank. Electric:
+  // UK electricity for EVs, its T&D, plus well-to-tank. DESNZ publishes no
+  // market-segment figures for full hybrids, so they use "Cars (by size)".
+  // "make" is kg CO2e to make the car by size, from ICCT
   // (Bieker 2021, EU and UK cars): glider and powertrain at 5.2 t per tonne
   // of car for petrol and diesel, 5.7 t for plug-in hybrids and 4.7 t for
   // electric, times the average weight of small (1,155 kg), lower-medium
   // (1,382 kg) and SUV (1,537 kg) cars, plus the battery at 60 kg per kWh.
   // A full hybrid's 1.5 kWh battery adds about 0.1 t to the petrol figure.
   const CAR_TYPES = [
-    { key: "petrol", label: "Petrol", drive_small: 0.14257 + 0.04015, drive_medium: 0.17411 + 0.04957, drive_large: 0.26606 + 0.07528, make_small: 6000, make_medium: 7200, make_large: 8000 },
-    { key: "diesel", label: "Diesel", drive_small: 0.14327 + 0.03409, drive_medium: 0.17209 + 0.04103, drive_large: 0.20905 + 0.0507, make_small: 6000, make_medium: 7200, make_large: 8000 },
+    { key: "petrol", label: "Petrol", drive_small: 0.14217 + 0.04019, drive_medium: 0.1601 + 0.04582, drive_large: 0.19109 + 0.0549, make_small: 6000, make_medium: 7200, make_large: 8000 },
+    { key: "diesel", label: "Diesel", drive_small: 0.13461 + 0.03208, drive_medium: 0.14457 + 0.03482, drive_large: 0.19794 + 0.0483, make_small: 6000, make_medium: 7200, make_large: 8000 },
     { key: "hybrid", label: "Hybrid", drive_small: 0.1138 + 0.03026, drive_medium: 0.11678 + 0.02998, drive_large: 0.15846 + 0.03961, make_small: 6100, make_medium: 7300, make_large: 8100 },
-    { key: "phev", label: "Plug-in hybrid", drive_small: 0.03002 + 0.01791 + 0.00178 + 0.0152, drive_medium: 0.07349 + 0.00691 + 0.00069 + 0.02524, drive_large: 0.09842 + 0.00944 + 0.00093 + 0.03221, make_small: 7200, make_medium: 8500, make_large: 9600 },
-    { key: "ev", label: "Electric", drive_small: 0.02469 + 0.00244 + 0.00948, drive_medium: 0.02563 + 0.00254 + 0.01022, drive_large: 0.0279 + 0.00276 + 0.01088, make_small: 8100, make_medium: 9200, make_large: 11400 },
+    { key: "phev", label: "Plug-in hybrid", drive_small: 0.03002 + 0.01791 + 0.00178 + 0.0152, drive_medium: 0.07069 + 0.00668 + 0.00066 + 0.0242, drive_large: 0.09975 + 0.00977 + 0.00097 + 0.03308, make_small: 7200, make_medium: 8500, make_large: 9600 },
+    { key: "ev", label: "Electric", drive_small: 0.02522 + 0.00249 + 0.00971, drive_medium: 0.02528 + 0.00251 + 0.0102, drive_large: 0.0281 + 0.00279 + 0.01106, make_small: 8100, make_medium: 9200, make_large: 11400 },
   ];
   const CAR_SIZES = [
     { key: "small", label: "Small", hint: "like a Corsa or Fiesta" },
@@ -1947,7 +1953,9 @@
     (t === "hybrid" ? ", plus a 1.5 kWh battery at 60 kg CO₂e per kWh. App assumption: the study counts full hybrids with petrol cars and adds no battery." : t === "petrol" || t === "diesel" ? ". No battery is added." : ".") +
     (t === "phev" && z === "small" ? " The study has no small plug-in hybrid, so this uses the lower-medium battery." : "");
   CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_make_" + t.key + "_" + z, label: "Making a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e", path: "CAR_TYPES[" + t.key + "].make_" + z, source: icctSource(t.key, z), asOf: "2021-07" })));
-  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_drive_" + t.key + "_" + z, label: "Driving a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e per km", path: "CAR_TYPES[" + t.key + "].drive_" + z, source: DESNZ_2026 + ", cars by size: " + (t.key === "ev" ? "'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : t.key === "phev" ? "'Passenger vehicles' (its petrol) + 'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : "'Passenger vehicles' + 'WTT- pass vehs & travel- land'") + " sheets. DESNZ sizes petrol and diesel cars by engine size (for example, a 1.6-litre diesel is medium).", asOf: "2026-06", every: 12 })));
+  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_drive_" + t.key + "_" + z, label: "Driving a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e per km", path: "CAR_TYPES[" + t.key + "].drive_" + z, source: DESNZ_2026 + (t.key === "hybrid"
+    ? ", cars by size (" + ({ small: "Small car", medium: "Medium car", large: "Large car" })[z] + "): 'Passenger vehicles' + 'WTT- pass vehs & travel- land' sheets. DESNZ has no market-segment figures for full hybrids."
+    : ", cars by market segment (" + ({ small: "Supermini", medium: "Lower medium", large: "Dual purpose 4X4" })[z] + "): " + (t.key === "ev" ? "'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : t.key === "phev" ? "'Passenger vehicles' (its petrol) + 'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : "'Passenger vehicles' + 'WTT- pass vehs & travel- land'") + " sheets, the same segments as making the car."), asOf: "2026-06", every: 12 })));
   BANKS.forEach((b) => INPUT_DEFS.push({ group: "Banks", key: "bank_" + b.key, label: b.label, unit: "kg CO₂e per £ a year", path: "BANKS[" + b.key + "].factor", source: "MotherTree bank carbon emissions league table (2021)", asOf: "2021-06", every: 12 }));
   PENSION_PROVIDERS.filter((p) => !p.unfunded).forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
   INPUT_DEFS.push(
