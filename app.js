@@ -5272,7 +5272,7 @@
       { n: 4, name: "More green travel", what: "walk, cycle, take the train, fly less", icon: HB_TRAIN, cat: travel.length && travel[0].done ? "flights" : "commute",
         done: travelDone, save: travelDone ? 0 : travelSave,
         sub: !ready ? "Finish your survey to see" : travelDone ? "Done · green commute and no flights" :
-          [travel[0].done ? "Commute done" : "Commute not yet", travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
+          [travel[0].done ? "Commute done" : "Commute not yet" + (travel[0].why ? " (" + travel[0].why.replace(/^Not yet: /, "").split(".")[0] + ")" : ""), travel[1].done ? "no flights" : "flights not yet"].join(" · ") + (travelSave >= 0.5 ? " · could save " + kgFmt(travelSave) + " kg a year" : "") },
       { n: 5, name: "Monitor your CO₂ footprint", what: "and cut where you can", icon: HB_CHART, href: "#/acts/monitor", done: !!ready, sub: ready ? "Done · you've measured it with CO2 Counter" : "Take the survey to tick this one" },
       { ...mobiliseAct(ticked), icon: HB_VOTE },
       { ...motivateAct(ticked, url, text), icon: SW_ICONS.motivate },
@@ -5721,7 +5721,9 @@
       '<div class="tf-top">' + node("commute", "Green commute", SW_ICONS.commute) + node("flights", "Green one-off trips", SW_ICONS.flights) + "</div>" +
       '<div class="tf-lines' + (ready && areas.commute && areas.commute.done ? " c" : "") + (ready && areas.flights && areas.flights.done ? " f" : "") + (both ? " full" : "") + '" aria-hidden="true"><i class="l"></i><i class="r"></i><i class="m"></i></div>' +
       '<div class="tf-main' + (both ? " done" : "") + '"><span class="tf-ic" aria-hidden="true">' + svgPath(HB_TRAIN, 18) + (both ? '<span class="tf-tick">' + icon("check") + "</span>" : "") + '</span><span class="min0"><b class="display">Green travel</b><span class="tf-sub">' +
-      (both ? "Done · both halves are green" : "Unlocks when both are done") + "</span></span></div></div>"
+      (both ? "Done · both halves are green" : "Unlocks when both are done") + "</span></span></div>" +
+      (ready ? ["commute", "flights"].filter((k) => areas[k] && !areas[k].done && areas[k].why).map((k) => '<p class="tf-why"><b>' + (k === "commute" ? "Commute" : "Flights") + "</b> " + esc(areas[k].why) + "</p>").join("") : "") +
+      "</div>"
     );
   }
 
@@ -6787,6 +6789,36 @@
   }
 
   // The five areas, with savings and a before/after for each.
+  // Why a commute doesn't count as green yet, in words, or "" if it does.
+  // "Mon–Thu by petrol car, Fri by bus" plus the rule that would change it.
+  const COMMUTE_WORDS = { car_petrol: "petrol car", car_diesel: "diesel car", ev: "electric car", motorcycle: "motorcycle", train: "train", tube: "Tube", bus: "bus" };
+  const TRANSIT = ["train", "tube", "bus"];
+  function commuteWhy(cm) {
+    cm = cm || {};
+    const km = Number(cm.distance) || 0;
+    const days = DAYS.filter((d) => cm[d] && cm[d] !== "wfh");
+    if (!(km > 0 && days.length)) return "";
+    const far = km > A.ACTIVE_TRAVEL_MAX_KM;
+    const bad = days.filter((d) => cm[d] !== "walk_bike" && !(far && TRANSIT.includes(cm[d])));
+    if (!bad.length) return "";
+    // Group the days by how they're travelled: "Mon–Wed by petrol car".
+    const runs = [];
+    bad.forEach((d) => {
+      const last = runs[runs.length - 1];
+      const i = DAYS.indexOf(d);
+      if (last && last.mode === cm[d] && DAYS.indexOf(last.to) === i - 1) last.to = d;
+      else runs.push({ mode: cm[d], from: d, to: d });
+    });
+    const byMode = {};
+    runs.forEach((r) => (byMode[r.mode] = (byMode[r.mode] || []).concat(r.from === r.to ? r.from : r.from + "–" + r.to)));
+    const list = Object.keys(byMode).map((m) => byMode[m].join(", ") + " by " + (COMMUTE_WORDS[m] || m)).join("; ");
+    const transit = bad.some((d) => TRANSIT.includes(cm[d]));
+    const kmTxt = (Math.round(km * 10) / 10).toString();
+    return "Not yet: " + list + ". " + (transit
+      ? "Walking, cycling or working from home always count. Train, Tube and bus count when the commute is over " + A.ACTIVE_TRAVEL_MAX_KM + " km each way; yours is " + kmTxt + " km."
+      : "Days on foot, by bike or from home count" + (far ? ", and so do train, Tube and bus on a commute as long as yours." : "."));
+  }
+
   function switchAreas(base) {
     const s = base.s;
     const swap = (fn) => { const keep = survey; survey = s; try { return fn(); } finally { survey = keep; } };
@@ -6807,13 +6839,23 @@
     const diet = dietType(s);
     const foodDone = base.mine && (diet === "vegan" || diet === "veggie");
     const myFlights = (s.flights || []).filter((f) => flightKm(f.from, f.to) > 0);
-    const flightsDone = base.mine && !myFlights.length;
-    // Commute: nothing to switch without a commute, or when every trip is
-    // already on foot, by bike or from home, and there's no car to change.
+    // Act 4's one-off trips half clears once a year has passed since the last
+    // flight. A flight with no date counts from when the survey was finished.
+    const YEAR_MS = 365 * 864e5;
+    const flownAt = (f) => { const t = Date.parse(f.date || s.completedAt || ""); return isNaN(t) ? Date.now() : t; };
+    const recentFlights = myFlights.filter((f) => Date.now() - flownAt(f) < YEAR_MS);
+    const flightsDone = base.mine && !recentFlights.length;
+    const clearsOn = recentFlights.length ? new Date(Math.max(...recentFlights.map(flownAt)) + YEAR_MS) : null;
+    // Commute: green when every commuting day is on foot, by bike or from
+    // home, or by train, Tube or bus on a commute longer than
+    // ACTIVE_TRAVEL_MAX_KM each way (too far to walk or cycle). Owning a car
+    // doesn't matter here: its driving is counted in the footprint.
     const cm = s.commute || {};
     const cmDays = DAYS.map((d) => cm[d]).filter((m) => m && m !== "wfh");
     const noCommute = !(cm.distance > 0 && cmDays.length);
-    const commuteDone = base.mine && !ownedCars(s).some((x) => x.fuel !== "ev") && cmDays.every((m) => m === "walk_bike");
+    const cmWhy = commuteWhy(cm);
+    const commuteDone = base.mine && !cmWhy;
+    const allActive = cmDays.every((m) => m === "walk_bike");
     const elecKwh = (12 * (s.energy.electricityKwh || 0)) / householdOf(s) || (D.UK_PROFILE.electricityKwh / D.UK_PROFILE.household);
     const dist = s.commute.distance || D.UK_PROFILE.commuteKm;
     const day = (k) => byKey(D.MEAL_OPTIONS, k).factor;
@@ -6870,19 +6912,26 @@
         vsTitle: "A day of food, kg CO₂e", beforeLabel: food.beforeLabel, before: food.before, afterLabel: food.afterLabel, after: food.after },
       { key: "commute", short: "Commute", effort: "Ongoing · a day a week", ex: 70, save: saving("commute"), verb: "Visit", panel: "#7FA3AE", panelInk: "#14262B", dropInk: "#14262B",
         done: commuteDone,
-        doneTitle: noCommute ? "No commute to switch" : "You already walk or cycle",
+        doneTitle: noCommute ? "No commute to switch" : allActive ? "You already walk or cycle" : "Your commute is green",
+        why: base.mine ? cmWhy : "",
         fact: commuteDone
           ? noCommute
             ? "You don't commute, so there's nothing to switch here. If that changes, walking, cycling or the train are the ones to look at."
-            : "You already walk or cycle to work, so your commute is as low as it gets. Nothing to switch here."
+            : allActive
+              ? "You already walk or cycle to work, so your commute is as low as it gets. Nothing to switch here."
+              : "You walk, cycle or take public transport on a commute too long to walk or cycle, so your commute counts as green."
           : "Your commute repeats over 200 times a year. Swapping car days for the train or a bike, or going electric through a salary-sacrifice scheme, adds up fast.",
         vsTitle: (base.mine ? "Your " : "A ") + (Math.round(dist * 10) / 10) + " km commute, one day, kg CO₂e", beforeLabel: "Petrol car", before: dist * 2 * petrol,
-        afterLabel: commuteDone && !noCommute ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute ? 0 : dist * 2 * train },
+        afterLabel: commuteDone && !noCommute && allActive ? "Yours: walk or cycle" : "Train", after: commuteDone && !noCommute && allActive ? 0 : dist * 2 * train },
       { key: "flights", short: "Flights", effort: "When you travel · per trip", ex: 59, save: saving("flights"), verb: "Plan with", panel: "#B8653D", panelInk: "#FFF7EE", dropInk: "#FFF7EE",
         done: flightsDone,
-        doneTitle: "No flights to switch",
+        doneTitle: myFlights.length ? "No flights in the last year" : "No flights to switch",
+        why: base.mine && clearsOn ? "Not yet: " + recentFlights.length + (recentFlights.length === 1 ? " flight" : " flights") + " in the last 12 months. This half clears on " +
+          clearsOn.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) + ", a year after your last flight, if you don't fly before then." : "",
         fact: flightsDone
-          ? "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+          ? myFlights.length
+            ? "Your last flight was over a year ago, so there's nothing to switch right now. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
+            : "You haven't added any flights, so there's nothing to switch. For trips in the UK and nearby Europe, the train is usually the low-carbon way to go."
           : base.mine && myFlights.length && myFlights.every((f) => flightKm(f.from, f.to) > A.SHORT_HAUL_KM)
             ? "Your flights are too far for the train to be realistic. The switches here are flying a little less often and choosing economy, which shares the plane's emissions between more people."
             : "Once airport time is counted, the train is often as quick door to door for shorter trips, and it emits a fraction as much.",
@@ -7015,7 +7064,7 @@
           "<span>" + esc(a.afterLabel) + '</span><span class="sw-vs-track"><span class="sw-vs-after" style="width:' + Math.max(0, Math.min(100, (a.after / (a.before || 1)) * 100)).toFixed(1) + '%"></span></span><b class="display tnum">' + fmtKg(a.after) + "</b></div></div></div>" +
           '<div class="sw-body"><div class="chip-row">' + (a.done ? '<span class="sw-chip dark">' + icon("check") + "Already done</span>" : a.save > 0.5 ? '<span class="sw-chip dark tnum">−' + kgFmt(a.save) + " kg a year " + who + "</span>" : "") +
           '<span class="sw-chip">' + icon("clock") + esc(a.effort) + "</span></div>" +
-          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.done ? a.fact : firstSentence(a.fact)) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
+          '<h2 class="display">' + esc(a.title) + "</h2><p class=\"sw-fact\">" + esc(a.done ? a.fact : a.key === "commute" && a.why ? a.why : firstSentence(a.fact)) + "</p>" + (a.askHtml || "") + (a.links.length && !a.askHtml ? '<div class="sw-offers">' +
           a.links
             .map((l) => {
               const tone = TONES[l.tone] || TONES.leaf;

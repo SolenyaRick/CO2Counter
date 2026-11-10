@@ -7385,6 +7385,10 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .cc-rv.answer-tile { transition-delay: calc(var(--i, 0) * var(--stagger)); }
 
 
+/* Act 4: why a half isn't green yet, under the flow chart. */
+.tf-why { margin: 10px 0 0; font-size: 14px; line-height: 1.45; color: #4A453A; }
+.tf-why b { margin-right: 4px; color: #2E2A22; }
+
 /* ---------- Picture your year: the full-screen story ---------- */
 .pi-head .pi-acts { display: flex; align-items: center; gap: 8px; flex: none; }
 .pi-play { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px 0 10px; border-radius: 999px; border: 0; background: var(--canopy); color: var(--on-canopy); font: 700 13px/1 var(--font); cursor: pointer; }
