@@ -1934,9 +1934,20 @@
     { group: "Pets", key: "small_pet", label: "Small pet (rabbit, guinea pig, bird, fish)", unit: "kg CO₂e a year", path: "SMALL_PET_YEARLY", source: "Rough estimate for food and bedding; no published study yet" },
   ];
   const SIZE_WORD = { small: "small", medium: "medium", large: "large or SUV" };
-  const ICCT_CARS = "ICCT, A global comparison of the life-cycle GHG emissions of combustion engine and electric passenger cars (Bieker, 2021): production and recycling per tonne of car times the average EU and UK car weight for the size, plus the battery at 60 kg CO₂e per kWh";
-  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_make_" + t.key + "_" + z, label: "Making a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e", path: "CAR_TYPES[" + t.key + "].make_" + z, source: ICCT_CARS + (t.key === "hybrid" ? ". Full hybrids aren't in the study: the petrol figure plus a 1.5 kWh battery." : t.key === "phev" && z === "small" ? ". There's no small plug-in hybrid in the study, so this uses the lower-medium battery." : ""), asOf: "2021-07" })));
-  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_drive_" + t.key + "_" + z, label: "Driving a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e per km", path: "CAR_TYPES[" + t.key + "].drive_" + z, source: DESNZ_2026 + " (cars by size" + (t.key === "ev" || t.key === "phev" ? ", incl. UK electricity for EVs and T&D" : "") + ")", asOf: "2026-06", every: 12 })));
+  // Where each part of a car's making comes from in the ICCT report (Bieker,
+  // July 2021). Page numbers are as printed, then as a PDF reader shows them.
+  const ICCT_CARS = "ICCT, A global comparison of the life-cycle GHG emissions of combustion engine and electric passenger cars (Bieker, July 2021)";
+  const ICCT_WEIGHT = { small: "1,155 kg (small)", medium: "1,382 kg (lower medium)", large: "1,537 kg (SUV)" };
+  const ICCT_PER_T = { petrol: "5.2", diesel: "5.2", hybrid: "5.2", phev: "5.7", ev: "4.7" };
+  const ICCT_BATTERY = { phev: { small: "9.7 kWh", medium: "9.7 kWh", large: "13.8 kWh" }, ev: { small: "45 kWh", medium: "45 kWh", large: "70 kWh" } };
+  const icctSource = (t, z) =>
+    ICCT_CARS + ": " + ICCT_PER_T[t] + " t CO₂e per tonne of car for production and recycling" + (t === "phev" || t === "ev" ? " without the battery" : "") +
+    " (Table A.1, p. 63 / PDF p. 69), times the average EU and UK weight of " + ICCT_WEIGHT[z] + " (p. 63 / PDF p. 69)" +
+    (ICCT_BATTERY[t] ? ", plus a " + ICCT_BATTERY[t][z] + " battery (Table 2.4, p. 10 / PDF p. 16) at 60 kg CO₂e per kWh (p. 10 / PDF p. 16)" : "") +
+    (t === "hybrid" ? ", plus a 1.5 kWh battery at 60 kg CO₂e per kWh. App assumption: the study counts full hybrids with petrol cars and adds no battery." : t === "petrol" || t === "diesel" ? ". No battery is added." : ".") +
+    (t === "phev" && z === "small" ? " The study has no small plug-in hybrid, so this uses the lower-medium battery." : "");
+  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_make_" + t.key + "_" + z, label: "Making a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e", path: "CAR_TYPES[" + t.key + "].make_" + z, source: icctSource(t.key, z), asOf: "2021-07" })));
+  CAR_TYPES.forEach((t) => ["small", "medium", "large"].forEach((z) => INPUT_DEFS.push({ group: "Cars", key: "car_drive_" + t.key + "_" + z, label: "Driving a " + SIZE_WORD[z] + " " + t.label.toLowerCase() + " car", unit: "kg CO₂e per km", path: "CAR_TYPES[" + t.key + "].drive_" + z, source: DESNZ_2026 + ", cars by size: " + (t.key === "ev" ? "'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : t.key === "phev" ? "'Passenger vehicles' (its petrol) + 'UK electricity for EVs' + 'UK electricity T&D for EVs' + 'WTT- pass vehs & travel- land'" : "'Passenger vehicles' + 'WTT- pass vehs & travel- land'") + " sheets. DESNZ sizes petrol and diesel cars by engine size (for example, a 1.6-litre diesel is medium).", asOf: "2026-06", every: 12 })));
   BANKS.forEach((b) => INPUT_DEFS.push({ group: "Banks", key: "bank_" + b.key, label: b.label, unit: "kg CO₂e per £ a year", path: "BANKS[" + b.key + "].factor", source: "MotherTree bank carbon emissions league table (2021)", asOf: "2021-06", every: 12 }));
   PENSION_PROVIDERS.filter((p) => !p.unfunded).forEach((p) => INPUT_DEFS.push({ group: "Pensions", key: "pension_" + p.key, label: p.label, unit: "t CO₂e per £1m", path: "PENSION_PROVIDERS[" + p.key + "].tPerMillion", source: p.source, asOf: "2025-06", every: 12 }));
   INPUT_DEFS.push(
