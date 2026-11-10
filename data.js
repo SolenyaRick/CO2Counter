@@ -148,10 +148,17 @@
   // Categories used in the UK comparison (everything except banking).
   const UK_COMPARISON_KEYS = ["meals", "commute", "flights", "energy", "water", "pets"];
   const BUDGET_YEARLY = 2500; // 1.5°C budget, kg CO2e / year
-  const ELECTRICITY_FACTOR = 0.22687; // kg / kWh, standard grid
+  // DESNZ 2026 conversion factors (full set), kg CO2e per kWh. UK grid
+  // electricity: generated 0.13096 + transmission & distribution losses
+  // 0.01299 + well-to-tank for generation 0.03682 + well-to-tank for T&D
+  // 0.00359 = 0.18436.
+  const ELECTRICITY_FACTOR = 0.13096 + 0.01299 + 0.03682 + 0.00359;
   const GREEN_ELECTRICITY_FACTOR = 0.04;
-  const GAS_FACTOR = 0.21317;
-  const WATER_FACTOR = 0.36218; // kg / 1000 L
+  // Natural gas, gross CV: burning 0.18231 + well-to-tank 0.03021 = 0.21252.
+  const GAS_FACTOR = 0.18231 + 0.03021;
+  // Water, kg per 1,000 litres (a cubic metre): supply 0.1913 + treatment
+  // 0.17088 = 0.36218 (the same in 2025 and 2026).
+  const WATER_FACTOR = 0.1913 + 0.17088;
   // Fun ways to picture a footprint. CO2 is a gas: a tonne fills about
   // 535 m³ (1.87 kg/m³ at 15 °C at sea level), so a footprint makes a cube we
   // can measure in heights. Weights are typical adults; heights are published.
@@ -1897,9 +1904,9 @@
     { group: "Flights", key: "fly_uplift", label: "Routing uplift on flight distance", unit: "×", path: "FLIGHT_DISTANCE_UPLIFT", source: "DESNZ guidance: add 8% for indirect routes and holding" },
     { group: "Flights", key: "paris_plane", label: "London–Paris return by plane", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_FLIGHT_KG", source: "Eurostar (independently commissioned figures)" },
     { group: "Flights", key: "paris_train", label: "London–Paris return by Eurostar", unit: "kg CO₂e per person", path: "ASSUMPTIONS.PARIS_TRAIN_KG", source: "Eurostar (independently commissioned figures). The train-vs-plane ratio for other trips comes from these two." },
-    { group: "Home", key: "electricity", label: "Grid electricity", unit: "kg CO₂e per kWh", path: "ELECTRICITY_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ): generation + transmission & distribution + well-to-tank", asOf: "2025-06", every: 12 },
+    { group: "Home", key: "electricity", label: "Grid electricity", unit: "kg CO₂e per kWh", path: "ELECTRICITY_FACTOR", source: "UK Government GHG conversion factors 2026 (DESNZ, full set): generated 0.13096 + transmission & distribution 0.01299 + well-to-tank generation 0.03682 + well-to-tank T&D 0.00359", asOf: "2026-06", every: 12 },
     { group: "Home", key: "electricity_green", label: "Renewable tariff electricity", unit: "kg CO₂e per kWh", path: "GREEN_ELECTRICITY_FACTOR", source: "No source recorded yet" },
-    { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2025 (DESNZ), gross CV + well-to-tank", asOf: "2025-06", every: 12 },
+    { group: "Home", key: "gas", label: "Mains gas", unit: "kg CO₂e per kWh", path: "GAS_FACTOR", source: "UK Government GHG conversion factors 2026 (DESNZ, full set): natural gas, gross CV 0.18231 + well-to-tank 0.03021", asOf: "2026-06", every: 12 },
     { group: "Home", key: "water", label: "Mains water", unit: "kg CO₂e per 1,000 L", path: "WATER_FACTOR", source: DESNZ_2026 + ": supply + treatment", asOf: "2026-06", every: 12 },
     { group: "Home", key: "heat_pump_cop", label: "Heat pump efficiency (COP)", unit: "kWh heat per kWh", path: "ASSUMPTIONS.HEAT_PUMP_COP", source: "App assumption for the “going all the way” saving" },
     { group: "Pets", key: "dog", label: "Dog", unit: "kg CO₂e a year", path: "DOG_YEARLY", source: "Average-sized dog, Mike Berners-Lee, How Bad Are Bananas? (2020 edition)" },
