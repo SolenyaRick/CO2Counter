@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Page not found | CO2 Counter</title>
+<link rel="icon" type="image/svg+xml" href="/icons/leaf-ledger.svg?v=4" />
+<script>
+  // Old or shortened links to the app's screens (co2counter.co.uk/results)
+  // go straight to them (co2counter.co.uk/#/results), keeping any invite code.
+  (function () {
+    var path = location.pathname.replace(/^\/+|\/+$/g, "");
+    var first = path.split("/")[0].toLowerCase();
+    var app = ["welcome", "results", "habits", "check-in", "friends", "account", "explainer", "acts", "survey"];
+    if (app.indexOf(first) >= 0) location.replace("/" + location.search + "#/" + (first === "survey" ? "" : path));
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Karla:wght@500;700&display=swap" />
+<style>
+  :root { --canopy: #17241a; --on: #f1ede4; --muted: #b7c2ae; --sprout: #c4e57d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--canopy); color: var(--on); font: 500 17px/1.5 Karla, system-ui, sans-serif; }
+  main { max-width: 560px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--on); text-decoration: none; font: 800 18px/1 "Bricolage Grotesque", system-ui, sans-serif; }
+  .brand img { width: 32px; height: 32px; }
+  .k { display: block; margin-top: 48px; font: 700 13px/18px Karla, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 12px 0 0; font: 800 clamp(40px, 9vw, 72px)/0.95 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -0.04em; }
+  h1 span { color: var(--sprout); }
+  p { margin: 20px 0 0; color: var(--muted); max-width: 40ch; }
+  .go { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+  .btn { display: inline-flex; align-items: center; min-height: 50px; padding: 0 22px; border-radius: 14px; font-weight: 700; text-decoration: none; }
+  .btn.main { background: var(--sprout); color: var(--canopy); }
+  .btn.alt { border: 1.5px solid rgba(241, 237, 228, .45); color: var(--on); }
+  .btn:focus-visible, .brand:focus-visible { outline: 3px solid var(--sprout); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="brand" href="/"><img src="/icons/leaf-ledger.svg?v=4" alt="" />CO2 Counter</a>
+  <span class="k">Page not found</span>
+  <h1>This page has <span>gone green</span>, and disappeared.</h1>
+  <p>The link may be old or mistyped. Your footprint is still a few minutes away.</p>
+  <div class="go"><a class="btn main" href="/">Go to CO2 Counter →</a><a class="btn alt" href="/#/">Take the survey</a></div>
+</main>
+</body>
+</html>

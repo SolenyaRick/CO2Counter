@@ -35,17 +35,45 @@
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
-  // before you search); airports.js adds every other scheduled airport.
+  // before you search); airports.js adds every other scheduled airport. It's
+  // about 100 KB, so it loads in the background (see loadAirports) rather
+  // than holding up the first paint.
   const POPULAR_AIRPORTS = D.AIRPORTS.length;
-  (window.ECO_AIRPORTS || "").split("\n").forEach((line) => {
-    const [code, city, country, lat, lon, name] = line.split("|");
-    if (!code) return;
-    const known = D.AIRPORTS.find((a) => a.code === code);
-    if (known) known.name = name; // full name helps search, e.g. "Kennedy"
-    else D.AIRPORTS.push({ code, city, country, lat: Number(lat), lon: Number(lon), name });
-  });
-  D.AIRPORTS.forEach((a) => (a.search = (a.city + " " + a.code + " " + a.country + " " + (a.name || "")).toLowerCase()));
+  const airportSearchText = (a) => (a.search = (a.city + " " + a.code + " " + a.country + " " + (a.name || "")).toLowerCase());
+  D.AIRPORTS.forEach(airportSearchText);
   const AIRPORT_BY_CODE = new Map(D.AIRPORTS.map((a) => [a.code, a]));
+  let airportsReady = false, airportsLoading = null;
+  function addAirports() {
+    (window.ECO_AIRPORTS || "").split("\n").forEach((line) => {
+      const [code, city, country, lat, lon, name] = line.split("|");
+      if (!code) return;
+      const known = AIRPORT_BY_CODE.get(code);
+      if (known) { known.name = name; airportSearchText(known); } // full name helps search, e.g. "Kennedy"
+      else { const a = { code, city, country, lat: Number(lat), lon: Number(lon), name }; airportSearchText(a); D.AIRPORTS.push(a); AIRPORT_BY_CODE.set(code, a); }
+    });
+    airportsReady = true;
+  }
+  function loadAirports() {
+    if (airportsReady) return Promise.resolve();
+    if (window.ECO_AIRPORTS) { addAirports(); return Promise.resolve(); }
+    if (!airportsLoading) airportsLoading = new Promise((done) => {
+      const v = ((document.querySelector('script[src*="app.js?v="]') || { src: "" }).src.split("v=")[1] || "");
+      const sc = document.createElement("script");
+      sc.src = "airports.js?v=" + v;
+      sc.async = true;
+      sc.onload = () => { addAirports(); done(); };
+      sc.onerror = () => { airportsLoading = null; done(); };
+      document.head.appendChild(sc);
+    });
+    return airportsLoading;
+  }
+  // A survey with an airport outside the built-in list needs the full list
+  // before its footprint can be worked out.
+  const needsAirports = (s) => !airportsReady && !!s && (s.flights || []).some((f) => (f.from && !AIRPORT_BY_CODE.has(f.from)) || (f.to && !AIRPORT_BY_CODE.has(f.to)));
+  // Start early when this device has a saved survey with flights; otherwise
+  // once the page has loaded and gone quiet.
+  try { if (/"flights":\[\{/.test(localStorage.getItem("ecoimpact_survey") || "")) loadAirports(); } catch (e) {}
+  window.addEventListener("load", () => setTimeout(() => (window.requestIdleCallback || setTimeout)(() => loadAirports()), 1500));
   // An invite link (?ref=CODE) is remembered until the person signs in,
   // then claimed for whoever shared it (act 7 on the Habits page).
   (() => {
@@ -1782,7 +1810,8 @@
     return (
       '<section class="state-card ' + (o.kind || "empty") + (o.inline ? " inline" : "") + '" role="' + (o.kind === "error" ? "alert" : "status") + '"' + (o.kind === "loading" ? ' aria-busy="true"' : "") + ">" +
       '<span class="state-art" aria-hidden="true">' + art + "</span>" +
-      (o.title ? '<h2 class="display">' + o.title + "</h2>" : "") + (o.text ? "<p>" + o.text + "</p>" : "") +
+      // A full-page message is the page's main heading; a notice inside a page isn't.
+      (o.title ? (o.inline ? '<h2 class="display">' + o.title + "</h2>" : '<h1 class="display">' + o.title + "</h1>") : "") + (o.text ? "<p>" + o.text + "</p>" : "") +
       (acts ? '<div class="state-actions">' + acts + "</div>" : "") + "</section>"
     );
   }
@@ -2899,6 +2928,7 @@
   }
 
   function airportPicker(index, field, value, placeholder) {
+    loadAirports();
     const a = airport(value);
     const open = ui.airport && ui.airport.index === index && ui.airport.field === field;
     let html =
@@ -4026,7 +4056,9 @@
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
-    let html = '<div class="container results-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg">' + (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
+    let html = '<div class="container results-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg">' +
+      '<h1 class="sr-only">' + (ui.exampleMode ? "Example result: a typical UK resident's carbon footprint" : "Your carbon footprint") + "</h1>" +
+      (ui.exampleMode ? "" : celebrationCard() + newFiguresCard());
     if (ui.exampleMode) {
       html +=
         '<div class="glass example-banner"><div><span class="eyebrow">Example result</span><p>This is a typical UK resident\'s footprint, worked out the same way as yours will be.</p></div>' +
@@ -9555,6 +9587,13 @@
 
   function render() {
     const path = currentPath();
+    // Never draw a footprint that's missing a flight: wait for the full
+    // airport list if a survey here uses one outside the built-in list.
+    if ([survey, ui.draft, ui.prevSurvey].some(needsAirports)) {
+      app.innerHTML = spinner;
+      loadAirports().then(() => render());
+      return;
+    }
     // While a new survey is open, every other page shows the finished one.
     if (ui.newSurvey) survey = path === "/" ? ui.draft : ui.prevSurvey;
     applyInputs(path === "/example" ? liveInputs : factorsFor(survey));
@@ -10931,6 +10970,7 @@
       return;
     }
     if (t.id === "airport-search") {
+      if (!airportsReady) loadAirports().then(() => { const i = document.getElementById("airport-search"); if (i) i.dispatchEvent(new Event("input", { bubbles: true })); });
       ui.airportQuery = t.value;
       const list = document.getElementById("airport-list");
       const f = survey.flights[ui.airport.index];

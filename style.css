@@ -6252,7 +6252,7 @@ body.calm .rise, body.calm .fr-post, body.calm .bar-you, body.calm .bar-uk { ani
 .state-card.error .state-art { background: #F3DCCD; color: #9A4A28; box-shadow: 0 0 0 10px rgba(243, 220, 205, 0.45); }
 .state-card.loading .state-art { background: #EFE9DC; box-shadow: 0 0 0 10px rgba(239, 233, 220, 0.5); }
 .state-card.loading .spinner { width: 30px; height: 30px; margin: 0; }
-.state-card h2 { margin: 0 0 6px; font-size: 20px; line-height: 1.2; color: #22331F; }
+.state-card h1, .state-card h2 { margin: 0 0 6px; font-size: 20px; line-height: 1.2; color: #22331F; }
 .state-card.inline h2 { font-size: 18px; }
 .state-card p { margin: 0 auto; max-width: 36ch; font-size: 15px; line-height: 1.5; color: #5C5649; }
 .state-card.inline p { font-size: 15px; }
@@ -7225,7 +7225,7 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
 @media (prefers-color-scheme: dark) { .state-art { background: #1f251a; color: #bfd4bb; } }
 @media (prefers-color-scheme: dark) { .state-card.error .state-art { background: #27201b; color: #dcb3a2; } }
 @media (prefers-color-scheme: dark) { .state-card.loading .state-art { background: #2a261d; } }
-@media (prefers-color-scheme: dark) { .state-card h2 { color: #cedfcb; } }
+@media (prefers-color-scheme: dark) { .state-card h1, .state-card h2 { color: #cedfcb; } }
 @media (prefers-color-scheme: dark) { .state-card p { color: #cbc7be; } }
 @media (prefers-color-scheme: dark) { .offline-note { background: #2c281f; color: #e5d8bb; } }
 @media (prefers-color-scheme: dark) { :root { --surface: #342f24; } }

@@ -1,0 +1,16 @@
+# GitHub Pages builds this site with Jekyll. None of the pages use Jekyll
+# front matter, so they're published exactly as they are; this only stops
+# the files below (developer notes, database and server code, build
+# scripts and the native app projects) being served on co2counter.co.uk.
+exclude:
+  - README.md
+  - supabase
+  - scripts
+  - store
+  - android
+  - ios
+  - ios-universal-links
+  - package.json
+  - package-lock.json
+  - capacitor.config.json
+  - node_modules
