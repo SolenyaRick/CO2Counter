@@ -7540,6 +7540,10 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .w-end-you.hot b { color: #e7a27f; }
 .w-end.on { opacity: 1; scale: 1; }
 .warm-key { display: none; }
+/* "How warm" or "How fast": only that view's captions show. */
+.warm-track:not(.view-rate) .warm-caps[data-view="rate"], .warm-track.view-rate .warm-caps[data-view="level"] { display: none; }
+.warm-ctrls { grid-column: 1; grid-row: 3; align-self: end; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.warm-ctrls .warm-modes.small { grid-column: auto; grid-row: auto; align-self: auto; }
 .warm-note { grid-column: 2; grid-row: 3; align-self: end; margin: 0; font: 500 12px/18px var(--font); color: var(--on-canopy-muted); }
 .warm-note .link-btn { color: var(--on-canopy); }
 @media (max-width: 760px) {
@@ -7556,6 +7560,7 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
   .warm-x span[data-y="2025"] { display: none; }
   .warm-stage { grid-template-rows: auto auto auto 1fr auto; }
   .warm-modes.small { grid-column: 1; grid-row: 3; }
+  .warm-ctrls { grid-column: 1; grid-row: 3; flex-direction: row; flex-wrap: wrap; gap: 6px; }
   .warm-modes.small button { padding: 6px 10px; font-size: 11px; }
   .warm-chart { grid-row: 4 !important; }
   .warm-stage { grid-template-rows: auto auto auto 1fr auto auto; }
