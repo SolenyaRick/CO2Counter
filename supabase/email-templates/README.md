@@ -22,10 +22,11 @@ paste the whole HTML file into the **Body** (Source) box. Save each one.
 | `password-changed.html` | Authentication → Emails → Security notifications → Password changed | Your CO2 Counter password has changed |
 | `email-changed.html` | Authentication → Emails → Security notifications → Email address changed | Your CO2 Counter email has changed |
 
-The app only uses the first two today (sign-up and reset). Magic link, change
-email and reauthentication are styled so that nothing goes out in Supabase's
-plain default look if they are ever switched on. The two security notices
-need turning on in the same Security notifications section.
+The app sends sign-up, reset password, magic link ("Email me a sign-in link"
+on the sign-in screen) and change email (the Change button by your email on
+Account). Reauthentication is only sent if "Secure password change" is turned
+on in Supabase. The two security notices need turning on in the Security
+notifications section.
 
 ## Links
 

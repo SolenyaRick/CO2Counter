@@ -8906,8 +8906,16 @@
     const details = [["Name", name], ["Username", ui.username ? "@" + ui.username : "Not set"], ["Email", currentUser.email || ""]];
     const profile =
       '<section class="glass acc-box" aria-labelledby="acc-prof"><h2 id="acc-prof" class="display">Profile</h2><dl class="acc-dl">' +
-      details.map(([k, v]) => "<div><dt>" + k + "</dt><dd>" + esc(v) + "</dd></div>").join("") +
+      details.map(([k, v]) => "<div><dt>" + k + "</dt><dd>" + esc(v) + "</dd>" +
+        (k === "Email" && !ui.changeEmail ? '<button type="button" class="link-btn acc-edit" data-action="change-email" aria-label="Change your email">Change</button>' : "") + "</div>").join("") +
       "<div><dt>Saved</dt><dd>" + (canSync() ? "Synced across your devices" : "On this device") + "</dd></div></dl>" +
+      (ui.changeEmail
+        ? '<form id="email-form" class="acc-email" novalidate><label class="label" for="new-email">New email address</label>' +
+          '<div class="acc-confirm-row"><input class="input" type="email" id="new-email" autocomplete="email" inputmode="email" required />' +
+          '<button type="submit" class="acc-btn">Send confirmation</button><button type="button" class="acc-btn" data-action="cancel-email">Cancel</button></div>' +
+          (ui.emailErr ? '<p class="auth-note error" role="alert">' + esc(ui.emailErr) + "</p>" : "") + "</form>"
+        : "") +
+      (ui.emailMsg ? '<p class="auth-note ok" role="status">' + esc(ui.emailMsg) + "</p>" : "") +
       '<p class="xs mt-2"><a href="#/friends">Change the name friends see</a></p></section>';
     const plan =
       '<section class="acc-box acc-plan" aria-labelledby="acc-plan"><div class="row-between gap-3"><h2 id="acc-plan" class="display">Your plan</h2><span class="acc-tag">' + planTag + "</span></div>" +
@@ -9137,6 +9145,14 @@
         '<div class="chip-row"><button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Back to sign in</button></div></form>'
       );
     }
+    if (ui.authMode === "link") {
+      return (
+        '<form id="link-form" class="auth-form" novalidate><p class="sm muted">Enter your account email and we\'ll send you a link that signs you in. No password needed.</p>' +
+        emailField() + authNotes() +
+        '<button type="submit" class="btn btn-green btn-block">Email me a sign-in link</button>' +
+        '<div class="chip-row"><button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Sign in with a password</button></div></form>'
+      );
+    }
     const signup = ui.authMode === "signup";
     return (
       '<form id="auth-form" class="auth-form" novalidate>' +
@@ -9156,7 +9172,8 @@
       (signup
         ? '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Have an account? Sign in</button>'
         : '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signup">Need an account? Sign up</button>' +
-          '<button type="button" class="link-btn" data-action="auth-mode" data-mode="reset">Forgot password?</button>') +
+          '<button type="button" class="link-btn" data-action="auth-mode" data-mode="reset">Forgot password?</button>' +
+          '<button type="button" class="link-btn" data-action="auth-mode" data-mode="link">Email me a sign-in link</button>') +
       "</div></form>"
     );
   }
@@ -9293,6 +9310,44 @@
     // Same message whether or not the account exists, so the form can't be
     // used to find out who has one.
     else ui.authMsg = "If there's an account for " + email + ", we've sent it a link to reset the password. Check your inbox (and junk folder).";
+    render();
+  }
+
+  // Sign-in link by email (the magic-link email). Only for existing accounts:
+  // new people sign up with the full form so they agree to the terms.
+  async function submitLink() {
+    const email = document.getElementById("auth-email").value.trim();
+    ui.authEmail = email;
+    ui.authErr = "";
+    ui.authMsg = "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      ui.authErr = "Please enter a valid email address.";
+      return render();
+    }
+    const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: authRedirectUrl() } });
+    const noAccount = error && (/signups not allowed|otp_disabled|user not found/i.test((error.code || "") + " " + (error.message || "")));
+    if (error && !noAccount) ui.authErr = friendlyAuthError(error);
+    // Same message whether or not the account exists.
+    else ui.authMsg = "If there's an account for " + email + ", we've sent it a sign-in link. Check your inbox (and junk folder).";
+    render();
+  }
+
+  // Change of email from Account. Supabase emails a confirmation link to the
+  // new address (and, with secure email change on, the current one too).
+  async function submitEmailChange() {
+    const email = document.getElementById("new-email").value.trim();
+    ui.emailErr = "";
+    ui.emailMsg = "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) ui.emailErr = "Please enter a valid email address.";
+    else if (email.toLowerCase() === (currentUser.email || "").toLowerCase()) ui.emailErr = "That's already your email address.";
+    else {
+      const { error } = await sb.auth.updateUser({ email }, { emailRedirectTo: authRedirectUrl() });
+      if (error) ui.emailErr = /already|registered|exists/i.test(error.message || "") ? "There's already an account with that email." : friendlyAuthError(error);
+      else {
+        ui.changeEmail = false;
+        ui.emailMsg = "We've sent a confirmation link to " + email + ". Tap it to finish the change. If one also arrives at your current address, tap that too.";
+      }
+    }
     render();
   }
 
@@ -9437,6 +9492,7 @@
     if (ui.recovery) return gateShell("Choose a new password", "Type your new password twice to make sure it's right.", authForm());
     if (ui.authSentTo) return gateShell("Check your inbox", "", authForm());
     if (ui.authMode === "reset") return gateShell("Reset your password", "", authForm());
+    if (ui.authMode === "link") return gateShell("Sign in by email", "", authForm());
     const signup = ui.authMode === "signup";
     return gateShell(
       signup ? "Create your account" : "Sign in",
@@ -10690,6 +10746,19 @@
       friends.loaded = false;
       await loadFriends();
     },
+    "change-email": () => {
+      ui.changeEmail = true;
+      ui.emailErr = "";
+      ui.emailMsg = "";
+      render();
+      const f = document.getElementById("new-email");
+      if (f) f.focus();
+    },
+    "cancel-email": () => {
+      ui.changeEmail = false;
+      ui.emailErr = "";
+      render();
+    },
     "delete-account": () => {
       ui.confirmDelete = true;
       ui.deleteErr = "";
@@ -11258,6 +11327,12 @@
     } else if (e.target.id === "reset-form") {
       e.preventDefault();
       submitReset();
+    } else if (e.target.id === "link-form") {
+      e.preventDefault();
+      submitLink();
+    } else if (e.target.id === "email-form") {
+      e.preventDefault();
+      submitEmailChange();
     } else if (e.target.id === "recovery-form") {
       e.preventDefault();
       submitNewPassword();
