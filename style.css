@@ -7739,3 +7739,13 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .acc-email { margin-top: 14px; display: grid; gap: 8px; }
 .acc-email .input { flex: 1 1 220px; min-width: 0; }
 .acc-email + .auth-note, .acc-dl + .auth-note { margin-top: 12px; }
+
+/* Survey: meals once or twice a month, and the Enter hint */
+.month-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.month-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; border-radius: 16px; background: var(--surface, #FFFCF5); border: 1px solid rgba(46, 42, 34, 0.1); }
+.month-row.on { border-color: rgba(63, 91, 58, 0.45); }
+.month-row .meal-dot { flex: none; }
+.month-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.month-chips .q-chip { min-height: 36px; padding: 0 12px; font-size: 14px; }
+.enter-hint { display: none; margin-left: 8px; padding: 1px 6px; border-radius: 6px; border: 1px solid currentColor; font: inherit; font-size: 12px; line-height: 16px; opacity: 0.55; }
+@media (hover: hover) and (pointer: fine) { .enter-hint { display: inline-block; } }
