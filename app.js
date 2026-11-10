@@ -3438,7 +3438,7 @@
     const r = w.rate, rEnd = (k) => end(r[k]);
     const rateCaps = [
       ["1850", "Warming barely moves", "How fast the world was warming each decade, from measured temperatures (the trend over 21 years)."],
-      ["1950s", "Then it speeds up", "Coal, oil and gas burn faster every decade, and so does the warming."],
+      ["1950s", "A pause, then it speeds up", "Air pollution briefly masked the warming mid-century. Since the 1970s it has sped up as coal, oil and gas burn faster."],
       ["Today", "About " + perDecade(r.t0), "The fastest in the record: about " + (r.t0 / 10).toFixed(3) + "°C every year."],
       ["If the world carries on", "Slowing to " + perDecade(rEnd("cp")) + " by 2100", "Warming keeps its pace for a while, then slows as emissions ease under today's policies. About " + degC(cpEnd) + " warmer by then."],
       ["If everyone lived like you do now", perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year. Held at this footprint, the pace barely eases, and creeps up as the population grows. About " + degC(youEnd) + " warmer by then."],
@@ -3456,11 +3456,11 @@
       "<p>Your full footprint, with shopping and your share of public services, is <b>" + t(w.fullKg) + " t</b> a year. Make every change you could and it's <b>" + t(w.allKg) + " t</b>. The world averages about <b>" + t(w.worldKg) + " t</b>.</p>" +
       '<p class="warm-q">Which version of you should everyone live like?</p>' + modes("big") +
       '<span class="warm-go" aria-hidden="true">Scroll to play</span></section>' +
-      '<section class="warm-track"><div class="warm-stage">' +
+      '<section class="warm-track view-rate"><div class="warm-stage">' +
       capList(caps, "level") + capList(rateCaps, "rate") +
       '<div class="warm-read" aria-hidden="true"><b class="display tnum warm-yr">1850</b><span class="warm-t tnum">+0.0°C</span></div>' +
       '<div class="warm-ctrls"><div class="warm-modes small warm-view" role="radiogroup" aria-label="Show">' +
-      '<button type="button" role="radio" aria-checked="true" data-warm-view="level">How warm</button><button type="button" role="radio" aria-checked="false" data-warm-view="rate">How fast</button></div>' +
+      '<button type="button" role="radio" aria-checked="true" data-warm-view="rate">How fast</button><button type="button" role="radio" aria-checked="false" data-warm-view="level">How warm</button></div>' +
       modes("small") + "</div>" +
       '<div class="warm-chart" role="img" aria-label="' + esc(summary) + '">' +
       '<div class="warm-grid" aria-hidden="true"></div>' +
@@ -3628,7 +3628,8 @@
     const kgEl = storyEl.querySelector(".story-kg");
     const savedEl = storyEl.querySelector(".story-saved b");
     const warmTrack = storyEl.querySelector(".warm-track");
-    let warmMode = "both", warmView = "level";
+    // "How fast" (the pace of warming) opens first; "How warm" is a tap away.
+    let warmMode = "both", warmView = "rate";
     const items = [...storyEl.querySelectorAll(".story-steps li")];
     const n = d.steps.length;
     let tick = false, shown = -1;
