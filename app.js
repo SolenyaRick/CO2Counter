@@ -792,9 +792,9 @@
 
     // meals.weekMix ({ mealKey: days per week }) allows fractional days; it's
     // only used for the typical UK resident, whose week comes from averages.
-    const mealBase = meals.weekMix
-      ? Object.keys(meals.weekMix).reduce((sum, k) => sum + factorOf(D.MEAL_OPTIONS, k) * meals.weekMix[k], 0)
-      : DAYS.reduce((sum, day) => sum + factorOf(D.MEAL_OPTIONS, meals[day]), 0);
+    // meals.monthly ({ mealKey: times a month }) takes its share of the week.
+    const mc = mealCounts(s);
+    const mealBase = Object.keys(mc).reduce((sum, k) => sum + factorOf(D.MEAL_OPTIONS, k) * mc[k], 0);
     const eatOut = Math.min(7, Math.max(0, meals.eatOut || 0));
     const eatOutMult = (7 + (D.EAT_OUT_MULTIPLIER - 1) * eatOut) / 7;
     const waste = byKey(D.FOOD_WASTE, meals.foodWaste || "low");
@@ -889,17 +889,38 @@
   // tailored to the person's actual diet.
   // Days a week of each main meal: from the day-by-day answers, or the
   // fractional weekMix used for the typical UK resident.
+  // Meals had once or twice a month (meals.monthly, times a month) take the
+  // place of the lowest-impact meals in the week, so a week stays 7 days.
+  // Once a month counts as a quarter of a day a week, twice a month as half.
+  // So 2 vegan days and a steak every other week = 1.5 vegan days + 0.5 beef.
+  const PER_MONTH_TO_WEEK = 0.25;
   function mealCounts(s) {
     const m = s.meals || {};
     const out = {};
     if (m.weekMix) Object.keys(m.weekMix).forEach((k) => (out[k] = m.weekMix[k]));
     else DAYS.forEach((d) => m[d] && (out[m[d]] = (out[m[d]] || 0) + 1));
+    const mo = m.monthly || {};
+    const extra = Object.keys(mo).reduce((t, k) => t + (mo[k] || 0) * PER_MONTH_TO_WEEK, 0);
+    if (extra > 0) {
+      let left = extra;
+      Object.keys(out)
+        .sort((a, b) => factorOf(D.MEAL_OPTIONS, a) - factorOf(D.MEAL_OPTIONS, b))
+        .forEach((k) => {
+          const take = Math.min(out[k], left);
+          out[k] -= take;
+          left -= take;
+        });
+      const share = (extra - left) / extra; // all of it unless the week is nearly empty
+      Object.keys(mo).forEach((k) => mo[k] && (out[k] = (out[k] || 0) + mo[k] * PER_MONTH_TO_WEEK * share));
+    }
     return out;
   }
+  const monthWords = (n) => (n >= 2 ? "2× a month" : "1× a month");
+  const monthlyOf = (m) => m.monthly || {};
 
   // Whole days a week of each main meal (the survey stores them by weekday).
   function mealDayCounts(s) {
-    const c = mealCounts(s);
+    const c = mealCounts({ meals: { ...(s.meals || {}), monthly: null } });
     const out = {};
     Object.keys(c).forEach((k) => (out[k] = Math.round(c[k])));
     return out;
@@ -965,7 +986,7 @@
           title: "Lean into more plant-based days",
           body:
             "You're avoiding red meat — a strong start. Chicken and fish still carry a higher footprint than plant-based meals, though. Swapping " +
-            (chicken + fish) +
+            Math.max(1, Math.round(chicken + fish)) +
             " of your chicken/fish day(s) a week for a vegan meal could save ~" +
             saving.toFixed(0) +
             " kg CO₂e a year.",
@@ -978,8 +999,8 @@
           title: "Add more plant-based days",
           body:
             "A pescatarian diet is already relatively low-impact. Fish still beats plants, though — swapping " +
-            fish +
-            " fish day(s) a week for a vegan meal could save ~" +
+            (fish < 1 ? "your occasional fish meals" : Math.round(fish) + " fish day(s) a week") +
+            " for vegan ones could save ~" +
             saving.toFixed(0) +
             " kg CO₂e a year.",
           saving,
@@ -1187,7 +1208,7 @@
     const tip = (tips[key] || tips.meals)();
     if (key === "meals" || !tips[key]) {
       // Maximum for food: a fully plant-based week with little waste.
-      const vegan = { ...s, meals: { ...(s.meals || {}), weekMix: { vegan: 7 }, foodWaste: "low" } };
+      const vegan = { ...s, meals: { ...(s.meals || {}), weekMix: { vegan: 7 }, monthly: null, foodWaste: "low" } };
       tip.maxSaving = Math.max(0, categoryYearly("meals", s) - categoryYearly("meals", vegan));
       tip.realisticLabel = "swapping your highest-impact meals";
       tip.maxLabel = "a fully plant-based diet with little waste";
@@ -2343,8 +2364,9 @@
       const diet = byKey(D.DIETS, m.diet);
       const waste = byKey(D.FOOD_WASTE, m.foodWaste || "low");
       return [
-        (diet ? diet.label + ": " : "") + (countLabels(D.MEAL_OPTIONS, DAYS.map((d) => m[d])) || "No meals chosen"),
-        "Eat out " + ((m.eatOut || 0) >= 7 ? "every day" : (m.eatOut || 0) + "× a week") + " · " + (waste ? waste.title : "Hardly any") + " food wasted",
+        (diet ? diet.label + ": " : "") + (countLabels(D.MEAL_OPTIONS, DAYS.map((d) => m[d])) || "No meals chosen") +
+          Object.keys(monthlyOf(m)).filter((k) => monthlyOf(m)[k]).map((k) => " · " + ((byKey(D.MEAL_OPTIONS, k) || {}).label || k) + " " + monthWords(monthlyOf(m)[k])).join(""),
+        "Eat out " + ((m.eatOut || 0) >= 7 ? "every day" : (m.eatOut || 0) > 0 && m.eatOut < 1 ? monthWords(m.eatOut * 4) : (m.eatOut || 0) + "× a week") + " · " + (waste ? waste.title : "Hardly any") + " food wasted",
       ];
     }
     if (key === "commute") {
@@ -2476,7 +2498,7 @@
         ? '<button type="button" class="btn btn-outline" data-action="prev-step">' + icon("chevronLeft") + ' Back<span class="nav-lbl">: ' + esc(STEP_TAB[prev.key]) + "</span></button>"
         : ui.newSurvey || ui.editing ? '<a class="btn btn-outline" href="#/results">Back to results</a>' : "<span></span>") +
       '<button type="button" class="btn btn-green" data-action="next-step">' +
-      (qMore ? "Next question" : last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + "</button>" +
+      (qMore ? "Next question" : last ? (ui.editing ? "Save and see results" : "See my results") : "Next: " + esc(STEP_TAB[next.key])) + " " + icon("chevronRight") + '<kbd class="enter-hint" title="Or press Enter" aria-hidden="true">↵</kbd></button>' +
       "</div></div>"
     );
   }
@@ -2582,6 +2604,7 @@
       // A rough week, not specific days: how many days each main meal.
       const counts = mealDayCounts(survey);
       const total = Object.values(counts).reduce((t, v) => t + v, 0);
+      const mo = monthlyOf(m);
       const rows = D.MEAL_OPTIONS.map((o) => {
         const c = counts[o.key] || 0;
         return (
@@ -2592,6 +2615,7 @@
           '<button type="button" class="step-btn" data-action="meal-count" data-key="' + o.key + '" data-delta="1" aria-label="More ' + esc(o.label) + ' days"' + (total < 7 ? "" : " disabled") + ">" + icon("plus") + "</button></span></li>"
         );
       }).join("");
+
       const top = D.MEAL_OPTIONS.filter((o) => counts[o.key]).sort((a, b) => b.factor - a.factor)[0];
       const veg = byKey(D.MEAL_OPTIONS, "veggie");
       const tip =
@@ -2602,9 +2626,44 @@
         qCard(
           n++,
           "How many days a week is your main meal…",
-          "",
-          '<p class="meal-total"><b class="tnum">' + total + " of 7 days</b>" + (total < 7 ? '<span class="muted"> · ' + (7 - total) + " to go</span>" : ' <span class="green-dark">' + icon("check") + "</span>") + "</p>" +
+          "A normal week. Things you have once or twice a month come next.",
+          '<p class="meal-total"><b class="tnum">' + total + " of 7 days</b>" + (total < 7 ? '<span class="muted"> · ' + (7 - total) + " to go</span>" : ' <span class="green-dark">' + icon("check") + "</span>") +
+"</p>" +
             '<ul class="meal-rows">' + rows + "</ul>" + tip
+        )
+      );
+      // Now and then: each takes the place of the week's lowest-impact meals.
+      const low = D.MEAL_OPTIONS.filter((o) => counts[o.key]).sort((a, b) => a.factor - b.factor)[0];
+      const mrows = D.MEAL_OPTIONS.filter((o) => o.key !== "vegan").map((o) => {
+        const v = mo[o.key] || 0;
+        return (
+          '<li class="month-row' + (v ? " on" : "") + '"><i class="meal-dot" style="background:' + dayDot(o.factor, 8, 3, 2) + '" aria-hidden="true"></i><b class="grow">' + esc(o.label) + "</b>" +
+          '<span class="month-chips" role="group" aria-label="' + esc(o.label) + ' once or twice a month">' +
+          [[0, "No"], [1, "1× a month"], [2, "2× a month"]].map(([n, l]) => chip(v === n, 'data-action="set-monthly" data-key="' + o.key + '" data-value="' + n + '"', l)).join("") +
+          "</span></li>"
+        );
+      }).join("");
+      cards.push(
+        qCard(
+          n++,
+          "Anything you have once or twice a month?",
+          "A steak every other week, say. Each one takes the place of " + (low ? "some of your " + esc(low.label.toLowerCase()) + " days" : "your lowest-impact meals") + ": once a month counts as a quarter of a day a week, twice a month as half a day.",
+          '<ul class="month-rows">' + mrows + "</ul>",
+          { optional: true }
+        )
+      );
+    }
+    if (diet === "pescatarian") {
+      const fishDays = mealDayCounts(survey).fish || 0;
+      const fm = monthlyOf(m).fish;
+      const sel = fm && !fishDays ? "m" + (fm >= 2 ? 2 : 1) : String(fishDays);
+      const opts = [["m1", "1× a month"], ["m2", "2× a month"], ["1", "1 day"], ["2", "2 days"], ["3", "3 days"], ["4", "4 days"], ["5", "5 days"], ["6", "6 days"], ["7", "Every day"]];
+      cards.push(
+        qCard(
+          n++,
+          "How often do you have fish?",
+          "Days with fish as the main meal. The rest count as vegetarian.",
+          '<div class="chip-wrap">' + opts.map(([v, l]) => chip(sel === v, 'data-action="set-fish" data-value="' + v + '"', l)).join("") + "</div>"
         )
       );
     }
@@ -3472,7 +3531,7 @@
       ["Today", "About " + perDecade(r.t0), "The fastest in the record: about " + (r.t0 / 10).toFixed(3) + "°C every year."],
       ["If the world carries on", "Slowing to " + perDecade(rEnd("cp")) + " by 2100", "Warming keeps its pace for a while, then slows as emissions ease under today's policies. About " + degC(cpEnd) + " warmer by then."],
       ["If everyone lived like you do now", perDecade(rEnd("you")) + " by 2100", "Everyone at " + t(w.fullKg) + " t a year. Held at this footprint, the pace barely eases, and creeps up as the population grows. About " + degC(youEnd) + " warmer by then."],
-      ["If everyone made every change you could", perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
+      ["If everyone made every change you could", perDecade(rEnd("all")) + " by 2100", "Everyone at " + t(w.allKg) + " t a year. The pace eases for 20 years or so, then creeps back up a little as the population grows. About " + degC(allEnd) + " warmer by then" + (youEnd - allEnd >= 0.05 ? ", " + (youEnd - allEnd).toFixed(1) + "°C cooler than living as you do now." : ".")],
     ];
     const capList = (list, view) => '<ol class="warm-caps" data-view="' + view + '">' + list.map((c, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(c[0]) + '</span><h3 class="display">' + esc(c[1]) + "</h3><p>" + esc(c[2]) + "</p></li>").join("") + "</ol>";
     const summary = "Global warming from 1850 to today, reaching about " + degC(w.t0) + ", warming now at about " + perDecade(r.t0) + ". By 2100: about " + degC(cpEnd) + " if the world carries on as it is, about " + degC(youEnd) +
@@ -9924,9 +9983,28 @@
         window.scrollTo(0, 0);
       } else finishSurvey();
     },
+    "set-monthly": (el) => {
+      const mo = { ...monthlyOf(survey.meals) };
+      const v = Number(el.dataset.value);
+      if (v) mo[el.dataset.key] = v;
+      else delete mo[el.dataset.key];
+      survey.meals = { ...survey.meals, monthly: mo };
+      surveyChanged();
+      render();
+    },
+    "set-fish": (el) => {
+      const v = el.dataset.value;
+      const monthly = v[0] === "m" ? Number(v.slice(1)) : 0;
+      const fish = monthly ? 0 : Number(v);
+      survey.meals = { ...mealsFromCounts(survey.meals, { fish, veggie: 7 - fish }), monthly: monthly ? { fish: monthly } : {} };
+      surveyChanged();
+      render();
+      autoAdvance();
+    },
     "set-diet": (el) => {
       const d = byKey(D.DIETS, el.dataset.key);
       const meals = { ...survey.meals, diet: d.key };
+      if (d.key !== survey.meals.diet) meals.monthly = {};
       if (d.mealKey) DAYS.forEach((day) => (meals[day] = d.mealKey));
       survey.meals = meals;
       surveyChanged();
@@ -10127,9 +10205,11 @@
       const counts = mealDayCounts(survey);
       const total = Object.values(counts).reduce((t, v) => t + v, 0);
       const k = el.dataset.key, delta = Number(el.dataset.delta);
+      const mo = { ...monthlyOf(survey.meals) };
+      const c = counts[k] || 0;
       if (delta > 0 && total >= 7) return;
-      counts[k] = Math.max(0, (counts[k] || 0) + delta);
-      survey.meals = mealsFromCounts(survey.meals, counts);
+      counts[k] = Math.max(0, c + delta);
+      survey.meals = { ...mealsFromCounts(survey.meals, counts), monthly: mo };
       surveyChanged();
       render();
     },
@@ -11032,6 +11112,19 @@
           const s = d.querySelector("summary");
           if (s) s.focus();
         }
+      }
+    }
+    // Survey: Enter moves on, as the Next button does. Buttons and links keep
+    // their own Enter, and the airport search uses it to pick an airport.
+    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && !e.isComposing && currentPath() === "/" && !ui.airport && !modalRoot.innerHTML) {
+      const t = e.target;
+      const next = app.querySelector('.step-nav-v2 [data-action="next-step"]');
+      if (next && !t.closest("button, a, summary, textarea, select, [contenteditable], .story, form") && t.id !== "airport-search") {
+        e.preventDefault();
+        if (/^INPUT$/.test(t.tagName)) t.dispatchEvent(new Event("change", { bubbles: true }));
+        const btn = app.querySelector('.step-nav-v2 [data-action="next-step"]');
+        if (btn) btn.click();
+        return;
       }
     }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches(".section-card")) {

@@ -333,6 +333,8 @@
 ];
   const EAT_OUT_OPTIONS = [
     { value: 0, label: "Never" },
+    { value: 0.25, label: "1× a month" }, // once a month counts as a quarter of a week's 1×
+    { value: 0.5, label: "2× a month" },
     { value: 1, label: "1× a week" },
     { value: 2, label: "2× a week" },
     { value: 3, label: "3× a week" },
