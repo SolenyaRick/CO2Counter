@@ -7873,3 +7873,5 @@ body.fs-on::before, body.fs-on::after { will-change: transform; transition: tran
   .sw-offers { scroll-padding-left: 20px; }
   .sw-offer { min-height: 44px; }
 }
+/* The welcome story's category labels ride on top of the disc. */
+.story-orb .wl-cat { z-index: 5; }
