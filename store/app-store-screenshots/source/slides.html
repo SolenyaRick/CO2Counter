@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Karla:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#EFE9DC;--surface:#FFFCF5;--ink:#2E2A22;--ink2:#4A453A;--moss:#3F5B3A;--canopy:#17241a;--sprout:#c4e57d;--honey:#D9A441;--clay:#B8653D;--sage:#A3B58F;--on:#F1EDE4;--onm:#B7C2AE}
+*{box-sizing:border-box}body{margin:0;background:#555}
+.slide{position:relative;width:1320px;height:2868px;overflow:hidden;font-family:Karla,sans-serif;margin:0 0 40px}
+.slide.dark{background:var(--canopy);color:var(--on)}
+.slide.light{background:var(--cream);color:var(--ink)}
+.slide.honey{background:var(--honey);color:#2a1f08}
+.slide.sage{background:#DCE3CC;color:var(--ink)}
+/* soft light */
+.glow{position:absolute;border-radius:50%;pointer-events:none}
+.dark .glow.a{width:1500px;height:1500px;left:-500px;top:-600px;background:radial-gradient(closest-side,rgba(196,229,125,.22),transparent)}
+.dark .glow.b{width:1400px;height:1400px;right:-600px;top:1100px;background:radial-gradient(closest-side,rgba(217,164,65,.16),transparent)}
+.light .glow.a,.sage .glow.a{width:1500px;height:1500px;left:-500px;top:-600px;background:radial-gradient(closest-side,rgba(163,181,143,.55),transparent)}
+.light .glow.b,.sage .glow.b{width:1400px;height:1400px;right:-600px;top:1000px;background:radial-gradient(closest-side,rgba(232,200,138,.6),transparent)}
+.honey .glow.a{width:1500px;height:1500px;left:-500px;top:-600px;background:radial-gradient(closest-side,rgba(255,240,200,.5),transparent)}
+.honey .glow.b{width:1400px;height:1400px;right:-600px;top:1100px;background:radial-gradient(closest-side,rgba(184,101,61,.3),transparent)}
+/* ledger bars motif (from the mark), stepping down */
+.bars{position:absolute;right:104px;top:150px;display:flex;align-items:flex-end;gap:12px;height:62px}
+.bars i{display:block;width:14px;border-radius:7px}
+.bars i:nth-child(1){height:62px}.bars i:nth-child(2){height:46px}.bars i:nth-child(3){height:30px}.bars i:nth-child(4){height:14px}
+.dark .bars i{background:var(--sprout);opacity:.9}.dark .bars i:last-child{background:var(--honey)}
+.light .bars i,.sage .bars i{background:var(--moss);opacity:.85}.light .bars i:last-child,.sage .bars i:last-child{background:var(--honey);opacity:1}
+.honey .bars i{background:#2a1f08;opacity:.85}.honey .bars i:last-child{background:var(--surface);opacity:1}
+/* words */
+.words{position:absolute;left:104px;right:104px;top:150px}
+.brand{display:flex;align-items:center;gap:18px;font:800 40px/1 'Bricolage Grotesque';letter-spacing:-.02em}
+.brand img{width:68px;height:68px;border-radius:17px}
+.eyebrow{display:inline-block;font:700 30px/1 Karla;letter-spacing:.14em;text-transform:uppercase;padding:14px 22px;border-radius:999px}
+.dark .eyebrow{background:rgba(196,229,125,.14);color:var(--sprout)}
+.light .eyebrow,.sage .eyebrow{background:rgba(63,91,58,.12);color:var(--moss)}
+.honey .eyebrow{background:rgba(42,31,8,.12);color:#2a1f08}
+.eyebrow.beta{background:var(--honey);color:#2a1f08}
+h1{margin:44px 0 0;font:800 136px/.94 'Bricolage Grotesque';letter-spacing:-.045em;max-width:1000px}
+.dark h1 em{font-style:normal;color:var(--sprout)}
+.light h1 em,.sage h1 em{font-style:normal;color:var(--moss)}
+.honey h1 em{font-style:normal;color:var(--surface)}
+p.sub{margin:40px 0 0;font:500 46px/1.34 Karla;max-width:1000px}
+.dark p.sub{color:var(--onm)}.light p.sub,.sage p.sub{color:var(--ink2)}.honey p.sub{color:#3d2e0e}
+/* phone */
+.phone{position:absolute;left:50%;width:1000px;height:2164px;margin-left:-500px;border-radius:150px;padding:26px;background:#0d0f0c;box-shadow:0 0 0 4px #3a3f36 inset,0 80px 160px -40px rgba(0,0,0,.55),0 30px 60px -30px rgba(0,0,0,.4)}
+.light .phone,.sage .phone{box-shadow:0 0 0 4px #3a3f36 inset,0 80px 160px -50px rgba(46,42,34,.45),0 30px 60px -30px rgba(46,42,34,.3)}
+.screen{position:relative;width:100%;height:100%;border-radius:124px;overflow:hidden;background:#fff}
+.status{position:absolute;left:0;right:0;top:0;height:120px;display:flex;align-items:center;justify-content:space-between;padding:22px 92px 0 100px;font:700 40px/1 -apple-system,'SF Pro Text',Karla,sans-serif;z-index:2}
+.status .ic{display:flex;gap:14px;align-items:center}
+.island{position:absolute;top:30px;left:50%;width:300px;height:88px;margin-left:-150px;border-radius:44px;background:#000;z-index:3}
+.shot{position:absolute;left:0;right:0;top:120px;width:100%;display:block}
+.chip{position:absolute;z-index:5;display:flex;align-items:center;gap:20px;padding:30px 40px;border-radius:40px;font:800 52px/1 'Bricolage Grotesque';letter-spacing:-.02em;box-shadow:0 40px 80px -30px rgba(0,0,0,.45)}
+.chip small{display:block;font:700 26px/1.2 Karla;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:8px}
+.chip .dot{width:76px;height:76px;border-radius:22px;display:grid;place-items:center;flex:none}
+.chip.sprout{background:var(--sprout);color:var(--canopy)}.chip.sprout .dot{background:var(--canopy);color:var(--sprout)}
+.chip.cream{background:var(--surface);color:var(--ink)}.chip.cream .dot{background:var(--moss);color:var(--surface)}
+.chip.honeyc{background:var(--honey);color:#2a1f08}.chip.honeyc .dot{background:#2a1f08;color:var(--honey)}
+.chip.canopyc{background:var(--canopy);color:var(--on)}.chip.canopyc .dot{background:var(--sprout);color:var(--canopy)}
+.chip svg{width:40px;height:40px}
+</style></head><body><div id="out"></div><script src="slides.js"></script>
+<script>
+const I={leaf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14Z"/><path d="M5 19l7-7"/></svg>',
+down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m6 13 6 6 6-6"/></svg>',
+clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+chart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 19h16"/><path d="M7 15v-4M12 15V7M17 15v-2"/></svg>',
+fire:'<span style="font-size:44px">🔥</span>'};
+const SLIDES=window.SLIDES;
+const out=document.getElementById('out');
+SLIDES.forEach((s,i)=>{
+  const top=s.phoneTop||1010;
+  out.insertAdjacentHTML('beforeend',`<section class="slide ${s.bg}" id="s${i}"><i class="glow a"></i><i class="glow b"></i>${s.bars===false?'':'<div class="bars"><i></i><i></i><i></i><i></i></div>'}
+  <div class="words">${s.brand?'<div class="brand"><img src="leaf-ledger.svg">CO2 Counter</div>':`<span class="eyebrow ${s.eyeCls||''}">${s.eye}</span>`}<h1>${s.h}</h1><p class="sub">${s.sub}</p></div>
+  <div class="phone" style="top:${top}px"><div class="screen" style="background:${s.top}"><div class="status" style="color:${s.statusInk}"><span>9:41</span><span class="ic">
+  <svg width="54" height="34" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+  <svg width="50" height="36" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.5c2.3 0 4.4.9 6 2.4l1.1-1.2A10 10 0 0 0 8 .8 10 10 0 0 0 .9 3.7L2 4.9a8.6 8.6 0 0 1 6-2.4Zm0 3.4c1.4 0 2.6.5 3.6 1.4l1.1-1.2a7 7 0 0 0-9.4 0l1.1 1.2c1-.9 2.2-1.4 3.6-1.4Zm0 3.4c.5 0 1 .2 1.3.5L8 11.2 6.7 9.8c.3-.3.8-.5 1.3-.5Z"/></svg>
+  <svg width="74" height="36" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3.5" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="16" height="8" rx="2" fill="currentColor"/><rect x="22.5" y="4" width="1.6" height="4" rx=".8" fill="currentColor" opacity=".45"/></svg></span></div>
+  <i class="island"></i><img class="shot" src="raw/${s.img}.png"></div></div>
+  ${s.chip?`<div class="chip ${s.chip.cls}" style="${s.chip.pos}"><span class="dot">${I[s.chip.icon]}</span><span>${s.chip.small?'<small>'+s.chip.small+'</small>':''}${s.chip.text}</span></div>`:''}
+  </section>`);
+});
+
+// The status bar takes its colours from the top of each screenshot.
+document.querySelectorAll('.shot').forEach(img=>{const go=()=>{const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=40;const x=c.getContext('2d');x.drawImage(img,0,0);const d=x.getImageData(Math.floor(c.width/2),30,1,1).data;const scr=img.closest('.screen');scr.style.background='rgb('+d[0]+','+d[1]+','+d[2]+')';const lum=(0.299*d[0]+0.587*d[1]+0.114*d[2]);scr.querySelector('.status').style.color=lum<128?'#F1EDE4':'#2E2A22';};img.complete?go():img.addEventListener('load',go);});
+</script></body></html>
