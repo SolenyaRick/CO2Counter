@@ -4067,7 +4067,9 @@
     const cut = top.reduce((t, x) => t + x.t.saving, 0);
     const items = piItems();
     const pal = items.find((x) => x.key === piMascot()) || items[0];
-    const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '"></path>').join("");
+    // The mascot's outline as a mask: fills and strokes both count, so legs,
+    // necks and arms drawn as thick lines take the colour too.
+    const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '" fill="' + (p[1] && p[1] !== "none" ? "#fff" : "none") + '" stroke="' + (p[2] && p[2] !== "none" ? "#fff" : "none") + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"></path>').join("");
     // Tall shapes and heights fill from the ground up; the rest side by side.
     const up = pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
     const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
@@ -4086,11 +4088,11 @@
     const big =
       '<svg class="mv3-big" viewBox="' + (up ? "-1 -6 56 56" : "0 -6 48 56") + '" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
-      '<defs><clipPath id="mv3-sil">' + parts + "</clipPath>" +
+      '<defs><mask id="mv3-sil" maskUnits="userSpaceOnUse" x="-4" y="-8" width="60" height="62">' + parts + "</mask>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
       '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true, true) + "</g>" +
-      slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g clip-path="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect><rect x="0" y="-6" width="48" height="56" fill="url(#pi-sheen)"></rect></g><g class="mv3-shade">' + piArt(pal.key, false, true) + "</g></g>").join("") +
-      '<g clip-path="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
+      slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g mask="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect><rect x="0" y="-6" width="48" height="56" fill="url(#pi-sheen)"></rect></g><g class="mv3-shade">' + piArt(pal.key, false, true) + "</g></g>").join("") +
+      '<g mask="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
       slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
       "</svg>";
     return (
