@@ -7875,3 +7875,34 @@ body.fs-on::before, body.fs-on::after { will-change: transform; transition: tran
 }
 /* The welcome story's category labels ride on top of the disc. */
 .story-orb .wl-cat { z-index: 5; }
+
+/* ===== Phone polish ===== */
+/* Results: the like-for-like starting point beside "with realistic changes". */
+.res-from { font: 800 22px/1 var(--display); letter-spacing: -0.02em; color: var(--on-canopy-muted, #b7c2ae); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: rgba(183, 194, 174, 0.6); }
+.res-arrow { font: 700 20px/1 var(--font); color: var(--on-canopy-muted, #b7c2ae); }
+.res-basis { display: none; margin: 6px 0 0; font: 500 12px/17px var(--font); color: var(--on-canopy-muted, #b7c2ae); }
+@media (max-width: 640px) { .res-basis { display: block; } }
+/* Account: "More" on the dark plan card was dark on dark. */
+.acc-plan .ph-more { color: #E8C88A; }
+/* Reading pages join the scroll motion; their load-time fade steps aside. */
+.cc-rv.fade-up { animation: none; }
+/* Thumb-sized targets: everything tappable is at least 44px tall on phones. */
+@media (max-width: 760px) {
+  .res-tag, .pi-play, .uk-toggle, .seg button, .section-tabs a, .donut-legend a, .fr-tabs button, .acc-btn, .ph-more, .btn-sm, .hb-explain, .hb-rz-foot, .acc-edit, .done-v2 .chip-row .link-btn { min-height: 44px; }
+  .res-tag, .hb-explain, .hb-rz-foot, .acc-edit, .done-v2 .chip-row .link-btn, .donut-legend a { display: inline-flex; align-items: center; }
+  .donut-legend a { display: flex; }
+  .pi-share { min-width: 44px; min-height: 44px; }
+  .acc-edit { padding: 0 6px; }
+  .fr-addform .input { min-height: 44px; }
+  .check-label input[type="checkbox"] { width: 22px; height: 22px; }
+}
+/* Category pages: the "share of your footprint" pie sweeps round to its
+   value the first time the page is seen (not on a return visit). */
+@keyframes pie-in { from { stroke-dasharray: 0 100; } }
+body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--ease-out) 300ms backwards; }
+/* Tab bar: the icon you've just switched to gives a small spring pop. */
+@keyframes tab-pop { 0% { transform: scale(0.7); } 60% { transform: scale(1.14); } 100% { transform: none; } }
+@media (max-width: 760px) { .tabbar a.active svg { animation: tab-pop 0.45s var(--ease-spring) both; } }
+@media (prefers-reduced-motion: reduce) {
+  body:not(.calm) .cat-v2 .cat-share circle + circle, .tabbar a.active svg { animation: none; }
+}

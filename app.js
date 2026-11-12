@@ -3871,7 +3871,7 @@
   // data-fs-from/-to (the reading line shows that span of a longer journey).
   const FS_PAGES = [
     { name: "welcome", paths: ["/", "/welcome"], page: ".intro-v2", hero: ".wl", items: ".intro-mission .intro-sec-head, .mission > li, .intro-split > *, .intro-cards > *, .intro-faq > *", onScroll: () => paintWelcome() },
-    { name: "results", paths: ["/results"], page: ".results-v2", hero: ".res-hero" },
+    { name: "results", paths: ["/results", "/example"], page: ".results-v2", hero: ".res-hero" },
     { name: "habits", paths: ["/habits", "/check-in"], page: ".hb-page", hero: ".hb3-top-row, .hbf-strip" },
     // Pages where people are filling things in stay calm: no rise-ins, only
     // the reading line and the top-bar pill.
@@ -3880,6 +3880,8 @@
     { name: "friends", paths: ["/friends"], page: ".fr-page", hero: ".fr-h1", items: ".fr-side > :not(.fr-me), .fr-feed > :not(h1)" },
     { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
     { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: null },
+    // The long reading pages: each card rises in as it's reached.
+    { name: "docs", paths: ["/how-we-calculate", "/budget"], page: ".container.narrow", hero: ".page-head", items: ".stack-6 > *, .budget-you, .container.narrow > .center" },
     // Greener switches: sections rise in, and each Act plays its comparison
     // (bars fill, the percentage counts up) the first time it's seen.
     { name: "switches", paths: ["/switches"], page: ".sw-page", hero: ".sw-hero", items: ".sw-sec-head, .sw-plot, .sw-legend > li, .sw-feat, .sw-band", onIn: (el) => swPlay(el) },
@@ -4260,7 +4262,12 @@
       '<a class="res-tag ' + (budgetRatio <= 1 ? "down" : "up") + '" href="#/budget">' + budgetTag + "</a></div></div>" +
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
       (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
-      '</div><div class="res-after"><span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
+      // The budget comparison leaves out bank and pension and adds typical
+      // shopping, so its starting point differs from the headline: show it,
+      // or "after" can read as higher than the number above it.
+      '</div><div class="res-after">' + (Math.abs(lifeNow - now) >= 1 && lifeSaving > 0.5 ? '<span class="res-from tnum" title="Your survey without bank and pension, plus typical shopping">' + kgFmt(lifeNow) + '</span><span class="res-arrow" aria-hidden="true">→</span><span class="sr-only"> down to </span>' : "") +
+      '<span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
+      (Math.abs(lifeNow - now) >= 1 && lifeSaving > 0.5 ? '<p class="res-basis">Compared like for like with the 1.5°C budget: without your bank and pension, with typical shopping.</p>' : "") +
       // Both markers are labelled above the bar; when they're close, the UK one sits a line higher.
       '<div class="path' + (animate ? " animate" : "") + (Math.abs(W(ukTotal) - W(budget)) < 34 ? " two-rows" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
