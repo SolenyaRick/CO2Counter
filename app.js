@@ -2274,7 +2274,7 @@
     const ip = Math.min(1, Math.max(0, -ro.top / (ro.height * 0.8)));
     const step = Math.min(n - 1, Math.floor(tp * n));
     // The disc holds at the UK size, then shrinks to the budget in the last step.
-    const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.2) / 0.7);
+    const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.4) / 0.9);
     const shrink = fsReduce() ? (step === n - 1 ? 1 : 0) : f * f * (3 - 2 * f);
     const uk = Number(wl.dataset.uk), b = D.BUDGET_YEARLY;
     const kg = uk + (b - uk) * shrink;
@@ -3900,12 +3900,15 @@
     const from = get(), dist = top - from;
     if (fsReduce() || Math.abs(dist) < 2) return set(top);
     const vh = sc ? sc.clientHeight : innerHeight;
-    const dur = Math.min(1800, Math.max(550, (Math.abs(dist) / vh) * 380));
+    // Slow enough to watch: about 1.4s for a step, up to 3.2s for a long
+    // stretch of the chart, so whatever the scroll drives plays out in full.
+    const dur = Math.min(3200, Math.max(1400, (Math.abs(dist) / vh) * 1100));
     const t0 = performance.now();
     tapGlide.target = top;
     const step = (t) => {
       const k = Math.min(1, (t - t0) / dur);
-      set(from + dist * (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2));
+      // A gentle ease in and out, near-steady in the middle.
+      set(from + dist * (0.5 - Math.cos(Math.PI * k) / 2));
       tapGlide.raf = k < 1 ? requestAnimationFrame(step) : 0;
     };
     tapGlide.raf = requestAnimationFrame(step);
