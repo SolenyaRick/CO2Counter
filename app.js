@@ -2249,36 +2249,54 @@
       "</div></section></div>"
     );
   }
+  // Scroll-linked, so it runs every frame: all reads first, then writes, and
+  // each variable is written only to the element that uses it and only when
+  // it changes (a variable written on a big block restyles all of it).
+  const setVar = (el, k, v) => {
+    if (!el) return;
+    const c = el._v || (el._v = {});
+    if (c[k] === v) return;
+    c[k] = v;
+    el.style.setProperty(k, v);
+  };
   function paintWelcome() {
     const wl = app.querySelector(".wl");
     if (!wl) return;
-    const track = wl.querySelector(".wl-track");
-    const open = wl.querySelector(".wl-open");
-    const r = track.getBoundingClientRect();
+    const q = wl._q || (wl._q = { track: wl.querySelector(".wl-track"), open: wl.querySelector(".wl-open"), stage: wl.querySelector(".wl-stage"), kg: wl.querySelector(".wl-kg"), steps: [...wl.querySelectorAll(".wl-steps li")], bar: document.querySelector(".topbar") });
+    // Reads. The stage is 100svh, which doesn't jump as a phone's toolbar
+    // slides away (innerHeight does).
+    const vh = q.stage.offsetHeight || innerHeight;
+    const r = q.track.getBoundingClientRect();
+    const ro = q.open.getBoundingClientRect();
+    const wr = wl.getBoundingClientRect();
     const n = 4;
-    const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)));
-    const ip = Math.min(1, Math.max(0, -open.getBoundingClientRect().top / (open.offsetHeight * 0.8)));
+    const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
+    const ip = Math.min(1, Math.max(0, -ro.top / (ro.height * 0.8)));
     const step = Math.min(n - 1, Math.floor(tp * n));
     // The disc holds at the UK size, then shrinks to the budget in the last step.
     const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.2) / 0.7);
     const shrink = fsReduce() ? (step === n - 1 ? 1 : 0) : f * f * (3 - 2 * f);
     const uk = Number(wl.dataset.uk), b = D.BUDGET_YEARLY;
     const kg = uk + (b - uk) * shrink;
-    wl.style.setProperty("--ip", ip.toFixed(4));
-    wl.style.setProperty("--tp", tp.toFixed(4));
-    wl.style.setProperty("--s", Math.sqrt(kg / uk).toFixed(4));
-    wl.style.setProperty("--q", (1 - kg / uk).toFixed(4));
-    wl.classList.toggle("under", shrink > 0.98);
-    wl.querySelector(".wl-kg").textContent = (kg / 1000).toFixed(1) + " t";
+    // Writes.
+    setVar(q.open, "--ip", ip.toFixed(3));
+    if (r.top < vh && r.bottom > 0) {
+      setVar(q.stage, "--tp", tp.toFixed(4));
+      setVar(q.stage, "--s", Math.sqrt(kg / uk).toFixed(4));
+      setVar(q.stage, "--q", (1 - kg / uk).toFixed(3));
+      const t = (kg / 1000).toFixed(1) + " t";
+      if (q.kg.textContent !== t) q.kg.textContent = t;
+      const under = shrink > 0.98;
+      if (wl.classList.contains("under") !== under) wl.classList.toggle("under", under);
+    }
     // While the story fills the screen, the top bar goes dark and the phone's
     // sticky "Start the survey" bar waits (the story has its own buttons).
-    const wr = wl.getBoundingClientRect();
-    const bar = document.querySelector(".topbar");
-    if (bar) bar.classList.toggle("on-dark", wr.top < 40 && wr.bottom > 64);
-    document.body.classList.toggle("wl-in", wr.bottom > innerHeight * 0.6);
+    const dark = wr.top < 40 && wr.bottom > 64, inWl = wr.bottom > vh * 0.6;
+    if (q.bar && q.bar.classList.contains("on-dark") !== dark) q.bar.classList.toggle("on-dark", dark);
+    if (document.body.classList.contains("wl-in") !== inWl) document.body.classList.toggle("wl-in", inWl);
     if (wl.dataset.step !== String(step)) {
       wl.dataset.step = String(step);
-      wl.querySelectorAll(".wl-steps li").forEach((li, i) => { li.classList.toggle("on", i === step); li.classList.toggle("past", i < step); });
+      q.steps.forEach((li, i) => { li.classList.toggle("on", i === step); li.classList.toggle("past", i < step); });
     }
   }
 
@@ -3862,8 +3880,11 @@
     { name: "friends", paths: ["/friends"], page: ".fr-page", hero: ".fr-h1", items: ".fr-side > :not(.fr-me), .fr-feed > :not(h1)" },
     { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
     { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: null },
+    // Greener switches: sections rise in, and each Act plays its comparison
+    // (bars fill, the percentage counts up) the first time it's seen.
+    { name: "switches", paths: ["/switches"], page: ".sw-page", hero: ".sw-hero", items: ".sw-sec-head, .sw-plot, .sw-legend > li, .sw-feat, .sw-band", onIn: (el) => swPlay(el) },
   ];
-  let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null;
+  let fsObs = null, fsPath = "", fsTick = false, fsHero = null, fsCfg = null, fsFreshAt = 0;
   const fsReduce = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // Tap-through stories: on touch screens (and always in the app) a tap moves
   // the full-screen stories on to their next stage, and a tap on the left
@@ -3931,7 +3952,10 @@
       if (brand) brand.insertAdjacentHTML("afterend", '<span class="nav-total" aria-hidden="true"><span></span> <small></small></span>');
     }
     const key = path + "|" + ((page && page.dataset.fsKey) || "");
-    const fresh = fsPath !== key;
+    // A page drawn twice as it loads (once straight away, again when the
+    // session arrives) still counts as a first visit until it's scrolled.
+    const fresh = fsPath !== key || (performance.now() - fsFreshAt < 2500 && window.scrollY < 40);
+    if (fsPath !== key) fsFreshAt = performance.now();
     fsPath = key;
     if (!on) return;
     const mini = bar && bar.querySelector(".nav-total");
@@ -3964,7 +3988,7 @@
     if (!fresh || fsReduce() || !("IntersectionObserver" in window)) targets.forEach((el) => el.classList.add("is-in"));
     else {
       fsObs = new IntersectionObserver((es) => es.forEach((e) => {
-        if (e.isIntersecting) { e.target.classList.add("is-in"); fsObs.unobserve(e.target); }
+        if (e.isIntersecting) { e.target.classList.add("is-in"); fsObs.unobserve(e.target); if (fsCfg && fsCfg.onIn) fsCfg.onIn(e.target); }
       }), { rootMargin: "0px 0px -12% 0px", threshold: 0.06 });
       targets.forEach((el) => fsObs.observe(el));
     }
@@ -3972,7 +3996,7 @@
   }
   function fsScroll() {
     if (!fsHero || !document.body.classList.contains("fs-on")) return;
-    if (fsCfg && fsCfg.onScroll) fsCfg.onScroll();
+    // Reads first (a read after a write forces a layout every frame).
     const max = document.documentElement.scrollHeight - innerHeight;
     let rp = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     const page = fsHero.closest("[data-fs-from]");
@@ -3983,22 +4007,29 @@
     const bar = document.querySelector(".topbar");
     let hp;
     // A hero that sticks (the phone's level strip) tightens over the first 140px.
-    if (getComputedStyle(fsHero).position === "sticky") hp = Math.min(1, scrollY / 140);
+    if (fsHero._sticky === undefined) fsHero._sticky = getComputedStyle(fsHero).position === "sticky";
+    if (fsHero._sticky) hp = Math.min(1, scrollY / 140);
     else {
       const r = fsHero.getBoundingClientRect();
       const top = bar ? bar.getBoundingClientRect().bottom : 0;
       hp = Math.min(1, Math.max(0, (top + 40 - r.top) / (r.height * 0.7)));
     }
     if (fsReduce()) hp = hp > 0.5 ? 1 : 0;
-    document.body.style.setProperty("--rp", rp.toFixed(4));
-    document.body.style.setProperty("--hp", hp.toFixed(4));
+    if (fsCfg && fsCfg.onScroll) fsCfg.onScroll();
+    // --rp drives the reading line (set on it directly) and the soft light
+    // behind the page, which only needs coarse steps (it's blurred and eases
+    // between them). --hp only changes while the hero leaves.
+    const line = bar && bar.querySelector(".read-line");
+    if (line) setVar(line, "--rp", rp.toFixed(4));
+    setVar(document.body, "--rp", rp.toFixed(2));
+    setVar(document.body, "--hp", hp.toFixed(3));
   }
   window.addEventListener("scroll", () => {
     if (fsTick) return;
     fsTick = true;
     requestAnimationFrame(() => { fsTick = false; fsScroll(); });
   }, { passive: true });
-  window.addEventListener("resize", fsScroll);
+  window.addEventListener("resize", () => { if (fsHero) fsHero._sticky = undefined; fsScroll(); });
 
   // Plays once per visit, when it scrolls into view.
   function animateProgress() {
@@ -7206,6 +7237,22 @@
     ];
   }
 
+  // An Act's panel arriving: its "−87%" counts up as the bars fill (CSS).
+  function swPlay(el) {
+    if (!el.classList || !el.classList.contains("sw-feat") || fsReduce()) return;
+    const b = el.querySelector(".sw-drop b");
+    const m = b && b.textContent.match(/^(\D*)(\d+)(\D*)$/);
+    if (!m) return;
+    const to = Number(m[2]), t0 = performance.now() + 250, dur = 1100;
+    b.textContent = m[1] + "0" + m[3];
+    const step = (t) => {
+      if (!b.isConnected) return;
+      const k = Math.min(1, Math.max(0, (t - t0) / dur));
+      b.textContent = m[1] + Math.round(to * (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k))) + m[3];
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
   function renderSwitches() {
     const base = switchBase();
     const fp = footprint(base.s);

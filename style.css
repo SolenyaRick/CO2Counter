@@ -2947,8 +2947,11 @@ body::after {
   pointer-events: none;
   border-radius: 50%;
 }
-body::before { left: -12vw; top: -240px; width: 700px; height: 700px; background: #b7c4a4; opacity: 0.6; filter: blur(110px); }
-body::after { right: -14vw; top: 46vh; width: 560px; height: 560px; background: #e8c88a; opacity: 0.42; filter: blur(120px); }
+/* Drawn as soft radial gradients rather than blurred discs: a big blur
+   filter costs phones a lot every frame the page scrolls. */
+body::before, body::after { background: radial-gradient(closest-side, var(--amb), color-mix(in srgb, var(--amb) 82%, transparent) 30%, color-mix(in srgb, var(--amb) 45%, transparent) 58%, color-mix(in srgb, var(--amb) 14%, transparent) 80%, transparent); }
+body::before { --amb: #b7c4a4; left: calc(-12vw - 160px); top: -400px; width: 1020px; height: 1020px; opacity: 0.6; }
+body::after { --amb: #e8c88a; right: calc(-14vw - 170px); top: calc(46vh - 170px); width: 900px; height: 900px; opacity: 0.42; }
 .topbar, #app, .site-footer { position: relative; z-index: 1; }
 .topbar { z-index: 30; position: sticky; }
 
@@ -6598,8 +6601,8 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
 @media (prefers-color-scheme: dark) { :root { --bg: #2a261d; --fg: #dcd8cf; --card: #322d23; --glass: rgba(52, 47, 36, 0.62); --glass-border: rgba(236, 235, 233, 0.08); --muted: #242119; --muted-fg: #cbc7be; } }
 @media (prefers-color-scheme: dark) { html { background: #2a261d; } }
 @media (prefers-color-scheme: dark) { body { background: #2a261d; } }
-@media (prefers-color-scheme: dark) { body::before { background: #37412a; } }
-@media (prefers-color-scheme: dark) { body::after { background: #4a3d23; } }
+@media (prefers-color-scheme: dark) { body::before { --amb: #37412a; } }
+@media (prefers-color-scheme: dark) { body::after { --amb: #4a3d23; } }
 @media (prefers-color-scheme: dark) { .page-head h1, .step-title, .explainer-title { color: #dcd8cf; } }
 @media (prefers-color-scheme: dark) { .eyebrow, .eyebrow-sm, .eyebrow-xs { color: #bfd4bb; } }
 @media (prefers-color-scheme: dark) { .topbar { background: rgba(42, 38, 29, 0.78); border-bottom: 1px solid rgba(236, 235, 233, 0.08); color: #dcd8cf; } }
@@ -7806,3 +7809,67 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 .native-app .story-scroll, .native-app .wl-open, .native-app .wl-track { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .story-taphint { position: fixed; z-index: 3; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); translate: -50% 0; padding: 7px 14px; border-radius: 999px; background: rgba(23, 36, 26, 0.82); border: 1px solid rgba(241, 237, 228, 0.18); color: var(--on-canopy, #f1ede4); font: 600 12px/16px var(--font); white-space: nowrap; pointer-events: none; transition: opacity var(--dur-base, 0.3s) ease; }
 .story.tapped .story-taphint { opacity: 0; }
+
+/* ===== Smoother scroll stories =====
+   Everything that moves with the scroll is a transform or an opacity, so the
+   phone's compositor does it without repainting. */
+/* The disc only scales. Its colour shift is a sage layer fading in on top,
+   and the ghost ring's fill is a layer fading in too (no repaint per frame). */
+.story-disc { background: var(--clay-hue); transition: background-color var(--dur-base) var(--ease-out); }
+.story-disc::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--sage, #a3b58f); opacity: min(1, calc(var(--q, 0) * 1.4)); transition: opacity var(--dur-base) var(--ease-out); }
+/* Ring, disc, budget ring, its label, then the figure, always in that order. */
+.story-orb > .story-ghost { z-index: 0; }
+.story-orb > .story-disc { z-index: 1; }
+.story-orb > .story-budget { z-index: 2; }
+.story-orb .story-budget-l { z-index: 3; }
+.story-orb .story-read { z-index: 4; }
+.story.under .story-disc::after, .wl.under .story-disc::after { opacity: 0; }
+.story-ghost { background: rgba(196, 229, 125, 0.08); }
+.story-ghost::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: rgba(196, 229, 125, 0.2); opacity: min(1, calc(var(--q, 0) * 4)); }
+/* The welcome story's stage and track use the small viewport height, which
+   stays put while a phone's toolbar slides in and out. */
+.wl-track { height: calc(var(--n) * 100vh + 60vh); height: calc(var(--n) * 100svh + 60svh); }
+.wl .story-stage { height: 100vh; height: 100svh; }
+.wl-open > * { will-change: transform, opacity; }
+/* A slow turn of the dashed ring keeps the stage alive between steps. */
+.wl .story-ghost { rotate: calc(var(--tp, 0) * 140deg); }
+/* The soft light behind the page moves in coarse steps and eases between them. */
+body.fs-on::before, body.fs-on::after { will-change: transform; transition: transform 700ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  .wl .story-ghost { rotate: none; }
+  body.fs-on::before, body.fs-on::after { transition: none; }
+}
+/* Once the disc is inside the budget it turns sprout, so the budget ring and
+   its label switch to canopy to stay visible on it. */
+.wl.under .story-budget, .story.under .story-budget { border-color: var(--canopy); }
+.wl.under .story-budget-l, .story.under .story-budget-l { color: var(--canopy); }
+
+/* ===== Greener switches: motion and phone fit ===== */
+/* Each Act's comparison plays once as it arrives: the "before" bar sweeps
+   across, then the "after" bar grows to its share, and the offers slide in
+   one after another. Only transforms and opacity, so it stays smooth. */
+.fs-switches .sw-feat.cc-rv .sw-vs-before, .fs-switches .sw-feat.cc-rv .sw-vs-after { transform-origin: 0 50%; transform: scaleX(0); transition: transform var(--dur-story) var(--ease-out); }
+.fs-switches .sw-feat.cc-rv .sw-vs-before { transition-delay: 200ms; }
+.fs-switches .sw-feat.cc-rv .sw-vs-after { transition-delay: 650ms; }
+.fs-switches .sw-feat.is-in .sw-vs-before, .fs-switches .sw-feat.is-in .sw-vs-after { transform: none; }
+.fs-switches .sw-feat.cc-rv .sw-panel-bg { transform: rotate(-12deg) scale(0.9); transition: transform 1.4s var(--ease-out) 150ms; }
+.fs-switches .sw-feat.is-in .sw-panel-bg { transform: none; }
+.fs-switches .sw-feat.cc-rv .sw-offer { opacity: 0; transform: translateX(28px); transition: opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out); }
+.fs-switches .sw-feat.cc-rv .sw-offer:nth-child(2) { transition-delay: 90ms; }
+.fs-switches .sw-feat.cc-rv .sw-offer:nth-child(3) { transition-delay: 180ms; }
+.fs-switches .sw-feat.cc-rv .sw-offer:nth-child(n+4) { transition-delay: 270ms; }
+.fs-switches .sw-feat.is-in .sw-offer { opacity: 1; transform: none; transition-delay: 350ms; }
+.fs-switches .sw-feat.is-in .sw-offer:nth-child(2) { transition-delay: 440ms; }
+.fs-switches .sw-feat.is-in .sw-offer:nth-child(3) { transition-delay: 530ms; }
+.fs-switches .sw-feat.is-in .sw-offer:nth-child(n+4) { transition-delay: 620ms; }
+@media (prefers-reduced-motion: reduce) {
+  .fs-switches .sw-feat.cc-rv .sw-vs-before, .fs-switches .sw-feat.cc-rv .sw-vs-after, .fs-switches .sw-feat.cc-rv .sw-panel-bg, .fs-switches .sw-feat.cc-rv .sw-offer { transform: none; opacity: 1; transition: none; }
+}
+/* Phones: every link is a comfortable thumb target. */
+@media (max-width: 760px) {
+  .sw-disc a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+  .sw-note-foot .link-btn { display: inline-flex; align-items: center; min-height: 44px; }
+  .site-footer a { display: inline-block; padding: 12px 2px; }
+  .sw-offers { scroll-padding-left: 20px; }
+  .sw-offer { min-height: 44px; }
+}
