@@ -8065,3 +8065,31 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .lg-more { gap: 8px; }
 .lg-back { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; min-height: 44px; }
 @media (prefers-color-scheme: dark) { .lgx-lv { color: #a9a395; } .lgx-list li.me .fr-sname { color: #bfd4bb; } }
+/* The tree leagues carousel, on a canopy band (the trees are drawn in light
+   lines for a dark ground). */
+.lgh { position: relative; overflow: hidden; margin-top: 14px; padding: 18px 0 18px; border-radius: 22px; background: var(--canopy, #17241a); color: var(--on-canopy, #f1ede4); text-align: center; }
+.lgh::before { content: ""; position: absolute; left: 50%; top: -60px; width: 260px; height: 260px; margin-left: -130px; border-radius: 50%; background: radial-gradient(closest-side, rgba(196, 229, 125, 0.22), transparent); pointer-events: none; }
+.lgh-row { position: relative; display: flex; align-items: center; gap: 14px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 6px 40% 8px; }
+.lgh-row::-webkit-scrollbar { display: none; }
+.lgh-t { position: relative; flex: none; scroll-snap-align: center; display: grid; place-items: center; }
+.lgh-disc { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 50%; background: rgba(241, 237, 228, 0.06); border: 1.5px solid rgba(241, 237, 228, 0.16); }
+.lgh-tree { width: 58px; height: auto; }
+.lgh-t.now .lgh-disc { width: 112px; height: 112px; background: rgba(196, 229, 125, 0.12); border: 2.5px solid var(--sprout, #c4e57d); box-shadow: 0 0 0 6px rgba(196, 229, 125, 0.12), 0 0 40px -6px rgba(196, 229, 125, 0.55); }
+.lgh-t.now .lgh-tree { width: 92px; }
+.lgh-t.now .lgh-tree .tr-l { stroke: var(--sprout, #c4e57d); }
+.lgh-t.got .lgh-disc { background: rgba(196, 229, 125, 0.08); border-color: rgba(196, 229, 125, 0.4); }
+/* Not reached yet: faded, like Duolingo's locked leagues. */
+.lgh-t.todo { opacity: 0.32; filter: grayscale(1); }
+.lgh-need { position: absolute; right: -2px; bottom: -2px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; background: #2B3F28; border: 1.5px solid rgba(241, 237, 228, 0.3); font: 800 12px/1 var(--display); color: var(--on-canopy, #f1ede4); }
+.lgh-t.got .lgh-need { background: var(--sprout, #c4e57d); border-color: var(--sprout, #c4e57d); color: var(--canopy, #17241a); }
+.lgh-need .icon { width: 13px; height: 13px; stroke-width: 3; }
+.lgh-title { position: relative; margin: 10px 0 0; font-size: 26px; line-height: 1.05; letter-spacing: -0.03em; font-weight: 800; color: var(--on-canopy, #f1ede4); }
+.lgh-sub { position: relative; margin: 6px 16px 0; font: 600 14px/1.4 var(--font); color: var(--on-canopy-muted, #b7c2ae); }
+/* Arriving: the trees rise in turn, the current one with a little pop. */
+.lgh-t { animation: lgh-in var(--dur-slow, 640ms) var(--ease-out, ease-out) both; animation-delay: calc(var(--k, 0) * 70ms); }
+.lgh-t.now { animation: lgh-pop 0.8s var(--ease-spring, ease) 0.2s both; }
+.lgh-t.todo { animation-name: lgh-in-todo; }
+@keyframes lgh-in { from { opacity: 0; translate: 0 14px; } }
+@keyframes lgh-in-todo { from { opacity: 0; translate: 0 14px; } to { opacity: 0.32; } }
+@keyframes lgh-pop { 0% { opacity: 0; scale: 0.7; } 70% { opacity: 1; scale: 1.06; } 100% { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .lgh-t, .lgh-t.now { animation: none; } }
