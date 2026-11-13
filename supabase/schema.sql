@@ -2686,34 +2686,43 @@ $$;
 revoke all on function public.owner_level_analytics() from public, anon;
 grant execute on function public.owner_level_analytics() to authenticated;
 
--- ---------- Leagues: the people ranked around you (November 2026) ----------
--- Like a Duolingo league: up to 11 people around your place in the global
--- ranking, by Acts done (whoever got there first is ahead on a tie). Only
--- usernames and Act counts are shown. Anyone can hide from leagues on their
--- Account page (they still count in the anonymous totals), and people who
--- have blocked each other never see each other.
+-- ---------- Leagues: your tree, ranked by footprint (November 2026) ----------
+-- Your league is your tree level from the 7 Acts (Seed 0, Sprout 1-2,
+-- Sapling 3-4, Tree 5-6, Forest 7). Inside your league, people are ranked
+-- by yearly footprint (survey_responses.total_yearly, the total friends
+-- see), lowest first; on a tie, whoever got there first. You see up to 11
+-- people around you, by username and total. Anyone can hide from leagues on
+-- their Account page (they still count in anonymous totals), and people
+-- who've blocked each other never see each other.
 alter table public.profiles add column if not exists leagues_hidden boolean not null default false;
+drop function if exists public.my_acts_league();
 
 create or replace function public.my_acts_league()
-returns table (pos bigint, username text, acts integer, is_me boolean)
+returns table (pos bigint, username text, kg integer, acts integer, is_me boolean, league_size bigint)
 language sql
 stable
 security definer
 set search_path = public
 as $$
-  with ranked as (
-    select p.id, p.username, coalesce(cardinality(p.acts_done), 0)::integer as n,
-      row_number() over (order by coalesce(cardinality(p.acts_done), 0) desc, p.acts_at asc nulls last, p.id) as pos
-    from public.profiles p
+  with mine as (
+    select public.acts_level(coalesce(cardinality(acts_done), 0)) as lvl from public.profiles where id = auth.uid() and acts_done is not null
+  ), members as (
+    select s.user_id as id, p.username, round(s.total_yearly)::integer as t, coalesce(cardinality(p.acts_done), 0)::integer as n, s.updated_at
+    from public.survey_responses s
+    join public.profiles p on p.id = s.user_id
     where p.acts_done is not null
-      and (not p.leagues_hidden or p.id = auth.uid())
-      and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = p.id) or (b.blocker_id = p.id and b.blocked_id = auth.uid()))
+      and public.acts_level(coalesce(cardinality(p.acts_done), 0)) = (select lvl from mine)
+      and s.total_yearly is not null and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+      and (not p.leagues_hidden or s.user_id = auth.uid())
+      and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = s.user_id) or (b.blocker_id = s.user_id and b.blocked_id = auth.uid()))
+  ), ranked as (
+    select m.*, row_number() over (order by m.t asc, m.updated_at asc nulls last, m.id) as pos, count(*) over () as size from members m
   ), me as (
     select pos from ranked where id = auth.uid()
   ), win as (
     select greatest(1, least((select pos from me) - 5, (select count(*) from ranked) - 10)) as lo
   )
-  select r.pos, r.username, r.n, r.id = auth.uid()
+  select r.pos, r.username, r.t, r.n, r.id = auth.uid(), r.size
   from ranked r, win
   where exists (select 1 from me) and r.pos >= win.lo and r.pos < win.lo + 11
   order by r.pos;

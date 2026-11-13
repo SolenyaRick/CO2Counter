@@ -5707,19 +5707,22 @@
     if (L.missing) return rankBoardHtml();
     const rows = L.rows || [];
     const me = rows.find((r) => r.is_me);
-    if (!me) return '<p class="sm mt-3">Open <a class="link-btn" href="#/habits">My Habits</a> to take your place in a league.</p>' + '<button type="button" class="link-btn lg-more" data-action="rank-full">See the full ranking ' + icon("arrowRight") + "</button>";
+    if (!me) return '<p class="sm mt-3">Finish <a class="link-btn" href="#/" data-action="start-survey">the survey</a> and open <a class="link-btn" href="#/habits">My Habits</a> to take your place in a league.</p>' + '<button type="button" class="link-btn lg-more" data-action="rank-full">See the full ranking ' + icon("arrowRight") + "</button>";
     const above = rows.filter((r) => r.pos < me.pos).length, below = rows.length - above - 1;
+    const size = Number(me.league_size) || rows.length;
+    const league = levelOf(me.acts);
     return (
       '<div class="lgx">' + leagueHeaderHtml(me.acts) +
-      '<p class="lg-lede">Ranked by how many of the 7 Acts you\'ve done. ' + (above ? "Do your next Act to climb past " + (above === 1 ? "the person above you." : "the people above you.") : below ? "You're top of your league." : "") + "</p>" +
+      '<p class="lg-lede">Everyone in the ' + league + " League" + (size > 1 ? " (" + kgFmt(size) + " people)" : "") + ", ranked by yearly footprint, lowest first. " +
+        (above ? "Cut yours to climb past " + (above === 1 ? "the person above you." : "the people above you.") : below ? "You're top of your league." : "Invite friends to join you here.") + "</p>" +
       '<ol class="fr-stand lg-list lgx-list">' + rows.map((r, i) => {
         const name = r.is_me ? "You" : r.username ? "@" + r.username : "Someone";
         return '<li class="' + (r.is_me ? "me" : "") + '" style="--k:' + i + '"><span class="fr-n">' + r.pos + "</span>" +
           frAv("u:" + (r.username || r.pos), r.is_me ? friends.myName || "You" : r.username || "?", 34, r.is_me) +
-          '<span class="min0"><span class="fr-sname">' + esc(name) + '</span><span class="lgx-lv">' + levelOf(r.acts) + "</span></span>" +
-          '<b class="display tnum fr-sval">' + r.acts + "<small>/7</small></b></li>";
+          '<span class="min0"><span class="fr-sname">' + esc(name) + '</span><span class="lgx-lv">' + r.acts + (r.acts === 1 ? " Act" : " Acts") + " done</span></span>" +
+          '<b class="display tnum fr-sval">' + tonnes(r.kg) + "<small> t</small></b></li>";
       }).join("") + "</ol>" +
-      '<p class="xs muted mt-2">You\'re ' + ordinal(me.pos) + ". Only usernames and Act counts are shown. <a class=\"link-btn\" href=\"#/account\">Hide me from leagues</a></p>" +
+      '<p class="xs muted mt-2">You\'re ' + ordinal(me.pos) + " in your league. Only usernames, Acts done and yearly totals are shown. <a class=\"link-btn\" href=\"#/account\">Hide me from leagues</a></p>" +
       '<button type="button" class="btn btn-outline btn-sm mt-3 lg-more" data-action="rank-full">' + icon("globe") + " See the full ranking</button></div>"
     );
   }
@@ -9107,7 +9110,7 @@
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only, and we only count that a survey was finished and when, with nothing about you or your answers.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
-            "<strong>Leagues</strong>: if you're signed in, your username and how many of the 7 Acts you've done are shown in the leagues of people ranked near you (Friends, Everyone). Nothing else about you is shown. You can hide from leagues on your Account page; you still see your own place, and you're still counted in anonymous totals.",
+            "<strong>Leagues</strong>: if you're signed in, your username, how many of the 7 Acts you've done and your yearly footprint total are shown in the leagues of people ranked near you (Friends, Everyone). Nothing else about you is shown. You can hide from leagues on your Account page; you still see your own place, and you're still counted in anonymous totals.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
             "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
@@ -9503,7 +9506,7 @@
       // just the research choice.
       '<section class="glass guide-card"><span class="eyebrow">Privacy choices</span>' +
       '<form id="about-you-form" class="stack-3 mt-2">' +
-      (a.leagues != null ? '<label class="check-label research-consent"><input type="checkbox" id="about-leagues"' + (a.leagues ? " checked" : "") + " /> <span><b>Show me in public leagues.</b> Your username and how many of the 7 Acts you've done, to people ranked near you. Untick to hide; you'll still see your own place.</span></label>" : "") +
+      (a.leagues != null ? '<label class="check-label research-consent"><input type="checkbox" id="about-leagues"' + (a.leagues ? " checked" : "") + " /> <span><b>Show me in public leagues.</b> Your username, Acts done and yearly total, to people in your league. Untick to hide; you'll still see your own place.</span></label>" : "") +
       '<label class="check-label research-consent"><input type="checkbox" id="about-research"' + (a.research_opt_in ? " checked" : "") + " /> <span><b>Share my answers for research.</b> Your survey answers and footprint, without your name, email or username, may be shared with research and health partners studying how people can cut emissions. You can turn this off at any time.</span></label>" +
       '<div class="row-between gap-3" style="flex-wrap:wrap"><button type="submit" class="btn btn-green">Save</button>' +
       (ui.aboutMsg ? '<span class="xs ' + (ui.aboutMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.aboutMsg.text) + "</span>" : "") + "</div></form></section>"
