@@ -1,7 +1,11 @@
 # App Store screenshots
 
-Seven 1320 × 2868 images for App Store Connect's 6.9" iPhone slot (it scales
-them for the smaller iPhones). Upload them in this order:
+Seven images, in two sizes:
+
+- This folder: 1320 × 2868, for App Store Connect's **6.9"** iPhone slot.
+- `iphone-6.3/`: 1206 × 2622, for the **6.1" / 6.3"** iPhone slot.
+
+Upload them in this order (same names in both folders):
 
 1. `01-know-your-footprint.png`: Know your footprint. Watch it shrink.
 2. `02-six-short-steps.png`: Answer a few questions about your week.
@@ -26,4 +30,6 @@ From the repo root, serve the site, capture the screens, then render:
 
 Then open `http://localhost:8766/slides.html` and screenshot each
 `<section class="slide">` at 1320 × 2868 (Playwright: `el.screenshot()`).
+For the 6.3" set, resize each to 1206 × 2622 (the same shape, to within
+0.1%) with a high-quality filter such as Pillow's LANCZOS.
 Headlines, badges and colours are in `slides.js`.
