@@ -7880,8 +7880,9 @@ body.fs-on::before, body.fs-on::after { will-change: transform; transition: tran
 /* Results: the like-for-like starting point beside "with realistic changes". */
 .res-from { font: 800 22px/1 var(--display); letter-spacing: -0.02em; color: var(--on-canopy-muted, #b7c2ae); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: rgba(183, 194, 174, 0.6); }
 .res-arrow { font: 700 20px/1 var(--font); color: var(--on-canopy-muted, #b7c2ae); }
-.res-basis { display: none; margin: 6px 0 0; font: 500 12px/17px var(--font); color: var(--on-canopy-muted, #b7c2ae); }
-@media (max-width: 640px) { .res-basis { display: block; } }
+.res-budget-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(241, 237, 228, 0.12); font-size: 15px; color: var(--on-canopy, #f1ede4); }
+.res-budget-nums { font: 800 17px/1 var(--display); letter-spacing: -0.01em; color: var(--on-canopy, #f1ede4); }
+.res-basis { margin: 4px 0 4px; font: 500 12px/17px var(--font); color: var(--on-canopy-muted, #b7c2ae); }
 /* Account: "More" on the dark plan card was dark on dark. */
 .acc-plan .ph-more { color: #E8C88A; }
 /* Reading pages join the scroll motion; their load-time fade steps aside. */
