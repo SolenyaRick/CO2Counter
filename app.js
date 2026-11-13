@@ -2281,9 +2281,13 @@
     // Reads. The stage is 100svh, which doesn't jump as a phone's toolbar
     // slides away (innerHeight does).
     const vh = q.stage.offsetHeight || innerHeight;
-    const r = q.track.getBoundingClientRect();
-    const ro = q.open.getBoundingClientRect();
-    const wr = wl.getBoundingClientRect();
+    // While a tap glides, use the glide's own position (the page's scroll
+    // can lag behind it on an iPhone).
+    const dy = window.scrollY - glidePos(null);
+    const R = (el) => { const b = el.getBoundingClientRect(); return { top: b.top + dy, bottom: b.bottom + dy, height: b.height }; };
+    const r = R(q.track);
+    const ro = R(q.open);
+    const wr = R(wl);
     const n = 4;
     const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
     const ip = Math.min(1, Math.max(0, -ro.top / (ro.height * 0.8)));
@@ -3784,12 +3788,13 @@
     let tick = false, shown = -1;
     const ease = (t) => t * t * (3 - 2 * t);
     const paint = () => {
+      const pos = glidePos(sc);
       tick = false;
       if (!storyEl) return;
       const vh = sc.clientHeight;
       const max = Math.max(1, sc.scrollHeight - vh);
-      const ip = Math.min(1, sc.scrollTop / (vh * 0.8));
-      const tp = Math.min(1, Math.max(0, (sc.scrollTop - track.offsetTop) / Math.max(1, track.offsetHeight - vh)));
+      const ip = Math.min(1, pos / (vh * 0.8));
+      const tp = Math.min(1, Math.max(0, (pos - track.offsetTop) / Math.max(1, track.offsetHeight - vh)));
       const f = Math.min(n - 1, Math.max(0, tp * n - 0.5));
       const i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
       const kg = fsReduce() ? d.steps[Math.round(f)].kg : d.steps[i0].kg + (d.steps[i1].kg - d.steps[i0].kg) * ease(f - i0);
@@ -3798,11 +3803,11 @@
       // changes: set on the whole overlay, every frame restyled all of it.
       setVar(storyEl, "--ip", ip.toFixed(3));
       setVar(ticksEl, "--tp", tp.toFixed(4));
-      setVar(lineEl, "--sp", (sc.scrollTop / max).toFixed(4));
+      setVar(lineEl, "--sp", (pos / max).toFixed(4));
       setVar(orbEl, "--s", Math.sqrt(kg / d.total).toFixed(4));
       setVar(orbEl, "--q", (1 - kg / d.total).toFixed(3));
       storyEl.classList.toggle("under", kg <= d.budget);
-      if (warmTrack) paintWarm(warmTrack, d.warm, Math.min(1, Math.max(0, (sc.scrollTop - warmTrack.offsetTop) / Math.max(1, warmTrack.offsetHeight - vh))), warmMode, warmView);
+      if (warmTrack) paintWarm(warmTrack, d.warm, Math.min(1, Math.max(0, (pos - warmTrack.offsetTop) / Math.max(1, warmTrack.offsetHeight - vh))), warmMode, warmView);
       kgEl.textContent = kgFmt(kg);
       savedEl.textContent = "−" + kgFmt(d.total - kg);
       storyEl.classList.toggle("saving", d.total - kg >= 1);
@@ -3815,7 +3820,7 @@
     window.addEventListener("resize", paint);
     storyEl.addEventListener("click", (e) => {
       if (e.target.closest("[data-story-close]")) return closeStory();
-      if (e.target.closest("[data-story-next]")) return sc.scrollTo({ top: track.offsetTop, behavior: fsReduce() ? "auto" : "smooth" });
+      if (e.target.closest("[data-story-next]")) return glideTo(sc, track.offsetTop, paint);
       const viewBtn = e.target.closest("[data-warm-view]");
       if (viewBtn) {
         warmView = viewBtn.dataset.warmView;
@@ -3833,7 +3838,7 @@
       if (e.target.closest("a[href]")) return closeStory(true);
       if (tapNav() && !e.target.closest("button, a, input, select, textarea, label")) {
         storyEl.classList.add("tapped");
-        tapStep(sc, storyStops(), e.clientX < innerWidth * 0.22);
+        tapStep(sc, storyStops(), e.clientX < innerWidth * 0.22, paint);
       }
     });
     // Where a tap stops: the opening, each step of your year, the warming
@@ -3927,11 +3932,16 @@
   // everything scrubbed by scroll (discs, counts, the chart) plays on its way.
   const tapNav = () => isNativeApp() || !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   const tapGlide = { raf: 0, target: 0 };
-  function glideTo(sc, top) {
+  // The glide keeps its own position (tapGlide.cur) and repaints the story
+  // itself every frame (onFrame), so the animation plays even where a
+  // browser holds back or merges scroll events (iPhone's web view does).
+  const glidePos = (sc) => (tapGlide.raf && tapGlide.sc === sc ? tapGlide.cur : sc ? sc.scrollTop : window.scrollY);
+  function glideTo(sc, top, onFrame) {
     const get = () => (sc ? sc.scrollTop : window.scrollY);
-    const set = (v) => (sc ? (sc.scrollTop = v) : window.scrollTo({ top: v, behavior: "instant" }));
+    const set = (v) => { tapGlide.cur = v; if (sc) sc.scrollTop = v; else window.scrollTo(0, v); if (onFrame) onFrame(); };
     cancelAnimationFrame(tapGlide.raf);
     tapGlide.raf = 0;
+    tapGlide.sc = sc;
     const from = get(), dist = top - from;
     if (fsReduce() || Math.abs(dist) < 2) return set(top);
     const vh = sc ? sc.clientHeight : innerHeight;
@@ -3943,17 +3953,18 @@
     const step = (t) => {
       const k = Math.min(1, (t - t0) / dur);
       // A gentle ease in and out, near-steady in the middle.
-      set(from + dist * (0.5 - Math.cos(Math.PI * k) / 2));
       tapGlide.raf = k < 1 ? requestAnimationFrame(step) : 0;
+      set(from + dist * (0.5 - Math.cos(Math.PI * k) / 2));
     };
+    tapGlide.cur = from;
     tapGlide.raf = requestAnimationFrame(step);
   }
   // Moves to the next (or previous) stop; false when there isn't one.
-  function tapStep(sc, stops, back) {
+  function tapStep(sc, stops, back, onFrame) {
     const cur = tapGlide.raf ? tapGlide.target : sc ? sc.scrollTop : window.scrollY;
     const to = back ? stops.filter((s) => s < cur - 4).pop() : stops.find((s) => s > cur + 4);
     if (to == null) return false;
-    glideTo(sc, to);
+    glideTo(sc, to, onFrame);
     return true;
   }
   // The welcome page's story: a tap on the opening or the pinned stage moves
@@ -3968,7 +3979,7 @@
     const stops = [wlTop < 120 ? 0 : wlTop];
     for (let i = 0; i < n; i++) stops.push(top + ((i + 0.5) / n) * tl);
     stops.push(top + track.offsetHeight - 64);
-    tapStep(null, stops.map(Math.round), e.clientX < innerWidth * 0.22);
+    tapStep(null, stops.map(Math.round), e.clientX < innerWidth * 0.22, () => fsScroll());
   });
   // Stops the glide when someone takes over by dragging.
   document.addEventListener("touchstart", () => { if (tapGlide.raf) { cancelAnimationFrame(tapGlide.raf); tapGlide.raf = 0; } }, { passive: true });
