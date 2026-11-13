@@ -4,6 +4,9 @@ Seven images, in two sizes:
 
 - This folder: 1320 × 2868, for App Store Connect's **6.9"** iPhone slot.
 - `iphone-6.3/`: 1206 × 2622, for the **6.1" / 6.3"** iPhone slot.
+- `ipad-13/`: 2064 × 2752, for the **iPad 13"** slot. The app at iPad size, in an iPad frame.
+- `laptop/`: 2880 × 1800, the website in a browser window. That's the Mac App
+  Store size (16:10), and it works for the website, press and social media too.
 
 Upload them in this order (same names in both folders):
 
@@ -33,3 +36,10 @@ Then open `http://localhost:8766/slides.html` and screenshot each
 For the 6.3" set, resize each to 1206 × 2622 (the same shape, to within
 0.1%) with a high-quality filter such as Pillow's LANCZOS.
 Headlines, badges and colours are in `slides.js`.
+
+### iPad and laptop sets
+
+`source/wide/capture.cjs` captures the screens at iPad (1032 × 1352) or
+laptop (1440 × 860) size, at 2x, and `source/wide/wide.html?m=ipad` (or
+`?m=laptop`) lays out the slides. Serve `source/wide/` with the captures in
+`raw-ipad/` and `raw-laptop/` beside it, then screenshot each slide.
