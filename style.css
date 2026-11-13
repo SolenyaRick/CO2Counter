@@ -8006,3 +8006,20 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 @keyframes calc-pop { 0% { opacity: 0; scale: 0.7; } 70% { opacity: 1; scale: 1.06; } 100% { scale: 1; } }
 @keyframes calc-bar { from { transform: scaleX(0); } }
 @media (prefers-reduced-motion: reduce) { .calc-body.go * { animation: none !important; } }
+
+/* ===== Welcome story: every step moves =====
+   Driven by --f (0 to 4 through the story), --sw (pie sweep) and --po (pie
+   fading out), written by paintWelcome on the stage. */
+/* Step 3: the disc becomes a pie of where a typical footprint comes from,
+   sweeping round clockwise. */
+.wl-pie { position: absolute; inset: 0; z-index: 1; border-radius: 50%; transform: scale(var(--s, 1)); opacity: calc(var(--po, 0) * min(1, var(--sw, 0) * 20)); -webkit-mask-image: conic-gradient(#000 calc(var(--sw, 0) * 360deg), transparent 0); mask-image: conic-gradient(#000 calc(var(--sw, 0) * 360deg), transparent 0); box-shadow: inset 0 0 0 2px rgba(23, 36, 26, 0.25); pointer-events: none; }
+/* Step 2: a ring of trees fills in around the disc, one by one. */
+.wl-trees { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.wl-trees i { --on: clamp(0, (var(--f, 0) - var(--a)) * 8, 1); position: absolute; left: calc(50% + var(--cx) * 57%); top: calc(50% + var(--cy) * 57%); translate: -50% -50%; color: var(--sprout); opacity: calc(var(--on) * clamp(0, (1.9 - var(--f, 0)) * 6, 1)); scale: calc(0.3 + 0.7 * var(--on)); }
+.wl-trees .icon { display: block; width: 18px; height: 18px; stroke-width: 2.2; }
+/* The labels sit on their own slice and pop in as the sweep reaches them. */
+.wl .wl-cat, .wl[data-step] .wl-cat { --on: clamp(0, (var(--sw, 0) - var(--st, 0)) * 14, 1); opacity: calc(var(--on) * var(--po, 0)); scale: calc(0.7 + 0.3 * var(--on)); transition: none; background: rgba(23, 36, 26, 0.72); }
+@media (max-width: 640px) {
+  .wl-trees .icon { width: 14px; height: 14px; }
+  .wl-trees i { left: calc(50% + var(--cx) * 55%); top: calc(50% + var(--cy) * 55%); }
+}
