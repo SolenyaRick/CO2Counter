@@ -5674,6 +5674,31 @@
       if (currentPath() === "/friends") render();
     }, () => { ui.leagueLoading = false; ui.league = { missing: true }; });
   }
+  // Like Duolingo's league trophies: your five trees in a row, your current
+  // one big and glowing, the ones you've reached in full colour and the ones
+  // still to come faded. Centred on yours when it opens.
+  const LG_TREES = [["Seed", 0], ["Sprout", 1], ["Sapling", 3], ["Tree", 5], ["Forest", 7]];
+  function leagueHeaderHtml(acts) {
+    const cur = LG_TREES.reduce((k, l, i) => (acts >= l[1] ? i : k), 0);
+    const next = LG_TREES[cur + 1];
+    const toGo = next ? next[1] - acts : 0;
+    const seen = !!ui.lgSeen;
+    ui.lgSeen = true;
+    return (
+      '<div class="lgh">' +
+      '<div class="lgh-row" role="list" aria-label="Tree leagues">' + LG_TREES.map(([name, need], i) =>
+        '<div role="listitem" class="lgh-t ' + (i === cur ? "now" : i < cur ? "got" : "todo") + '" style="--k:' + i + '" aria-label="' + name + " league" + (i === cur ? ", your league" : i < cur ? ", reached" : ", " + need + (need === 1 ? " Act" : " Acts") + " to reach") + '">' +
+        '<span class="lgh-disc">' + hbTree(name, "lgh-tree", i === cur && !seen) + "</span>" +
+        (i === cur ? "" : '<span class="lgh-need">' + (i < cur ? icon("check") : need) + "</span>") + "</div>").join("") + "</div>" +
+      '<h3 class="display lgh-title">' + LG_TREES[cur][0] + " League</h3>" +
+      '<p class="lgh-sub">' + (next ? toGo + (toGo === 1 ? " more Act" : " more Acts") + " to reach the " + next[0] + " League" : "The top league. Every Act done.") + "</p></div>"
+    );
+  }
+  function centreLeagueTrees() {
+    const row = app.querySelector(".lgh-row");
+    const now = row && row.querySelector(".lgh-t.now");
+    if (row && now && !row._centred) { row._centred = true; row.scrollLeft = now.offsetLeft + now.offsetWidth / 2 - row.clientWidth / 2; }
+  }
   const levelOf = (n) => (n >= 7 ? "Forest" : n >= 5 ? "Tree" : n >= 3 ? "Sapling" : n >= 1 ? "Sprout" : "Seed");
   function leagueBoardHtml() {
     const L = ui.league;
@@ -5685,7 +5710,7 @@
     if (!me) return '<p class="sm mt-3">Open <a class="link-btn" href="#/habits">My Habits</a> to take your place in a league.</p>' + '<button type="button" class="link-btn lg-more" data-action="rank-full">See the full ranking ' + icon("arrowRight") + "</button>";
     const above = rows.filter((r) => r.pos < me.pos).length, below = rows.length - above - 1;
     return (
-      '<div class="lgx">' +
+      '<div class="lgx">' + leagueHeaderHtml(me.acts) +
       '<p class="lg-lede">Ranked by how many of the 7 Acts you\'ve done. ' + (above ? "Do your next Act to climb past " + (above === 1 ? "the person above you." : "the people above you.") : below ? "You're top of your league." : "") + "</p>" +
       '<ol class="fr-stand lg-list lgx-list">' + rows.map((r, i) => {
         const name = r.is_me ? "You" : r.username ? "@" + r.username : "Someone";
@@ -10223,6 +10248,7 @@
     animateMoves();
     animateProgress();
     calcAfterRender();
+    centreLeagueTrees();
     freshSpin(path);
     if (ui.levelUp && (path === "/habits" || path === "/check-in") && app.querySelector(".hb-page")) {
       const l = ui.levelUp;
