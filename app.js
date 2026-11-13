@@ -5635,8 +5635,63 @@
   const KEY_HB_WON = "co2_hb_won"; // acts already celebrated, per account
   const KEY_HB_LEVEL = "co2_hb_level"; // highest level already celebrated, per account
 
+  // ---------- Global ranking by the 7 Acts ----------
+  // The app saves which Acts you've done (when they change, or weekly), and
+  // asks the server for your anonymous place among everyone. Both quietly do
+  // nothing until the ranking SQL has been run in Supabase.
+  const KEY_ACTS_SENT = "co2_acts_sent";
+  function saveMyActs(acts) {
+    if (!sb || !currentUser || !survey || !survey.completedAt) return;
+    const done = acts.filter((a) => a.done).map((a) => a.n).sort();
+    const key = KEY_ACTS_SENT + ":" + currentUser.id;
+    const was = lsGet(key, null), sig = done.join(",");
+    if (was && (was.sig === sig || was.sig === "") && Date.now() - was.at < 7 * 86400000) return;
+    lsSet(key, { sig, at: Date.now() });
+    // A failure (no SQL yet, or offline) tries again in an hour, not every page.
+    const later = () => lsSet(key, { sig: "", at: Date.now() - 7 * 86400000 + 3600000 });
+    sb.rpc("save_my_acts", { p_done: done }).then(({ error }) => {
+      if (error) later();
+      else if (ui.rank && ui.rank.acts !== done.length) { ui.rank = null; loadRank(); }
+    }, later);
+  }
+  function loadRank() {
+    if (!sb || !currentUser || ui.rankLoading) return;
+    ui.rankLoading = true;
+    sb.rpc("my_acts_rank").then(({ data, error }) => {
+      ui.rankLoading = false;
+      ui.rank = error ? { missing: true } : data || { missing: true };
+      const p = currentPath();
+      if (p === "/friends" || p === "/habits" || p === "/check-in") render();
+    }, () => { ui.rankLoading = false; ui.rank = { missing: true }; });
+  }
+  const RANK_LEVELS = [["forest", "Forest", "7 Acts"], ["tree", "Tree", "5–6"], ["sapling", "Sapling", "3–4"], ["sprout", "Sprout", "1–2"], ["seed", "Seed", "0"]];
+  const rankTop = (r) => (r && r.rank && r.total ? Math.max(1, Math.ceil((r.rank / r.total) * 100)) : null);
+  function rankBoardHtml() {
+    const r = ui.rank;
+    if (!r) { loadRank(); return '<p class="sm muted mt-3">Loading the global ranking…</p>'; }
+    if (r.missing) return stateCard({ inline: true, icon: "globe", title: "Global ranking is on its way", text: "Soon you'll see where your 7 Acts put you among everyone using CO2 Counter." });
+    const levels = r.levels || {};
+    const max = Math.max(1, ...RANK_LEVELS.map(([k]) => Number(levels[k]) || 0));
+    const mine = r.acts != null ? (r.acts >= 7 ? "forest" : r.acts >= 5 ? "tree" : r.acts >= 3 ? "sapling" : r.acts >= 1 ? "sprout" : "seed") : null;
+    const top = rankTop(r);
+    const head = r.rank
+      ? '<div class="gr-head"><div><span class="gr-k">Your place</span><b class="display tnum gr-rank">#' + kgFmt(r.rank) + '</b><span class="gr-of tnum">of ' + kgFmt(r.total) + (r.tied > 1 ? " · tied with " + kgFmt(r.tied - 1) : "") + "</span></div>" +
+        (top ? '<span class="gr-top">Top ' + top + "%</span>" : "") + "</div>"
+      : '<p class="sm mt-3">Finish the survey and open My Habits to take your place.</p>';
+    return (
+      '<div class="gr">' + head +
+      '<p class="gr-lede">Ranked by how many of the 7 Acts you\'ve done. Everyone is anonymous: you only ever see your own place.</p>' +
+      '<ol class="gr-ladder">' + RANK_LEVELS.map(([k, label, acts], i) => {
+        const c = Number(levels[k]) || 0;
+        return '<li class="' + (k === mine ? "me" : "") + '" style="--k:' + i + '"><span class="gr-lv"><b>' + label + "</b><small>" + acts + '</small></span><i class="gr-bar"><s style="--w:' + ((c / max) * 100).toFixed(1) + '%"></s></i><b class="tnum gr-n">' + kgFmt(c) + "</b>" + (k === mine ? '<span class="gr-you">You</span>' : "") + "</li>";
+      }).join("") + "</ol>" +
+      '<p class="xs muted mt-2">' + kgFmt(r.total) + (r.total === 1 ? " person" : " people") + ' ranked. <a class="link-btn" href="#/habits">Your Acts</a></p></div>'
+    );
+  }
   function renderHabitsPage() {
     const { acts, ready } = habitActs();
+    saveMyActs(acts);
+    if (currentUser && !ui.rank) loadRank();
     syncSunday(acts);
     const state = (a) => (a.done ? "done" : a.pending ? "wait" : "todo");
     const made = acts.filter((a) => a.done).length;
@@ -5886,7 +5941,8 @@
       '<div class="hb-top"><span class="hb-eyebrow">My Habits</span><a class="hb-rz" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener" aria-label="Real Zero, who made the 7 Acts (opens their site)"><span>The 7 Acts by</span><img src="/icons/realzero-56.png" srcset="/icons/realzero-56.png 1x, /icons/realzero.png 3x" width="141" height="22" alt="Real Zero" /></a></div>' +
       '<div class="hb3-lv">' + ring + '<div class="hb3-lvt"><span class="hb3-lvchip">Level ' + (lv + 1) + "</span>" +
       '<div class="hb3-name"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " done, " + (7 - made) + " to go.</span></h1>" + hbTree(HB_LEVELS[lv][1], "now", animate) + "</div>" +
-      '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + (nextLv ? hbTree(nextLv[1], "next") : "") + toNextText + "</span></div></div>" +
+      '<div class="hb3-xp gold" aria-hidden="true"><i style="--w:' + lvPct + '%"></i></div><span class="hb3-lvnext">' + (nextLv ? hbTree(nextLv[1], "next") : "") + toNextText + "</span>" +
+      (rankTop(ui.rank) ? '<a class="hb3-rank" href="#/friends" data-action="rank-open">' + icon("globe") + " Top " + rankTop(ui.rank) + "% of everyone</a>" : "") + "</div></div>" +
       (ready && toSave >= 0.5 ? '<p class="hb-tosave"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year still up for grabs in Acts 1 to 4</span></p>" : "") +
       '<p class="hb-lede">Real Zero\'s <b>7 Acts</b> are the changes that cut the most. ' + (ready ? "Acts 1 to 5 tick themselves from your survey." : "Take the survey and acts 1 to 5 tick themselves.") +
       ' <a class="hb-explain" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener">What are the 7 Acts?' + icon("link") + "</a></p>" +
@@ -6015,7 +6071,7 @@
     return (
       '<div class="container hb-page hbf" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' + party +
       '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
-      '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + "</span></div>" +
+      '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + (rankTop(ui.rank) ? " · Top " + rankTop(ui.rank) + "%" : "") + "</span></div>" +
       (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
       sundayOffer(acts) +
       (ready ? "" : '<button type="button" class="hbf-start" data-action="start-survey"><b class="display">Take the survey first</b><span>Acts 1 to 5 tick themselves from it</span>' + icon("arrowRight") + "</button>") +
@@ -7706,6 +7762,28 @@
 
   const analytics = { loaded: false, loading: false, error: "", data: null, at: null };
   // Owner view of the 7 Acts: invites, letters, verifications. Totals only.
+  // Everyone's tree level and how many people have done each Act.
+  function levelAnalyticsHtml(a) {
+    const head = '<section class="glass an-card"><h2 class="card-title">Global ranking: levels and Acts</h2>';
+    if (!a) return head + '<p class="sm muted">Run the global ranking SQL in Supabase to see everyone\'s levels and Acts here.</p></section>';
+    const n = (x) => kgFmt(Number(x) || 0);
+    const people = Number(a.people) || 0;
+    const pct = (x) => (people ? Math.round(((Number(x) || 0) / people) * 100) + "%" : "–");
+    const levels = a.levels || {}, by = a.by_act || {};
+    const max = Math.max(1, ...RANK_LEVELS.map(([k]) => Number(levels[k]) || 0));
+    const tile = (label, value, sub) => '<div class="an-tile"><span class="eyebrow">' + label + '</span><b class="display tnum">' + value + '</b><span class="xs muted">' + sub + "</span></div>";
+    const bar = (label, sub, c, m) => '<li><span class="gr-lv"><b>' + label + "</b><small>" + sub + '</small></span><i class="gr-bar"><s style="--w:' + ((Number(c) || 0) / m * 100).toFixed(1) + '%"></s></i><b class="tnum gr-n">' + n(c) + " · " + pct(c) + "</b></li>";
+    const ACT_NAMES = ["", "Move your money", "Move your energy", "More plant-based food", "More green travel", "Monitor your footprint", "Mobilise: your MP", "Motivate seven others"];
+    const maxA = Math.max(1, ...[1, 2, 3, 4, 5, 6, 7].map((i) => Number(by[i]) || 0));
+    return (
+      head + '<p class="sm muted">Saved by each signed-in person\'s app from their survey and verified acts. Counts only, no names.</p>' +
+      '<div class="an-tiles mt-2">' + tile("People ranked", n(people), n(a.active_30) + " updated in the last 30 days") +
+      tile("Average Acts", a.average != null ? Number(a.average).toFixed(1) : "–", "of 7 per person") +
+      tile("Forest", n(levels.forest), pct(levels.forest) + " have done all 7") + tile("Seed", n(levels.seed), pct(levels.seed) + " haven't started") + "</div>" +
+      '<h3 class="display mt-4">By level</h3><ol class="gr-ladder an-ladder">' + RANK_LEVELS.map(([k, label, acts]) => bar(label, acts, levels[k], max)).join("") + "</ol>" +
+      '<h3 class="display mt-4">By Act</h3><ol class="gr-ladder an-ladder">' + [1, 2, 3, 4, 5, 6, 7].map((i) => bar("Act " + i, ACT_NAMES[i], by[i], maxA)).join("") + "</ol></section>"
+    );
+  }
   function actsAnalyticsHtml(a) {
     const head = '<section class="glass an-card"><h2 class="card-title">The 7 Acts</h2>';
     if (!a) return head + '<p class="sm muted">Run the 7 Acts analytics SQL in Supabase to see invites, letters and verified acts here.</p></section>';
@@ -7747,6 +7825,13 @@
         analytics.acts = acts.error ? null : acts.data;
       } catch (e2) {
         analytics.acts = null;
+      }
+      // The global ranking spread (null until that SQL is run).
+      try {
+        const lv = await sb.rpc("owner_level_analytics");
+        analytics.levels = lv.error ? null : lv.data;
+      } catch (e5) {
+        analytics.levels = null;
       }
       // Surveys finished without an account (null until that SQL is run).
       try {
@@ -7987,6 +8072,7 @@
       );
     };
     html += actsAnalyticsHtml(analytics.acts);
+    html += levelAnalyticsHtml(analytics.levels);
     html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step).", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
     html +=
       '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
@@ -8707,7 +8793,7 @@
   }
   function standingsHtml() {
     const myName = friends.myName || (currentUser.email || "").split("@")[0];
-    const tab = ui.standTab === "imp" ? "imp" : "board";
+    const tab = ui.standTab === "imp" ? "imp" : ui.standTab === "all" ? "all" : "board";
     const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     let rows;
     if (tab === "board") {
@@ -8725,8 +8811,10 @@
       '<section class="glass fr-box" id="fr-standings" aria-labelledby="fr-st-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="fr-st-h" class="display">Standings</h2>' +
       (latest ? '<span class="xs muted">Updated ' + new Date(latest).toLocaleDateString(undefined, { day: "numeric", month: "long" }) + "</span>" : "") + "</div>" +
       '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
-      [["board", "Lowest footprint"], ["imp", "Most improved"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
-      (tab === "board" && !rows.some((r) => !r.self)
+      [["board", "Lowest footprint"], ["imp", "Most improved"], ["all", "Everyone"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
+      (tab === "all"
+        ? rankBoardHtml()
+        : tab === "board" && !rows.some((r) => !r.self)
         ? leagueHtml(myName)
         : rows.length
         ? '<ol class="fr-stand">' + rows.map((r, i) => '<li class="' + (r.self ? "me" : "") + '"><span class="fr-n' + (r.first && tab === "board" ? " gold" : "") + '">' + (i + 1) + "</span>" + frAv(r.id, r.self ? myName : r.name, 34, r.self) +
@@ -8734,7 +8822,7 @@
         : tab === "board"
           ? stateCard({ inline: true, icon: "chart", title: "No one to compare with yet", text: "Add friends to compare yearly totals. Lowest wins.", actions: [["Find a friend", 'data-action="fr-find"', true]] })
           : stateCard({ inline: true, icon: "trendDown", title: "No changes yet", text: "Retake the survey every few months. The biggest cut wins.", actions: [["Update my survey", 'href="#/" data-action="whats-changed"', true]] })) +
-      (rows.length ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
+      (rows.length && tab !== "all" ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
     );
   }
   function renderFriends() {
@@ -11124,6 +11212,9 @@
         await navigator.clipboard.writeText(inviteLink());
         el.textContent = "Link copied";
       } catch (e) {}
+    },
+    "rank-open": (el, e) => {
+      ui.standTab = "all";
     },
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
