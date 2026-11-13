@@ -1436,6 +1436,9 @@ grant execute on function public.record_link_click(text, text) to authenticated;
 
 -- People per link. Open it in the Supabase table editor or run
 -- "select * from public.link_click_stats;". Not visible to app users.
+-- Dropped first: a view can't lose columns, so re-running this file over a
+-- newer version of the view would otherwise fail ("cannot drop columns").
+drop view if exists public.link_click_stats;
 create or replace view public.link_click_stats as
   select link_key,
     count(*)::integer as people,
@@ -1580,6 +1583,9 @@ $$;
 revoke all on function public.record_link_click(text, text, boolean) from public;
 grant execute on function public.record_link_click(text, text, boolean) to authenticated;
 
+-- Dropped first: a view can't lose columns, so re-running this file over a
+-- newer version of the view would otherwise fail ("cannot drop columns").
+drop view if exists public.link_click_stats;
 create or replace view public.link_click_stats as
   select link_key,
     count(*)::integer as people,
