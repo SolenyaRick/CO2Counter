@@ -31,26 +31,26 @@ if (location.protocol === "http:" && location.hostname !== "localhost" && locati
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="CO2 Counter" />
 <link rel="manifest" href="manifest.json" />
-<link rel="shortcut icon" href="favicon.ico?v=9" />
-<link rel="icon" type="image/svg+xml" href="icons/leaf-ledger.svg?v=9" />
-<link rel="icon" type="image/png" sizes="32x32" href="icons/leaf-ledger-32.png?v=9" />
-<link rel="icon" type="image/png" sizes="16x16" href="icons/leaf-ledger-16.png?v=9" />
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=9" />
+<link rel="shortcut icon" href="favicon.ico?v=10" />
+<link rel="icon" type="image/svg+xml" href="icons/leaf-ledger.svg?v=10" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/leaf-ledger-32.png?v=10" />
+<link rel="icon" type="image/png" sizes="16x16" href="icons/leaf-ledger-16.png?v=10" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=10" />
 <!-- Bump ?v= whenever these files change, so browsers that cached the
      previous version (GitHub Pages sends max-age=600) fetch the new one. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Karla:wght@400;500;600;700&display=swap" />
-<link rel="stylesheet" href="style.css?v=204" />
-<script src="vendor/supabase.js?v=204"></script>
-<script src="data.js?v=204"></script>
+<link rel="stylesheet" href="style.css?v=205" />
+<script src="vendor/supabase.js?v=205"></script>
+<script src="data.js?v=205"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <button type="button" class="nav-back" id="nav-back" data-action="nav-back" hidden><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Back</span></button>
       <a href="#/welcome" class="brand">
-        <span class="brand-mark"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="cc-logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#244A31"/><stop offset="1" stop-color="#0E1C13"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#cc-logo-g)"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#FAF8F3"/><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#132A1B"/><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#FF5A36"/><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#FFA51F"/></svg></span>
+        <span class="brand-mark"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#3F5B3A"/><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"/><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"/><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"/><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"/></svg></span>
         <span class="brand-name">CO2 Counter</span>
       </a>
       <span class="nav-title" id="nav-title" aria-hidden="true"></span>
@@ -79,6 +79,6 @@ if (location.protocol === "http:" && location.hostname !== "localhost" && locati
   <nav class="tabbar" id="tabbar" aria-label="App"><span class="tab-ink" aria-hidden="true"></span><a href="#/" data-route="/"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6v3H9zM7 5H5.5v15.5h13V5H17M9 11.5h6M9 15.5h4"/></svg><span>Survey</span></a><a href="#/results" data-route="/results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/></svg><span>Results</span></a><a href="#/friends" data-route="/friends"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 4.5a3.5 3.5 0 0 1 0 6.5M18 14c2 .6 3.5 2.8 3.5 6"/></svg><span>Friends</span></a><a href="#/habits" data-route="/habits"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8 12.5l3 3 5-6"/></svg><span>Habits</span></a><a href="#/account" data-route="/account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg><span>Account</span></a></nav>
   <div id="modal-root"></div>
 
-  <script src="app.js?v=204"></script>
+  <script src="app.js?v=205"></script>
 </body>
 </html>
