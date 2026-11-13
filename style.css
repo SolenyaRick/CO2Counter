@@ -4145,7 +4145,7 @@ body::after { --amb: #e8c88a; right: calc(-14vw - 170px); top: calc(46vh - 170px
 .ab-fac.ph { position: static; width: auto; height: auto; padding: 6px 8px; border-radius: 12px; font-size: 12px; box-shadow: none; }
 .ab-dot { position: absolute; left: 0; top: 0; border-radius: 999px; animation: ab-travel linear infinite; animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95); box-shadow: 0 0 0 3px rgba(255, 252, 245, 0.7); }
 @keyframes ab-travel { 0% { offset-distance: 0%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
-.ab-core { position: absolute; display: grid; place-items: center; background: var(--canopy); box-shadow: 0 24px 48px rgba(23, 36, 26, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.15); animation: ab-breathe 3.2s ease-in-out infinite; }
+.ab-core { position: absolute; display: grid; place-items: center; background: linear-gradient(135deg, #244A31, #0E1C13); box-shadow: 0 24px 48px rgba(23, 36, 26, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.15); animation: ab-breathe 3.2s ease-in-out infinite; }
 .ab-core.ph { position: static; width: 110px; height: 110px; border-radius: 28px; }
 @keyframes ab-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 .ab-calc { position: absolute; left: 400px; width: 200px; top: 392px; text-align: center; font-size: 15px; color: #5C5649; }
