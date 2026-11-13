@@ -2226,7 +2226,17 @@
     const uk = ukComparison(footprint(D.UK_TYPICAL_SURVEY)).uk + D.ASSUMED_SHOPPING.totalKg;
     const tree = (D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22;
     const t = (kg) => (kg / 1000).toFixed(1);
-    const cats = ["Meals", "Travel", "Flights", "Home", "Pets", "Money"];
+    // The typical footprint's real split, for the pie in step 3 (it sums to
+    // the 5.8 t shown: the survey's parts plus typical shopping).
+    const ukFp = footprint(D.UK_TYPICAL_SURVEY);
+    const part = (keys) => ukFp.breakdown.filter((b) => keys.includes(b.key)).reduce((s, b) => s + b.yearly, 0);
+    const slices = [["Meals", part(["meals"]), CAT_COLOR.meals], ["Travel", part(["commute"]), CAT_COLOR.commute], ["Flights", part(["flights"]), CAT_COLOR.flights],
+      ["Home", part(["energy", "water"]), CAT_COLOR.energy], ["Pets", part(["pets"]), CAT_COLOR.pets], ["Shopping", D.ASSUMED_SHOPPING.totalKg, "#C9BFA8"]];
+    const sum = slices.reduce((s, x) => s + x[1], 0) || 1;
+    let at = 0;
+    const sl = slices.map(([l, kg, c]) => { const x = { l, c, from: at / sum, to: (at + kg) / sum }; at += kg; return x; });
+    const pie = "conic-gradient(" + sl.map((x) => x.c + " " + (x.from * 360).toFixed(1) + "deg " + (x.to * 360).toFixed(1) + "deg").join(", ") + ")";
+    const nTrees = 24;
     const steps = [
       ["The typical UK footprint", "About " + t(uk) + " tonnes of CO₂e a year", "What a year of everyday life adds up to: food, travel, home, pets, money and shopping."],
       ["Picture it", kgFmt(uk / tree) + " mature trees", "That's how many trees it takes, working all year, to soak up one person's footprint."],
@@ -2234,7 +2244,7 @@
       ["The 1.5°C budget", "About " + t(D.BUDGET_YEARLY) + " t each", "To stay on track for 1.5°C, footprints like this need to fall to about " + t(D.BUDGET_YEARLY) + " t by 2030. Find your biggest levers in six short steps."],
     ];
     return (
-      '<div class="wl" data-step="0" style="--b:' + Math.sqrt(D.BUDGET_YEARLY / uk).toFixed(4) + '" data-uk="' + Math.round(uk) + '">' +
+      '<div class="wl" data-step="0" style="--b:' + Math.sqrt(D.BUDGET_YEARLY / uk).toFixed(4) + '" data-uk="' + Math.round(uk) + '" data-trees="' + Math.round(uk / tree) + '">' +
       '<section class="wl-open"><span class="story-k">Free for everyone · no ads</span>' +
       '<h1 class="display wl-title">Know your footprint.<br><span>Shrink it,</span> one habit at a time.</h1>' +
       '<p class="wl-lead">Answer six short steps about your week. We estimate your yearly carbon footprint, show where it really comes from, and point you to the changes that make the biggest difference for you.</p>' +
@@ -2244,8 +2254,10 @@
       '<section class="wl-track" style="--n:' + steps.length + '"><div class="story-stage wl-stage">' +
       '<div class="story-orb wl-orb" aria-hidden="true"><i class="story-ghost"></i><i class="story-disc"></i><i class="story-budget"></i>' +
       '<span class="story-budget-l">1.5°C budget · ' + t(D.BUDGET_YEARLY) + " t</span>" +
-      '<span class="story-read"><b class="display tnum wl-kg">' + t(uk) + " t</b><small>a year</small></span>" +
-      cats.map((c, i) => { const a = (i / cats.length) * Math.PI * 2 - Math.PI / 2; return '<span class="wl-cat" style="--cx:' + Math.cos(a).toFixed(3) + ";--cy:" + Math.sin(a).toFixed(3) + ";--k:" + i + '">' + c + "</span>"; }).join("") +
+      '<span class="story-read"><b class="display tnum wl-kg">' + t(uk) + ' t</b><small class="wl-unit">a year</small></span>' +
+      '<i class="wl-pie" style="background:' + pie + '"></i>' +
+      '<span class="wl-trees">' + Array.from({ length: nTrees }, (_, i) => { const a = (i / nTrees) * Math.PI * 2 - Math.PI / 2; return '<i style="--cx:' + Math.cos(a).toFixed(3) + ";--cy:" + Math.sin(a).toFixed(3) + ";--a:" + (0.6 + (i / nTrees) * 0.62).toFixed(3) + '">' + icon("tree") + "</i>"; }).join("") + "</span>" +
+      sl.map((x) => { const a = ((x.from + x.to) / 2) * Math.PI * 2 - Math.PI / 2; return '<span class="wl-cat" style="--cx:' + Math.cos(a).toFixed(3) + ";--cy:" + Math.sin(a).toFixed(3) + ";--st:" + x.from.toFixed(3) + '">' + x.l + "</span>"; }).join("") +
       "</div>" +
       '<ol class="story-steps wl-steps">' + steps.map((st, i) => '<li data-i="' + i + '"' + (i ? "" : ' class="on"') + '><span class="story-k">' + esc(st[0]) + '</span><h2 class="display">' + esc(st[1]) + "</h2><p>" + esc(st[2]) + "</p>" + (i === steps.length - 1 ? '<div class="wl-ctas">' + cta(survey.completedAt ? "Update my survey" : "Start the survey") + "</div>" : "") + "</li>").join("") + "</ol>" +
       '<div class="story-ticks" aria-hidden="true">' + steps.map((_, i) => '<span style="--k:' + i + '"></span>').join("") + "</div>" +
@@ -2265,7 +2277,7 @@
   function paintWelcome() {
     const wl = app.querySelector(".wl");
     if (!wl) return;
-    const q = wl._q || (wl._q = { track: wl.querySelector(".wl-track"), open: wl.querySelector(".wl-open"), stage: wl.querySelector(".wl-stage"), kg: wl.querySelector(".wl-kg"), steps: [...wl.querySelectorAll(".wl-steps li")], bar: document.querySelector(".topbar") });
+    const q = wl._q || (wl._q = { track: wl.querySelector(".wl-track"), open: wl.querySelector(".wl-open"), stage: wl.querySelector(".wl-stage"), kg: wl.querySelector(".wl-kg"), unit: wl.querySelector(".wl-unit"), steps: [...wl.querySelectorAll(".wl-steps li")], bar: document.querySelector(".topbar") });
     // Reads. The stage is 100svh, which doesn't jump as a phone's toolbar
     // slides away (innerHeight does).
     const vh = q.stage.offsetHeight || innerHeight;
@@ -2276,19 +2288,34 @@
     const tp = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)));
     const ip = Math.min(1, Math.max(0, -ro.top / (ro.height * 0.8)));
     const step = Math.min(n - 1, Math.floor(tp * n));
-    // The disc holds at the UK size, then shrinks to the budget in the last step.
-    const f = Math.min(1, Math.max(0, tp * n - (n - 1) + 0.4) / 0.9);
-    const shrink = fsReduce() ? (step === n - 1 ? 1 : 0) : f * f * (3 - 2 * f);
+    // Every step moves, and each finishes where a tap stops (step + 0.5):
+    // 1 the disc grows as the total counts up; 2 a ring of trees fills in;
+    // 3 the disc becomes a pie of where it comes from; 4 it shrinks to the
+    // budget. F runs 0 to 4 through the story.
+    const F = fsReduce() ? step + 0.5 : tp * n;
+    const ease = (x) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); };
+    // Each finishes about 0.1 before its stop, so a tap always lands on it complete.
+    const grow = ease(F / 0.4);
+    const sweep = ease((F - 1.6) / 0.78), pieOn = Math.min(1, Math.max(0, (2.9 - F) / 0.3));
+    const shrink = ease((F - 2.6) / 0.78);
     const uk = Number(wl.dataset.uk), b = D.BUDGET_YEARLY;
     const kg = uk + (b - uk) * shrink;
+    const treesAll = Number(wl.dataset.trees) || 0; // the same figure the step's text gives
     // Writes.
     setVar(q.open, "--ip", ip.toFixed(3));
     if (r.top < vh && r.bottom > 0) {
       setVar(q.stage, "--tp", tp.toFixed(4));
-      setVar(q.stage, "--s", Math.sqrt(kg / uk).toFixed(4));
+      setVar(q.stage, "--f", F.toFixed(3));
+      setVar(q.stage, "--sw", sweep.toFixed(3));
+      setVar(q.stage, "--po", pieOn.toFixed(3));
+      setVar(q.stage, "--s", ((0.42 + 0.58 * grow) * Math.sqrt(kg / uk)).toFixed(4));
       setVar(q.stage, "--q", (1 - kg / uk).toFixed(3));
-      const t = (kg / 1000).toFixed(1) + " t";
+      // The figure: counting up, then trees, then the total shrinking.
+      const trees = F >= 0.6 && F < 1.9;
+      const t = trees ? kgFmt(treesAll * ease((F - 0.6) / 0.7)) : F < 0.6 ? ((uk * grow) / 1000).toFixed(1) + " t" : (kg / 1000).toFixed(1) + " t";
+      const u = trees ? "mature trees" : "a year";
       if (q.kg.textContent !== t) q.kg.textContent = t;
+      if (q.unit && q.unit.textContent !== u) q.unit.textContent = u;
       const under = shrink > 0.98;
       if (wl.classList.contains("under") !== under) wl.classList.toggle("under", under);
     }
