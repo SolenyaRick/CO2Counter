@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Karla:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}html,body{margin:0}
+body{width:var(--W);height:var(--H);overflow:hidden;position:relative;background:#17241a;font-family:Karla,sans-serif}
+.glow{position:absolute;border-radius:50%;pointer-events:none}
+.g1{width:calc(var(--W)*.9);height:calc(var(--W)*.9);left:calc(var(--W)*-.25);top:calc(var(--W)*-.45);background:radial-gradient(closest-side,rgba(196,229,125,.22),transparent)}
+.g2{width:calc(var(--W)*.8);height:calc(var(--W)*.8);right:calc(var(--W)*-.25);bottom:calc(var(--W)*-.45);background:radial-gradient(closest-side,rgba(217,164,65,.2),transparent)}
+/* Decorative ledger bars out at the edges: fine to lose in a crop. */
+.edge{position:absolute;display:flex;align-items:flex-end;gap:calc(var(--S)*.018);opacity:.5}
+.edge i{display:block;width:calc(var(--S)*.024);border-radius:99px;background:#c4e57d}
+.edge i:nth-child(1){height:calc(var(--S)*.16)}.edge i:nth-child(2){height:calc(var(--S)*.12)}.edge i:nth-child(3){height:calc(var(--S)*.08)}.edge i:nth-child(4){height:calc(var(--S)*.04);background:#D9A441}
+.e1{left:calc(var(--S)*.08);bottom:calc(var(--H)*.12)}.e2{right:calc(var(--S)*.08);top:calc(var(--H)*.12);transform:scaleX(-1)}
+/* Everything that matters sits in a centred square, which survives the
+   App Store's crop on an iPhone. */
+.safe{position:absolute;left:50%;top:50%;width:var(--S);height:var(--S);transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center}
+.brand{margin-top:calc(var(--S)*.035);display:flex;align-items:center;gap:calc(var(--S)*.016);font:800 calc(var(--S)*.036)/1 'Bricolage Grotesque';color:#F1EDE4;letter-spacing:-.02em}
+.brand img{width:calc(var(--S)*.06);height:calc(var(--S)*.06);border-radius:calc(var(--S)*.015)}
+h1{margin:calc(var(--S)*.03) 0 0;text-align:center;font:800 calc(var(--S)*.085)/.95 'Bricolage Grotesque';letter-spacing:-.045em;color:#F1EDE4}
+h1 em{font-style:normal;color:#c4e57d}
+.phones{position:relative;flex:1;width:100%;margin-top:calc(var(--S)*.04)}
+.ph{position:absolute;top:0;width:calc(var(--S)*.27);aspect-ratio:1170/2391;border-radius:calc(var(--S)*.045);padding:calc(var(--S)*.008);background:#0d0f0c;box-shadow:0 0 0 calc(var(--S)*.002) #3a3f36 inset,0 calc(var(--S)*.04) calc(var(--S)*.08) calc(var(--S)*-.02) rgba(0,0,0,.6)}
+.ph img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:calc(var(--S)*.037)}
+.p1{left:50%;margin-left:calc(var(--S)*-.135);z-index:3}
+.p2{left:50%;margin-left:calc(var(--S)*-.385);top:calc(var(--S)*.05);transform:rotate(-7deg);z-index:2}
+.p3{left:50%;margin-left:calc(var(--S)*.115);top:calc(var(--S)*.05);transform:rotate(7deg);z-index:2}
+</style></head><body>
+<i class="glow g1"></i><i class="glow g2"></i>
+<div class="edge e1"><i></i><i></i><i></i><i></i></div><div class="edge e2"><i></i><i></i><i></i><i></i></div>
+<div class="safe">
+ <div class="brand"><img src="leaf-ledger.svg">CO2 Counter</div>
+ <h1>Know your footprint.<br><em>Watch it shrink.</em></h1>
+ <div class="phones">
+  <div class="ph p2"><img src="welcome-cats.png"></div>
+  <div class="ph p3"><img src="habits.png"></div>
+  <div class="ph p1"><img src="results.png"></div>
+ </div>
+</div>
+<script>
+const q=new URLSearchParams(location.search);const W=+q.get('w'),H=+q.get('h');
+const S=Math.min(W,H)*0.94;
+document.documentElement.style.setProperty('--W',W+'px');document.documentElement.style.setProperty('--H',H+'px');document.documentElement.style.setProperty('--S',S+'px');
+</script></body></html>
