@@ -2658,6 +2658,7 @@ revoke all on function public.my_acts_rank() from public, anon;
 grant execute on function public.my_acts_rank() to authenticated;
 
 -- Owner analytics: the same spread, plus how many people have done each Act.
+alter table public.profiles add column if not exists leagues_hidden boolean not null default false;
 create or replace function public.owner_level_analytics()
 returns jsonb
 language plpgsql
@@ -2678,7 +2679,25 @@ begin
       'average', (select round(avg(n)::numeric, 2) from everyone),
       'active_30', (select count(*) from everyone where acts_at > now() - interval '30 days'),
       'levels', coalesce((select jsonb_object_agg(l, c) from (select public.acts_level(n) as l, count(*) as c from everyone group by 1) x), '{}'::jsonb),
-      'by_act', coalesce((select jsonb_object_agg(a::text, c) from (select a, count(*) as c from everyone, unnest(d) a group by a) y), '{}'::jsonb)
+      'by_act', coalesce((select jsonb_object_agg(a::text, c) from (select a, count(*) as c from everyone, unnest(d) a group by a) y), '{}'::jsonb),
+      -- Each tree league: who's in it and their yearly footprints (the same
+      -- totals the league tables rank by). Counts and averages only.
+      'leagues', coalesce((select jsonb_object_agg(lvl, x) from (
+        select public.acts_level(coalesce(cardinality(p.acts_done), 0)) as lvl,
+          jsonb_build_object(
+            'people', count(*),
+            'with_total', count(s.total_yearly),
+            'median', round(percentile_cont(0.5) within group (order by s.total_yearly)),
+            'average', round(avg(s.total_yearly)),
+            'lowest', round(min(s.total_yearly)),
+            'highest', round(max(s.total_yearly)),
+            'under_2500', count(*) filter (where s.total_yearly < 2500),
+            'hidden', count(*) filter (where p.leagues_hidden)
+          ) as x
+        from public.profiles p
+        left join public.survey_responses s on s.user_id = p.id and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+        where p.acts_done is not null
+        group by 1) l), '{}'::jsonb)
     )
   );
 end;

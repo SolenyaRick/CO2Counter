@@ -8093,3 +8093,7 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 @keyframes lgh-in-todo { from { opacity: 0; translate: 0 14px; } to { opacity: 0.32; } }
 @keyframes lgh-pop { 0% { opacity: 0; scale: 0.7; } 70% { opacity: 1; scale: 1.06; } 100% { scale: 1; } }
 @media (prefers-reduced-motion: reduce) { .lgh-t, .lgh-t.now { animation: none; } }
+/* Analytics: the per-league table. */
+.an-table-5 .an-tr { grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)); }
+.an-sub { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--muted-fg, #6B6455); }
+@media (max-width: 640px) { .an-table-5 .an-tr { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 14px; } }

@@ -7843,7 +7843,31 @@
       tile("Average Acts", a.average != null ? Number(a.average).toFixed(1) : "–", "of 7 per person") +
       tile("Forest", n(levels.forest), pct(levels.forest) + " have done all 7") + tile("Seed", n(levels.seed), pct(levels.seed) + " haven't started") + "</div>" +
       '<h3 class="display mt-4">By level</h3><ol class="gr-ladder an-ladder">' + RANK_LEVELS.map(([k, label, acts]) => bar(label, acts, levels[k], max)).join("") + "</ol>" +
+      leagueStatsHtml(a.leagues) +
       '<h3 class="display mt-4">By Act</h3><ol class="gr-ladder an-ladder">' + [1, 2, 3, 4, 5, 6, 7].map((i) => bar("Act " + i, ACT_NAMES[i], by[i], maxA)).join("") + "</ol></section>"
+    );
+  }
+  // Each tree league: how many people, and their yearly footprints (the
+  // totals the league tables rank by). Do more Acts go with lower footprints?
+  function leagueStatsHtml(L) {
+    if (!L || !Object.keys(L).length) return "";
+    const t = (kg) => (kg == null ? "–" : (Number(kg) / 1000).toFixed(1) + " t");
+    const n = (x) => kgFmt(Number(x) || 0);
+    const rows = RANK_LEVELS.slice().reverse().map(([k, label, acts]) => {
+      const x = L[k] || {};
+      const withT = Number(x.with_total) || 0;
+      return (
+        '<div class="an-tr" role="row"><span role="cell"><b>' + label + '</b><small class="an-sub">' + (/Act/.test(acts) ? acts : acts + " Acts") + (x.hidden ? " · " + n(x.hidden) + " hidden" : "") + "</small></span>" +
+        '<span class="tnum" role="cell" data-label="People">' + n(x.people) + (withT !== (Number(x.people) || 0) ? '<small class="an-sub">' + n(withT) + " with a total</small>" : "") + "</span>" +
+        '<span class="tnum" role="cell" data-label="Median">' + t(x.median) + '<small class="an-sub">avg ' + t(x.average) + "</small></span>" +
+        '<span class="tnum" role="cell" data-label="Lowest">' + t(x.lowest) + '<small class="an-sub">to ' + t(x.highest) + "</small></span>" +
+        '<span class="tnum" role="cell" data-label="Under 2.5 t">' + (withT ? Math.round(((Number(x.under_2500) || 0) / withT) * 100) + "%" : "–") + '<small class="an-sub">' + n(x.under_2500) + " people</small></span></div>"
+      );
+    }).join("");
+    return (
+      '<h3 class="display mt-4">Each league</h3><p class="xs muted">Tree leagues come from Acts done; footprints are each person\'s latest yearly total, the figure the league tables rank by.</p>' +
+      '<div class="an-table an-table-5" role="table"><div class="an-tr an-th" role="row"><span role="columnheader">League</span><span role="columnheader">People</span>' +
+      '<span role="columnheader">Median</span><span role="columnheader">Lowest</span><span role="columnheader">Under 2.5 t</span></div>' + rows + "</div>"
     );
   }
   function actsAnalyticsHtml(a) {
