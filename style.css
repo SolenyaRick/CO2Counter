@@ -8057,3 +8057,11 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
   .gr-bar { background: rgba(236, 235, 233, 0.08); }
 }
 @media (prefers-reduced-motion: reduce) { .gr-bar s { animation: none; } }
+/* Your league: the people ranked around you. */
+.lgx-list li { grid-template-columns: 26px 34px minmax(0, 1fr) auto; }
+.lgx-lv { display: block; margin-top: 2px; font: 600 12px var(--font); color: #6B6455; }
+.lgx-list .fr-sval small { font-size: 12px; font-weight: 700; color: #8A8273; }
+.lgx-list li.me .fr-sname { color: #3F5B3A; }
+.lg-more { gap: 8px; }
+.lg-back { display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; min-height: 44px; }
+@media (prefers-color-scheme: dark) { .lgx-lv { color: #a9a395; } .lgx-list li.me .fr-sname { color: #bfd4bb; } }

@@ -28,10 +28,10 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "2 November 2026";
+  const LEGAL_UPDATED = "13 November 2026";
   // Bump when the privacy policy changes in a way people should be told
   // about: signed-in accounts on an older version see a one-time notice.
-  const PRIVACY_VERSION = "2026-10-28";
+  const PRIVACY_VERSION = "2026-11-13";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -5651,7 +5651,7 @@
     const later = () => lsSet(key, { sig: "", at: Date.now() - 7 * 86400000 + 3600000 });
     sb.rpc("save_my_acts", { p_done: done }).then(({ error }) => {
       if (error) later();
-      else if (ui.rank && ui.rank.acts !== done.length) { ui.rank = null; loadRank(); }
+      else { if (ui.rank && ui.rank.acts !== done.length) { ui.rank = null; loadRank(); } ui.league = null; }
     }, later);
   }
   function loadRank() {
@@ -5663,6 +5663,40 @@
       const p = currentPath();
       if (p === "/friends" || p === "/habits" || p === "/check-in") render();
     }, () => { ui.rankLoading = false; ui.rank = { missing: true }; });
+  }
+  // Your league: the people ranked around you, by username (my_acts_league).
+  function loadLeague() {
+    if (!sb || !currentUser || ui.leagueLoading) return;
+    ui.leagueLoading = true;
+    sb.rpc("my_acts_league").then(({ data, error }) => {
+      ui.leagueLoading = false;
+      ui.league = error ? { missing: true } : { rows: data || [] };
+      if (currentPath() === "/friends") render();
+    }, () => { ui.leagueLoading = false; ui.league = { missing: true }; });
+  }
+  const levelOf = (n) => (n >= 7 ? "Forest" : n >= 5 ? "Tree" : n >= 3 ? "Sapling" : n >= 1 ? "Sprout" : "Seed");
+  function leagueBoardHtml() {
+    const L = ui.league;
+    if (!L) { loadLeague(); return '<p class="sm muted mt-3">Loading your league…</p>'; }
+    // No league yet (SQL not run): the anonymous table instead.
+    if (L.missing) return rankBoardHtml();
+    const rows = L.rows || [];
+    const me = rows.find((r) => r.is_me);
+    if (!me) return '<p class="sm mt-3">Open <a class="link-btn" href="#/habits">My Habits</a> to take your place in a league.</p>' + '<button type="button" class="link-btn lg-more" data-action="rank-full">See the full ranking ' + icon("arrowRight") + "</button>";
+    const above = rows.filter((r) => r.pos < me.pos).length, below = rows.length - above - 1;
+    return (
+      '<div class="lgx">' +
+      '<p class="lg-lede">Ranked by how many of the 7 Acts you\'ve done. ' + (above ? "Do your next Act to climb past " + (above === 1 ? "the person above you." : "the people above you.") : below ? "You're top of your league." : "") + "</p>" +
+      '<ol class="fr-stand lg-list lgx-list">' + rows.map((r, i) => {
+        const name = r.is_me ? "You" : r.username ? "@" + r.username : "Someone";
+        return '<li class="' + (r.is_me ? "me" : "") + '" style="--k:' + i + '"><span class="fr-n">' + r.pos + "</span>" +
+          frAv("u:" + (r.username || r.pos), r.is_me ? friends.myName || "You" : r.username || "?", 34, r.is_me) +
+          '<span class="min0"><span class="fr-sname">' + esc(name) + '</span><span class="lgx-lv">' + levelOf(r.acts) + "</span></span>" +
+          '<b class="display tnum fr-sval">' + r.acts + "<small>/7</small></b></li>";
+      }).join("") + "</ol>" +
+      '<p class="xs muted mt-2">You\'re ' + ordinal(me.pos) + ". Only usernames and Act counts are shown. <a class=\"link-btn\" href=\"#/account\">Hide me from leagues</a></p>" +
+      '<button type="button" class="btn btn-outline btn-sm mt-3 lg-more" data-action="rank-full">' + icon("globe") + " See the full ranking</button></div>"
+    );
   }
   const RANK_LEVELS = [["forest", "Forest", "7 Acts"], ["tree", "Tree", "5–6"], ["sapling", "Sapling", "3–4"], ["sprout", "Sprout", "1–2"], ["seed", "Seed", "0"]];
   const rankTop = (r) => (r && r.rank && r.total ? Math.max(1, Math.ceil((r.rank / r.total) * 100)) : null);
@@ -8813,7 +8847,9 @@
       '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
       [["board", "Lowest footprint"], ["imp", "Most improved"], ["all", "Everyone"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
       (tab === "all"
-        ? rankBoardHtml()
+        ? ui.rankFull
+          ? '<button type="button" class="link-btn lg-back" data-action="rank-league">' + icon("chevronLeft") + " Your league</button>" + rankBoardHtml()
+          : leagueBoardHtml()
         : tab === "board" && !rows.some((r) => !r.self)
         ? leagueHtml(myName)
         : rows.length
@@ -9046,6 +9082,7 @@
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only, and we only count that a survey was finished and when, with nothing about you or your answers.",
             "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
+            "<strong>Leagues</strong>: if you're signed in, your username and how many of the 7 Acts you've done are shown in the leagues of people ranked near you (Friends, Everyone). Nothing else about you is shown. You can hide from leagues on your Account page; you still see your own place, and you're still counted in anonymous totals.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
             "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
@@ -9422,8 +9459,11 @@
   async function loadAboutYou() {
     ui.aboutYou = { loading: true };
     try {
-      const { data, error } = await sb.from("profiles").select("role, research_opt_in").eq("id", currentUser.id).maybeSingle();
-      ui.aboutYou = error ? { failed: true } : { role: (data && data.role) || "", research_opt_in: !!(data && data.research_opt_in) };
+      let { data, error } = await sb.from("profiles").select("role, research_opt_in, leagues_hidden").eq("id", currentUser.id).maybeSingle();
+      // Before the leagues SQL is run there's no leagues_hidden column.
+      const noLeagues = !!error;
+      if (noLeagues) ({ data, error } = await sb.from("profiles").select("role, research_opt_in").eq("id", currentUser.id).maybeSingle());
+      ui.aboutYou = error ? { failed: true } : { role: (data && data.role) || "", research_opt_in: !!(data && data.research_opt_in), leagues: noLeagues ? null : !(data && data.leagues_hidden) };
     } catch (e) {
       ui.aboutYou = { failed: true };
     }
@@ -9436,8 +9476,9 @@
     return (
       // What you do is asked once, in the survey's Money step; this card is
       // just the research choice.
-      '<section class="glass guide-card"><span class="eyebrow">Research · optional</span>' +
+      '<section class="glass guide-card"><span class="eyebrow">Privacy choices</span>' +
       '<form id="about-you-form" class="stack-3 mt-2">' +
+      (a.leagues != null ? '<label class="check-label research-consent"><input type="checkbox" id="about-leagues"' + (a.leagues ? " checked" : "") + " /> <span><b>Show me in public leagues.</b> Your username and how many of the 7 Acts you've done, to people ranked near you. Untick to hide; you'll still see your own place.</span></label>" : "") +
       '<label class="check-label research-consent"><input type="checkbox" id="about-research"' + (a.research_opt_in ? " checked" : "") + " /> <span><b>Share my answers for research.</b> Your survey answers and footprint, without your name, email or username, may be shared with research and health partners studying how people can cut emissions. You can turn this off at any time.</span></label>" +
       '<div class="row-between gap-3" style="flex-wrap:wrap"><button type="submit" class="btn btn-green">Save</button>' +
       (ui.aboutMsg ? '<span class="xs ' + (ui.aboutMsg.ok ? "green-dark" : "red") + '" role="status">' + esc(ui.aboutMsg.text) + "</span>" : "") + "</div></form></section>"
@@ -11215,6 +11256,15 @@
     },
     "rank-open": (el, e) => {
       ui.standTab = "all";
+      ui.rankFull = false;
+    },
+    "rank-full": () => {
+      ui.rankFull = true;
+      render();
+    },
+    "rank-league": () => {
+      ui.rankFull = false;
+      render();
     },
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
@@ -11804,10 +11854,12 @@
       e.preventDefault();
       const research = document.getElementById("about-research").checked;
       const patch = { research_opt_in: research };
+      const lg = document.getElementById("about-leagues");
+      if (lg) patch.leagues_hidden = !lg.checked;
       if (research && !ui.aboutYou.research_opt_in) patch.research_opted_at = new Date().toISOString();
       const { error } = await sb.from("profiles").update(patch).eq("id", currentUser.id);
       ui.aboutMsg = error ? { ok: false, text: "Couldn't save. Please try again." } : { ok: true, text: "Saved." };
-      if (!error) ui.aboutYou = { ...ui.aboutYou, research_opt_in: research };
+      if (!error) { ui.aboutYou = { ...ui.aboutYou, research_opt_in: research, leagues: lg ? lg.checked : ui.aboutYou.leagues }; ui.league = null; }
       render();
       return;
     }
