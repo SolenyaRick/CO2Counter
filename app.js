@@ -7295,7 +7295,7 @@
   const svgPath = (d, size, extra) =>
     '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (extra || "") + '><path d="' + d + '"></path></svg>';
   const leafMark = (size) =>
-    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#EFE9DC"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#3F5B3A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#3F5B3A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#D9A441"></rect></svg>';
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 80C22 44 46 20 82 18c0 38-24 62-60 62Z" fill="#C4E57D"></path><rect x="36" y="40" width="7" height="22" rx="3.5" fill="#17241A"></rect><rect x="46" y="47" width="7" height="15" rx="3.5" fill="#17241A"></rect><rect x="56" y="54" width="7" height="8" rx="3.5" fill="#17241A"></rect></svg>';
   const TONES = { leaf: ["#3F5B3A", "#F6F1E6"], amber: ["#E8C88A", "#2E2A22"], plum: ["#6F4E63", "#F6F1E6"], sky: ["#7FA3AE", "#14262B"] };
   const domainOf = (u) => u.replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
   const fmtKg = (n) => (n < 10 && n > 0 ? (Math.round(n * 100) / 100).toString() : kgFmt(n));
