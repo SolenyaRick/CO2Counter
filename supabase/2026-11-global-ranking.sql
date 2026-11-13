@@ -86,3 +86,38 @@ end;
 $$;
 revoke all on function public.owner_level_analytics() from public, anon;
 grant execute on function public.owner_level_analytics() to authenticated;
+
+-- ---------- Leagues: the people ranked around you (November 2026) ----------
+-- Like a Duolingo league: up to 11 people around your place in the global
+-- ranking, by Acts done (whoever got there first is ahead on a tie). Only
+-- usernames and Act counts are shown. Anyone can hide from leagues on their
+-- Account page (they still count in the anonymous totals), and people who
+-- have blocked each other never see each other.
+alter table public.profiles add column if not exists leagues_hidden boolean not null default false;
+
+create or replace function public.my_acts_league()
+returns table (pos bigint, username text, acts integer, is_me boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with ranked as (
+    select p.id, p.username, coalesce(cardinality(p.acts_done), 0)::integer as n,
+      row_number() over (order by coalesce(cardinality(p.acts_done), 0) desc, p.acts_at asc nulls last, p.id) as pos
+    from public.profiles p
+    where p.acts_done is not null
+      and (not p.leagues_hidden or p.id = auth.uid())
+      and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = p.id) or (b.blocker_id = p.id and b.blocked_id = auth.uid()))
+  ), me as (
+    select pos from ranked where id = auth.uid()
+  ), win as (
+    select greatest(1, least((select pos from me) - 5, (select count(*) from ranked) - 10)) as lo
+  )
+  select r.pos, r.username, r.n, r.id = auth.uid()
+  from ranked r, win
+  where exists (select 1 from me) and r.pos >= win.lo and r.pos < win.lo + 11
+  order by r.pos;
+$$;
+revoke all on function public.my_acts_league() from public, anon;
+grant execute on function public.my_acts_league() to authenticated;
