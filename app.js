@@ -3838,7 +3838,10 @@
       if (e.target.closest("a[href]")) return closeStory(true);
       if (tapNav() && !e.target.closest("button, a, input, select, textarea, label")) {
         storyEl.classList.add("tapped");
-        tapStep(sc, storyStops(), e.clientX < innerWidth * 0.22, paint);
+        tapStep(sc, storyStops(), e.clientX < innerWidth * 0.22, paint, (a, b) => {
+          const vh = sc.clientHeight;
+          return [track, warmTrack].some((t) => t && Math.min(a, b) >= t.offsetTop - 2 && Math.max(a, b) <= t.offsetTop + t.offsetHeight - vh + 2);
+        });
       }
     });
     // Where a tap stops: the opening, each step of your year, the warming
@@ -3936,9 +3939,15 @@
   // itself every frame (onFrame), so the animation plays even where a
   // browser holds back or merges scroll events (iPhone's web view does).
   const glidePos = (sc) => (tapGlide.raf && tapGlide.sc === sc ? tapGlide.cur : sc ? sc.scrollTop : window.scrollY);
-  function glideTo(sc, top, onFrame) {
+  // pinned(a, b): true when both positions are inside a pinned (sticky)
+  // stage, where nothing on screen needs to scroll. Then the glide plays
+  // the animation directly and moves the scroll position once, at the end:
+  // scrolling 60 times a second is what makes an iPhone stutter.
+  function glideTo(sc, top, onFrame, pinned) {
     const get = () => (sc ? sc.scrollTop : window.scrollY);
-    const set = (v) => { tapGlide.cur = v; if (sc) sc.scrollTop = v; else window.scrollTo(0, v); if (onFrame) onFrame(); };
+    const write = (v) => { if (sc) sc.scrollTop = v; else window.scrollTo(0, v); };
+    let virtual = false;
+    const set = (v, last) => { tapGlide.cur = v; if (!virtual || last) write(v); if (onFrame) onFrame(); };
     cancelAnimationFrame(tapGlide.raf);
     tapGlide.raf = 0;
     tapGlide.sc = sc;
@@ -3954,17 +3963,18 @@
       const k = Math.min(1, (t - t0) / dur);
       // A gentle ease in and out, near-steady in the middle.
       tapGlide.raf = k < 1 ? requestAnimationFrame(step) : 0;
-      set(from + dist * (0.5 - Math.cos(Math.PI * k) / 2));
+      set(from + dist * (0.5 - Math.cos(Math.PI * k) / 2), k >= 1);
     };
+    virtual = !!(pinned && onFrame && pinned(from, top));
     tapGlide.cur = from;
     tapGlide.raf = requestAnimationFrame(step);
   }
   // Moves to the next (or previous) stop; false when there isn't one.
-  function tapStep(sc, stops, back, onFrame) {
+  function tapStep(sc, stops, back, onFrame, pinned) {
     const cur = tapGlide.raf ? tapGlide.target : sc ? sc.scrollTop : window.scrollY;
     const to = back ? stops.filter((s) => s < cur - 4).pop() : stops.find((s) => s > cur + 4);
     if (to == null) return false;
-    glideTo(sc, to, onFrame);
+    glideTo(sc, to, onFrame, pinned);
     return true;
   }
   // The welcome page's story: a tap on the opening or the pinned stage moves
@@ -3979,7 +3989,7 @@
     const stops = [wlTop < 120 ? 0 : wlTop];
     for (let i = 0; i < n; i++) stops.push(top + ((i + 0.5) / n) * tl);
     stops.push(top + track.offsetHeight - 64);
-    tapStep(null, stops.map(Math.round), e.clientX < innerWidth * 0.22, () => fsScroll());
+    tapStep(null, stops.map(Math.round), e.clientX < innerWidth * 0.22, () => fsScroll(), (a, b2) => Math.min(a, b2) >= top - 2 && Math.max(a, b2) <= top + tl + 2);
   });
   // Stops the glide when someone takes over by dragging.
   document.addEventListener("touchstart", () => { if (tapGlide.raf) { cancelAnimationFrame(tapGlide.raf); tapGlide.raf = 0; } }, { passive: true });
