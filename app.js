@@ -4262,14 +4262,18 @@
       '<div class="res-total"><span class="display tnum" data-countup="' + Math.round(now) + '">' + kgFmt(animate ? 0 : now) + '</span><span class="muted">kg CO₂e</span></div>' +
       '<div class="res-tags"><span class="res-tag ' + (cmp.pct < 5 ? "" : cmp.above ? "up" : "down") + '">' + ukTag + "</span>" +
       '<a class="res-tag ' + (budgetRatio <= 1 ? "down" : "up") + '" href="#/budget">' + budgetTag + "</a></div></div>" +
+      // "With realistic changes" is every realistic change, your bank
+      // included, taken off the same headline number, so it agrees with the
+      // next-act button below it and with Picture it.
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
-      (lifeSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(lifeSaving) + " kg · " + lifePct(lifeSaving) + "% less</span>" : "") +
-      // The budget comparison leaves out bank and pension and adds typical
-      // shopping, so its starting point differs from the headline: show it,
-      // or "after" can read as higher than the number above it.
-      '</div><div class="res-after">' + (Math.abs(lifeNow - now) >= 1 && lifeSaving > 0.5 ? '<span class="res-from tnum" title="Your survey without bank and pension, plus typical shopping">' + kgFmt(lifeNow) + '</span><span class="res-arrow" aria-hidden="true">→</span><span class="sr-only"> down to </span>' : "") +
-      '<span class="display tnum">' + kgFmt(after) + '</span><span class="muted">kg a year</span></div>' +
-      (Math.abs(lifeNow - now) >= 1 && lifeSaving > 0.5 ? '<p class="res-basis">Compared like for like with the 1.5°C budget: without your bank and pension, with typical shopping.</p>' : "") +
+      (totalSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(totalSaving) + " kg · " + pct(totalSaving) + "% less</span>" : "") +
+      '</div><div class="res-after"><span class="display tnum">' + kgFmt(Math.max(0, now - totalSaving)) + '</span><span class="muted">kg a year</span></div>' +
+      // The budget is compared like for like (see budgetBasis): without bank
+      // and pension, with typical shopping. It gets its own heading and its
+      // own numbers so the two comparisons aren't mixed up.
+      '<div class="res-budget-head"><span class="fw-600">Against the 1.5°C budget</span>' +
+      '<span class="res-budget-nums tnum">' + kgFmt(lifeNow) + (lifeSaving > 0.5 ? ' <span aria-hidden="true">→</span><span class="sr-only"> down to </span> ' + kgFmt(after) : "") + " kg</span></div>" +
+      '<p class="res-basis">Your lifestyle footprint: without your bank and pension, with typical shopping, like the budget.</p>' +
       // Both markers are labelled above the bar; when they're close, the UK one sits a line higher.
       '<div class="path' + (animate ? " animate" : "") + (Math.abs(W(ukTotal) - W(budget)) < 34 ? " two-rows" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
