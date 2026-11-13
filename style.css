@@ -7294,8 +7294,14 @@ a.link-btn:hover, .link-btn:hover { color: var(--primary-hover); text-decoration
   --shadow-lift: 0 24px 48px -20px rgba(46, 42, 34, 0.36);
 }
 /* The sage and honey light drifts as you read down the page. */
-body.fs-on::before { transform: translate3d(calc(var(--rp, 0) * 8vw), calc(var(--rp, 0) * 30vh), 0) scale(calc(1 + var(--rp, 0) * 0.25)); }
-body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(--rp, 0) * -40vh), 0); }
+/* Driven by the page's own scroll on the compositor (no JavaScript, no
+   restyling); browsers without scroll timelines keep the light still. */
+@supports (animation-timeline: scroll()) {
+  @keyframes amb-a { to { transform: translate3d(8vw, 30vh, 0) scale(1.25); } }
+  @keyframes amb-b { to { transform: translate3d(-10vw, -40vh, 0); } }
+  body.fs-on::before { animation: amb-a linear both; animation-timeline: scroll(root); }
+  body.fs-on::after { animation: amb-b linear both; animation-timeline: scroll(root); }
+}
 
 /* Reading line under the top bar, with a leaf riding its tip. */
 .read-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; pointer-events: none; opacity: 0; transition: opacity var(--dur-base) var(--ease-out); }
@@ -7834,10 +7840,10 @@ body.fs-on::after { transform: translate3d(calc(var(--rp, 0) * -10vw), calc(var(
 /* A slow turn of the dashed ring keeps the stage alive between steps. */
 .wl .story-ghost { rotate: calc(var(--tp, 0) * 140deg); }
 /* The soft light behind the page moves in coarse steps and eases between them. */
-body.fs-on::before, body.fs-on::after { will-change: transform; transition: transform 700ms var(--ease-out); }
+body.fs-on::before, body.fs-on::after { will-change: transform; }
 @media (prefers-reduced-motion: reduce) {
   .wl .story-ghost { rotate: none; }
-  body.fs-on::before, body.fs-on::after { transition: none; }
+  body.fs-on::before, body.fs-on::after { animation: none; }
 }
 /* Once the disc is inside the budget it turns sprout, so the budget ring and
    its label switch to canopy to stay visible on it. */
@@ -7907,3 +7913,9 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 @media (prefers-reduced-motion: reduce) {
   body:not(.calm) .cat-v2 .cat-share circle + circle, .tabbar a.active svg { animation: none; }
 }
+
+/* The reading line's leaf stays inside the screen at both ends (at the end
+   of a page it sat 6px past the edge, letting the page wobble sideways). */
+.read-line b { left: calc(10px + var(--rp, 0) * (100% - 20px)); }
+/* The guide pop-up's backdrop never scrolls sideways (sub-pixel rounding). */
+.sheet-backdrop { overflow-x: hidden; }

@@ -1271,8 +1271,10 @@
     const mine = sumKeys(fp);
     const uk = sumKeys(footprint(D.UK_TYPICAL_SURVEY));
     const diff = mine - uk;
-    return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)) };
+    return { mine, uk, above: diff > 0, pct: Math.abs(Math.round((diff / uk) * 100)), times: mine / uk };
   }
+  // "21% above", or past double "3.4× the" (a percentage like 4666% is hard to read).
+  const ukWords = (cmp) => (cmp.above && cmp.times >= 2 ? cmp.times.toFixed(1).replace(/\.0$/, "") + "× the" : cmp.pct + "% " + (cmp.above ? "above" : "below") + " the");
 
   // ---------- Picture it: your footprint as lettuces, axolotls, Danny DeVitos ----------
   // Now and after the big switches in Real Zero's 7 Acts. Weights become a
@@ -1662,8 +1664,8 @@
     if (cmp.pct < 5) return '<span class="stat-pill">About the same as the UK average</span>';
     return (
       '<span class="stat-pill">' +
-      (cmp.above ? '<span class="red">' + cmp.pct + "% above</span>" : '<span class="green">' + cmp.pct + "% below</span>") +
-      " the UK average</span>"
+      (cmp.above ? '<span class="red">' + ukWords(cmp).replace(/ the$/, "") + "</span>" + (cmp.times >= 2 ? " the" : "") : '<span class="green">' + cmp.pct + "% below</span>") +
+      (cmp.above && cmp.times >= 2 ? "" : " the") + " UK average</span>"
     );
   }
 
@@ -3215,13 +3217,13 @@
       const seen = countedUp.has(key);
       countedUp.add(key);
       if (seen || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
-        el.textContent = to.toLocaleString();
+        el.textContent = kgFmt(to);
         return;
       }
       const t0 = performance.now();
       const tick = (t) => {
         const k = Math.min(1, (t - t0) / 1400);
-        el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString();
+        el.textContent = kgFmt(to * (1 - Math.pow(1 - k, 3)));
         if (k < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -3746,6 +3748,7 @@
     const kgEl = storyEl.querySelector(".story-kg");
     const savedEl = storyEl.querySelector(".story-saved b");
     const warmTrack = storyEl.querySelector(".warm-track");
+    const ticksEl = storyEl.querySelector(".story-ticks"), lineEl = storyEl.querySelector(".story-line"), orbEl = storyEl.querySelector(".story-orb");
     // "How fast" (the pace of warming) opens first; "How warm" is a tap away.
     let warmMode = "both", warmView = "rate";
     const items = [...storyEl.querySelectorAll(".story-steps li")];
@@ -3763,11 +3766,13 @@
       const i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
       const kg = fsReduce() ? d.steps[Math.round(f)].kg : d.steps[i0].kg + (d.steps[i1].kg - d.steps[i0].kg) * ease(f - i0);
       const active = Math.min(n - 1, Math.floor(tp * n));
-      storyEl.style.setProperty("--ip", ip.toFixed(4));
-      storyEl.style.setProperty("--tp", tp.toFixed(4));
-      storyEl.style.setProperty("--sp", (sc.scrollTop / max).toFixed(4));
-      storyEl.style.setProperty("--s", Math.sqrt(kg / d.total).toFixed(4));
-      storyEl.style.setProperty("--q", (1 - kg / d.total).toFixed(4));
+      // Each value only on the element that uses it, and only when it
+      // changes: set on the whole overlay, every frame restyled all of it.
+      setVar(storyEl, "--ip", ip.toFixed(3));
+      setVar(ticksEl, "--tp", tp.toFixed(4));
+      setVar(lineEl, "--sp", (sc.scrollTop / max).toFixed(4));
+      setVar(orbEl, "--s", Math.sqrt(kg / d.total).toFixed(4));
+      setVar(orbEl, "--q", (1 - kg / d.total).toFixed(3));
       storyEl.classList.toggle("under", kg <= d.budget);
       if (warmTrack) paintWarm(warmTrack, d.warm, Math.min(1, Math.max(0, (sc.scrollTop - warmTrack.offsetTop) / Math.max(1, warmTrack.offsetHeight - vh))), warmMode, warmView);
       kgEl.textContent = kgFmt(kg);
@@ -4021,13 +4026,15 @@
     }
     if (fsReduce()) hp = hp > 0.5 ? 1 : 0;
     if (fsCfg && fsCfg.onScroll) fsCfg.onScroll();
-    // --rp drives the reading line (set on it directly) and the soft light
-    // behind the page, which only needs coarse steps (it's blurred and eases
-    // between them). --hp only changes while the hero leaves.
+    // Each value goes only where it's used: a variable set on <body> makes
+    // the browser restyle the whole page every frame. --rp drives the
+    // reading line; --hp the hero as it leaves and the top-bar pill. (The
+    // soft light behind the page drifts with a CSS scroll timeline.)
     const line = bar && bar.querySelector(".read-line");
     if (line) setVar(line, "--rp", rp.toFixed(4));
-    setVar(document.body, "--rp", rp.toFixed(2));
-    setVar(document.body, "--hp", hp.toFixed(3));
+    const h3 = hp.toFixed(3);
+    setVar(fsHero, "--hp", h3);
+    if (bar) setVar(bar, "--hp", h3);
   }
   window.addEventListener("scroll", () => {
     if (fsTick) return;
@@ -4181,7 +4188,7 @@
         const ms = t - t0 - 200;
         fill((r) => ease((ms - bands.indexOf(r) * gap) / each));
         const all = ease(ms / (gap * (bands.length - 1) + each));
-        nums.forEach((m) => (m.textContent = Math.round(Number(m.dataset.mvTo) * all).toLocaleString()));
+        nums.forEach((m) => (m.textContent = kgFmt(Number(m.dataset.mvTo) * all)));
         if (ms < gap * bands.length + each) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -4226,7 +4233,7 @@
     const animate = !ui.resultsSeen;
     ui.resultsSeen = true;
 
-    const ukTag = cmp.pct < 5 ? "About the UK average" : cmp.pct + "% " + (cmp.above ? "above" : "below") + " the UK average";
+    const ukTag = cmp.pct < 5 ? "About the UK average" : ukWords(cmp) + " UK average";
     const budgetRatio = lifeNow / budget;
     const budgetTag = budgetRatio <= 1 ? "Inside the 1.5°C budget" : budgetRatio < 1.5 ? Math.round((budgetRatio - 1) * 100) + "% over the 1.5°C budget" : budgetRatio.toFixed(1).replace(/\.0$/, "") + "× the 1.5°C budget";
 
@@ -4708,7 +4715,10 @@
 
   const bankRating = (bank) => D.BANK_RATING_BANDS.find((b) => bank.factor <= b.max);
   const rateChip = (key, label) => '<span class="rate rate-' + key + '">' + esc(label) + "</span>";
-  const kgFmt = (n) => Math.round(n).toLocaleString();
+  // One formatter, made once: toLocaleString() builds a new one every call,
+  // and this runs hundreds of times a render (and every frame of a count-up).
+  const KG_NF = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const kgFmt = (n) => KG_NF.format(Math.round(n));
 
   function pensionRating(score) {
     if (score >= 7.5) return { key: "vgood", label: "Good" };
