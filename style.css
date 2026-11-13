@@ -7919,3 +7919,90 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .read-line b { left: calc(10px + var(--rp, 0) * (100% - 20px)); }
 /* The guide pop-up's backdrop never scrolls sideways (sub-pixel rounding). */
 .sheet-backdrop { overflow-x: hidden; }
+
+/* ===== Friends: "Your league" before any friends join ===== */
+.lg-lede { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink-2, #4A453A); }
+.lg-list li { opacity: 0; translate: 0 12px; animation: lg-in var(--dur-slow, 640ms) var(--ease-out, ease-out) forwards; animation-delay: calc(var(--k, 0) * 90ms + 120ms); }
+@keyframes lg-in { to { opacity: 1; translate: none; } }
+.lg-list .fr-sbar span { transform-origin: 0 50%; animation: lg-bar var(--dur-story, 900ms) var(--ease-out, ease-out) both; animation-delay: calc(var(--k, 0) * 90ms + 380ms); }
+@keyframes lg-bar { from { transform: scaleX(0); } }
+.lg-flag { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; background: rgba(217, 164, 65, 0.18); color: #9A6E1E; }
+.lg-flag .icon { width: 17px; height: 17px; }
+.lg-tag { margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: rgba(217, 164, 65, 0.2); color: #7A5616; font: 700 11px/16px var(--font); vertical-align: 1px; }
+.lg-bench .fr-sbar span { background: #D9A441; }
+/* Empty seats: a dashed place that's clearly waiting for someone. */
+.lg-seat { grid-template-columns: 22px minmax(0, 1fr) !important; }
+.lg-seat-btn { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 34px minmax(0, 1fr) 70px; gap: 10px; align-items: center; min-height: 44px; border-radius: 12px; transition: background-color var(--dur-quick, 200ms) ease, transform var(--dur-quick, 200ms) var(--ease-spring, ease); }
+.lg-seat-btn:hover { background: rgba(63, 91, 58, 0.06); }
+.lg-seat-btn:active { transform: scale(0.98); }
+.lg-seat-btn:focus-visible { outline: 3px solid var(--focus, #3F5B3A); outline-offset: 2px; }
+.lg-plus { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; border: 2px dashed rgba(63, 91, 58, 0.45); color: #3F5B3A; }
+.lg-plus .icon { width: 16px; height: 16px; }
+.lg-seat .fr-sname { color: #6B6455; }
+.lg-sub { display: block; font-size: 12px; font-weight: 700; color: #3F5B3A; }
+.lg-dash { height: 5px; border-radius: 999px; background: repeating-linear-gradient(90deg, rgba(46, 42, 34, 0.18) 0 6px, transparent 6px 11px); }
+/* The first empty seat gives one small nudge as it arrives. */
+.lg-first .lg-plus { animation: lg-nudge 0.7s var(--ease-spring, ease) 1.3s both; }
+@keyframes lg-nudge { 0% { scale: 1; } 40% { scale: 1.18; border-color: #3F5B3A; } 100% { scale: 1; } }
+@media (prefers-color-scheme: dark) {
+  .lg-lede, .lg-seat .fr-sname { color: #cbc7be; }
+  .lg-sub, .lg-plus { color: #bfd4bb; border-color: rgba(191, 212, 187, 0.5); }
+  .lg-dash { background: repeating-linear-gradient(90deg, rgba(236, 235, 233, 0.22) 0 6px, transparent 6px 11px); }
+  .lg-tag { color: #E8C88A; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-list li, .lg-list .fr-sbar span, .lg-plus { animation: none !important; opacity: 1; translate: none; }
+}
+
+/* ===== How we calculate: "One answer, worked out" ===== */
+.calc { position: relative; overflow: hidden; margin: 0 0 32px; padding: 26px 24px 24px; border-radius: 28px; background: var(--canopy, #17241a); color: var(--on-canopy, #f1ede4); box-shadow: 0 24px 48px -28px rgba(23, 36, 26, 0.6); }
+.calc::before { content: ""; position: absolute; right: -120px; top: -140px; width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(closest-side, rgba(196, 229, 125, 0.18), transparent); pointer-events: none; }
+.calc-k { font: 700 12px/16px var(--font); letter-spacing: 0.12em; text-transform: uppercase; color: var(--sprout, #c4e57d); }
+.calc h2 { margin: 8px 0 0; font-size: clamp(28px, 4vw, 38px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 800; color: var(--on-canopy, #f1ede4); }
+.calc-lede { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: var(--on-canopy-muted, #b7c2ae); }
+.calc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.calc-chips button { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1.5px solid rgba(241, 237, 228, 0.28); background: rgba(241, 237, 228, 0.05); color: var(--on-canopy, #f1ede4); font: 700 14px var(--font); cursor: pointer; transition: background-color var(--dur-quick, 200ms) ease, border-color var(--dur-quick, 200ms) ease, transform var(--dur-quick, 200ms) var(--ease-spring, ease); }
+.calc-chips button:hover { border-color: rgba(241, 237, 228, 0.6); transform: translateY(-2px); }
+.calc-chips button:active { transform: scale(0.97); }
+.calc-chips button[aria-checked="true"] { background: var(--sprout, #c4e57d); border-color: var(--sprout, #c4e57d); color: var(--canopy, #17241a); }
+.calc-chips button:focus-visible { outline: 3px solid var(--sprout, #c4e57d); outline-offset: 2px; }
+/* The sum: amount × factor = kg */
+.calc-eq { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 8px; margin-top: 20px; }
+.calc-tile { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 14px 12px; border-radius: 18px; background: rgba(241, 237, 228, 0.07); border: 1px solid rgba(241, 237, 228, 0.12); }
+.calc-tile b { font-size: clamp(22px, 3.2vw, 32px); line-height: 1; letter-spacing: -0.03em; font-weight: 800; overflow-wrap: anywhere; }
+.calc-tile small { font: 600 12px/1.35 var(--font); color: var(--on-canopy-muted, #b7c2ae); }
+.calc-res { background: var(--sprout, #c4e57d); border-color: var(--sprout, #c4e57d); color: var(--canopy, #17241a); }
+.calc-res small { color: rgba(23, 36, 26, 0.72); }
+.calc-op { align-self: center; font: 800 26px/1 var(--display); color: var(--sprout, #c4e57d); }
+.calc-year { margin: 18px 0 0; font-size: 15px; line-height: 1.5; color: var(--on-canopy-muted, #b7c2ae); }
+.calc-year b { color: var(--on-canopy, #f1ede4); font-family: var(--display); font-weight: 800; }
+.calc-bars { margin-top: 12px; display: grid; gap: 8px; }
+.calc-bar { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 10px; align-items: center; font: 600 13px var(--font); }
+.calc-bar i { height: 12px; border-radius: 999px; background: rgba(241, 237, 228, 0.08); overflow: hidden; }
+.calc-bar s { display: block; height: 100%; width: var(--w); min-width: 6px; border-radius: 999px; background: var(--clay, #B8653D); transform-origin: 0 50%; }
+.calc-bar.swap s { background: var(--sprout, #c4e57d); }
+.calc-bar b { font: 800 14px/1 var(--display); min-width: 62px; text-align: right; }
+.calc-save { margin: 4px 0 0; font-size: 13px; color: var(--on-canopy-muted, #b7c2ae); }
+.calc-save b { color: var(--sprout, #c4e57d); }
+@media (max-width: 520px) {
+  .calc { padding: 22px 16px 18px; border-radius: 24px; margin-bottom: 24px; }
+  .calc-eq { gap: 5px; }
+  .calc-tile { padding: 12px 8px; border-radius: 14px; }
+  .calc-tile small { font-size: 11px; }
+  .calc-op { font-size: 20px; }
+  .calc-bar { grid-template-columns: 92px minmax(0, 1fr) auto; }
+}
+/* Playing the sum: pieces arrive in turn, then the bars grow. */
+.calc-body.go .calc-tile, .calc-body.go .calc-op { animation: calc-in var(--dur-slow, 640ms) var(--ease-out, ease-out) both; }
+.calc-body.go .calc-op:nth-child(2) { animation-delay: 90ms; }
+.calc-body.go .calc-f { animation-delay: 160ms; }
+.calc-body.go .calc-op:nth-child(5), .calc-body.go .calc-op:nth-of-type(2) { animation-delay: 260ms; }
+.calc-body.go .calc-res { animation: calc-pop 0.7s var(--ease-spring, ease) 330ms both; }
+.calc-body.go .calc-year { animation: calc-in var(--dur-slow, 640ms) var(--ease-out, ease-out) 700ms both; }
+.calc-body.go .calc-bar s { animation: calc-bar var(--dur-story, 900ms) var(--ease-out, ease-out) 850ms both; }
+.calc-body.go .calc-bar.swap s { animation-delay: 1000ms; }
+.calc-body.go .calc-save { animation: calc-in var(--dur-base, 320ms) var(--ease-out, ease-out) 1500ms both; }
+@keyframes calc-in { from { opacity: 0; translate: 0 14px; } }
+@keyframes calc-pop { 0% { opacity: 0; scale: 0.7; } 70% { opacity: 1; scale: 1.06; } 100% { scale: 1; } }
+@keyframes calc-bar { from { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .calc-body.go * { animation: none !important; } }

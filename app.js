@@ -173,6 +173,7 @@
     chevronLeft: '<path d="m15 18-6-6 6-6"/>',
     chevronDown: '<path d="m6 9 6 6 6-6"/>',
     trendDown: '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
+    flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
     target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
     calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
     refresh: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
@@ -3886,7 +3887,7 @@
     { name: "category", prefix: "/explainer/", page: ".cat-v2", hero: ".cat-hero", items: ".cat-sub, .todo-list > li, .cat-col > :not(.cat-sub):not(ol), .cat-aside > *, .cat-steps" },
     { name: "account", paths: ["/account"], page: ".acc-page", hero: ".acc-h1", items: null },
     // The long reading pages: each card rises in as it's reached.
-    { name: "docs", paths: ["/how-we-calculate", "/budget"], page: ".container.narrow", hero: ".page-head", items: ".stack-6 > *, .budget-you, .container.narrow > .center" },
+    { name: "docs", paths: ["/how-we-calculate", "/budget"], page: ".container.narrow", hero: ".page-head", items: ".calc, .stack-6 > *, .budget-you, .container.narrow > .center" },
     // Greener switches: sections rise in, and each Act plays its comparison
     // (bars fill, the percentage counts up) the first time it's seen.
     { name: "switches", paths: ["/switches"], page: ".sw-page", hero: ".sw-hero", items: ".sw-sec-head, .sw-plot, .sw-legend > li, .sw-feat, .sw-band", onIn: (el) => swPlay(el) },
@@ -6655,6 +6656,80 @@
 
   // Public, free page explaining sources and approach. It deliberately
   // describes the method in words without exact factors or formulas.
+  // "One answer, worked out": an everyday thing, the official factor, and the
+  // kilograms, with its greener swap. Every number comes from the same data
+  // the calculator uses, so it can't drift from the real results.
+  function calcExamples() {
+    const meal = (k) => factorOf(D.MEAL_OPTIONS, k);
+    const mode = (k) => factorOf(D.COMMUTE_MODES, k);
+    const bank = (k) => factorOf(D.BANKS, k);
+    const W = D.WEEKS_PER_YEAR;
+    const elecMonth = Math.round(D.UK_TYPICAL_SURVEY.energy.electricityKwh);
+    return [
+      { key: "beef", chip: "Beef day", amt: 1, amtTxt: "1 day", what: "with beef as the main meal", f: meal("beef"), fDec: 2, fUnit: "kg CO₂e per day", src: "Poore & Nemecek 2018", n: W, nTxt: "Once a week for a year", me: "Beef day", swap: "Vegan day", sf: meal("vegan") },
+      { key: "drive", chip: "10 km drive", amt: 10, amtTxt: "10 km", what: "in an average petrol car", f: mode("car_petrol"), fDec: 3, fUnit: "kg CO₂e per km", src: "DESNZ 2026", n: 2 * 5 * W, nTxt: "There and back, five days a week, for a year", me: "Petrol car", swap: "Train", sf: mode("train") },
+      { key: "elec", chip: "Month of electricity", amt: elecMonth, amtTxt: elecMonth + " kWh", what: "a typical UK home's month", f: D.ELECTRICITY_FACTOR, fDec: 3, fUnit: "kg CO₂e per kWh", src: "DESNZ 2026", n: 12, nTxt: "Every month for a year", me: "Standard tariff", swap: "Renewable tariff", sf: D.GREEN_ELECTRICITY_FACTOR },
+      { key: "bank", chip: "£5,000 in a bank", amt: 5000, amtTxt: "£5,000", what: "kept in Barclays for a year", f: bank("barclays"), fDec: 3, fUnit: "kg CO₂e financed per £", src: "MotherTree", n: 1, nTxt: "Kept there for a year", me: "Barclays", swap: "Triodos", sf: bank("triodos") },
+    ];
+  }
+  const calcNum = (v, dec) => v.toLocaleString("en-GB", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const calcDec = (v) => (v >= 100 ? 0 : 1);
+  function calcInner(x) {
+    const one = x.amt * x.f, yr = one * x.n, swapYr = x.amt * x.sf * x.n;
+    const trees = Math.round(yr / ((D.EVERYDAY_COMPARISONS && D.EVERYDAY_COMPARISONS.treeKgYear) || 22));
+    const max = Math.max(yr, swapYr, 1);
+    return (
+      '<div class="calc-eq">' +
+      '<div class="calc-tile calc-amt"><b class="display tnum">' + esc(x.amtTxt) + "</b><small>" + esc(x.what) + "</small></div>" +
+      '<span class="calc-op" aria-hidden="true">×</span><span class="sr-only"> times </span>' +
+      '<div class="calc-tile calc-f"><b class="display tnum">' + calcNum(x.f, x.fDec) + "</b><small>" + esc(x.fUnit) + " · " + esc(x.src) + "</small></div>" +
+      '<span class="calc-op" aria-hidden="true">=</span><span class="sr-only"> equals </span>' +
+      '<div class="calc-tile calc-res"><b class="display tnum" data-calc-to="' + one.toFixed(4) + '" data-dec="' + calcDec(one) + '">' + calcNum(one, calcDec(one)) + "</b><small>kg CO₂e</small></div></div>" +
+      '<p class="calc-year">' + esc(x.nTxt) + ": <b class=\"tnum\">" + kgFmt(yr) + " kg</b>." + (trees >= 1 ? " That's what about " + kgFmt(trees) + (trees === 1 ? " mature tree absorbs" : " mature trees absorb") + " in a year." : "") + "</p>" +
+      '<div class="calc-bars">' +
+      '<div class="calc-bar"><span>' + esc(x.me) + '</span><i><s style="--w:' + ((yr / max) * 100).toFixed(1) + '%"></s></i><b class="tnum">' + kgFmt(yr) + " kg</b></div>" +
+      '<div class="calc-bar swap"><span>' + esc(x.swap) + '</span><i><s style="--w:' + ((swapYr / max) * 100).toFixed(1) + '%"></s></i><b class="tnum">' + kgFmt(swapYr) + " kg</b></div>" +
+      '<p class="calc-save">Switching saves <b class="tnum">' + kgFmt(yr - swapYr) + " kg a year</b>, " + Math.round((1 - swapYr / yr) * 100) + "% less.</p></div>"
+    );
+  }
+  function calcHtml() {
+    const ex = calcExamples();
+    const cur = byKey(ex, ui.calcEx) || ex[0];
+    return (
+      '<section class="calc" aria-labelledby="calc-h"><span class="calc-k">Try it</span><h2 id="calc-h" class="display">One answer, worked out</h2>' +
+      '<p class="calc-lede">Every figure is an amount times an official emission factor. Pick one to see it.</p>' +
+      '<div class="calc-chips" role="radiogroup" aria-label="Pick an example">' +
+      ex.map((x) => '<button type="button" role="radio" aria-checked="' + (x === cur) + '" data-action="calc-ex" data-key="' + x.key + '">' + esc(x.chip) + "</button>").join("") + "</div>" +
+      '<div class="calc-body" aria-live="polite">' + calcInner(cur) + "</div></section>"
+    );
+  }
+  // Plays the sum: the pieces arrive in turn, the answer counts up, the bars
+  // grow. Once when the card is first seen, and again for each example picked.
+  function calcPlay() {
+    const body = app.querySelector(".calc-body");
+    if (!body || reducedMotion()) return;
+    body.classList.remove("go");
+    void body.offsetWidth;
+    body.classList.add("go");
+    const res = body.querySelector("[data-calc-to]");
+    const to = Number(res.dataset.calcTo), dec = Number(res.dataset.dec), t0 = performance.now() + 420, dur = 900;
+    const step = (t) => {
+      if (!res.isConnected) return;
+      const k = Math.min(1, Math.max(0, (t - t0) / dur));
+      res.textContent = calcNum(to * (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k)), dec);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    res.textContent = calcNum(0, dec);
+    requestAnimationFrame(step);
+  }
+  function calcAfterRender() {
+    const card = app.querySelector(".calc");
+    if (!card || card._seen) return;
+    card._seen = true;
+    if (!("IntersectionObserver" in window) || reducedMotion()) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); calcPlay(); } }, { threshold: 0.45 });
+    io.observe(card);
+  }
   function renderMethod() {
     const section = (title, body) =>
       '<div class="section-card static fade-up"><h2 class="fw-600 mb-2">' + esc(title) + '</h2><div class="sm muted lh method">' + body + "</div></div>";
@@ -6663,6 +6738,7 @@
       '<div class="container narrow">' + pageHeader("How we calculate", "Where the numbers come from", "info") +
       '<p class="muted lh mb-8">CO2 Counter estimates your yearly carbon footprint from a short survey about how you live. ' +
       "Every figure is an estimate built from published data. It's designed to show where your biggest opportunities are, not to audit your exact emissions.</p>" +
+      calcHtml() +
       '<div class="stack-6 mb-10">' +
       section(
         "What we measure",
@@ -8553,6 +8629,34 @@
       ? '<div class="fr-stack open">' + st.items.map((p, j) => postHtml(p, i + j)).join("") + btn("Show less") + "</div>"
       : '<div class="fr-stack closed"><div class="fr-pile" data-n="' + Math.min(n, 2) + '">' + postHtml(top, i) + "</div>" + btn("+" + esc(label)) + "</div>";
   }
+  // Before any friends join: a real league with you in it, ranked against a
+  // typical UK resident (same basis as everyone's yearly total), and empty
+  // seats that invite friends in. Lowest wins.
+  function leagueHtml(myName) {
+    const me = survey && survey.completedAt ? footprint(survey).totalYearly : null;
+    const uk = footprint(D.UK_TYPICAL_SURVEY).totalYearly;
+    const people = [{ me: true, name: (myName || "You") + " (you)", kg: me }, { uk: true, name: "Typical UK resident", kg: uk }]
+      .filter((x) => x.kg != null)
+      .sort((a, b) => a.kg - b.kg);
+    const max = Math.max(1, ...people.map((x) => x.kg));
+    const row = (x, i) =>
+      '<li class="' + (x.me ? "me" : "lg-bench") + '" style="--k:' + i + '"><span class="fr-n' + (i === 0 ? " gold" : "") + '">' + (i + 1) + "</span>" +
+      (x.me ? frAv(currentUser.id, myName, 34, true) : '<span class="lg-flag" aria-hidden="true">' + icon("flag") + "</span>") +
+      '<span class="min0"><span class="fr-sname">' + esc(x.name) + (x.uk ? '<span class="sr-only"> (benchmark)</span>' : "") + "</span>" +
+      '<span class="fr-sbar"><span style="width:' + ((x.kg / max) * 100).toFixed(1) + '%"></span></span></span>' +
+      '<b class="display tnum fr-sval">' + tonnes(x.kg) + " t</b></li>";
+    const seat = (i, first) =>
+      '<li class="lg-seat' + (first ? " lg-first" : "") + '" style="--k:' + i + '"><span class="fr-n">' + (i + 1) + "</span>" +
+      '<button type="button" class="lg-seat-btn" data-action="invite-share" aria-label="Empty seat: invite a friend"><span class="lg-plus" aria-hidden="true">' + icon("plus") + "</span>" +
+      '<span class="min0"><span class="fr-sname">Empty seat</span><span class="lg-sub">Invite a friend</span></span><span class="lg-dash" aria-hidden="true"></span></button></li>';
+    return (
+      '<div class="league">' +
+      '<p class="lg-lede">Lowest yearly footprint wins. ' + (me == null ? "Finish the survey to take your place." : me <= uk ? "You're ahead of a typical UK resident. Bring friends in to make it a race." : "A typical UK resident is ahead for now. Bring friends in to make it a race.") + "</p>" +
+      '<ol class="fr-stand lg-list">' + people.map(row).join("") + [0, 1, 2].map((j) => seat(people.length + j, j === 0)).join("") + "</ol>" +
+      '<div class="chip-row mt-3"><button type="button" class="btn btn-green btn-sm" data-action="invite-share">' + icon("link") + " Invite friends</button>" +
+      (me == null ? '<a class="btn btn-outline btn-sm" href="#/" data-action="start-survey">Take the survey</a>' : '<button type="button" class="btn btn-outline btn-sm" data-action="fr-find">Find by username</button>') + "</div></div>"
+    );
+  }
   function standingsHtml() {
     const myName = friends.myName || (currentUser.email || "").split("@")[0];
     const tab = ui.standTab === "imp" ? "imp" : "board";
@@ -8574,7 +8678,9 @@
       (latest ? '<span class="xs muted">Updated ' + new Date(latest).toLocaleDateString(undefined, { day: "numeric", month: "long" }) + "</span>" : "") + "</div>" +
       '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
       [["board", "Lowest footprint"], ["imp", "Most improved"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
-      (rows.length
+      (tab === "board" && !rows.some((r) => !r.self)
+        ? leagueHtml(myName)
+        : rows.length
         ? '<ol class="fr-stand">' + rows.map((r, i) => '<li class="' + (r.self ? "me" : "") + '"><span class="fr-n' + (r.first && tab === "board" ? " gold" : "") + '">' + (i + 1) + "</span>" + frAv(r.id, r.self ? myName : r.name, 34, r.self) +
             '<span class="min0"><span class="fr-sname">' + esc(r.name) + '</span><span class="fr-sbar ' + r.cls + '"><span style="width:' + r.w.toFixed(1) + '%"></span></span></span><b class="display tnum fr-sval ' + r.cls + '">' + r.val + "</b></li>").join("") + "</ol>"
         : tab === "board"
@@ -9939,6 +10045,7 @@
     countUp();
     animateMoves();
     animateProgress();
+    calcAfterRender();
     freshSpin(path);
     if (ui.levelUp && (path === "/habits" || path === "/check-in") && app.querySelector(".hb-page")) {
       const l = ui.levelUp;
@@ -10580,6 +10687,15 @@
       friends.error = "";
       friends.loaded = false;
       render();
+    },
+    "calc-ex": (el) => {
+      ui.calcEx = el.dataset.key;
+      const card = app.querySelector(".calc");
+      if (!card) return;
+      card.querySelectorAll("[data-action=calc-ex]").forEach((b) => b.setAttribute("aria-checked", String(b === el)));
+      const ex = calcExamples();
+      card.querySelector(".calc-body").innerHTML = calcInner(byKey(ex, ui.calcEx) || ex[0]);
+      calcPlay();
     },
     "fr-find": () => {
       const inp = document.getElementById("friend-email");
