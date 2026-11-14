@@ -5647,6 +5647,30 @@
   // asks the server for your anonymous place among everyone. Both quietly do
   // nothing until the ranking SQL has been run in Supabase.
   const KEY_ACTS_SENT = "co2_acts_sent";
+  // What's already been celebrated: the most of this device (signed in or
+  // not) and of the account itself, which keeps it in the sign-in record so
+  // the app, the website and a reinstall all remember.
+  function celebrated() {
+    const meta = (currentUser && currentUser.user_metadata) || {};
+    const uid = currentUser ? ":" + currentUser.id : "";
+    const won = [].concat(lsGet(KEY_HB_WON, []), uid ? lsGet(KEY_HB_WON + uid, []) : [], Array.isArray(meta.hb_won) ? meta.hb_won : []);
+    return {
+      lv: Math.max(Number(lsGet(KEY_HB_LEVEL, 0)) || 0, uid ? Number(lsGet(KEY_HB_LEVEL + uid, 0)) || 0 : 0, Number(meta.hb_level) || 0),
+      won: [...new Set(won.map(Number).filter((n) => n >= 1 && n <= 7))].sort(),
+    };
+  }
+  function markCelebrated(lv, won) {
+    won = [...new Set(won.map(Number))].sort();
+    lsSet(KEY_HB_LEVEL, lv);
+    lsSet(KEY_HB_WON, won);
+    if (!currentUser) return;
+    lsSet(KEY_HB_LEVEL + ":" + currentUser.id, lv);
+    lsSet(KEY_HB_WON + ":" + currentUser.id, won);
+    const meta = currentUser.user_metadata || {};
+    if (!sb || (Number(meta.hb_level) === lv && String(meta.hb_won || []) === String(won))) return;
+    currentUser.user_metadata = { ...meta, hb_level: lv, hb_won: won };
+    sb.auth.updateUser({ data: { hb_level: lv, hb_won: won } }).catch(() => {});
+  }
   function saveMyActs(acts) {
     if (!sb || !currentUser || !survey || !survey.completedAt) return;
     const done = acts.filter((a) => a.done).map((a) => a.n).sort();
@@ -5775,23 +5799,22 @@
     const lvPct = nextLv ? Math.max(8, Math.round(((made - HB_LEVELS[lv][0]) / (nextLv[0] - HB_LEVELS[lv][0])) * 100)) : 100;
     const toNextText = nextLv ? toNext + (toNext === 1 ? " act" : " acts") + " to " + nextLv[1] : "Top level";
 
-    // Reaching a new level gets a full-screen moment, once (see openLevelUp).
-    const lvKey = KEY_HB_LEVEL + (currentUser ? ":" + currentUser.id : "");
-    if (ui.hbLvKey !== lvKey) {
-      ui.hbLvKey = lvKey;
-      const seenLv = lsGet(lvKey, 0);
-      if (lv > seenLv) { lsSet(lvKey, lv); ui.levelUp = { from: seenLv, to: lv, made }; }
+    // Reaching a new level gets a full-screen moment, and newly banked acts
+    // a party: each once ever, not once per device or per sign-in (see
+    // celebrated()).
+    const seen = celebrated();
+    const hbKey = currentUser ? currentUser.id : "guest";
+    if (ui.hbLvKey !== hbKey) {
+      ui.hbLvKey = hbKey;
+      if (lv > seen.lv) ui.levelUp = { from: seen.lv, to: lv, made };
     }
-    // Newly banked acts get a party, once (the first visit counts too).
-    const wonKey = KEY_HB_WON + (currentUser ? ":" + currentUser.id : "");
-    if (!ui.hbWin || ui.hbWin.key !== wonKey) {
-      const before = lsGet(wonKey, []);
+    if (!ui.hbWin || ui.hbWin.key !== hbKey) {
       const doneNow = acts.filter((a) => a.done).map((a) => a.n);
-      const fresh = doneNow.filter((n) => !before.includes(n));
-      lsSet(wonKey, doneNow);
-      ui.hbWin = { key: wonKey, list: fresh };
+      const fresh = doneNow.filter((n) => !seen.won.includes(n));
+      ui.hbWin = { key: hbKey, list: fresh };
       if (fresh.length) setTimeout(() => haptic("success"), 450);
     }
+    markCelebrated(Math.max(seen.lv, lv), seen.won.concat(acts.filter((a) => a.done).map((a) => a.n)));
     const fresh = (ui.hbWin.list || []).map((n) => acts.find((a) => a.n === n)).filter((a) => a && a.done);
 
     const people = () => {
@@ -11083,6 +11106,8 @@
       ui.authMode = "signin";
       // The next person to use this device shouldn't see these answers.
       lsRemove(KEY_SURVEY);
+      lsRemove(KEY_HB_LEVEL);
+      lsRemove(KEY_HB_WON);
       lsRemove(KEY_HISTORY);
       ui.history = [];
       ui.newSurvey = ui.reviewing = ui.fromReview = false;
