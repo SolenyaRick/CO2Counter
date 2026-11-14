@@ -8097,3 +8097,23 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .an-table-5 .an-tr { grid-template-columns: minmax(0, 1.3fr) repeat(4, minmax(0, 1fr)); }
 .an-sub { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--muted-fg, #6B6455); }
 @media (max-width: 640px) { .an-table-5 .an-tr { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; font-size: 14px; } }
+/* Account: Create account / Sign in switch, and what an account gives you. */
+.auth-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0 0 18px; border-radius: 14px; background: rgba(46, 42, 34, 0.07); }
+.auth-seg-b { min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-3, #5C5649); font: 700 14px/1 var(--font); cursor: pointer; transition: background var(--dur-quick, 200ms) ease, color var(--dur-quick, 200ms) ease, box-shadow var(--dur-quick, 200ms) ease; }
+.auth-seg-b.on { background: var(--surface, #FFFCF5); color: var(--ink, #2E2A22); box-shadow: 0 1px 3px rgba(46, 42, 34, 0.14); }
+.auth-seg-b:focus-visible { outline: 2px solid var(--primary, #3F5B3A); outline-offset: 2px; }
+.auth-perks { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 10px; }
+.auth-perks li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.4; color: var(--ink-3, #5C5649); }
+.auth-perks li b { color: var(--ink, #2E2A22); }
+.auth-perks svg { flex: none; width: 34px; height: 34px; padding: 8px; border-radius: 10px; background: rgba(63, 91, 58, 0.1); color: var(--primary, #3F5B3A); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .auth-seg { background: rgba(236, 235, 233, 0.08); }
+  :root:not([data-theme="light"]) .auth-seg-b { color: #cbc7be; }
+  :root:not([data-theme="light"]) .auth-seg-b.on { background: #3a352b; color: #f1ede4; box-shadow: none; }
+  :root:not([data-theme="light"]) .auth-perks li { color: #cbc7be; }
+  :root:not([data-theme="light"]) .auth-perks li b { color: #f1ede4; }
+  :root:not([data-theme="light"]) .auth-perks svg { background: rgba(196, 229, 125, 0.12); color: #c4e57d; }
+}
+/* Signed out, the account button reads "Sign in" on wide screens. */
+.nav-avatar.guest { width: auto; padding: 0 16px 0 12px; gap: 6px; display: inline-flex; align-items: center; font: 700 14px/1 var(--font); letter-spacing: 0; }
+@media (max-width: 900px) { .nav-avatar.guest { width: 44px; padding: 0; justify-content: center; } .nav-avatar.guest .nav-av-l { display: none; } }
