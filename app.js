@@ -282,6 +282,7 @@
 
   let currentUser = null;
   let authChecked = false;
+  const KEY_HAD_ACCOUNT = "co2_had_account";
 
   async function refreshUser() {
     if (!sb) {
@@ -290,6 +291,9 @@
       try {
         const { data } = await sb.auth.getSession();
         currentUser = (data && data.session && data.session.user) || null;
+        // Remember that this device has had an account, so the account page
+        // opens on Sign in for them and on Create account for newcomers.
+        if (currentUser) lsSet(KEY_HAD_ACCOUNT, 1);
       } catch (e) {
         currentUser = null;
       }
@@ -1866,7 +1870,9 @@
     if (av) {
       const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || currentUser?.email || "";
       const label = currentUser ? initials(name) : "";
-      av.innerHTML = label ? label : icon("user");
+      // Signed out, it says what it is, so newcomers can find their way in.
+      av.innerHTML = label ? label : icon("user") + (currentUser ? "" : '<span class="nav-av-l">Sign in</span>');
+      av.classList.toggle("guest", !currentUser);
       av.setAttribute("aria-label", currentUser ? "Account" : "Sign in");
     }
     moveTabInk();
@@ -2035,7 +2041,7 @@
     airport: null, // { index, field } of the open airport picker
     airportQuery: "",
     selectedCategory: null, // Results page bar/tip selection
-    authMode: "signin",
+    authMode: lsGet("co2_had_account", 0) ? "signin" : "signup",
     authEmail: "",
     authMsg: "",
     authErr: "",
@@ -4081,7 +4087,8 @@
     // soft light behind the page drifts with a CSS scroll timeline.)
     const line = bar && bar.querySelector(".read-line");
     if (line) setVar(line, "--rp", rp.toFixed(4));
-    const h3 = hp.toFixed(3);
+    // At rest the pill is fully hidden, not a faint ghost beside the logo.
+    const h3 = (hp < 0.04 ? 0 : hp).toFixed(3);
     setVar(fsHero, "--hp", h3);
     if (bar) setVar(bar, "--hp", h3);
   }
@@ -9703,7 +9710,10 @@
       );
     }
     const signup = ui.authMode === "signup";
+    const seg = (mode, label) =>
+      '<button type="button" role="tab" aria-selected="' + (ui.authMode === mode) + '" class="auth-seg-b' + (ui.authMode === mode ? " on" : "") + '" data-action="auth-mode" data-mode="' + mode + '">' + label + "</button>";
     return (
+      '<div class="auth-seg" role="tablist" aria-label="Account">' + seg("signup", "Create account") + seg("signin", "Sign in") + "</div>" +
       '<form id="auth-form" class="auth-form" novalidate>' +
       (signup ? usernameField("auth-username") : "") +
       emailField() +
@@ -9719,9 +9729,8 @@
       '<button type="submit" class="btn btn-green btn-block">' + (signup ? "Create account" : "Sign in") + "</button>" +
       '<div class="chip-row auth-links">' +
       (signup
-        ? '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signin">Have an account? Sign in</button>'
-        : '<button type="button" class="link-btn" data-action="auth-mode" data-mode="signup">Need an account? Sign up</button>' +
-          '<button type="button" class="link-btn" data-action="auth-mode" data-mode="reset">Forgot password?</button>' +
+        ? ""
+        : '<button type="button" class="link-btn" data-action="auth-mode" data-mode="reset">Forgot password?</button>' +
           '<button type="button" class="link-btn" data-action="auth-mode" data-mode="link">Email me a sign-in link</button>') +
       "</div></form>"
     );
@@ -10043,10 +10052,23 @@
     if (ui.authMode === "reset") return gateShell("Reset your password", "", authForm());
     if (ui.authMode === "link") return gateShell("Sign in by email", "", authForm());
     const signup = ui.authMode === "signup";
+    const path = currentPath();
+    // Say what an account is for, in the words of the tab they tapped.
+    const perks = signup
+      ? '<ul class="auth-perks">' +
+        [["chart", "Your results, saved", "on your phone and the website"], ["tree", "My Habits", "tick off the 7 Acts and grow your tree"], ["heart", "Friends and leagues", "compare footprints, cheer each other on"]]
+          .map(([ic, t, d]) => "<li>" + icon(ic) + "<span><b>" + t + "</b> " + d + "</span></li>").join("") + "</ul>"
+      : "";
+    if (path === "/friends")
+      return gateShell(
+        "Friends and leagues",
+        signup ? "Compare footprints with friends and see how you rank in your tree league. It's free, with no ads." : "Sign in to see your friends and your league.",
+        perks + authForm()
+      );
     return gateShell(
-      signup ? "Create your account" : "Sign in",
-      signup ? "Save your results and see your full breakdown." : "Welcome back. Sign in to see your results.",
-      authForm()
+      signup ? "Create your free account" : "Sign in",
+      signup ? "Free, with no ads. You don't need one for the survey." : "Welcome back. Sign in to see your results.",
+      perks + authForm()
     );
   }
 
@@ -10375,6 +10397,8 @@
     // the usual /#/… address rather than /about/#/….
     if (location.pathname !== "/" && location.hash && !/^\/(?:index\.html)?$/.test(location.pathname)) history.replaceState(null, "", "/" + location.hash);
     closeModal();
+    // A level-up moment belongs to My Habits: leaving the page closes it.
+    document.querySelectorAll(".lvup:not(.out) [data-lv-close]").forEach((b) => b.click());
     ui.shownStep = null;
     ui.flash = "";
     ui.inputMsg = null;
