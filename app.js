@@ -5741,6 +5741,26 @@
       '<p class="lgh-sub">' + (next ? toGo + (toGo === 1 ? " more Act" : " more Acts") + " to reach the " + next[0] + " League" : "The top league. Every Act done.") + "</p></div>"
     );
   }
+  // Friends opens on your tree league: the trees in a row, yours lit up,
+  // where you stand in it, and a way into the full league table.
+  function leagueBannerHtml() {
+    if (!survey || !survey.completedAt) return "";
+    let acts = 0;
+    try { acts = habitActs().acts.filter((a) => a.done).length; } catch (e) {}
+    const L = ui.league;
+    if (!L && currentUser) loadLeague();
+    const me = L && L.rows ? L.rows.find((r) => r.is_me) : null;
+    if (me) acts = Number(me.acts) || acts;
+    const size = me ? Number(me.league_size) || L.rows.length : 0;
+    const place = me
+      ? '<p class="lgb-place"><span class="lgb-pos display tnum">' + ordinal(me.pos) + "</span><span>of " + kgFmt(size) + (size === 1 ? " person" : " people") + " in your league, ranked by yearly footprint</span></p>"
+      : "";
+    return (
+      '<section class="lgb rise" aria-label="Your league">' + leagueHeaderHtml(acts) + place +
+      '<div class="lgb-ctas"><button type="button" class="lgb-btn" data-action="league-open">See my league ' + icon("arrowRight") + "</button>" +
+      '<a class="lgb-btn ghost" href="#/habits">Climb with Acts</a></div></section>'
+    );
+  }
   function centreLeagueTrees() {
     const row = app.querySelector(".lgh-row");
     const now = row && row.querySelector(".lgh-t.now");
@@ -5759,7 +5779,7 @@
     const size = Number(me.league_size) || rows.length;
     const league = levelOf(me.acts);
     return (
-      '<div class="lgx">' + leagueHeaderHtml(me.acts) +
+      '<div class="lgx">' +
       '<p class="lg-lede">Everyone in the ' + league + " League" + (size > 1 ? " (" + kgFmt(size) + " people)" : "") + ", ranked by yearly footprint, lowest first. " +
         (above ? "Cut yours to climb past " + (above === 1 ? "the person above you." : "the people above you.") : below ? "You're top of your league." : "Invite friends to join you here.") + "</p>" +
       '<ol class="fr-stand lg-list lgx-list">' + rows.map((r, i) => {
@@ -9121,7 +9141,7 @@
     return (
       '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
-      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+      '<main class="fr-feed">' + leagueBannerHtml() + '<h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
   }
 
@@ -11453,6 +11473,13 @@
     "rank-league": () => {
       ui.rankFull = false;
       render();
+    },
+    "league-open": () => {
+      ui.standTab = "all";
+      ui.rankFull = false;
+      render();
+      const t = document.getElementById("fr-standings");
+      if (t) t.scrollIntoView({ behavior: fsReduce() ? "auto" : "smooth", block: "start" });
     },
     "stand-tab": (el) => {
       ui.standTab = el.dataset.tab;
