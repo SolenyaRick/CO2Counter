@@ -2090,32 +2090,48 @@
   // The Survey tab once it's done: update it, or change one step.
   function renderSurveyDone() {
     const when = Date.parse(survey.completedAt);
-    const longDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+    const shortDate = (t) => new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "long" });
+    const days = isNaN(when) ? null : Math.max(0, Math.floor((Date.now() - when) / 86400000));
+    const ago = days == null ? "" : days === 0 ? "today" : days === 1 ? "yesterday" : days < 60 ? days + " days ago" : Math.round(days / 30) + " months ago";
     const now = footprint(survey).totalYearly;
+    // Change since the survey before this one, if there is one.
+    const prev = (ui.history || [])[1];
+    const diff = prev && prev.totalYearly > 0 ? Math.round(now - prev.totalYearly) : null;
+    const trend = diff == null || Math.abs(diff) < 1 ? "" :
+      '<span class="upd-trend ' + (diff < 0 ? "down" : "up") + '">' + (diff < 0 ? "▼ " : "▲ ") + kgFmt(Math.abs(diff)) + " kg since the time before</span>";
+    const parts = STEPS.map((st, i) => ({ st, i, kg: stepKg(st.key, survey) }));
+    const sum = parts.reduce((t, x) => t + x.kg, 0) || 1;
+    const biggest = parts.reduce((a, b) => (b.kg > a.kg ? b : a), parts[0]);
+    const icKey = { meals: "meals", commute: "commute", flights: "flights", energy: "energy", pets: "pets", banking: "banking" };
     return (
-      '<div class="container done-v2" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg last time">' +
-      '<header class="glass cat-hero rise"><span class="cat-watermark" aria-hidden="true">' + icon("clipboard") + "</span>" +
-      '<div class="cat-hero-main done-head"><span class="done-tick">' + icon("check") + "</span><div>" +
-      '<h1 class="cat-title display">Update your answers</h1><p class="cat-why">' +
-      (isNaN(when) ? "" : "Last done on <strong>" + esc(longDate(when)) + "</strong>. ") +
-      "Change only what's different.</p>" +
-      '<div class="chip-row mt-4"><button type="button" class="btn btn-honey" data-action="whats-changed">Update my answers ' + icon("arrowRight") + "</button>" +
-      '<button type="button" class="link-btn" data-action="new-survey">Start from scratch</button></div></div></div>' +
-      '<div class="cat-figs"><div class="muted">Your last result</div><div class="cat-kg display tnum" data-countup="' + Math.round(now) + '">0</div><div class="muted">kg CO₂e a year</div>' +
-      '<a class="link-btn mt-2" href="#/results">See results</a></div></header>' +
-      '<section class="guide-card flat"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline">' +
-      '<h2 class="display">Or change one step</h2><span class="muted">Tap the one that\'s different</span></div><div class="answer-tiles">' +
-      STEPS.map((st, i) => {
+      '<div class="container upd" data-fs-pill="' + kgFmt(now) + '" data-fs-unit="kg last time">' +
+      '<header class="upd-hero rise">' +
+      '<span class="upd-k">' + icon("calendar") + (ago ? "Last check-in " + ago : "Your check-in") + "</span>" +
+      '<h1 class="display upd-h1">What\'s changed' + (isNaN(when) ? "" : " since " + esc(shortDate(when))) + "?</h1>" +
+      '<p class="upd-lede">Update only what\'s different. It usually takes about two minutes, and your results and My Habits catch up straight away.</p>' +
+      '<div class="upd-last"><span class="upd-last-l">Your last result</span>' +
+      '<span class="upd-last-v"><b class="display tnum" data-countup="' + Math.round(now) + '">0</b><small>kg CO₂e a year</small></span>' + trend +
+      '<a class="upd-see" href="#/results">See results ' + icon("chevronRight") + "</a></div>" +
+      '<div class="upd-ctas"><button type="button" class="btn btn-green upd-go" data-action="whats-changed">Update my answers ' + icon("arrowRight") + "</button>" +
+      '<button type="button" class="btn btn-outline upd-fresh" data-action="new-survey">' + icon("refresh") + " Start from scratch</button></div>" +
+      "</header>" +
+      '<section class="upd-steps" aria-labelledby="upd-steps-h"><div class="upd-steps-head"><h2 id="upd-steps-h" class="display">Or change just one part</h2>' +
+      '<p class="muted sm">Tap a part to jump straight to it. The bar shows its share of your footprint.</p></div><ul class="upd-list">' +
+      parts.map(({ st, i, kg }) => {
         const lines = answerSummary(st.key, survey);
+        const share = Math.round((kg / sum) * 100);
+        const big = biggest && biggest.i === i && kg > 0;
         return (
-          '<button type="button" class="answer-tile" data-action="quick-edit" data-step="' + i + '" aria-label="Change ' + esc(STEP_TAB[st.key]) + '">' +
-          '<span class="row-between"><span class="display answer-name"><span class="answer-n">' + (i + 1) + "</span>" + esc(STEP_TAB[st.key]) + "</span>" +
-          '<span class="display tnum fw-700">' + kgFmt(stepKg(st.key, survey)) + ' <small class="muted">kg</small></span></span>' +
-          '<span class="answer-l1">' + esc(lines[0] || "") + "</span>" + (lines[1] ? '<span class="answer-l2">' + esc(lines[1]) + "</span>" : "") +
-          '<span class="answer-change">Change</span></button>'
+          '<li style="--c:' + (CAT_COLOR[st.key] || "#3F5B3A") + ";--w:" + Math.max(2, share) + '%"><button type="button" class="upd-row" data-action="quick-edit" data-step="' + i + '" aria-label="Change ' + esc(STEP_TAB[st.key]) + ", " + kgFmt(kg) + ' kg a year">' +
+          '<span class="upd-ic' + (st.key === "energy" || st.key === "pets" ? " light" : "") + '" aria-hidden="true">' + svgPath(SW_ICONS[icKey[st.key]] || "", 20) + "</span>" +
+          '<span class="upd-main"><span class="upd-name">' + esc(STEP_TAB[st.key]) + (big ? '<span class="upd-big">Biggest</span>' : "") + "</span>" +
+          '<span class="upd-sum">' + esc(lines[0] || "Not answered") + (lines[1] ? " · " + esc(lines[1]) : "") + "</span>" +
+          '<span class="upd-bar" aria-hidden="true"><i></i></span></span>' +
+          '<span class="upd-kg"><b class="display tnum">' + kgFmt(kg) + "</b><small>kg · " + share + "%</small></span>" +
+          '<span class="upd-chev" aria-hidden="true">' + icon("chevronRight") + "</span></button></li>"
         );
       }).join("") +
-      "</div></section></div>"
+      "</ul></section></div>"
     );
   }
 
@@ -8706,6 +8722,76 @@
     return { label: ordinal(i + 1) + " of " + board.length, nudge, href };
   }
 
+  // The top three of your board on a podium, and what it takes to climb.
+  function frPodiumHtml() {
+    const board = friends.board || [];
+    if (board.length < 2) return "";
+    const i = board.findIndex((b) => b.is_self);
+    const top = board.slice(0, 3);
+    const order = top.length === 3 ? [1, 0, 2] : [1, 0];
+    const crown = '<svg class="pd-crown" viewBox="0 0 24 16" aria-hidden="true"><path d="M2 14 1 3l6 5 5-7 5 7 6-5-1 11Z" fill="currentColor"/></svg>';
+    const step = (b, place) =>
+      '<li class="pd-step p' + place + (b.is_self ? " me" : "") + '">' +
+      '<span class="pd-av">' + (place === 1 ? crown : "") + frAv(b.user_id, b.display_name, place === 1 ? 64 : 52, b.is_self) + "</span>" +
+      '<span class="pd-name truncate">' + (b.is_self ? "You" : esc(b.display_name)) + "</span>" +
+      '<span class="pd-t tnum">' + tonnes(b.total_yearly) + " t</span>" +
+      '<span class="pd-block"><b class="display">' + place + "</b></span></li>";
+    let chase = "";
+    if (i === 0) {
+      const lead = Math.round(board[1].total_yearly - board[0].total_yearly);
+      chase = '<div class="pd-chase lead"><span class="pd-chase-t">' + icon("flame") + "<span><b>You're top of the table.</b> " + kgFmt(lead) + " kg a year ahead of " + esc(board[1].display_name) + ". Keep it that way.</span></span>" +
+        '<span class="pd-track" aria-hidden="true"><i style="--w:100%"></i></span></div>';
+    } else if (i > 0) {
+      const me = board[i], ahead = board[i - 1];
+      const gap = Math.max(1, Math.round(me.total_yearly - ahead.total_yearly));
+      const close = Math.max(6, Math.min(97, (ahead.total_yearly / me.total_yearly) * 100));
+      const r = rankInfo();
+      chase = '<div class="pd-chase"><span class="pd-chase-t">' + icon("target") + "<span>You're <b>" + ordinal(i + 1) + "</b>. Cut <b>" + kgFmt(gap) + " kg</b> a year to overtake " + esc(ahead.display_name) + ".</span></span>" +
+        '<span class="pd-track" role="img" aria-label="' + Math.round(close) + "% of the way to " + esc(ahead.display_name) + '\'s total"><i style="--w:' + close.toFixed(1) + '%"></i>' + frAv(ahead.user_id, ahead.display_name, 26, false, "pd-goal") + "</span>" +
+        (r && r.href ? '<a class="btn btn-green btn-sm pd-how" href="' + r.href + '">Find the cut ' + icon("arrowRight") + "</a>" : "") + "</div>";
+    }
+    return (
+      '<section class="glass pd rise" aria-labelledby="pd-h"><div class="pd-head"><h2 id="pd-h" class="display">Leaderboard</h2><span class="pd-k">Lowest footprint wins</span></div>' +
+      '<ol class="pd-podium n' + top.length + '">' + order.map((k) => step(top[k], k + 1)).join("") + "</ol>" + chase + "</section>"
+    );
+  }
+
+  // Trophies to collect, worked out from what the page already knows.
+  function frTrophiesHtml(accepted, meBoard, myProg) {
+    const total = meBoard ? Number(meBoard.total_yearly) : survey && survey.completedAt ? footprint(survey).totalYearly : 0;
+    const first = myProg ? Number(myProg.first_total) : 0;
+    const cutPct = first > 0 ? Math.max(0, Math.round(((first - Number(myProg.latest_total)) / first) * 100)) : 0;
+    const surveys = myProg ? Number(myProg.surveys) || 1 : Math.max(1, (ui.history || []).length);
+    const board = friends.board || [];
+    const lead = board.length > 1 && board[0].is_self;
+    const T = [
+      ["flag", "First count", "Take the survey", 1, 1, ""],
+      ["user", "Squad of 3", "Add 3 friends", accepted.length, 3, " friends"],
+      ["heart", "Cheered on", "Get 10 cheers", friends.cheersGot || 0, 10, " cheers"],
+      ["refresh", "Regular", "Take it 3 times", surveys, 3, " surveys"],
+      ["trendDown", "Cutter", "Cut 10% from your first", cutPct, 10, "%"],
+      ["globe", "Team player", "Join or start a group", (friends.groups || []).length ? 1 : 0, 1, ""],
+      ["flame", "Top of the table", "Lead your friends", lead ? 1 : 0, 1, ""],
+      ["target", "1.5°C ready", "Get under 2.5 t a year", total > 0 && total <= 2500 ? 1 : 0, 1, ""],
+    ];
+    const got = T.filter((t) => t[3] >= t[4]).length;
+    const nextUp = T.filter((t) => t[3] < t[4]).sort((a, b) => b[3] / b[4] - a[3] / a[4])[0];
+    return (
+      '<section class="glass tro rise" aria-labelledby="tro-h"><div class="pd-head"><h2 id="tro-h" class="display">Trophies</h2><span class="pd-k"><b>' + got + "</b> of " + T.length + " collected</span></div>" +
+      '<ul class="tro-grid">' + T.map(([ic, name, how, have, need, unit]) => {
+        const done = have >= need;
+        const p = Math.min(1, have / need);
+        const prog = done ? "Collected" : need > 1 ? Math.min(have, need) + " of " + need + unit : how;
+        return '<li class="tro-i' + (done ? " got" : "") + '" style="--p:' + (p * 100).toFixed(0) + '%" title="' + esc(how) + '">' +
+          '<span class="tro-medal" aria-hidden="true">' + icon(ic) + "</span>" +
+          '<span class="tro-n">' + esc(name) + '</span><span class="tro-p">' + esc(prog) + "</span>" +
+          '<span class="sr-only">' + (done ? "Collected" : "Not yet: " + esc(how)) + "</span></li>";
+      }).join("") + "</ul>" +
+      (nextUp ? '<p class="tro-next">' + icon("arrowRight") + "<span>Next up: <b>" + esc(nextUp[1]) + "</b>. " + esc(nextUp[2]) + (nextUp[4] > 1 ? " (" + Math.min(nextUp[3], nextUp[4]) + " of " + nextUp[4] + nextUp[5] + " so far)" : "") + ".</span></p>" : '<p class="tro-next">' + icon("check") + "<span><b>All eight collected.</b> Legend.</span></p>") +
+      "</section>"
+    );
+  }
+
   function mostImprovedHtml() {
     const rows = (friends.progress || [])
       .filter((p) => p.surveys >= 2 && Number(p.first_total) > 0 && Math.round(Number(p.latest_total) - Number(p.first_total)) !== 0)
@@ -9035,7 +9121,7 @@
     return (
       '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
-      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
   }
 
