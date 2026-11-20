@@ -8609,3 +8609,27 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 @media (max-width: 420px) { .dh-plan-l { display: none; } .dh-plan { padding: 2px 6px 2px 5px; } }
 .pl-time input { width: 6.4em; }
 @media (max-width: 420px) { .dh-tool { white-space: nowrap; padding: 0 8px; gap: 5px; } .pl-time input { width: 6em; } }
+/* Daily habits, one per Act: the Act, the habit, why it fits you, and a swap. */
+.dh-list { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .dh-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .dh-list { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+.dh-li { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 6px; align-items: stretch; }
+.dh-act { display: block; margin-bottom: 1px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c); }
+.dh-list .dh-t small { display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; }
+.dh-swap { display: grid; place-items: center; border-radius: 14px; border: 1.5px solid var(--line, rgba(46, 42, 34, 0.14)); background: transparent; color: var(--ink-faint, #8a8273); cursor: pointer; transition: background var(--dur-quick, 200ms) ease, color var(--dur-quick, 200ms) ease, transform var(--dur-instant, 120ms) ease; }
+.dh-swap svg { width: 16px; height: 16px; }
+.dh-swap:hover { background: rgba(46, 42, 34, 0.05); color: var(--ink, #2e2a22); }
+.dh-swap:active { transform: scale(0.94); }
+.dh-swap:focus-visible { outline: 2px solid var(--primary, #3f5b3a); outline-offset: 2px; }
+.pk-row { grid-template-columns: minmax(0, 1fr) !important; }
+.pk-list .dh-t small { display: block !important; font-size: 12.5px; }
+@media (max-width: 420px) {
+  .dh-h { grid-template-columns: 34px minmax(0, 1fr) 22px; padding: 10px 9px; }
+  .dh-ic { width: 34px; height: 34px; }
+  .dh-t b { font-size: 14px; }
+  .dh-li { grid-template-columns: minmax(0, 1fr) 36px; }
+}
+@media (prefers-color-scheme: dark) {
+  .dh-act { color: color-mix(in srgb, var(--c) 45%, #f1ede4); }
+  .dh-swap { border-color: rgba(236, 235, 233, 0.12); color: #b5ae9f; }
+}
