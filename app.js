@@ -6188,6 +6188,7 @@
     clearTimeout(dailyTimer);
     dailyTimer = setTimeout(() => saveDailyRemote(key, log[key] || []), 500);
     syncDailyReminder();
+    syncPlanReminders();
     return set.has(k);
   }
   async function saveDailyRemote(day, list) {
@@ -6231,17 +6232,27 @@
       '<button type="button" class="dh-remind-on" data-action="notif-daily-on">Remind me</button>' +
       '<button type="button" class="dh-remind-no" data-action="notif-daily-no" aria-label="No thanks">' + icon("x") + "</button></div>";
   }
+  // Nudges still to come: today's planned but not done, and tomorrow's.
+  function dhToolsHtml() {
+    const plans = dailyPlan(), done = dailyLog()[localDay(new Date())] || [];
+    const n = Object.keys(plans[localDay(new Date())] || {}).filter((h) => !done.includes(h)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
+    return '<button type="button" class="dh-tool" data-action="shower-timer">' + svgPath(SW_ICONS.water, 16) + "Shower timer</button>" +
+      '<button type="button" class="dh-tool" data-action="plan-open">' + icon("bell") + "Plan &amp; remind" + (n ? '<span class="dh-tool-n tnum">' + n + "</span>" : "") + "</button>";
+  }
   function dailyCardHtml(still) {
     const st = dailyStats(), on = new Set(st.today);
+    const planToday = dailyPlan()[localDay(new Date())] || {};
     return (
       '<section class="dh' + (still ? " still" : "") + '" aria-labelledby="dh-h">' +
       '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
       '<h2 id="dh-h" class="display">Daily habits</h2></div><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div></div>" +
       '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
       '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c], i) =>
-        '<li style="--k:' + i + '"><button type="button" class="dh-h' + (on.has(k) ? " on" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on.has(k) + '" style="--c:' + c + '">' +
-        '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + esc(sub) + "</small></span>" +
+        '<li style="--k:' + i + '"><button type="button" class="dh-h' + (on.has(k) ? " on" : planToday[k] ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on.has(k) + '" style="--c:' + c + '">' +
+        '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + esc(sub) + "</small>" +
+        (planToday[k] && !on.has(k) ? '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(planToday[k]) + "</span>" : "") + "</span>" +
         '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button></li>").join("") + "</ul>" +
+      '<div class="dh-tools">' + dhToolsHtml() + "</div>" +
       '<div class="dh-foot">' + dhFootHtml(st) + "</div>" + dailyRemindOffer() + "</section>"
     );
   }
@@ -6254,20 +6265,24 @@
     const st = dailyStats(), now = new Date();
     const at = (d) => { const x = new Date(d); x.setHours(19, 30, 0, 0); return x; };
     const times = [];
+    const left = plannedLeft(localDay(now));
     if (on) {
-      if (!st.today.length && at(now) > now) times.push(at(now));
+      if ((!st.today.length || left.length) && at(now) > now) times.push(at(now));
       times.push(at(dayAdd(now, 1)));
       if (times.length < 2) times.push(at(dayAdd(now, 2)));
     }
-    const sig = times.map((t) => t.getTime()).join(",") + "|" + st.streak + "|" + st.today.length;
+    const sig = times.map((t) => t.getTime()).join(",") + "|" + st.streak + "|" + st.today.length + "|" + left.join(",");
     if (sig === dailySig) return;
     dailySig = sig;
     try {
       await LN.cancel({ notifications: [{ id: DAILY_ID }, { id: DAILY_ID + 1 }] });
       if (times.length)
         await LN.schedule({ notifications: times.map((t, i) => {
-          const tonight = i === 0 && localDay(t) === localDay(now) && st.streak > 0;
-          return { id: DAILY_ID + i, title: tonight ? "Keep your " + st.streak + "-day streak going" : "One small thing today?", body: tonight ? "Tick off a daily habit before midnight." : "A meat-free day, a car-free day or a short shower: tick it off on My Habits.", schedule: { at: t, allowWhileIdle: true }, extra: { route: "#/habits" } };
+          const isToday = i === 0 && localDay(t) === localDay(now);
+          const names = left.map((h) => (dailyHabits().find((x) => x[0] === h) || [])[1]).filter(Boolean).map((n) => n.toLowerCase());
+          const title = isToday && names.length ? "Did you manage it?" : isToday && st.streak > 0 ? "Keep your " + st.streak + "-day streak going" : "One small thing today?";
+          const body = isToday && names.length ? "Your " + names.join(" and ") + ": tick it off on My Habits." : isToday && st.streak > 0 ? "Tick off a daily habit before midnight." : "A meat-free day, a car-free day or a short shower: tick it off on My Habits.";
+          return { id: DAILY_ID + i, title, body, schedule: { at: t, allowWhileIdle: true }, extra: { route: "#/habits" } };
         }) });
     } catch (e) {
       dailySig = null;
@@ -6293,6 +6308,282 @@
     dailySig = null;
     await syncDailyReminder();
     render();
+  }
+
+  // ---------- Plan & remind, and the shower timer ----------
+  // Pick habits for today or tomorrow and get a nudge at the right moment
+  // (the app schedules them on the phone; nothing is sent to us). A
+  // reminder is dropped once that habit is ticked.
+  const KEY_DAILY_PLAN = "co2_daily_plan"; // { "2026-11-21": { carfree: "07:30" } }
+  const PLAN_ID = 7201; // 7201-7220: today's and tomorrow's
+  const TIMER_ID = 7300;
+  const DH_PLAN = {
+    carfree: ["07:30", "Car-free day today", "You planned a car-free day. Leave the keys at home: walk, cycle, bus or train.", "A nudge before you head out"],
+    meatfree: ["11:30", "Meat-free day today", "You planned a meat-free day: no meat or fish today. Lunch is the easy win.", "A nudge before lunch"],
+    shower: ["07:00", "Short shower today", "Tap to start a 5-minute shower timer.", "Opens the 5-minute timer"],
+    heating: ["18:00", "Heating down a notch", "You planned to turn the heating down a degree tonight, or put a jumper on.", "A nudge when you get home"],
+    nothingnew: ["10:00", "Nothing new today", "You planned to buy nothing new: second-hand, borrowed or do without.", "A nudge in the morning"],
+    nowaste: ["20:00", "No food wasted", "Any leftovers? Eat them tomorrow or freeze them tonight.", "A nudge after dinner"],
+  };
+  // Today, a default that's already gone becomes the next half hour.
+  function planDefault(h, off) {
+    const t = DH_PLAN[h][0];
+    if (off) return t;
+    const now = new Date(), [hh, mm] = t.split(":").map(Number);
+    if (hh * 60 + mm > now.getHours() * 60 + now.getMinutes() + 10) return t;
+    const next = Math.min(23 * 60 + 30, Math.ceil((now.getHours() * 60 + now.getMinutes() + 20) / 30) * 30);
+    return pad2(Math.floor(next / 60)) + ":" + pad2(next % 60);
+  }
+  function dailyPlan() {
+    const p = lsGet(KEY_DAILY_PLAN, {});
+    if (!p || typeof p !== "object" || Array.isArray(p)) return {};
+    const today = localDay(new Date());
+    Object.keys(p).forEach((d) => { if (d < today) delete p[d]; });
+    return p;
+  }
+  const plannedLeft = (k) => { const done = dailyLog()[k] || []; return Object.keys(dailyPlan()[k] || {}).filter((h) => !done.includes(h)); };
+  let planSig = null;
+  async function syncPlanReminders() {
+    const LN = plugin("LocalNotifications");
+    if (!LN) return;
+    const plan = dailyPlan(), log = dailyLog(), now = new Date(), list = [];
+    [0, 1].forEach((off) => {
+      const d = dayAdd(now, off), k = localDay(d), p = plan[k] || {};
+      dailyHabits().forEach(([h], i) => {
+        if (!p[h] || (log[k] || []).includes(h)) return;
+        const [hh, mm] = String(p[h]).split(":").map(Number);
+        const at = new Date(d);
+        at.setHours(hh || 0, mm || 0, 0, 0);
+        if (at > now) list.push({ id: PLAN_ID + off * 10 + i, h, at });
+      });
+    });
+    const sig = list.map((x) => x.id + "@" + x.at.getTime()).join(",");
+    if (sig === planSig) return;
+    planSig = sig;
+    try {
+      await LN.cancel({ notifications: Array.from({ length: 20 }, (_, i) => ({ id: PLAN_ID + i })) });
+      if (list.length)
+        await LN.schedule({ notifications: list.map((x) => ({ id: x.id, title: DH_PLAN[x.h][1], body: DH_PLAN[x.h][2], schedule: { at: x.at, allowWhileIdle: true }, extra: { route: x.h === "shower" ? "#/habits?timer=shower" : "#/habits" } })) });
+    } catch (e) {
+      planSig = null;
+    }
+  }
+  async function notifAllowed(ask) {
+    const LN = plugin("LocalNotifications");
+    if (!LN) return false;
+    try {
+      let perm = await LN.checkPermissions();
+      if (perm.display !== "granted" && ask) perm = await LN.requestPermissions();
+      return perm.display === "granted";
+    } catch (e) {
+      return false;
+    }
+  }
+  function planSheetHtml() {
+    const off = ui.planDay || 0, k = localDay(dayAdd(new Date(), off));
+    const plan = dailyPlan()[k] || {}, done = dailyLog()[k] || [];
+    const count = Object.keys(plan).length;
+    return (
+      '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet" role="dialog" aria-modal="true" aria-labelledby="pl-h"><div class="sheet-body">' +
+      '<div class="sheet-head"><div class="min0"><h2 id="pl-h" class="display">Plan &amp; remind</h2><p class="sheet-habit">Pick what you\'ll do, and when you\'d like a nudge.</p></div>' +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+      '<div class="wk-mode pl-day" role="tablist" aria-label="Which day">' + [[0, "Today"], [1, "Tomorrow"]].map(([v, l]) =>
+        '<button type="button" role="tab" aria-selected="' + (off === v) + '" class="' + (off === v ? "on" : "") + '" data-action="plan-day" data-day="' + v + '">' + l + "</button>").join("") + "</div>" +
+      '<ul class="pl-list">' + dailyHabits().map(([h, name, , ic, c]) => {
+        const on = !!plan[h], isDone = done.includes(h);
+        return '<li class="pl-row' + (on ? " on" : "") + (isDone ? " done" : "") + '" style="--c:' + c + '">' +
+          '<button type="button" class="pl-pick" data-action="plan-toggle" data-h="' + h + '" aria-pressed="' + on + '"' + (isDone ? " disabled" : "") + ">" +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + (isDone ? "Done already today" : esc(DH_PLAN[h][3])) + "</small></span>" +
+          '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
+          '<label class="pl-time' + (on ? "" : " off") + '">' + icon("bell") + '<span class="sr-only">Reminder time for ' + esc(name) + "</span>" +
+          '<input type="time" class="pl-time-in" data-h="' + h + '" value="' + esc(plan[h] || planDefault(h, off)) + '"' + (on ? "" : " disabled") + " /></label></li>";
+      }).join("") + "</ul>" +
+      (ui.planBlocked ? '<p class="sm pl-note warn">Notifications are switched off for CO2 Counter. Allow them in your iPhone\'s Settings to get these nudges.</p>'
+        : isNativeApp() ? (count ? '<p class="xs muted pl-note">' + count + (count === 1 ? " nudge" : " nudges") + " set for " + (off ? "tomorrow" : "today") + ". Tick a habit and its nudge is dropped.</p>" : "")
+        : '<p class="xs muted pl-note">The nudges arrive in the CO2 Counter iPhone app. Here, your plan shows on the Daily habits card.</p>') +
+      '<button type="button" class="btn btn-green btn-block mt-3" data-action="plan-done">Done</button></div></div></div>'
+    );
+  }
+  function paintPlanSheet() {
+    const keep = modalRoot.querySelector(".sheet-body");
+    const top = keep ? keep.parentElement.scrollTop : 0;
+    modalRoot.innerHTML = planSheetHtml();
+    document.body.classList.add("modal-open");
+    const sh = modalRoot.querySelector(".pl-sheet");
+    if (keep && sh) { sh.style.animation = "none"; sh.scrollTop = top; }
+    modalRoot.querySelectorAll(".pl-time-in").forEach((inp) =>
+      inp.addEventListener("change", () => {
+        const k = localDay(dayAdd(new Date(), ui.planDay || 0)), all = dailyPlan();
+        if (all[k] && all[k][inp.dataset.h] && /^\d\d:\d\d$/.test(inp.value)) { all[k][inp.dataset.h] = inp.value; lsSet(KEY_DAILY_PLAN, all); }
+        afterPlanChange();
+      }));
+  }
+  function afterPlanChange() {
+    syncPlanReminders();
+    dailySig = null;
+    syncDailyReminder();
+    const card = app.querySelector(".dh");
+    if (card) card.outerHTML = dailyCardHtml(true);
+  }
+
+  // A 5-minute shower timer: a draining ring, a chime with a minute to go
+  // and at the end, the screen kept awake, and in the app a notification
+  // at the end too in case the phone locks.
+  let stimer = null;
+  function showerBeep(n) {
+    try {
+      const ctx = stimer && stimer.ctx;
+      if (!ctx) return;
+      for (let i = 0; i < n; i++) {
+        const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + i * 0.28;
+        o.type = "sine";
+        o.frequency.value = i === n - 1 ? 988 : 784;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        o.connect(g).connect(ctx.destination);
+        o.start(t);
+        o.stop(t + 0.26);
+      }
+    } catch (e) {}
+  }
+  const mmss = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(t / 60) + ":" + pad2(t % 60); };
+  function openShowerTimer() {
+    if (document.querySelector(".stimer")) return;
+    const mins = [3, 4, 5].includes(lsGet("co2_shower_mins", 5)) ? lsGet("co2_shower_mins", 5) : 5;
+    const C = 2 * Math.PI * 46;
+    document.body.insertAdjacentHTML("beforeend",
+      '<div class="stimer" role="dialog" aria-modal="true" aria-labelledby="st-h">' +
+      '<button type="button" class="story-close" data-st="close" aria-label="Close the timer">' + icon("x") + "</button>" +
+      '<div class="st-in"><span class="story-k">Short shower</span><h2 id="st-h" class="display st-title">Ready when you are</h2>' +
+      '<div class="st-ring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="st-track" cx="50" cy="50" r="46"></circle><circle class="st-fill" cx="50" cy="50" r="46" stroke-dasharray="' + C.toFixed(2) + '" stroke-dashoffset="0"></circle></svg>' +
+      '<div class="st-mid"><span class="st-drop" aria-hidden="true">' + svgPath(SW_ICONS.water, 26) + '</span><b class="display tnum st-time" aria-live="off">' + mins + ':00</b><span class="st-sub" aria-live="polite">' + mins + " minutes</span></div></div>" +
+      '<div class="st-lens" role="group" aria-label="How long">' + [3, 4, 5].map((m) => '<button type="button" data-st="len" data-m="' + m + '" aria-pressed="' + (m === mins) + '" class="' + (m === mins ? "on" : "") + '">' + m + " min</button>").join("") + "</div>" +
+      '<div class="st-ctl"><button type="button" class="btn st-go" data-st="start">' + icon("arrowRight") + " Start</button></div>" +
+      '<p class="st-note">' + (isNativeApp() ? "A chime with a minute to go and at the end. The screen stays on." : "A chime with a minute to go and at the end. Keep this page open.") + "</p></div></div>");
+    const el = document.body.lastElementChild;
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("in")));
+    const T = (stimer = { el, mins, total: mins * 60000, left: mins * 60000, end: 0, state: "ready", warned: false, iv: null, wake: null, ctx: null, C, from: document.activeElement });
+    const fill = el.querySelector(".st-fill"), timeEl = el.querySelector(".st-time"), sub = el.querySelector(".st-sub"), title = el.querySelector(".st-title"), ctl = el.querySelector(".st-ctl");
+    const offsetFor = (left) => (T.C * (1 - left / T.total)).toFixed(2);
+    const setRing = (left, animate) => {
+      fill.style.transition = "none";
+      fill.style.strokeDashoffset = offsetFor(left);
+      if (animate) { void fill.getBoundingClientRect(); fill.style.transition = "stroke-dashoffset " + left + "ms linear"; fill.style.strokeDashoffset = T.C.toFixed(2); }
+    };
+    const controls = () => {
+      const tickBtn = dailyStats().today.includes("shower") ? '<span class="st-ticked">' + icon("check") + " Short shower ticked</span>" : '<button type="button" class="btn st-go" data-st="tick">' + icon("check") + " Tick short shower</button>";
+      ctl.innerHTML =
+        T.state === "running" ? '<button type="button" class="btn st-ghost" data-st="pause">Pause</button><button type="button" class="btn st-go" data-st="done">' + icon("check") + " I'm done</button>"
+        : T.state === "paused" ? '<button type="button" class="btn st-go" data-st="resume">' + icon("arrowRight") + ' Carry on</button><button type="button" class="btn st-ghost" data-st="done">I\'m done</button>'
+        : T.state === "ended" ? tickBtn + '<button type="button" class="btn st-ghost" data-st="close">Close</button>'
+        : '<button type="button" class="btn st-go" data-st="start">' + icon("arrowRight") + " Start</button>";
+      el.classList.toggle("running", T.state === "running");
+      el.classList.toggle("ended", T.state === "ended");
+      el.querySelector(".st-lens").hidden = T.state !== "ready";
+    };
+    const wake = async (on) => {
+      try {
+        if (on && navigator.wakeLock && !T.wake) { T.wake = await navigator.wakeLock.request("screen"); T.wake.addEventListener("release", () => (T.wake = null)); }
+        if (!on && T.wake) { await T.wake.release(); T.wake = null; }
+      } catch (e) {}
+    };
+    const endNote = async (on) => {
+      const LN = plugin("LocalNotifications");
+      if (!LN) return;
+      try {
+        await LN.cancel({ notifications: [{ id: TIMER_ID }] });
+        if (on && (await notifAllowed(false)))
+          await LN.schedule({ notifications: [{ id: TIMER_ID, title: "Time's up", body: T.mins + " minutes. Tap to tick off your short shower.", schedule: { at: new Date(T.end), allowWhileIdle: true }, extra: { route: "#/habits" } }] });
+      } catch (e) {}
+    };
+    const finish = (early) => {
+      clearInterval(T.iv);
+      T.state = "ended";
+      wake(false);
+      endNote(false);
+      const used = T.total - Math.max(0, T.left);
+      timeEl.textContent = early ? mmss(used) : "0:00";
+      title.textContent = early ? "Nice and quick" : "Time's up";
+      sub.textContent = early ? "under " + T.mins + " minutes" : "that's " + T.mins + " minutes";
+      setRing(early ? T.left : 0, false);
+      if (!early) { showerBeep(3); haptic("success"); }
+      else haptic("success");
+      controls();
+    };
+    const tick = () => {
+      T.left = T.end - Date.now();
+      timeEl.textContent = mmss(T.left);
+      if (!T.warned && T.left <= 60000 && T.total > 60000) { T.warned = true; sub.textContent = "one minute left"; showerBeep(2); haptic("medium"); }
+      if (T.left <= 0) finish(false);
+    };
+    const run = () => {
+      T.end = Date.now() + T.left;
+      T.state = "running";
+      title.textContent = "Shower on";
+      sub.textContent = T.warned ? "one minute left" : "of " + T.mins + " minutes";
+      setRing(T.left, true);
+      clearInterval(T.iv);
+      T.iv = setInterval(tick, 250);
+      wake(true);
+      endNote(true);
+      controls();
+    };
+    T.onVis = () => { if (document.visibilityState === "visible" && T.state === "running") { tick(); if (T.state === "running") { setRing(T.left, true); wake(true); } } };
+    document.addEventListener("visibilitychange", T.onVis);
+    T.close = () => {
+      clearInterval(T.iv);
+      wake(false);
+      endNote(false);
+      document.removeEventListener("visibilitychange", T.onVis);
+      try { if (T.ctx) T.ctx.close(); } catch (e) {}
+      el.classList.remove("in");
+      el.classList.add("out");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => el.remove(), reducedMotion() ? 0 : 380);
+      if (T.from && T.from.isConnected) T.from.focus({ preventScroll: true });
+      stimer = null;
+    };
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-st]");
+      if (!b) return;
+      const a = b.dataset.st;
+      if (a === "len") {
+        T.mins = Number(b.dataset.m);
+        T.total = T.left = T.mins * 60000;
+        lsSet("co2_shower_mins", T.mins);
+        el.querySelectorAll(".st-lens button").forEach((x) => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+        timeEl.textContent = T.mins + ":00";
+        sub.textContent = T.mins + " minutes";
+        setRing(T.left, false);
+      } else if (a === "start" || a === "resume") {
+        if (!T.ctx) { try { const A = window.AudioContext || window.webkitAudioContext; if (A) T.ctx = new A(); } catch (e2) {} }
+        haptic("light");
+        run();
+      } else if (a === "pause") {
+        clearInterval(T.iv);
+        T.left = T.end - Date.now();
+        T.state = "paused";
+        title.textContent = "Paused";
+        setRing(T.left, false);
+        wake(false);
+        endNote(false);
+        controls();
+      } else if (a === "done") {
+        T.left = T.state === "running" ? T.end - Date.now() : T.left;
+        finish(true);
+      } else if (a === "tick") {
+        if (!dailyStats().today.includes("shower")) toggleDaily("shower");
+        const card = app.querySelector(".dh");
+        if (card) card.outerHTML = dailyCardHtml(true);
+        haptic("success");
+        controls();
+        setTimeout(() => stimer === T && T.close(), 700);
+      } else if (a === "close") T.close();
+    });
+    el.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); T.close(); } });
+    setTimeout(() => { const b = el.querySelector(".st-go"); if (b) b.focus({ preventScroll: true }); }, 60);
   }
 
   // ---------- My Habits on a phone ----------
@@ -8853,6 +9144,7 @@
     }
     syncSunday();
     syncDailyReminder();
+    syncPlanReminders();
     if (currentUser && canFeedPush() && lsGet(KEY_FEEDPUSH, "") === "on") registerPush().catch(() => {});
     // Turned down before? Show how to allow them, on the Account page.
     const LN = plugin("LocalNotifications");
@@ -10769,6 +11061,11 @@
     calcAfterRender();
     centreLeagueTrees();
     freshSpin(path);
+    // The morning shower nudge opens straight onto the timer.
+    if (path === "/habits" && /[?&]timer=shower/.test(location.hash)) {
+      history.replaceState(null, "", "#/habits");
+      setTimeout(openShowerTimer, 350);
+    }
     if (ui.levelUp && (path === "/habits" || path === "/check-in") && app.querySelector(".hb-page")) {
       const l = ui.levelUp;
       ui.levelUp = null;
@@ -10869,6 +11166,7 @@
     closeModal();
     // A level-up moment belongs to My Habits: leaving the page closes it.
     document.querySelectorAll(".lvup:not(.out) [data-lv-close]").forEach((b) => b.click());
+    if (stimer && !/timer=shower/.test(location.hash)) stimer.close();
     ui.shownStep = null;
     ui.flash = "";
     ui.inputMsg = null;
@@ -11657,6 +11955,11 @@
       const on = toggleDaily(el.dataset.k);
       el.classList.toggle("on", on);
       el.setAttribute("aria-pressed", on);
+      const planned = (dailyPlan()[localDay(new Date())] || {})[el.dataset.k];
+      el.classList.toggle("planned", !on && !!planned);
+      const pb = el.querySelector(".dh-plan");
+      if (on && pb) pb.remove();
+      else if (!on && planned && !pb) el.querySelector(".dh-t").insertAdjacentHTML("beforeend", '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(planned) + "</span>");
       const st = dailyStats();
       if (on) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); haptic(st.today.length === 1 ? "success" : "light"); }
       // Only the numbers change in place: no redraw.
@@ -11664,6 +11967,31 @@
       if (st.streak > before) card.querySelector(".dh-streak").classList.add("up");
       card.querySelector(".dh-week").innerHTML = dhWeekHtml(st);
       card.querySelector(".dh-foot").innerHTML = dhFootHtml(st);
+      card.querySelector(".dh-tools").innerHTML = dhToolsHtml();
+    },
+    "shower-timer": () => openShowerTimer(),
+    "plan-open": () => {
+      ui.planDay = new Date().getHours() >= 17 ? 1 : 0;
+      ui.planBlocked = false;
+      paintPlanSheet();
+    },
+    "plan-done": () => closeModal(),
+    "plan-day": (el) => {
+      ui.planDay = Number(el.dataset.day) || 0;
+      paintPlanSheet();
+    },
+    "plan-toggle": async (el) => {
+      const h = el.dataset.h, k = localDay(dayAdd(new Date(), ui.planDay || 0)), all = dailyPlan();
+      const day = all[k] || {};
+      if (day[h]) delete day[h];
+      else day[h] = planDefault(h, ui.planDay || 0);
+      if (Object.keys(day).length) all[k] = day; else delete all[k];
+      lsSet(KEY_DAILY_PLAN, all);
+      if (day[h]) haptic("light");
+      paintPlanSheet();
+      afterPlanChange();
+      // The first nudge asks the phone for permission.
+      if (day[h] && isNativeApp() && !(await notifAllowed(true))) { ui.planBlocked = true; ui.notifBlocked = true; paintPlanSheet(); }
     },
     "week-open": () => {
       ui.frTab = "board";
