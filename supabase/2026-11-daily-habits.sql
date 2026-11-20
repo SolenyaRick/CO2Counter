@@ -2,8 +2,8 @@
 -- Daily habits, streaks and weekly seasons. Also the last section of schema.sql.
 
 -- ---------- Daily habits and weekly seasons (November 2026) ----------
--- Small things ticked off each day on My Habits (a meat-free day, a
--- car-free day...). Each tick is 10 points. Points this week (Monday to
+-- Small things ticked off each day on My Habits: one per Act (1 to 5),
+-- picked from options that fit the person's survey. Each tick is 10 points. Points this week (Monday to
 -- Sunday, UK time) rank you among friends and in your tree league, and
 -- start again every Monday. Saved only through save_daily_habits(), which
 -- takes today or yesterday, so nobody can fill in a whole week for points.
@@ -35,9 +35,17 @@ begin
   if auth.uid() is null then raise exception 'Sign in first'; end if;
   -- Today or yesterday (a day either side for people abroad).
   if p_day is null or p_day < public.uk_today() - 1 or p_day > public.uk_today() + 1 then raise exception 'Only today or yesterday'; end if;
-  select coalesce(array_agg(distinct h order by h), '{}') into v
-  from unnest(coalesce(p_habits, '{}')) h
-  where h in ('meatfree', 'carfree', 'shower', 'heating', 'nothingnew', 'nowaste');
+  -- One habit per Act a day ("a3:meatfree": Act 3's habit, picked from the
+  -- person's options), plus the first six names from before.
+  select coalesce(array_agg(x.h order by x.h), '{}') into v
+  from (
+    select distinct on (case when h ~ '^a[1-5]:' then left(h, 2) else h end) h
+    from unnest(coalesce(p_habits, '{}')) h
+    where h ~ '^a[1-5]:[a-z0-9]{2,20}$'
+       or h in ('meatfree', 'carfree', 'shower', 'heating', 'nothingnew', 'nowaste')
+    order by case when h ~ '^a[1-5]:' then left(h, 2) else h end, h
+  ) x;
+  if cardinality(v) > 6 then v := v[1:6]; end if;
   if cardinality(v) = 0 then
     delete from public.daily_habits where user_id = auth.uid() and day = p_day;
   else

@@ -6150,20 +6150,125 @@
   const KEY_DAILY = "co2_daily"; // { "2026-11-20": ["meatfree", ...] }
   const KEY_DAILY_REMIND = "co2_notify_daily"; // "on" | "off"
   const DAILY_ID = 7101; // and 7102: the next two evenings
-  const DH_ICON = { bag: "M5 8h14l-1 12H6ZM9 8V6a3 3 0 0 1 6 0v2", bin: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" };
-  const dailyHabits = () => [
-    ["meatfree", "Meat-free day", "No meat or fish today", SW_ICONS.meals, "#3F5B3A"],
-    ["carfree", "Car-free day", "Walked, cycled, bus or train", HB_WALK, "#3E6F80"],
-    ["shower", "Short shower", "Under 5 minutes, or skipped", SW_ICONS.water, "#4F8798"],
-    ["heating", "Heating down a notch", "A degree lower, or a jumper on", SW_ICONS.energy, "#A9781F"],
-    ["nothingnew", "Bought nothing new", "Second-hand, borrowed or did without", DH_ICON.bag, "#8C6A4F"],
-    ["nowaste", "No food wasted", "Ate up or froze the leftovers", DH_ICON.bin, "#5D7C4E"],
-  ];
+  const DH_ICON = {
+    bag: "M5 8h14l-1 12H6ZM9 8V6a3 3 0 0 1 6 0v2",
+    bin: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",
+    tag: "M3 12V4h8l10 10-8 8ZM7.5 7.5h.01",
+    wash: "M4 3h16v18H4ZM4 7h16M12 18a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+    plug: "M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0ZM12 17v4",
+    route: "M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM8 17h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7",
+    home: "M3 11l9-7 9 7v9h-6v-6H9v6H3Z",
+    cal: "M4 6h16v14H4ZM4 10h16M8 3v4M16 3v4",
+    swap: "M7 7h12l-3-3M17 17H5l3 3",
+  };
+  const KEY_DAILY_CHOICE = "co2_daily_choice"; // { 3: "redfree", ... }
+  const DH_ACTS = ["", "Move your money", "Move your energy", "More plant-based food", "More green travel", "Monitor your footprint"];
+  const actOf = (k) => (/^a[1-5]:/.test(k) ? k.slice(0, 2) : null);
+  // Ticks from before habits were one per Act.
+  const DH_LEGACY = { nothingnew: "a1:nothingnew", heating: "a2:heating", shower: "a2:shower", meatfree: "a3:meatfree", nowaste: "a3:nowaste", carfree: "a4:carfree" };
+  const listDays = (ds) => (ds.length >= 5 ? "every weekday" : ds.length > 1 ? ds.slice(0, -1).join(", ") + " and " + ds[ds.length - 1] : ds[0]);
+  // One daily habit for each of Acts 1 to 5 (6 and 7 are about other
+  // people), worked out from the survey, with a few to choose from. The
+  // first is the suggestion. Each brings its own nudge for Plan & remind.
+  function actHabitOptions(n) {
+    const s = survey && survey.completedAt ? survey : null;
+    const o = (k, name, sub, ic, time, title, body) => ({ k, name, sub, ic, time, title, body });
+    if (n === 1) {
+      const b = (s && s.banking) || {};
+      const bank = b.bank ? D.BANKS.find((x) => x.key === b.bank) : null;
+      const list = [o("nothingnew", "Bought nothing new", "Second-hand, borrowed or did without", DH_ICON.bag, "10:00", "Nothing new today", "Second-hand, borrowed or do without.")];
+      if (s && (!bank || bank.green === false))
+        list.push(o("bankstep", "A step to a greener bank", bank ? "Compare, open or switch: one step away from " + bank.label : "Compare, open or switch: one step at a time", SW_ICONS.banking, "12:30", "One step to a greener bank", (bank ? "Today's step away from " + bank.label : "Today's step") + ": compare, open or switch."));
+      list.push(o("secondhand", "Chose second-hand", "Vinted, eBay or a charity shop before new", DH_ICON.tag, "10:00", "Second-hand first", "Need something? Look second-hand before new."));
+      return list;
+    }
+    if (n === 2) {
+      const e = (s && s.energy) || {};
+      const gas = !s || Number(e.gasKwh) > 30;
+      const cold = [9, 10, 11, 0, 1, 2, 3].includes(new Date().getMonth());
+      const each = s && s.water && s.water.liters ? Math.round(s.water.liters / 30.4 / Math.max(1, Number(e.household) || 1)) : 0;
+      const heat = o("heating", "Heating down a notch", s && gas ? "About " + kgFmt(e.gasKwh) + " kWh of gas a month: a degree lower is an easy cut" : "A degree lower, or a jumper on", SW_ICONS.energy, "18:00", "Heating down a notch", "Turn it down a degree tonight, or put a jumper on.");
+      const shower = o("shower", "Short shower", each > 140 ? "About " + each + " litres a day each, above the UK's 140: under 5 minutes" : "Under 5 minutes: use the timer", SW_ICONS.water, "07:00", "Short shower today", "Tap to start a 5-minute shower timer.");
+      const wash = o("wash30", "Washed at 30°, or line-dried", "Most of a wash's energy goes on heating the water", DH_ICON.wash, "19:00", "Wash at 30° today", "A cooler wash, and line-dry if you can.");
+      const off = o("standby", "Switched off at the wall", "TV, chargers and consoles on standby", DH_ICON.plug, "22:00", "Off at the wall", "TV, chargers and consoles: switch off at the wall before bed.");
+      return gas && cold ? [heat, shower, wash, off] : [shower, wash, off].concat(gas ? [heat] : []);
+    }
+    if (n === 3) {
+      const m = (s && s.meals) || {};
+      const c = s ? mealCounts(s) : {};
+      const red = (c.beef || 0) + (c.lamb || 0), meat = red + (c.chicken || 0) + (c.pork || 0);
+      const days = (x) => (x >= 6.5 ? "every day" : x < 0.75 ? "about once a fortnight" : x < 1.25 ? "about once a week" : "about " + Math.round(x * 2) / 2 + " days a week");
+      const waste = o("nowaste", "No food wasted", m.foodWaste && m.foodWaste !== "low" ? "You said some food gets thrown away: eat it up or freeze it" : "Ate up or froze the leftovers", DH_ICON.bin, "20:00", "No food wasted", "Any leftovers? Eat them tomorrow or freeze them tonight.");
+      const lunch = o("plantlunch", "Plant-based lunch", "Beans, lentils, falafel or veg", SW_ICONS.meals, "11:30", "Plant-based lunch today", "Beans, lentils, falafel or veg for lunch.");
+      const vegan = o("veganday", "Vegan day", "Dairy and eggs out for the day: cheese is the big one", SW_ICONS.meals, "11:30", "Vegan day today", "No dairy or eggs today. Cheese is the big one.");
+      if (m.diet === "vegan") return [waste, o("seasonal", "Seasonal or local food", "British and in season travels less and stays fresher", SW_ICONS.meals, "17:30", "Seasonal food today", "Pick what's British and in season for dinner.")];
+      if (m.diet === "veggie") return [vegan, o("plantmilk", "Plant milk swap", "Oat or soya in your tea, coffee and cereal", SW_ICONS.meals, "08:00", "Plant milk today", "Oat or soya in your tea, coffee and cereal."), waste];
+      if (m.diet === "pescatarian") return [o("veggieday", "Vegetarian day", c.fish ? "You have fish " + days(c.fish) + ": none today" : "No fish today", SW_ICONS.meals, "11:30", "Vegetarian day today", "No fish today: veg, beans or eggs instead."), vegan, waste];
+      const meatDay = o("meatfree", "Meat-free day", s && meat ? "You have meat " + days(meat) + ": none today" : "No meat or fish today", SW_ICONS.meals, "11:30", "Meat-free day today", "No meat today: lunch is the easy win.");
+      if (red >= 0.5) return [o("redfree", "No beef or lamb today", "You have beef or lamb " + days(red) + ": the highest-carbon meats", SW_ICONS.meals, "11:30", "No beef or lamb today", "Chicken, fish or plants instead of beef or lamb today."), meatDay, lunch, waste];
+      return [meatDay, lunch, waste];
+    }
+    if (n === 4) {
+      const cm = (s && s.commute) || {};
+      const wk = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+      const carDays = wk.filter((d) => ["car_petrol", "car_diesel", "motorcycle", "ev"].includes(cm[d]));
+      const ptDays = wk.filter((d) => ["train", "tube", "bus"].includes(cm[d]));
+      const km = Number(cm.distance) || 0;
+      const alt = km && km <= 3 ? "walk" : km && km <= 8 ? "cycle or take the bus" : "take the train or bus";
+      const errands = o("carfree", s ? "Car-free errands" : "Car-free day", "Shops and visits on foot, by bike or bus", HB_WALK, "09:30", "Car-free today", "Leave the keys at home: walk, cycle, bus or train.");
+      if (carDays.length)
+        return [
+          o("carfree", "Car-free commute", "You drive " + listDays(carDays) + ": " + alt + (km ? " the " + kgFmt(km) + " km" : "") + " instead", HB_WALK, "07:30", "Car-free commute today", "Leave the car at home today: " + alt + "."),
+          o("carshare", "Shared a lift", "Half the trip each when you share with a colleague", SW_ICONS.motivate, "07:30", "Share a lift today", "Ask a colleague, and halve the trip."),
+          o("combine", "Combined car trips", "One trip for the shop, the school run and errands", DH_ICON.route, "09:00", "One trip, not three", "Combine the shop, school run and errands into one trip today."),
+          o("wfh", "Worked from home", "No commute at all today", DH_ICON.home, "07:30", "Working from home?", "No commute today: one less drive."),
+        ];
+      if (ptDays.length) return [o("activeleg", "Walked or cycled part of the way", "Hop off a stop early, or cycle to the " + (cm[ptDays[0]] === "bus" ? "stop" : "station"), HB_WALK, "07:30", "Walk part of the way", "Hop off a stop early, or cycle to the " + (cm[ptDays[0]] === "bus" ? "stop" : "station") + "."), errands];
+      if (wk.some((d) => cm[d] === "walk_bike")) return [o("activekeep", "Walked or cycled", "Your commute's already green: keep it going", HB_WALK, "07:30", "Walk or cycle today", "Your commute's already green: keep it going."), errands];
+      return [errands];
+    }
+    return [
+      o("meter", "Checked my energy use", "Smart meter display or your supplier's app: spot what's using most", HB_CHART, "20:30", "Check today's energy use", "A quick look at your smart meter or supplier's app."),
+      o("plantomorrow", "Planned tomorrow", "Pick tomorrow's habits in Plan & remind", DH_ICON.cal, "21:00", "Plan tomorrow", "Two minutes: pick tomorrow's habits."),
+    ];
+  }
+  function chosenHabit(n) {
+    const opts = actHabitOptions(n), pick = (lsGet(KEY_DAILY_CHOICE, {}) || {})[n];
+    return opts.find((x) => x.k === pick) || opts[0];
+  }
+  // The card's habits: [key, name, why, icon, colour, act, option]
+  // Shows the habit actually ticked today if it differs (the shower timer
+  // ticks Short shower even when Act 2's usual habit is the heating).
+  const dailyHabits = () => {
+    const today = dailyLog()[localDay(new Date())] || [];
+    return [1, 2, 3, 4, 5].map((n) => {
+      const t = today.find((x) => actOf(x) === "a" + n);
+      const h = (t && actHabitOptions(n).find((o) => "a" + n + ":" + o.k === t)) || chosenHabit(n);
+      return ["a" + n + ":" + h.k, h.name, h.sub, h.ic, HB_COL[n], n, h];
+    });
+  };
   const pad2 = (n) => (n < 10 ? "0" : "") + n;
   const localDay = (d) => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
   const dayAdd = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const weekStartOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
-  function dailyLog() { const l = lsGet(KEY_DAILY, {}); return l && typeof l === "object" && !Array.isArray(l) ? l : {}; }
+  function dailyLog() {
+    const l = lsGet(KEY_DAILY, {});
+    if (!l || typeof l !== "object" || Array.isArray(l)) return {};
+    let changed = false;
+    Object.keys(l).forEach((d) => {
+      const seen = new Set(), out = [];
+      (Array.isArray(l[d]) ? l[d] : []).forEach((k) => {
+        const nk = DH_LEGACY[k] || k, a = actOf(nk);
+        if (nk !== k) changed = true;
+        if (!a || seen.has(a)) { changed = true; return; }
+        seen.add(a);
+        out.push(nk);
+      });
+      if (out.length) l[d] = out.sort(); else delete l[d];
+    });
+    if (changed) lsSet(KEY_DAILY, l);
+    return l;
+  }
   // The streak counts back from today, or from yesterday until today's
   // first tick (so it's still alive until midnight).
   function dailyStats(log) {
@@ -6180,7 +6285,9 @@
   function toggleDaily(k) {
     const log = dailyLog(), key = localDay(new Date());
     const set = new Set(log[key] || []);
-    set.has(k) ? set.delete(k) : set.add(k);
+    const had = set.has(k);
+    [...set].forEach((x) => { if (actOf(x) === actOf(k)) set.delete(x); });
+    if (!had) set.add(k);
     if (set.size) log[key] = [...set].sort(); else delete log[key];
     const cutoff = localDay(dayAdd(new Date(), -70));
     Object.keys(log).forEach((d) => { if (d < cutoff) delete log[d]; });
@@ -6235,23 +6342,27 @@
   // Nudges still to come: today's planned but not done, and tomorrow's.
   function dhToolsHtml() {
     const plans = dailyPlan(), done = dailyLog()[localDay(new Date())] || [];
-    const n = Object.keys(plans[localDay(new Date())] || {}).filter((h) => !done.includes(h)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
+    const n = Object.keys(plans[localDay(new Date())] || {}).filter((a) => !done.some((x) => actOf(x) === a)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
     return '<button type="button" class="dh-tool" data-action="shower-timer">' + svgPath(SW_ICONS.water, 16) + "Shower timer</button>" +
       '<button type="button" class="dh-tool" data-action="plan-open">' + icon("bell") + "Plan &amp; remind" + (n ? '<span class="dh-tool-n tnum">' + n + "</span>" : "") + "</button>";
   }
   function dailyCardHtml(still) {
-    const st = dailyStats(), on = new Set(st.today);
+    const st = dailyStats();
+    const doneAct = (n) => st.today.some((x) => actOf(x) === "a" + n);
     const planToday = dailyPlan()[localDay(new Date())] || {};
     return (
       '<section class="dh' + (still ? " still" : "") + '" aria-labelledby="dh-h">' +
       '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
       '<h2 id="dh-h" class="display">Daily habits</h2></div><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div></div>" +
       '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
-      '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c], i) =>
-        '<li style="--k:' + i + '"><button type="button" class="dh-h' + (on.has(k) ? " on" : planToday[k] ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on.has(k) + '" style="--c:' + c + '">' +
-        '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + esc(sub) + "</small>" +
-        (planToday[k] && !on.has(k) ? '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(planToday[k]) + "</span>" : "") + "</span>" +
-        '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button></li>").join("") + "</ul>" +
+      '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c, n], i) => {
+        const on = doneAct(n), pl = planToday["a" + n];
+        return '<li class="dh-li" style="--k:' + i + ";--c:" + c + '"><button type="button" class="dh-h' + (on ? " on" : pl ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on + '">' +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><span class="dh-act">Act ' + n + "</span><b>" + esc(name) + "</b><small>" + esc(sub) + "</small>" +
+          (pl && !on ? '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(pl) + "</span>" : "") + "</span>" +
+          '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
+          '<button type="button" class="dh-swap" data-action="dh-swap" data-n="' + n + '" aria-label="Choose another daily habit for Act ' + n + ", " + esc(DH_ACTS[n]) + '">' + svgPath(DH_ICON.swap, 16) + "</button></li>";
+      }).join("") + "</ul>" +
       '<div class="dh-tools">' + dhToolsHtml() + "</div>" +
       '<div class="dh-foot">' + dhFootHtml(st) + "</div>" + dailyRemindOffer() + "</section>"
     );
@@ -6279,7 +6390,7 @@
       if (times.length)
         await LN.schedule({ notifications: times.map((t, i) => {
           const isToday = i === 0 && localDay(t) === localDay(now);
-          const names = left.map((h) => (dailyHabits().find((x) => x[0] === h) || [])[1]).filter(Boolean).map((n) => n.toLowerCase());
+          const names = left.map((a) => chosenHabit(Number(a.slice(1))).name.toLowerCase());
           const title = isToday && names.length ? "Did you manage it?" : isToday && st.streak > 0 ? "Keep your " + st.streak + "-day streak going" : "One small thing today?";
           const body = isToday && names.length ? "Your " + names.join(" and ") + ": tick it off on My Habits." : isToday && st.streak > 0 ? "Tick off a daily habit before midnight." : "A meat-free day, a car-free day or a short shower: tick it off on My Habits.";
           return { id: DAILY_ID + i, title, body, schedule: { at: t, allowWhileIdle: true }, extra: { route: "#/habits" } };
@@ -6317,31 +6428,28 @@
   const KEY_DAILY_PLAN = "co2_daily_plan"; // { "2026-11-21": { carfree: "07:30" } }
   const PLAN_ID = 7201; // 7201-7220: today's and tomorrow's
   const TIMER_ID = 7300;
-  const DH_PLAN = {
-    carfree: ["07:30", "Car-free day today", "You planned a car-free day. Leave the keys at home: walk, cycle, bus or train.", "A nudge before you head out"],
-    meatfree: ["11:30", "Meat-free day today", "You planned a meat-free day: no meat or fish today. Lunch is the easy win.", "A nudge before lunch"],
-    shower: ["07:00", "Short shower today", "Tap to start a 5-minute shower timer.", "Opens the 5-minute timer"],
-    heating: ["18:00", "Heating down a notch", "You planned to turn the heating down a degree tonight, or put a jumper on.", "A nudge when you get home"],
-    nothingnew: ["10:00", "Nothing new today", "You planned to buy nothing new: second-hand, borrowed or do without.", "A nudge in the morning"],
-    nowaste: ["20:00", "No food wasted", "Any leftovers? Eat them tomorrow or freeze them tonight.", "A nudge after dinner"],
-  };
+
   // Today, a default that's already gone becomes the next half hour.
-  function planDefault(h, off) {
-    const t = DH_PLAN[h][0];
+  function planDefault(a, off) {
+    const t = chosenHabit(Number(a.slice(1))).time;
     if (off) return t;
     const now = new Date(), [hh, mm] = t.split(":").map(Number);
     if (hh * 60 + mm > now.getHours() * 60 + now.getMinutes() + 10) return t;
     const next = Math.min(23 * 60 + 30, Math.ceil((now.getHours() * 60 + now.getMinutes() + 20) / 30) * 30);
     return pad2(Math.floor(next / 60)) + ":" + pad2(next % 60);
   }
+  // Plans are by Act ({ a4: "07:30" }), so they follow whichever habit you pick.
   function dailyPlan() {
     const p = lsGet(KEY_DAILY_PLAN, {});
     if (!p || typeof p !== "object" || Array.isArray(p)) return {};
     const today = localDay(new Date());
-    Object.keys(p).forEach((d) => { if (d < today) delete p[d]; });
+    Object.keys(p).forEach((d) => {
+      if (d < today) { delete p[d]; return; }
+      Object.keys(p[d] || {}).forEach((h) => { const a = actOf(DH_LEGACY[h] || "") ; if (a && !p[d][a]) p[d][a] = p[d][h]; if (!/^a[1-5]$/.test(h)) delete p[d][h]; });
+    });
     return p;
   }
-  const plannedLeft = (k) => { const done = dailyLog()[k] || []; return Object.keys(dailyPlan()[k] || {}).filter((h) => !done.includes(h)); };
+  const plannedLeft = (k) => { const done = dailyLog()[k] || []; return Object.keys(dailyPlan()[k] || {}).filter((a) => !done.some((x) => actOf(x) === a)); };
   let planSig = null;
   async function syncPlanReminders() {
     const LN = plugin("LocalNotifications");
@@ -6349,12 +6457,13 @@
     const plan = dailyPlan(), log = dailyLog(), now = new Date(), list = [];
     [0, 1].forEach((off) => {
       const d = dayAdd(now, off), k = localDay(d), p = plan[k] || {};
-      dailyHabits().forEach(([h], i) => {
-        if (!p[h] || (log[k] || []).includes(h)) return;
-        const [hh, mm] = String(p[h]).split(":").map(Number);
+      [1, 2, 3, 4, 5].forEach((n) => {
+        const a = "a" + n;
+        if (!p[a] || (log[k] || []).some((x) => actOf(x) === a)) return;
+        const [hh, mm] = String(p[a]).split(":").map(Number);
         const at = new Date(d);
         at.setHours(hh || 0, mm || 0, 0, 0);
-        if (at > now) list.push({ id: PLAN_ID + off * 10 + i, h, at });
+        if (at > now) list.push({ id: PLAN_ID + off * 10 + n, h: chosenHabit(n), at });
       });
     });
     const sig = list.map((x) => x.id + "@" + x.at.getTime()).join(",");
@@ -6363,7 +6472,7 @@
     try {
       await LN.cancel({ notifications: Array.from({ length: 20 }, (_, i) => ({ id: PLAN_ID + i })) });
       if (list.length)
-        await LN.schedule({ notifications: list.map((x) => ({ id: x.id, title: DH_PLAN[x.h][1], body: DH_PLAN[x.h][2], schedule: { at: x.at, allowWhileIdle: true }, extra: { route: x.h === "shower" ? "#/habits?timer=shower" : "#/habits" } })) });
+        await LN.schedule({ notifications: list.map((x) => ({ id: x.id, title: x.h.title, body: x.h.body, schedule: { at: x.at, allowWhileIdle: true }, extra: { route: x.h.k === "shower" ? "#/habits?timer=shower" : "#/habits" } })) });
     } catch (e) {
       planSig = null;
     }
@@ -6389,11 +6498,11 @@
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
       '<div class="wk-mode pl-day" role="tablist" aria-label="Which day">' + [[0, "Today"], [1, "Tomorrow"]].map(([v, l]) =>
         '<button type="button" role="tab" aria-selected="' + (off === v) + '" class="' + (off === v ? "on" : "") + '" data-action="plan-day" data-day="' + v + '">' + l + "</button>").join("") + "</div>" +
-      '<ul class="pl-list">' + dailyHabits().map(([h, name, , ic, c]) => {
-        const on = !!plan[h], isDone = done.includes(h);
+      '<ul class="pl-list">' + dailyHabits().map(([, name, , ic, c, n]) => {
+        const h = "a" + n, on = !!plan[h], isDone = done.some((x) => actOf(x) === h);
         return '<li class="pl-row' + (on ? " on" : "") + (isDone ? " done" : "") + '" style="--c:' + c + '">' +
           '<button type="button" class="pl-pick" data-action="plan-toggle" data-h="' + h + '" aria-pressed="' + on + '"' + (isDone ? " disabled" : "") + ">" +
-          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + (isDone ? "Done already today" : esc(DH_PLAN[h][3])) + "</small></span>" +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + (isDone ? "Done already today" : "Act " + n + " · " + esc(DH_ACTS[n])) + "</small></span>" +
           '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
           '<label class="pl-time' + (on ? "" : " off") + '">' + icon("bell") + '<span class="sr-only">Reminder time for ' + esc(name) + "</span>" +
           '<input type="time" class="pl-time-in" data-h="' + h + '" value="' + esc(plan[h] || planDefault(h, off)) + '"' + (on ? "" : " disabled") + " /></label></li>";
@@ -6402,6 +6511,20 @@
         : isNativeApp() ? (count ? '<p class="xs muted pl-note">' + count + (count === 1 ? " nudge" : " nudges") + " set for " + (off ? "tomorrow" : "today") + ". Tick a habit and its nudge is dropped.</p>" : "")
         : '<p class="xs muted pl-note">The nudges arrive in the CO2 Counter iPhone app. Here, your plan shows on the Daily habits card.</p>') +
       '<button type="button" class="btn btn-green btn-block mt-3" data-action="plan-done">Done</button></div></div></div>'
+    );
+  }
+  // Pick a different daily habit for one Act, all from your answers.
+  function dhPickHtml(n) {
+    const opts = actHabitOptions(n), cur = chosenHabit(n).k;
+    return (
+      '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet" role="dialog" aria-modal="true" aria-labelledby="pk-h"><div class="sheet-body">' +
+      '<div class="sheet-head"><div class="min0"><span class="dh-k">Act ' + n + " · " + esc(DH_ACTS[n]) + '</span><h2 id="pk-h" class="display">Your daily habit</h2>' +
+      '<p class="sheet-habit">' + (survey && survey.completedAt ? "Worked out from your survey. Pick the one that fits your days." : "Take the survey and these fit your answers.") + "</p></div>" +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+      '<ul class="pl-list pk-list">' + opts.map((h) =>
+        '<li class="pl-row pk-row' + (h.k === cur ? " on" : "") + '" style="--c:' + HB_COL[n] + '"><button type="button" class="pl-pick" data-action="dh-choose" data-n="' + n + '" data-k="' + h.k + '" aria-pressed="' + (h.k === cur) + '">' +
+        '<span class="dh-ic" aria-hidden="true">' + svgPath(h.ic, 20) + '</span><span class="dh-t"><b>' + esc(h.name) + "</b><small>" + esc(h.sub) + "</small></span>" +
+        '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button></li>").join("") + "</ul></div></div></div>"
     );
   }
   function paintPlanSheet() {
@@ -6473,7 +6596,7 @@
       if (animate) { void fill.getBoundingClientRect(); fill.style.transition = "stroke-dashoffset " + left + "ms linear"; fill.style.strokeDashoffset = T.C.toFixed(2); }
     };
     const controls = () => {
-      const tickBtn = dailyStats().today.includes("shower") ? '<span class="st-ticked">' + icon("check") + " Short shower ticked</span>" : '<button type="button" class="btn st-go" data-st="tick">' + icon("check") + " Tick short shower</button>";
+      const tickBtn = dailyStats().today.includes("a2:shower") ? '<span class="st-ticked">' + icon("check") + " Short shower ticked</span>" : '<button type="button" class="btn st-go" data-st="tick">' + icon("check") + " Tick short shower</button>";
       ctl.innerHTML =
         T.state === "running" ? '<button type="button" class="btn st-ghost" data-st="pause">Pause</button><button type="button" class="btn st-go" data-st="done">' + icon("check") + " I'm done</button>"
         : T.state === "paused" ? '<button type="button" class="btn st-go" data-st="resume">' + icon("arrowRight") + ' Carry on</button><button type="button" class="btn st-ghost" data-st="done">I\'m done</button>'
@@ -6574,7 +6697,7 @@
         T.left = T.state === "running" ? T.end - Date.now() : T.left;
         finish(true);
       } else if (a === "tick") {
-        if (!dailyStats().today.includes("shower")) toggleDaily("shower");
+        if (!dailyStats().today.includes("a2:shower")) toggleDaily("a2:shower");
         const card = app.querySelector(".dh");
         if (card) card.outerHTML = dailyCardHtml(true);
         haptic("success");
@@ -11955,7 +12078,7 @@
       const on = toggleDaily(el.dataset.k);
       el.classList.toggle("on", on);
       el.setAttribute("aria-pressed", on);
-      const planned = (dailyPlan()[localDay(new Date())] || {})[el.dataset.k];
+      const planned = (dailyPlan()[localDay(new Date())] || {})[actOf(el.dataset.k)];
       el.classList.toggle("planned", !on && !!planned);
       const pb = el.querySelector(".dh-plan");
       if (on && pb) pb.remove();
@@ -11976,12 +12099,33 @@
       paintPlanSheet();
     },
     "plan-done": () => closeModal(),
+    "dh-swap": (el) => {
+      modalRoot.innerHTML = dhPickHtml(Number(el.dataset.n));
+      document.body.classList.add("modal-open");
+    },
+    "dh-choose": (el) => {
+      const n = Number(el.dataset.n), k = el.dataset.k, a = "a" + n;
+      const choice = lsGet(KEY_DAILY_CHOICE, {}) || {};
+      choice[n] = k;
+      lsSet(KEY_DAILY_CHOICE, choice);
+      // Already ticked today? It stays ticked, as the new habit.
+      const log = dailyLog(), day = localDay(new Date());
+      if ((log[day] || []).some((x) => actOf(x) === a)) {
+        log[day] = log[day].filter((x) => actOf(x) !== a).concat(a + ":" + k).sort();
+        lsSet(KEY_DAILY, log);
+        saveDailyRemote(day, log[day]);
+      }
+      haptic("light");
+      closeModal();
+      afterPlanChange();
+    },
     "plan-day": (el) => {
       ui.planDay = Number(el.dataset.day) || 0;
       paintPlanSheet();
     },
     "plan-toggle": async (el) => {
       const h = el.dataset.h, k = localDay(dayAdd(new Date(), ui.planDay || 0)), all = dailyPlan();
+      if (!/^a[1-5]$/.test(h)) return;
       const day = all[k] || {};
       if (day[h]) delete day[h];
       else day[h] = planDefault(h, ui.planDay || 0);
