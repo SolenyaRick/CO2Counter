@@ -8262,3 +8262,30 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .lgb-btn:hover { filter: brightness(1.06); }
 .lgb-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 @media (min-width: 700px) { .lgb-ctas { max-width: 460px; margin: 0 auto; } }
+.fr-page > .lgb { margin: 8px 0 14px; }
+/* Friends while it loads: the page's own shape, gently shimmering. */
+.fr-skel { position: relative; overflow: hidden; display: grid; gap: 10px; margin-bottom: 12px; padding: 18px; border-radius: 24px; background: rgba(255, 252, 245, 0.7); border: 1px solid var(--line, rgba(46, 42, 34, 0.12)); }
+.fr-skel i { display: block; height: 12px; border-radius: 8px; background: rgba(46, 42, 34, 0.08); }
+.fr-skel i:nth-child(1) { width: 40%; height: 16px; }
+.fr-skel i:nth-child(2) { width: 85%; }
+.fr-skel i:nth-child(3) { width: 65%; }
+.fr-skel.me { height: 72px; padding: 14px 18px; }
+.fr-skel.strip { height: 96px; background: transparent; border: 0; }
+.fr-skel.card { height: 170px; }
+.fr-skel::after, .lgb-place.wait::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%); background-size: 220% 100%; animation: fr-shimmer 1.4s ease-in-out infinite; }
+@keyframes fr-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.lgb-place.wait { overflow: hidden; }
+.lgb-place.wait .lgb-pos { width: 52px; height: 36px; background: rgba(196, 229, 125, 0.22); }
+.lgb-place.wait span:last-child { display: grid; gap: 6px; width: 150px; }
+.lgb-place.wait span i { display: block; height: 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); }
+.lgb-place.wait span i + i { width: 70%; }
+.lgb-place.wait::after { background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.08) 50%, transparent 70%); background-size: 220% 100%; }
+@media (prefers-color-scheme: dark) { .fr-skel { background: rgba(43, 39, 31, 0.7); border-color: rgba(236, 235, 233, 0.1); } .fr-skel i { background: rgba(236, 235, 233, 0.08); } .fr-skel::after { background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%); background-size: 220% 100%; } }
+@media (prefers-reduced-motion: reduce) { .fr-skel::after, .lgb-place.wait::after { animation: none; } }
+/* Biggest moves: the saving and its unit on one line. */
+.mv3 .move-kg { flex-direction: row; align-items: baseline; gap: 3px; white-space: nowrap; }
+.mv3 .move-kg .xs { font-size: 13px; font-weight: 700; }
+@media (max-width: 420px) { .mv3 .move-kg b { font-size: 18px; } }
+/* Friends: section headings all one size. */
+.fr-page .fr-groups h2.display { font-size: 22px; margin: 0; }
+.fr-page .fr-groups { padding: 20px 18px; }
