@@ -8391,3 +8391,21 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .frx .pd .pd-head { justify-content: center; margin-bottom: 30px; }
 .frx .pd .pd-k { padding: 4px 10px; border-radius: 999px; background: rgba(217, 164, 65, 0.16); color: #8a5d14; font-weight: 800; }
 @media (prefers-color-scheme: dark) { .frx .pd .pd-k { color: #f0c879; } }
+/* Friends on a laptop: as wide as the other pages, in two columns. */
+.frx-cols, .frx-left, .frx-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 420px) { .frx-cols, .frx-left, .frx-right { gap: 12px; } }
+@media (min-width: 960px) {
+  .frx { max-width: 1160px; }
+  .frx-cols { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .frx-left { position: sticky; top: 88px; }
+  .frx-left .frx-head { margin-top: 2px; }
+  .frx-left .fr-strip { flex-wrap: wrap; overflow: visible; gap: 12px 10px; margin: 0; }
+  .frx-left .frx-me { flex-wrap: wrap; }
+  .frx-left .frx-stats { width: 100%; }
+  .frx-left .frx-stat { flex: 1; }
+  .frx-right .frx-tabs { margin-top: 0; }
+  .frx .lgb .lgh { padding-top: 22px; }
+}
+/* A wide podium stays a sensible size. */
+@media (min-width: 960px) { .frx .pd-podium { max-width: 560px; margin: 0 auto; width: 100%; } }
+@media (min-width: 1180px) { .frx-right .tro-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px 6px; } }
