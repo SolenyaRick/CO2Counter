@@ -528,8 +528,19 @@
           .maybeSingle();
         if (!error && data) {
           const s = normaliseSurvey(data.survey_data);
-          // Saved before completedAt existed: they've been seeing results.
-          if (!s.completedAt) s.completedAt = data.survey_data && data.survey_data.completedAt ? data.survey_data.completedAt : "earlier";
+          // No finish time: either saved before finish times were kept (a
+          // finished survey sits in the history, and it's been showing
+          // results), or left half-done, which stays unfinished so it never
+          // counts as a result anywhere.
+          if (!s.completedAt || s.completedAt === "earlier") {
+            const was = s.completedAt;
+            const h = await sb.from("survey_history").select("id", { count: "exact", head: true }).eq("user_id", currentUser.id).then((x) => x, () => ({ error: true }));
+            if (h.error || h.count > 0) s.completedAt = "earlier";
+            else {
+              delete s.completedAt;
+              if (was) saveSurveyRemote(s); // put right one marked finished by mistake
+            }
+          }
           if (pinFactors(s)) saveSurveyRemote(s);
           lsSet(KEY_SURVEY, s);
           return s;
@@ -8125,12 +8136,15 @@
     const roleBy = {};
     (d.latest || []).forEach((r) => { const role = r.data && r.data.about && r.data.about.role; if (role) roleBy[r.u] = role; });
     (d.people || []).forEach((p) => { if (p.role) roleBy[p.u] = p.role; });
-    const everyone = Array.from(new Set((d.latest || []).map((r) => r.u).concat((d.people || []).map((p) => p.u))));
+    // Only people with a finished survey: someone part way through, or who
+    // never finished, isn't counted anywhere on this page.
+    const everyone = Array.from(new Set((d.latest || []).map((r) => r.u)));
+    const finished = new Set(everyone);
     const people = everyone.map((u) => ({ u, role: roleBy[u] || null }));
     const roles = ROLES.map(([k, l]) => breakdown(l, people.filter((p) => p.role === k).map((p) => p.u))).concat([breakdown("Not given", people.filter((p) => !p.role).map((p) => p.u))]);
-    const groups = (d.groups || []).map((g) => breakdown(g.name, g.members || []));
+    const groups = (d.groups || []).map((g) => breakdown(g.name, (g.members || []).filter((u) => finished.has(u))));
     // Research consent lives on the profile only.
-    const research = (d.people || []).filter((p) => p.research).map((p) => p.u);
+    const research = (d.people || []).filter((p) => p.research && finished.has(p.u)).map((p) => p.u);
     return { totals, cats, rows, people: fps.length, accounts: d.accounts || 0, surveys: (d.history || []).length, clickPeople: new Set(clicks.map((c) => c.u)).size, roles, groups, research, fps, latestUsers: (d.latest || []).map((r) => r.u), roleOf: Object.fromEntries(people.map((p) => [p.u, p.role])) };
   }
 
@@ -8225,7 +8239,7 @@
       tile("Average", t.n ? kgFmt(t.mean) : "–", "kg CO₂e a year") +
       tile("Standard deviation", t.n > 1 ? "± " + kgFmt(t.sd) : "–", t.n > 1 ? "two-thirds of people fall within " + kgFmt(Math.max(0, t.mean - t.sd)) + "–" + kgFmt(t.mean + t.sd) : "needs 2+ surveys") +
       tile("Median", t.n ? kgFmt(t.median) : "–", "half are above, half below") +
-      tile("People", m.people, m.accounts + " accounts · " + m.surveys + " surveys taken") +
+      tile("People", m.people, "with a finished survey · " + m.accounts + " accounts · " + m.surveys + " surveys finished") +
       "</div>" +
       (analytics.guests
         ? '<p class="sm mt-3"><b>+ ' + Number(analytics.guests.total || 0).toLocaleString() + "</b> surveys finished without an account" + (analytics.guests.last30 != null ? " (" + Number(analytics.guests.last30).toLocaleString() + " in the last 30 days)" : "") +
@@ -8259,7 +8273,7 @@
     html += table("By role", "From the optional \"What best describes your work?\" in the survey (Money step).", m.roles) + table("By group", "Groups people have made on the Friends page.", m.groups);
     html +=
       '<section class="glass an-card"><h2 class="card-title">Research data</h2><p class="sm muted">' + m.research.length + (m.research.length === 1 ? " person has" : " people have") +
-      " opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
+      " with a finished survey opted in to sharing their answers for research (Account page). The download has their answers and footprints with a scrambled id instead of any name or email, and their role if given.</p>" +
       '<button type="button" class="btn btn-outline btn-sm mt-3" data-action="export-research"' + (m.research.length ? "" : " disabled") + ">Download research data (CSV)</button></section>";
     const groups = [...new Set(m.rows.map((r) => r.cat))];
     const totalClicks = m.rows.reduce((a, r) => a + r.clicks, 0);
