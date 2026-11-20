@@ -2945,7 +2945,7 @@
 
   // One shared suggestion list for every From / To box. The place list is
   // loaded the first time it's needed, then the step re-renders.
-  let placesLoading = false;
+  let placesLoading = false, placesListQueued = false;
   function placesDatalist() {
     if (!window.ECO_PLACES) {
       if (!placesLoading) {
@@ -2954,17 +2954,36 @@
         sc.src = "places.js?v=" + ASSET_VERSION;
         sc.onload = () => {
           placeIndex = null;
-          render();
+          // Only redraw when a journey already typed needs the places to
+          // work out its distance; otherwise just add the suggestions.
+          if ((survey.longTrips || []).some((x) => x.from || x.to)) render();
+          else placesDatalist();
         };
         document.head.appendChild(sc);
       }
       return;
     }
-    if (document.getElementById("places-list")) return;
+    if (document.getElementById("places-list") || placesListQueued) return;
+    // Nearly 5,000 suggestions: built while the phone is idle, so moving on
+    // to the Commute step doesn't stutter.
+    placesListQueued = true;
     const dl = document.createElement("datalist");
     dl.id = "places-list";
-    dl.innerHTML = window.ECO_PLACES.map((p) => '<option value="' + esc(p[0]) + '"></option>').join("");
     document.body.appendChild(dl);
+    const all = window.ECO_PLACES;
+    let at = 0;
+    // A few hundred at a time, so a tap or scroll never waits on it.
+    const step = (deadline) => {
+      do {
+        const tpl = document.createElement("template");
+        tpl.innerHTML = all.slice(at, at + 400).map((p) => '<option value="' + esc(p[0]) + '"></option>').join("");
+        dl.appendChild(tpl.content);
+        at += 400;
+      } while (at < all.length && deadline && deadline.timeRemaining() > 6);
+      if (at < all.length) idle(step);
+    };
+    const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 30));
+    idle(step);
   }
 
   // "Not sure?" helper for the commute: two postcodes (looked up with the
@@ -4232,8 +4251,17 @@
       else { const x = (x0 + a * w).toFixed(2); l.setAttribute("x1", x); l.setAttribute("x2", x); }
     });
     // Number tags: above each slice, or beside it on the right.
-    el.querySelectorAll(".mv3-tag").forEach((g) => {
-      const m = Number(g.dataset.mid);
+    // Thin slices sit close together, so the tags are nudged apart until
+    // there is clear space between them (each is 6.8 units across).
+    const tags = [...el.querySelectorAll(".mv3-tag")];
+    const span = up ? h : w, gap = 9.5 / span;
+    const at = tags.map((g) => Number(g.dataset.mid));
+    const order = at.map((m, i) => i).sort((a, b) => at[a] - at[b]);
+    for (let k = 1; k < order.length; k++) at[order[k]] = Math.max(at[order[k]], at[order[k - 1]] + gap);
+    const over = at[order[order.length - 1]] - (1 + 2 / span);
+    if (over > 0) order.forEach((i) => (at[i] -= over));
+    tags.forEach((g, i) => {
+      const m = at[i];
       g.setAttribute("transform", up ? "translate(" + Math.min(52, x0 + w + 4.5).toFixed(2) + " " + (bottom - m * h).toFixed(2) + ")" : "translate(" + (x0 + m * w).toFixed(2) + " -2.4)");
     });
     const fill = (k) => bands.forEach((r) => {
@@ -5718,6 +5746,7 @@
     sb.rpc("my_acts_league").then(({ data, error }) => {
       ui.leagueLoading = false;
       ui.league = error ? { missing: true } : { rows: data || [] };
+      if (!error && friends.loaded) cacheFriends();
       if (currentPath() === "/friends") render();
     }, () => { ui.leagueLoading = false; ui.league = { missing: true }; });
   }
@@ -5754,7 +5783,9 @@
     const size = me ? Number(me.league_size) || L.rows.length : 0;
     const place = me
       ? '<p class="lgb-place"><span class="lgb-pos display tnum">' + ordinal(me.pos) + "</span><span>of " + kgFmt(size) + (size === 1 ? " person" : " people") + " in your league, ranked by yearly footprint</span></p>"
-      : "";
+      : !L && currentUser
+        ? '<p class="lgb-place wait" aria-hidden="true"><span class="lgb-pos"></span><span><i></i><i></i></span></p>'
+        : "";
     return (
       '<section class="lgb rise" aria-label="Your league">' + leagueHeaderHtml(acts) + place +
       '<div class="lgb-ctas"><button type="button" class="lgb-btn" data-action="league-open">See my league ' + icon("arrowRight") + "</button>" +
@@ -8262,37 +8293,61 @@
 
   const friends = { loaded: false, loading: false, rows: [], board: [], myName: "", error: "", msg: "" };
 
+  // The last Friends page is kept on this phone, so it opens straight away
+  // and refreshes in the background. Cleared on sign-out.
+  const KEY_FRIENDS_CACHE = "co2_friends_cache";
+  const FRIENDS_CACHED = ["rows", "board", "myName", "progress", "feed", "feedReady", "cheersGot", "groups", "groupsReady", "groupBoards", "blocks", "safetyReady"];
+  function hydrateFriends() {
+    if (friends.loaded || !currentUser) return false;
+    const c = lsGet(KEY_FRIENDS_CACHE, null);
+    if (!c || c.uid !== currentUser.id || Date.now() - c.at > 14 * 86400000) return false;
+    FRIENDS_CACHED.forEach((k) => { if (k in c) friends[k] = c[k]; });
+    if (c.league && !ui.league) ui.league = c.league;
+    if (!friends.groups || !friends.groups.some((g) => g.id === ui.groupSel)) ui.groupSel = friends.groups && friends.groups.length ? friends.groups[0].id : null;
+    friends.loaded = true;
+    return true;
+  }
+  function cacheFriends() {
+    if (!currentUser) return;
+    const c = { uid: currentUser.id, at: Date.now() };
+    FRIENDS_CACHED.forEach((k) => (c[k] = friends[k]));
+    if (ui.league && ui.league.rows) c.league = ui.league;
+    lsSet(KEY_FRIENDS_CACHE, c);
+  }
+
   async function loadFriends() {
     if (!currentUser || !sb || friends.loading) return;
     friends.loading = true;
     const me = currentUser.id;
+    const soft = (q) => q.then((x) => x, () => ({ error: true }));
     try {
-      const [{ data: rows }, { data: board }, { data: mine }, prog] = await Promise.all([
+      // Everything that doesn't depend on something else, all at once.
+      const [{ data: rows }, { data: board }, { data: mine }, prog, feed, cheers, , bl] = await Promise.all([
         sb.from("friendships").select("*").or("requester_id.eq." + me + ",addressee_id.eq." + me),
         sb.rpc("friends_footprints"),
         sb.from("profiles").select("display_name").eq("id", me).maybeSingle(),
-        // Most improved; missing until the SQL is run, which is fine.
-        sb.rpc("friends_progress").then((x) => x, () => ({ data: null })),
+        // Most improved, the feed, cheers and blocks are missing until their
+        // SQL is run, which is fine.
+        soft(sb.rpc("friends_progress")),
+        soft(sb.rpc("friends_feed")),
+        soft(sb.rpc("my_cheers")),
+        loadGroups(),
+        soft(sb.rpc("my_blocks")),
       ]);
       friends.progress = (prog && !prog.error && prog.data) || [];
-      // The feed and cheers; missing until the feed SQL is run.
-      const [feed, cheers] = await Promise.all([
-        sb.rpc("friends_feed").then((x) => x, () => ({ error: true })),
-        sb.rpc("my_cheers").then((x) => x, () => ({ error: true })),
-      ]);
       friends.feedReady = !!(feed && !feed.error && Array.isArray(feed.data));
       friends.feed = friends.feedReady ? feed.data.filter((x) => x && x.post_key && x.at && !isNaN(new Date(x.at))) : [];
       friends.cheersGot = (cheers && !cheers.error && Number(cheers.data)) || 0;
-      await loadGroups();
-      // People you've blocked (missing until the safety SQL is run).
-      const bl = await sb.rpc("my_blocks").then((x) => x, () => ({ error: true }));
       friends.safetyReady = !!(bl && !bl.error && Array.isArray(bl.data));
       friends.blocks = friends.safetyReady ? bl.data : [];
       const list = rows || [];
       const otherIds = [...new Set(list.map((r) => (r.requester_id === me ? r.addressee_id : r.requester_id)))];
+      // Names we already have from the totals; only ask for the rest.
       const names = {};
-      if (otherIds.length) {
-        const { data: profs } = await sb.from("profiles").select("id, display_name").in("id", otherIds);
+      (board || []).forEach((b) => { if (b.user_id && b.display_name) names[b.user_id] = b.display_name; });
+      const missing = otherIds.filter((id) => !names[id]);
+      if (missing.length) {
+        const { data: profs } = await sb.from("profiles").select("id, display_name").in("id", missing);
         (profs || []).forEach((p) => (names[p.id] = p.display_name || "Friend"));
       }
       friends.rows = list.map((r) => {
@@ -8301,6 +8356,8 @@
       });
       friends.board = (board || []).slice().sort((a, b) => a.total_yearly - b.total_yearly);
       friends.myName = (mine && mine.display_name) || "";
+      friends.error = "";
+      cacheFriends();
     } catch (e) {
       friends.error = "Couldn't load your friends. Check your connection and try again.";
     }
@@ -8682,7 +8739,7 @@
         (g.is_owner ? '<button type="button" class="btn btn-sm btn-outline btn-danger" data-action="delete-group" data-id="' + g.id + '">Delete group</button>' : "") + "</div>";
     }
     return (
-      '<section class="glass guide-card"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Groups</h2><span class="muted grp-sub">Teams, wards, classes, anyone</span></div>' +
+      '<section class="glass guide-card fr-groups"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 class="display">Groups</h2><span class="muted grp-sub">Teams, wards, classes, anyone</span></div>' +
       (friends.groupMsg ? '<p class="xs mt-2 ' + (friends.groupOk ? "green-dark" : "red") + '" role="status">' + esc(friends.groupMsg) + "</p>" : "") + body + "</section>"
     );
   }
@@ -9050,10 +9107,14 @@
     );
   }
   function renderFriends() {
+    if (!friends.loaded && hydrateFriends()) setTimeout(() => loadFriends(), 0);
     if (!friends.loaded) {
       loadFriends();
       if (friends.error) return '<div class="container">' + stateCard({ kind: "error", icon: "refresh", title: "Couldn't load your friends", text: "Check your connection, then try again.", actions: [["Try again", 'data-action="friends-retry"', true]] }) + "</div>";
-      return '<div class="container">' + stateCard({ kind: "loading", title: "Loading your friends", text: "Their totals, your groups and the feed." }) + "</div>";
+      // The page's own shape while it loads, so nothing jumps when it lands.
+      const bone = (cls) => '<div class="fr-skel ' + cls + '" aria-hidden="true"><i></i><i></i><i></i></div>';
+      return '<div class="container friends-v2 fr-page" aria-busy="true">' + leagueBannerHtml() +
+        '<p class="sr-only" role="status">Loading your friends</p>' + bone("me") + bone("strip") + bone("card") + bone("card") + "</div>";
     }
     // Nothing to show at all: say what went wrong and how to fix it.
     if (friends.error && !(friends.rows || []).length && !(friends.board || []).length)
@@ -9140,8 +9201,10 @@
 
     return (
       '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
+      // Your tree league comes first, above everything (full width on a laptop).
+      leagueBannerHtml() +
       '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
-      '<main class="fr-feed">' + leagueBannerHtml() + '<h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
     );
   }
 
@@ -9533,6 +9596,7 @@
     const hist = historyByDay();
     const change = hist.length > 1 ? hist[0].totalYearly - hist[hist.length - 1].totalYearly : 0;
     if (!friends.loaded && !friends.loading) loadFriends();
+    if (!friends.loaded) hydrateFriends();
     const friendCount = friends.rows.filter((f) => f.status === "accepted").length;
     const rank = friendCount ? rankInfo() : null;
     const name = ui.userName && ui.userName !== "App user" ? ui.userName : ui.username || "Your account";
@@ -9566,7 +9630,7 @@
       '<div class="acc-tiles">' +
       '<a class="dark" href="#/results"><b class="display tnum">' + (survey && survey.completedAt ? (fp.totalYearly / 1000).toFixed(1) + "<small> t</small>" : "–") + "</b>" +
       '<span class="' + (pct != null ? (change < 0 ? "honey fw-700" : "clay-l fw-700") : "") + '">' + (pct != null ? (change < 0 ? "▼ " : "▲ ") + pct + "%" : "a year") + "</span></a>" +
-      '<a href="#/friends"><b class="display tnum">' + (rank ? ordinal(friends.board.findIndex((b) => b.is_self) + 1) : friendCount) + "</b><span>" +
+      '<a href="#/friends"><b class="display tnum">' + (rank ? ordinal(friends.board.findIndex((b) => b.is_self) + 1) : friends.loaded ? friendCount : "–") + "</b><span>" +
       (rank ? "of " + friends.board.length + " friends" : friendCount === 1 ? "friend" : "friends") + "</span></a>" +
       '<a class="honey-bg" href="#/habits"><b class="display tnum">' + actsDone + "<small>/7</small></b><span>acts done</span></a></div>";
     const me =
@@ -11214,6 +11278,7 @@
       lsRemove(KEY_SURVEY);
       lsRemove(KEY_HB_LEVEL);
       lsRemove(KEY_HB_WON);
+      lsRemove(KEY_FRIENDS_CACHE);
       lsRemove(KEY_HISTORY);
       ui.history = [];
       ui.newSurvey = ui.reviewing = ui.fromReview = false;
