@@ -28,10 +28,10 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "13 November 2026";
+  const LEGAL_UPDATED = "20 November 2026";
   // Bump when the privacy policy changes in a way people should be told
   // about: signed-in accounts on an older version see a one-time notice.
-  const PRIVACY_VERSION = "2026-11-13";
+  const PRIVACY_VERSION = "2026-11-20";
 
   const D = window.ECO_DATA;
   // The hand-picked airports in data.js come first (they're the list shown
@@ -5810,6 +5810,12 @@
   }
   const levelOf = (n) => (n >= 7 ? "Forest" : n >= 5 ? "Tree" : n >= 3 ? "Sapling" : n >= 1 ? "Sprout" : "Seed");
   function leagueBoardHtml() {
+    const mode = ui.lgMode === "week" ? "week" : "kg";
+    const sw = '<div class="wk-mode" role="tablist" aria-label="Rank the league by">' +
+      [["kg", "Footprint"], ["week", "This week"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (mode === k) + '" class="' + (mode === k ? "on" : "") + '" data-action="lg-mode" data-mode="' + k + '">' + l + "</button>").join("") + "</div>";
+    return sw + (mode === "week" ? weekLeagueHtml() : leagueKgHtml());
+  }
+  function leagueKgHtml() {
     const L = ui.league;
     if (!L) { loadLeague(); return '<p class="sm muted mt-3">Loading your league…</p>'; }
     // No league yet (SQL not run): the anonymous table instead.
@@ -6127,17 +6133,168 @@
       return hbPhonePage({ acts, ready, made, lv, nextLv, toSave, party, shows, state });
     }
     hbSheetBuild = null;
-    const DAILY = [SW_ICONS.meals, SW_ICONS.water, HB_WALK];
     return (
       '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' +
-      party + '<div class="hb3-top-row">' + hero + spot + "</div>" + sundayOffer(acts) +
+      party + '<div class="hb3-top-row">' + hero + spot + "</div>" + dailyCardHtml(!animate) + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
-      '<section class="hb-soon" aria-labelledby="hb-daily"><span class="hb-soon-tag">Coming soon</span><p><b id="hb-daily" class="display">Daily habits</b> streaks for small daily things, like a meat-free lunch</p>' +
-      '<span class="hb-soon-ics" aria-hidden="true">' + DAILY.map((d) => "<i>" + svgPath(d, 16) + "</i>").join("") + "</span></section>" +
+
       '<p class="xs muted hb-credit"><a class="hb-rz-foot" href="https://www.realzero.earth/7-acts" target="_blank" rel="noopener"><img src="/icons/realzero-56.png" width="115" height="18" alt="Real Zero" /></a>The 7 Acts are by Real Zero, used with their permission.</p></div>'
     );
   }
+  // ==================== Daily habits ====================
+  // Six small things to tick off each day. Each tick is 10 points; points
+  // this week rank you among friends and in your league, and start again
+  // every Monday. Kept on this phone and, when signed in, on the account
+  // (save_daily_habits, which takes today or yesterday only).
+  const KEY_DAILY = "co2_daily"; // { "2026-11-20": ["meatfree", ...] }
+  const KEY_DAILY_REMIND = "co2_notify_daily"; // "on" | "off"
+  const DAILY_ID = 7101; // and 7102: the next two evenings
+  const DH_ICON = { bag: "M5 8h14l-1 12H6ZM9 8V6a3 3 0 0 1 6 0v2", bin: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" };
+  const dailyHabits = () => [
+    ["meatfree", "Meat-free day", "No meat or fish today", SW_ICONS.meals, "#3F5B3A"],
+    ["carfree", "Car-free day", "Walked, cycled, bus or train", HB_WALK, "#3E6F80"],
+    ["shower", "Short shower", "Under 5 minutes, or skipped", SW_ICONS.water, "#4F8798"],
+    ["heating", "Heating down a notch", "A degree lower, or a jumper on", SW_ICONS.energy, "#A9781F"],
+    ["nothingnew", "Bought nothing new", "Second-hand, borrowed or did without", DH_ICON.bag, "#8C6A4F"],
+    ["nowaste", "No food wasted", "Ate up or froze the leftovers", DH_ICON.bin, "#5D7C4E"],
+  ];
+  const pad2 = (n) => (n < 10 ? "0" : "") + n;
+  const localDay = (d) => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  const dayAdd = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const weekStartOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+  function dailyLog() { const l = lsGet(KEY_DAILY, {}); return l && typeof l === "object" && !Array.isArray(l) ? l : {}; }
+  // The streak counts back from today, or from yesterday until today's
+  // first tick (so it's still alive until midnight).
+  function dailyStats(log) {
+    log = log || dailyLog();
+    const now = new Date(), tk = localDay(now);
+    const has = (d) => (log[localDay(d)] || []).length > 0;
+    let d = has(now) ? now : dayAdd(now, -1), streak = 0;
+    while (has(d) && streak < 400) { streak++; d = dayAdd(d, -1); }
+    const ws = weekStartOf(now);
+    const week = Array.from({ length: 7 }, (_, i) => { const k = localDay(dayAdd(ws, i)); return { k, n: (log[k] || []).length, today: k === tk, future: k > tk }; });
+    return { streak, week, points: week.reduce((t, x) => t + x.n * 10, 0), today: log[tk] || [], daysLeft: 7 - ((now.getDay() + 6) % 7) };
+  }
+  let dailyTimer = null;
+  function toggleDaily(k) {
+    const log = dailyLog(), key = localDay(new Date());
+    const set = new Set(log[key] || []);
+    set.has(k) ? set.delete(k) : set.add(k);
+    if (set.size) log[key] = [...set].sort(); else delete log[key];
+    const cutoff = localDay(dayAdd(new Date(), -70));
+    Object.keys(log).forEach((d) => { if (d < cutoff) delete log[d]; });
+    lsSet(KEY_DAILY, log);
+    clearTimeout(dailyTimer);
+    dailyTimer = setTimeout(() => saveDailyRemote(key, log[key] || []), 500);
+    syncDailyReminder();
+    return set.has(k);
+  }
+  async function saveDailyRemote(day, list) {
+    if (!currentUser || !sb) return;
+    try {
+      const { error } = await sb.rpc("save_daily_habits", { p_day: day, p_habits: list });
+      if (!error) { ui.weekLeagueStale = true; friendsWeek.stale = true; }
+    } catch (e) {}
+  }
+  // Signed in: bring in ticks from other devices, and send up today's or
+  // yesterday's if the account hasn't got them yet.
+  async function loadDaily() {
+    if (!currentUser || !sb) return;
+    try {
+      const { data, error } = await sb.from("daily_habits").select("day, habits").gte("day", localDay(dayAdd(new Date(), -70)));
+      if (error) return;
+      const log = dailyLog(), server = {};
+      (data || []).forEach((r) => (server[r.day] = r.habits || []));
+      Object.entries(server).forEach(([d, h]) => (log[d] = [...new Set((log[d] || []).concat(h))].sort()));
+      lsSet(KEY_DAILY, log);
+      [localDay(new Date()), localDay(dayAdd(new Date(), -1))].forEach((d) => { if ((log[d] || []).length && String(log[d]) !== String((server[d] || []).slice().sort())) saveDailyRemote(d, log[d]); });
+      const card = app.querySelector(".dh");
+      if (card) card.outerHTML = dailyCardHtml(true);
+      syncDailyReminder();
+    } catch (e) {}
+  }
+  const dhStreakHtml = (st) =>
+    '<span class="dh-streak' + (st.streak ? " on" : "") + '"><span class="dh-flame" aria-hidden="true">' + icon("flame") + "</span>" +
+    (st.streak ? '<b class="display tnum">' + st.streak + "</b><small>" + (st.streak === 1 ? "day" : "days") + '</small><span class="sr-only"> streak</span>' : "<small>Start a streak</small>") + "</span>";
+  const dhWeekHtml = (st) => st.week.map((d, i) =>
+    '<span class="dh-day' + (d.n ? " got" : "") + (d.today ? " today" : "") + (d.future ? " later" : "") + '"><i aria-hidden="true">' + "MTWTFSS"[i] + "</i><b>" + (d.n ? icon("check") : "") + "</b>" +
+    '<span class="sr-only">' + ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i] + ": " + (d.n ? d.n + " ticked" : "none") + "</span></span>").join("");
+  const dhFootHtml = (st) =>
+    '<span class="dh-pts"><b class="display tnum">' + st.points + "</b> points this week · " + (st.daysLeft === 1 ? "last day" : st.daysLeft + " days left") + "</span>" +
+    (currentUser
+      ? '<a class="dh-league" href="#/friends" data-action="week-open">This week\'s league ' + icon("arrowRight") + "</a>"
+      : '<button type="button" class="dh-league" data-action="start-signup">Race friends ' + icon("arrowRight") + "</button>");
+  function dailyRemindOffer() {
+    if (!isNativeApp() || lsGet(KEY_DAILY_REMIND, "")) return "";
+    return '<div class="dh-remind">' + icon("bell") + "<span>A nudge at 7.30pm on days you haven't ticked anything?</span>" +
+      '<button type="button" class="dh-remind-on" data-action="notif-daily-on">Remind me</button>' +
+      '<button type="button" class="dh-remind-no" data-action="notif-daily-no" aria-label="No thanks">' + icon("x") + "</button></div>";
+  }
+  function dailyCardHtml(still) {
+    const st = dailyStats(), on = new Set(st.today);
+    return (
+      '<section class="dh' + (still ? " still" : "") + '" aria-labelledby="dh-h">' +
+      '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
+      '<h2 id="dh-h" class="display">Daily habits</h2></div><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div></div>" +
+      '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
+      '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c], i) =>
+        '<li style="--k:' + i + '"><button type="button" class="dh-h' + (on.has(k) ? " on" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on.has(k) + '" style="--c:' + c + '">' +
+        '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + esc(sub) + "</small></span>" +
+        '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button></li>").join("") + "</ul>" +
+      '<div class="dh-foot">' + dhFootHtml(st) + "</div>" + dailyRemindOffer() + "</section>"
+    );
+  }
+  // App only: tonight at 7.30 if nothing's ticked yet, and tomorrow's.
+  let dailySig = null;
+  async function syncDailyReminder() {
+    const LN = plugin("LocalNotifications");
+    if (!LN) return;
+    const on = lsGet(KEY_DAILY_REMIND, "") === "on";
+    const st = dailyStats(), now = new Date();
+    const at = (d) => { const x = new Date(d); x.setHours(19, 30, 0, 0); return x; };
+    const times = [];
+    if (on) {
+      if (!st.today.length && at(now) > now) times.push(at(now));
+      times.push(at(dayAdd(now, 1)));
+      if (times.length < 2) times.push(at(dayAdd(now, 2)));
+    }
+    const sig = times.map((t) => t.getTime()).join(",") + "|" + st.streak + "|" + st.today.length;
+    if (sig === dailySig) return;
+    dailySig = sig;
+    try {
+      await LN.cancel({ notifications: [{ id: DAILY_ID }, { id: DAILY_ID + 1 }] });
+      if (times.length)
+        await LN.schedule({ notifications: times.map((t, i) => {
+          const tonight = i === 0 && localDay(t) === localDay(now) && st.streak > 0;
+          return { id: DAILY_ID + i, title: tonight ? "Keep your " + st.streak + "-day streak going" : "One small thing today?", body: tonight ? "Tick off a daily habit before midnight." : "A meat-free day, a car-free day or a short shower: tick it off on My Habits.", schedule: { at: t, allowWhileIdle: true }, extra: { route: "#/habits" } };
+        }) });
+    } catch (e) {
+      dailySig = null;
+    }
+  }
+  async function turnOnDaily() {
+    const LN = plugin("LocalNotifications");
+    if (!LN) { ui.flash = NO_PLUGIN_MSG; render(); return; }
+    try {
+      let perm = await LN.checkPermissions();
+      if (perm.display !== "granted") perm = await LN.requestPermissions();
+      if (perm.display !== "granted") { lsSet(KEY_DAILY_REMIND, "off"); ui.notifBlocked = true; ui.flash = NOTIF_OFF_MSG; }
+      else { lsSet(KEY_DAILY_REMIND, "on"); ui.flash = "Done. We'll nudge you at 7.30pm on days you haven't ticked anything."; }
+    } catch (e) {
+      ui.flash = "Couldn't switch on reminders. Please try again.";
+    }
+    dailySig = null;
+    await syncDailyReminder();
+    render();
+  }
+  async function turnOffDaily() {
+    lsSet(KEY_DAILY_REMIND, "off");
+    dailySig = null;
+    await syncDailyReminder();
+    render();
+  }
+
   // ---------- My Habits on a phone ----------
   let hbSheetBuild = null;
   const HBF_CAT = { 1: ["banking"], 2: ["energy"], 3: ["meals"], 4: ["commute", "flights"] };
@@ -6220,6 +6377,7 @@
   const hbVerified = (a) => !!a.done && (!!a.verifiedTick || /^Verified/.test(a.sub || ""));
   function hbPhonePage(o) {
     const { acts, ready, made, lv, nextLv, toSave, party, shows, state } = o;
+    setTimeout(() => (ui.hbfDailySeen = true), 0);
     const toNext = nextLv ? nextLv[0] - made : 0;
     const tile = (a) => '<span class="hbf-ic" style="background:' + HB_COL[a.n] + '" aria-hidden="true">' + svgPath(a.icon, 22) + "</span>";
     const right = (a) =>
@@ -6243,7 +6401,7 @@
       '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
       '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + (rankTop(ui.rank) ? " · Top " + rankTop(ui.rank) + "%" : "") + "</span></div>" +
       (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
-      sundayOffer(acts) +
+      dailyCardHtml(ui.hbfDailySeen) + sundayOffer(acts) +
       (ready ? "" : '<button type="button" class="hbf-start" data-action="start-survey"><b class="display">Take the survey first</b><span>Acts 1 to 5 tick themselves from it</span>' + icon("arrowRight") + "</button>") +
       (todo.length
         ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>' + todo.length + ' left</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
@@ -8306,6 +8464,74 @@
   // ==================== Friends page ====================
 
   const friends = { loaded: false, loading: false, rows: [], board: [], myName: "", error: "", msg: "" };
+  // This week's points: you and your friends (friends_week), and your tree
+  // league (my_week_league). Both start again every Monday.
+  const friendsWeek = { loaded: false, loading: false, rows: [], missing: false };
+  function loadFriendsWeek() {
+    if (!sb || !currentUser || friendsWeek.loading) return;
+    friendsWeek.loading = true;
+    sb.rpc("friends_week").then(({ data, error }) => {
+      friendsWeek.loading = false;
+      friendsWeek.loaded = true;
+      friendsWeek.stale = false;
+      friendsWeek.missing = !!error;
+      friendsWeek.rows = error ? [] : (data || []).slice().sort((a, b) => b.points - a.points || b.streak - a.streak || String(a.display_name).localeCompare(String(b.display_name)));
+      if (currentPath() === "/friends") render();
+    }, () => { friendsWeek.loading = false; friendsWeek.loaded = true; friendsWeek.missing = true; });
+  }
+  function loadWeekLeague() {
+    if (!sb || !currentUser || ui.weekLeagueLoading) return;
+    ui.weekLeagueLoading = true;
+    sb.rpc("my_week_league").then(({ data, error }) => {
+      ui.weekLeagueLoading = false;
+      ui.weekLeagueStale = false;
+      ui.weekLeague = error ? { missing: true } : { rows: data || [] };
+      if (currentPath() === "/friends") render();
+    }, () => { ui.weekLeagueLoading = false; ui.weekLeague = { missing: true }; });
+  }
+  const daysLeftText = () => { const n = dailyStats().daysLeft; return n === 1 ? "Ends tonight" : "Resets Monday · " + n + " days left"; };
+  const medal = (pos, pts) => (pts > 0 && pos <= 3 ? " m" + pos : "");
+  // You and your friends, by points this week.
+  function weekFriendsHtml() {
+    // The last numbers stay up while fresh ones load: no flash.
+    if (!friendsWeek.loaded || friendsWeek.stale) { loadFriendsWeek(); if (!friendsWeek.loaded) return '<p class="sm muted mt-3">Adding up this week…</p>'; }
+    if (friendsWeek.missing) return '<p class="sm muted mt-3">Weekly points appear here once the latest database update is run.</p>';
+    const rows = friendsWeek.rows;
+    const anyone = rows.some((r) => r.points > 0);
+    const st = dailyStats();
+    return (
+      '<p class="wk-lede"><span>' + esc(daysLeftText()) + "</span><span>10 points for each daily habit you tick</span></p>" +
+      (anyone
+        ? '<ol class="fr-stand wk-list">' + rows.map((r, i) =>
+            '<li class="' + (r.is_self ? "me" : "") + '"><span class="fr-n wk-n' + medal(i + 1, r.points) + '">' + (i + 1) + "</span>" + frAv(r.user_id, r.display_name, 34, r.is_self) +
+            '<span class="min0"><span class="fr-sname">' + (r.is_self ? "You" : esc(r.display_name)) + "</span>" +
+            '<span class="wk-sub">' + (r.streak ? '<span class="wk-flame">' + icon("flame") + r.streak + "</span>" : "") + r.days + (r.days === 1 ? " day" : " days") + " this week</span></span>" +
+            '<b class="display tnum fr-sval">' + r.points + "<small> pts</small></b></li>").join("") + "</ol>"
+        : stateCard({ inline: true, icon: "flame", title: "A fresh week", text: "Nobody's ticked a daily habit yet. Be first: each one is 10 points.", actions: [["Tick one off", 'href="#/habits"', true]] })) +
+      (st.today.length ? "" : '<a class="wk-go" href="#/habits">' + icon("flame") + "<span>Nothing ticked today" + (st.streak ? ": keep your " + st.streak + "-day streak going" : "") + "</span>" + icon("arrowRight") + "</a>")
+    );
+  }
+  // Your tree league, by points this week, with last week's finish.
+  function weekLeagueHtml() {
+    const L = ui.weekLeague;
+    if (!L || ui.weekLeagueStale) { loadWeekLeague(); if (!L) return '<p class="sm muted mt-3">Adding up this week…</p>'; }
+    if (L.missing) return '<p class="sm muted mt-3">The weekly race appears here once the latest database update is run.</p>';
+    const rows = L.rows || [], me = rows.find((r) => r.is_me);
+    if (!me) return '<p class="sm mt-3">Finish <a class="link-btn" href="#/" data-action="start-survey">the survey</a> to take your place in a league.</p>';
+    const size = Number(me.league_size) || rows.length;
+    const last = me.last_pos ? Number(me.last_pos) : 0;
+    return (
+      (last ? '<p class="wk-last' + (last <= 3 ? " m" + last : "") + '">' + icon(last <= 3 ? "flame" : "flag") + "<span>Last week you finished <b>" + ordinal(last) + "</b> of " + kgFmt(size) + (last === 1 ? ". Champion!" : last <= 3 ? ". On the podium!" : ".") + "</span></p>" : "") +
+      '<p class="wk-lede"><span>' + esc(daysLeftText()) + "</span><span>" + kgFmt(size) + " in your league</span></p>" +
+      '<ol class="fr-stand lg-list wk-list">' + rows.map((r, i) => {
+        const name = r.is_me ? "You" : r.username ? "@" + r.username : "Someone";
+        return '<li class="' + (r.is_me ? "me" : "") + '" style="--k:' + i + '"><span class="fr-n wk-n' + medal(Number(r.pos), r.points) + '">' + r.pos + "</span>" +
+          frAv("u:" + (r.username || r.pos), r.is_me ? friends.myName || "You" : r.username || "?", 34, r.is_me) +
+          '<span class="min0"><span class="fr-sname">' + esc(name) + "</span></span>" +
+          '<b class="display tnum fr-sval">' + r.points + "<small> pts</small></b></li>";
+      }).join("") + "</ol>"
+    );
+  }
 
   // The last Friends page is kept on this phone, so it opens straight away
   // and refreshes in the background. Cleared on sign-out.
@@ -8626,6 +8852,7 @@
         })).catch(() => {});
     }
     syncSunday();
+    syncDailyReminder();
     if (currentUser && canFeedPush() && lsGet(KEY_FEEDPUSH, "") === "on") registerPush().catch(() => {});
     // Turned down before? Show how to allow them, on the Account page.
     const LN = plugin("LocalNotifications");
@@ -8660,6 +8887,7 @@
     return (
       '<section class="glass acc-box" aria-labelledby="acc-notif"><h2 id="acc-notif" class="display">Notifications</h2>' +
       row("Sunday reminder", "Your next big switch, each Sunday morning until all four are done.", lsGet(KEY_SUNDAY, "") === "on", "notif-sunday-toggle") +
+      row("Daily habits", "A nudge at 7.30pm on days you haven't ticked anything.", lsGet(KEY_DAILY_REMIND, "") === "on", "notif-daily-toggle") +
       (canFeedPush() ? row("Friends' activity", "When friends retake the survey, cheer you on or accept your request.", lsGet(KEY_FEEDPUSH, "") === "on", "notif-feed-toggle") : "") +
       // iPhone only asks once: if notifications were turned down, say how to allow them.
       (ui.notifBlocked
@@ -9091,7 +9319,7 @@
   }
   function standingsHtml(withPodium) {
     const myName = friends.myName || (currentUser.email || "").split("@")[0];
-    const tab = ui.standTab === "all" ? "all" : ui.standTab === "imp" || withPodium ? "imp" : "board";
+    const tab = ["week", "imp", "all"].includes(ui.standTab) ? ui.standTab : withPodium ? "week" : "board";
     const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     let rows;
     if (tab === "board") {
@@ -9109,8 +9337,10 @@
       '<section class="glass fr-box" id="fr-standings" aria-labelledby="fr-st-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="fr-st-h" class="display">' + (withPodium ? "More rankings" : "Standings") + "</h2>" +
       (latest ? '<span class="xs muted">Updated ' + new Date(latest).toLocaleDateString(undefined, { day: "numeric", month: "long" }) + "</span>" : "") + "</div>" +
       '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
-      (withPodium ? [["imp", "Most improved"], ["all", "My league"]] : [["board", "Lowest footprint"], ["imp", "Most improved"], ["all", "Everyone"]]).map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
-      (tab === "all"
+      (withPodium ? [["week", "This week"], ["imp", "Most improved"], ["all", "My league"]] : [["board", "Lowest"], ["week", "This week"], ["imp", "Improved"], ["all", "Everyone"]]).map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
+      (tab === "week"
+        ? weekFriendsHtml()
+        : tab === "all"
         ? ui.rankFull
           ? '<button type="button" class="link-btn lg-back" data-action="rank-league">' + icon("chevronLeft") + " Your league</button>" + rankBoardHtml()
           : leagueBoardHtml()
@@ -9122,7 +9352,7 @@
         : tab === "board"
           ? stateCard({ inline: true, icon: "chart", title: "No one to compare with yet", text: "Add friends to compare yearly totals. Lowest wins.", actions: [["Find a friend", 'data-action="fr-find"', true]] })
           : stateCard({ inline: true, icon: "trendDown", title: "No changes yet", text: "Retake the survey every few months. The biggest cut wins.", actions: [["Update my survey", 'href="#/" data-action="whats-changed"', true]] })) +
-      (rows.length && tab !== "all" ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
+      (rows.length && tab !== "all" && tab !== "week" ? '<p class="xs muted mt-2">' + (tab === "board" ? "Yearly totals of friends who've finished the survey." : "Change since each person's first survey.") + "</p>" : "") + "</section>"
     );
   }
   function renderFriends() {
@@ -9381,11 +9611,12 @@
             "<strong>Leagues</strong>: if you're signed in, your username, how many of the 7 Acts you've done and your yearly footprint total are shown in the leagues of people ranked near you (Friends, Everyone). Nothing else about you is shown. You can hide from leagues on your Account page; you still see your own place, and you're still counted in anonymous totals.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
             "<strong>Habits</strong>: the actions you tick yourself on the Habits page, so they're there on any device, and which of your 7 Acts we've verified.",
+            "<strong>Daily habits</strong>: which daily habits you tick each day (such as a meat-free or car-free day). Without an account they stay on your device. If you're signed in they're saved to your account, your friends see your points this week, how many days you've ticked and your streak, and people in your league see your username and points this week (unless you hide from leagues). Never which habits.",
             "<strong>Invites</strong>: your invite code, and who joined CO2 Counter with it. You see how many of them have finished the survey and, once at least two have measured twice, how much they've cut between them. Never who they are or their answers.",
             "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
             "<strong>Letters sent from the app</strong>: if you send a letter to your MP or a message to whoever pays your energy bills from CO2 Counter, it's sent through our email provider, Resend, from our address, with a copy to you and replies going to you. We keep only the date and the type of letter, not what you wrote or your address.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
-            "<strong>Notifications (app only)</strong>: Sunday reminders are scheduled on your phone, and nothing about them is sent to us. If you turn on notifications about friends' activity, we store your phone's push token (an address Apple gives your phone for notifications) until you turn them off, sign out or delete your account.",
+            "<strong>Notifications (app only)</strong>: Sunday reminders and daily habit reminders are scheduled on your phone, and nothing about them is sent to us. If you turn on notifications about friends' activity, we store your phone's push token (an address Apple gives your phone for notifications) until you turn them off, sign out or delete your account.",
             "<strong>Reports and blocks</strong>: if you report someone or a group, we keep the report (the reason, anything you add, and the name at the time) so we can review it. If you block someone, we keep that so they can't contact you. The person you report or block isn't told.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
             "<strong>Support details</strong>: if you choose to support CO2 Counter, the status and renewal date of your support and a reference to your customer record at Stripe. We never see or store your card details.",
@@ -10260,6 +10491,7 @@
       survey = await loadSurvey();
       saveSurveyRemote(survey);
       await loadHistory();
+      loadDaily();
       if (currentPath() === "/account") location.hash = "#/results";
     }
     notifStart();
@@ -10512,7 +10744,7 @@
     setNav(path === "/habits/level" ? "/habits" : parts[0] === "explainer" || parts[0] === "guide" || path === "/example" ? "/results" : path === "/welcome" || (path === "/" && html.includes("intro-v2")) ? "" : path);
     if (ui.privacyNotice && currentUser && html !== spinner && path !== "/privacy") {
       html =
-        '<div class="flash privacy-note" role="status">' + icon("info") + "<span>We've updated our privacy policy, including how we use anonymised totals. " +
+        '<div class="flash privacy-note" role="status">' + icon("info") + "<span>We've updated our privacy policy for daily habits: friends and your league see your points this week, never which habits. " +
         '<a class="link-btn" href="/privacy/">Read it</a></span><button type="button" class="btn btn-green btn-sm" data-action="accept-privacy">OK</button></div>' + html;
     }
     // Offline: say so, and that the page is what's saved on this phone.
@@ -10645,6 +10877,8 @@
     // Friends shows what it has straight away and refreshes in the background.
     if (currentPath() === "/friends") {
       friends.msg = "";
+      friendsWeek.stale = true;
+      ui.weekLeagueStale = true;
       if (friends.loaded) setTimeout(() => loadFriends(), 0);
     }
     ui.commuteOpen = null;
@@ -11417,6 +11651,35 @@
       ui.feedShown = (ui.feedShown || 5) + 5;
       render();
     },
+    "dh-tick": (el) => {
+      const card = el.closest(".dh");
+      const before = dailyStats().streak;
+      const on = toggleDaily(el.dataset.k);
+      el.classList.toggle("on", on);
+      el.setAttribute("aria-pressed", on);
+      const st = dailyStats();
+      if (on) { el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); haptic(st.today.length === 1 ? "success" : "light"); }
+      // Only the numbers change in place: no redraw.
+      card.querySelector(".dh-streak-wrap").innerHTML = dhStreakHtml(st);
+      if (st.streak > before) card.querySelector(".dh-streak").classList.add("up");
+      card.querySelector(".dh-week").innerHTML = dhWeekHtml(st);
+      card.querySelector(".dh-foot").innerHTML = dhFootHtml(st);
+    },
+    "week-open": () => {
+      ui.frTab = "board";
+      ui.standTab = "week";
+    },
+    "lg-mode": (el) => {
+      ui.lgMode = el.dataset.mode;
+      render();
+    },
+    "notif-daily-on": () => turnOnDaily(),
+    "notif-daily-no": () => {
+      lsSet(KEY_DAILY_REMIND, "off");
+      const o = app.querySelector(".dh-remind");
+      if (o) o.remove();
+    },
+    "notif-daily-toggle": () => (lsGet(KEY_DAILY_REMIND, "") === "on" ? turnOffDaily() : turnOnDaily()),
     "notif-sunday-on": () => turnOnSunday(),
     "notif-sunday-no": () => {
       lsSet(KEY_SUNDAY, "off");
@@ -12462,6 +12725,7 @@
     // Members get their saved answers; everyone else uses this device's.
     survey = await loadSurvey();
     await loadHistory();
+    loadDaily();
     notifStart();
     // Coming back with a finished survey: start on your plan (or your results
     // when signed out), not on the survey you've already done.
