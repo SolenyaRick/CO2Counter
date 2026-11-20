@@ -9237,17 +9237,19 @@
     return (
       '<div class="container friends-v2 fr-page frx' + (anim ? " frx-anim" : "") + '" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' +
       (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
-      leagueBannerHtml() + me +
+      leagueBannerHtml() +
+      // On a laptop: you and your friends on the left, the sections on the right.
+      '<div class="frx-cols"><div class="frx-left">' + me +
       '<div class="frx-head"><h1 class="display fr-h1">Friends' + (accepted.length ? ' <span class="frx-count tnum">' + accepted.length + "</span>" : "") + "</h1>" +
       // With no friends yet the add box is simply open: no button, no empty row.
       (accepted.length ? '<button type="button" class="frx-add' + (addOpen ? " on" : "") + '" data-action="fr-add-toggle" aria-expanded="' + addOpen + '" aria-controls="frx-addbox">' + icon(addOpen ? "x" : "plus") + (addOpen ? "Close" : "Add a friend") + "</button>" : "") + "</div>" +
       (people.length ? strip : "") +
       '<div id="frx-addbox" class="frx-addbox"' + (addOpen ? "" : " hidden") + ">" + manage + "</div>" +
-      reqs +
+      reqs + '</div><div class="frx-right">' +
       '<div class="frx-tabs" role="tablist" aria-label="Friends" style="--i:' + ti + '"><span class="frx-ink" aria-hidden="true"></span>' +
       tabs.map(([k, l]) => '<button type="button" role="tab" id="frx-t-' + k + '" aria-controls="frx-p-' + k + '" aria-selected="' + (k === tab) + '" tabindex="' + (k === tab ? 0 : -1) + '" class="' + (k === tab ? "on" : "") + '" data-action="fr-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
       tabs.map(([k]) => '<div class="frx-panel" role="tabpanel" id="frx-p-' + k + '" aria-labelledby="frx-t-' + k + '"' + (k === tab ? "" : " hidden") + ">" + panels[k] + "</div>").join("") +
-      "</div>"
+      "</div></div></div>"
     );
   }
 
