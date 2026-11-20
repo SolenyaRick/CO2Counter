@@ -2,6 +2,26 @@
 -- It is also the last sections of schema.sql.
 
 -- ---------- Global ranking by the 7 Acts (November 2026) ----------
+
+-- A survey counts as finished only with a real finish time, or the old
+-- "earlier" marker (surveys saved before finish times were kept) backed by
+-- a finished survey in the history. Half-done surveys never count, in the
+-- analytics, leagues, friends' totals or groups.
+create or replace function public.survey_finished(p_user uuid, p_data jsonb)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_data is null then return false; end if;
+  if coalesce(nullif(p_data ->> 'completedAt', ''), 'earlier') <> 'earlier' then return true; end if;
+  return p_data ->> 'completedAt' = 'earlier'
+    and exists (select 1 from public.survey_history h where h.user_id = p_user);
+end;
+$$;
+revoke all on function public.survey_finished(uuid, jsonb) from public, anon, authenticated;
 -- Each person's app saves which of the 7 Acts they've done (worked out on
 -- their phone from their survey and verified acts), via save_my_acts. The
 -- ranking is anonymous: my_acts_rank() tells you your own place and how
@@ -72,8 +92,12 @@ begin
     raise exception 'Admins only';
   end if;
   return (
+    -- Only people with a finished survey: a half-done one counts nowhere.
     with everyone as (
-      select coalesce(acts_done, '{}') as d, coalesce(cardinality(acts_done), 0) as n, acts_at from public.profiles where acts_done is not null
+      select coalesce(p.acts_done, '{}') as d, coalesce(cardinality(p.acts_done), 0) as n, p.acts_at
+      from public.profiles p
+      join public.survey_responses s on s.user_id = p.id and public.survey_finished(s.user_id, s.survey_data)
+      where p.acts_done is not null
     )
     select jsonb_build_object(
       'people', (select count(*) from everyone),
@@ -96,7 +120,7 @@ begin
             'hidden', count(*) filter (where p.leagues_hidden)
           ) as x
         from public.profiles p
-        left join public.survey_responses s on s.user_id = p.id and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+        join public.survey_responses s on s.user_id = p.id and public.survey_finished(s.user_id, s.survey_data)
         where p.acts_done is not null
         group by 1) l), '{}'::jsonb)
     )
@@ -132,7 +156,7 @@ as $$
     join public.profiles p on p.id = s.user_id
     where p.acts_done is not null
       and public.acts_level(coalesce(cardinality(p.acts_done), 0)) = (select lvl from mine)
-      and s.total_yearly is not null and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+      and s.total_yearly is not null and s.total_yearly > 0 and public.survey_finished(s.user_id, s.survey_data)
       and (not p.leagues_hidden or s.user_id = auth.uid())
       and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = s.user_id) or (b.blocker_id = s.user_id and b.blocked_id = auth.uid()))
   ), ranked as (

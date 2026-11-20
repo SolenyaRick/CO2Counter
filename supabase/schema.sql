@@ -1212,6 +1212,26 @@ grant execute on function public.membership_status() to authenticated;
 
 alter table public.survey_responses add column if not exists total_yearly numeric;
 
+-- A survey counts as finished only with a real finish time, or the old
+-- "earlier" marker (surveys saved before finish times were kept) backed by
+-- a finished survey in the history. Half-done surveys never count, in the
+-- analytics, leagues, friends' totals or groups.
+create or replace function public.survey_finished(p_user uuid, p_data jsonb)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_data is null then return false; end if;
+  if coalesce(nullif(p_data ->> 'completedAt', ''), 'earlier') <> 'earlier' then return true; end if;
+  return p_data ->> 'completedAt' = 'earlier'
+    and exists (select 1 from public.survey_history h where h.user_id = p_user);
+end;
+$$;
+revoke all on function public.survey_finished(uuid, jsonb) from public, anon, authenticated;
+
 drop function if exists public.friends_footprints();
 create function public.friends_footprints()
 returns table (user_id uuid, display_name text, total_yearly numeric, updated_at timestamptz, is_self boolean)
@@ -1230,6 +1250,7 @@ as $$
   left join public.profiles p on p.id = s.user_id
   where public.has_access()
     and s.total_yearly is not null
+    and public.survey_finished(s.user_id, s.survey_data)
     and (
       s.user_id = auth.uid()
       or exists (
@@ -1614,7 +1635,7 @@ begin
   end if;
   return jsonb_build_object(
     'latest', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || r.user_id::text), 12), 'data', r.survey_data))
-      from public.survey_responses r where r.survey_data ? 'completedAt'), '[]'::jsonb),
+      from public.survey_responses r where public.survey_finished(r.user_id, r.survey_data)), '[]'::jsonb),
     'history', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || h.user_id::text), 12), 'at', h.completed_at, 'data', h.survey_data) order by h.completed_at)
       from public.survey_history h), '[]'::jsonb),
     'clicks', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || c.user_id::text), 12), 'link', c.link_key, 'place', c.place, 'aff', c.via_affiliate, 'at', c.first_clicked_at))
@@ -1764,7 +1785,7 @@ as $$
     coalesce((select h3.n::integer from h h3 where h3.user_id = mb.user_id and h3.first_n = 1), 0),
     mb.user_id = auth.uid()
   from members mb
-  left join public.survey_responses s on s.user_id = mb.user_id
+  left join public.survey_responses s on s.user_id = mb.user_id and public.survey_finished(s.user_id, s.survey_data)
   left join public.profiles p on p.id = mb.user_id;
 $$;
 
@@ -1796,7 +1817,7 @@ begin
   end if;
   return jsonb_build_object(
     'latest', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || r.user_id::text), 12), 'data', r.survey_data))
-      from public.survey_responses r where r.survey_data ? 'completedAt'), '[]'::jsonb),
+      from public.survey_responses r where public.survey_finished(r.user_id, r.survey_data)), '[]'::jsonb),
     'history', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || h.user_id::text), 12), 'at', h.completed_at, 'data', h.survey_data) order by h.completed_at)
       from public.survey_history h), '[]'::jsonb),
     'clicks', coalesce((select jsonb_agg(jsonb_build_object('u', left(md5('co2:' || c.user_id::text), 12), 'link', c.link_key, 'place', c.place, 'aff', c.via_affiliate, 'at', c.first_clicked_at))
@@ -1905,7 +1926,7 @@ begin
     'joined', (select count(*) from public.referrals r where r.referrer_id = auth.uid()),
     'finished', (select count(*) from public.referrals r where r.referrer_id = auth.uid()
       and (exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
-        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt'))),
+        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and public.survey_finished(s.user_id, s.survey_data)))),
     'verified', coalesce((select jsonb_object_agg(v.act, v.verified_at) from public.act_verifications v where v.user_id = auth.uid()), '{}'::jsonb),
     -- Totals only, and only once enough people count that no one stands out.
     'cut', (select case when c.people >= 2 then round(c.cut) end from public.referral_cut(auth.uid()) c),
@@ -1965,7 +1986,7 @@ begin
   end if;
   select count(*) into v_finished from public.referrals r where r.referrer_id = v_referrer
     and (exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
-      or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt'));
+      or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and public.survey_finished(s.user_id, s.survey_data)));
   if v_finished >= 7 then
     insert into public.act_verifications (user_id, act) values (v_referrer, 'motivate') on conflict do nothing;
   end if;
@@ -2094,7 +2115,7 @@ begin
     'referrals', jsonb_build_object(
       'joined', (select count(*) from public.referrals),
       'finished', (select count(*) from public.referrals r where exists (select 1 from public.survey_history h where h.user_id = r.referred_id)
-        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and s.survey_data ? 'completedAt')),
+        or exists (select 1 from public.survey_responses s where s.user_id = r.referred_id and public.survey_finished(s.user_id, s.survey_data))),
       'inviters', (select count(distinct referrer_id) from public.referrals),
       'codes', (select count(*) from public.referral_codes),
       'cut_people', v_people,
@@ -2473,7 +2494,7 @@ as $$
     mb.user_id = auth.uid(),
     mb.user_id
   from members mb
-  left join public.survey_responses s on s.user_id = mb.user_id
+  left join public.survey_responses s on s.user_id = mb.user_id and public.survey_finished(s.user_id, s.survey_data)
   left join public.profiles p on p.id = mb.user_id;
 $$;
 
@@ -2601,6 +2622,26 @@ revoke all on function public.search_usernames(text) from public;
 grant execute on function public.search_usernames(text) to authenticated;
 
 -- ---------- Global ranking by the 7 Acts (November 2026) ----------
+
+-- A survey counts as finished only with a real finish time, or the old
+-- "earlier" marker (surveys saved before finish times were kept) backed by
+-- a finished survey in the history. Half-done surveys never count, in the
+-- analytics, leagues, friends' totals or groups.
+create or replace function public.survey_finished(p_user uuid, p_data jsonb)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_data is null then return false; end if;
+  if coalesce(nullif(p_data ->> 'completedAt', ''), 'earlier') <> 'earlier' then return true; end if;
+  return p_data ->> 'completedAt' = 'earlier'
+    and exists (select 1 from public.survey_history h where h.user_id = p_user);
+end;
+$$;
+revoke all on function public.survey_finished(uuid, jsonb) from public, anon, authenticated;
 -- Each person's app saves which of the 7 Acts they've done (worked out on
 -- their phone from their survey and verified acts), via save_my_acts. The
 -- ranking is anonymous: my_acts_rank() tells you your own place and how
@@ -2671,8 +2712,12 @@ begin
     raise exception 'Admins only';
   end if;
   return (
+    -- Only people with a finished survey: a half-done one counts nowhere.
     with everyone as (
-      select coalesce(acts_done, '{}') as d, coalesce(cardinality(acts_done), 0) as n, acts_at from public.profiles where acts_done is not null
+      select coalesce(p.acts_done, '{}') as d, coalesce(cardinality(p.acts_done), 0) as n, p.acts_at
+      from public.profiles p
+      join public.survey_responses s on s.user_id = p.id and public.survey_finished(s.user_id, s.survey_data)
+      where p.acts_done is not null
     )
     select jsonb_build_object(
       'people', (select count(*) from everyone),
@@ -2695,7 +2740,7 @@ begin
             'hidden', count(*) filter (where p.leagues_hidden)
           ) as x
         from public.profiles p
-        left join public.survey_responses s on s.user_id = p.id and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+        join public.survey_responses s on s.user_id = p.id and public.survey_finished(s.user_id, s.survey_data)
         where p.acts_done is not null
         group by 1) l), '{}'::jsonb)
     )
@@ -2731,7 +2776,7 @@ as $$
     join public.profiles p on p.id = s.user_id
     where p.acts_done is not null
       and public.acts_level(coalesce(cardinality(p.acts_done), 0)) = (select lvl from mine)
-      and s.total_yearly is not null and s.total_yearly > 0 and s.survey_data ? 'completedAt'
+      and s.total_yearly is not null and s.total_yearly > 0 and public.survey_finished(s.user_id, s.survey_data)
       and (not p.leagues_hidden or s.user_id = auth.uid())
       and not exists (select 1 from public.blocks b where (b.blocker_id = auth.uid() and b.blocked_id = s.user_id) or (b.blocker_id = s.user_id and b.blocked_id = auth.uid()))
   ), ranked as (
