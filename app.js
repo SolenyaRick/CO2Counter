@@ -6232,6 +6232,92 @@
       o("plantomorrow", "Planned tomorrow", "Pick tomorrow's habits in Plan & remind", DH_ICON.cal, "21:00", "Plan tomorrow", "Two minutes: pick tomorrow's habits."),
     ];
   }
+  // What one day of a habit saves, in kg CO₂e: from the person's own
+  // answers and the app's factors (a typical UK resident's before the
+  // survey). Steps that don't cut anything on the day are 0, and say so.
+  function habitSaving(k) {
+    const mine = !!(survey && survey.completedAt);
+    const s = mine ? survey : D.UK_TYPICAL_SURVEY;
+    const your = mine ? "your" : "a typical UK resident's";
+    const f2 = (x) => (x < 1 ? x.toFixed(2) : x.toFixed(1));
+    const meal = (key) => factorOf(D.MEAL_OPTIONS, key);
+    const c = mealCounts(s);
+    const tot = Object.keys(c).reduce((t, x) => t + c[x], 0) || 7;
+    const dayAvg = Object.keys(c).reduce((t, x) => t + c[x] * meal(x), 0) / tot;
+    const wasteMult = (D.FOOD_WASTE.find((w) => w.key === (s.meals && s.meals.foodWaste)) || D.FOOD_WASTE[0]).multiplier;
+    const cm = s.commute || {}, km = Number(cm.distance) || 0;
+    const wk = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const carMode = wk.map((d) => cm[d]).find((m) => ["car_petrol", "car_diesel", "motorcycle", "ev"].includes(m)) || "car_petrol";
+    const mode = (m) => factorOf(D.COMMUTE_MODES, m);
+    const carF = mode(carMode), carName = (D.COMMUTE_MODES.find((m) => m.key === carMode) || {}).label || "car";
+    const e = s.energy || {}, gas = Number(e.gasKwh) > 30;
+    const elecF = e.greenTariff ? D.GREEN_ELECTRICITY_FACTOR : D.ELECTRICITY_FACTOR;
+    const cold = [9, 10, 11, 0, 1, 2, 3].includes(new Date().getMonth());
+    const r = (kg, how) => ({ kg: Math.max(0, Math.round(kg * 100) / 100), how });
+    const red = (c.beef || 0) + (c.lamb || 0);
+    switch (k) {
+      case "meatfree": return r(dayAvg - meal("veggie"), "An average day of " + your + " meals (" + f2(dayAvg) + " kg) swapped for a vegetarian day (" + f2(meal("veggie")) + " kg).");
+      case "redfree": {
+        const redAvg = red ? ((c.beef || 0) * meal("beef") + (c.lamb || 0) * meal("lamb")) / red : meal("beef");
+        return r((red / tot) * (redAvg - meal("chicken")), "Beef or lamb is on about " + Math.round((red / tot) * 100) + "% of " + your + " days. On those days chicken instead saves " + f2(redAvg - meal("chicken")) + " kg; averaged over any day, this.");
+      }
+      case "veggieday": return r(dayAvg - meal("veggie"), "An average day of " + your + " meals (" + f2(dayAvg) + " kg) swapped for a vegetarian day (" + f2(meal("veggie")) + " kg).");
+      case "veganday": return r(dayAvg - meal("vegan"), "An average day of " + your + " meals (" + f2(dayAvg) + " kg) swapped for a vegan day (" + f2(meal("vegan")) + " kg).");
+      case "plantlunch": return r((dayAvg - meal("vegan")) / 3, "A third of the gap between an average day of " + your + " meals and a vegan day: one meal of three.");
+      case "plantmilk": return r(0.25 * (3.15 - 0.9), "250 ml of oat milk instead of cow's milk: 0.9 against 3.15 kg CO₂e a litre (Poore & Nemecek 2018, via Our World in Data).");
+      case "nowaste": return r(dayAvg * (wasteMult - 1), "The food " + (mine ? "you said gets" : "that typically gets") + " thrown away: about " + Math.round((wasteMult - 1) * 100) + "% of a day's food footprint (" + f2(dayAvg) + " kg).");
+      case "seasonal": return r(0, "Hard to put a fair number on one day, so we don't count it. It still helps.");
+      case "carfree": {
+        if (!km || !wk.some((d) => ["car_petrol", "car_diesel", "motorcycle", "ev"].includes(cm[d])) || !mine)
+          return r(6 * carF, "About one 6 km car journey you don't make (" + carName + ", " + carF.toFixed(3) + " kg a km, DESNZ).");
+        const alt = km <= 3 ? 0 : mode("bus");
+        return r(2 * km * (carF - alt), "Your " + km + " km each way by " + carName.toLowerCase() + " (" + carF.toFixed(3) + " kg a km) instead of " + (alt ? "the bus (" + alt.toFixed(3) + " kg a km)" : "walking") + ", there and back. DESNZ factors.");
+      }
+      case "carshare": return r(km * carF, "Half of " + your + " " + km + " km each way, there and back, by " + carName.toLowerCase() + " (" + carF.toFixed(3) + " kg a km).");
+      case "combine": return r(6 * carF, "About one 6 km car journey you don't make (" + carName.toLowerCase() + ", " + carF.toFixed(3) + " kg a km, DESNZ).");
+      case "wfh": return r(2 * km * carF, "No " + km + " km commute there and back by " + carName.toLowerCase() + " (" + carF.toFixed(3) + " kg a km).");
+      case "activeleg": {
+        const pt = wk.map((d) => cm[d]).find((m) => ["train", "tube", "bus"].includes(m)) || "bus";
+        return r(2 * mode(pt), "About 1 km each way on foot or by bike instead of the " + (pt === "tube" ? "tube" : pt) + " (" + mode(pt).toFixed(3) + " kg a km), there and back.");
+      }
+      case "activekeep": return r(2 * km * mode("car_petrol"), "Kept off the road: your " + km + " km each way would be this by petrol car (" + mode("car_petrol").toFixed(3) + " kg a km).");
+      case "heating": {
+        const day = (Number(e.gasKwh) || 0) / 30.4;
+        return r(gas ? day * 0.75 * 0.1 * D.GAS_FACTOR * (cold ? 1 : 0.3) : 0, gas ? "A degree lower cuts heating by up to a tenth (Energy Saving Trust): on about " + Math.round(day) + " kWh of gas a day, three-quarters of it for heating" + (cold ? "." : ", less in warmer months.") : "No gas in your answers, so we don't count it.");
+      }
+      case "shower": {
+        const kwh = gas ? 0.98 : 0.84;
+        return r(kwh * (gas ? D.GAS_FACTOR : elecF) + 0.024 * D.WATER_FACTOR, "Three minutes less than an 8-minute shower: about 24 litres of hot water, heated by " + (gas ? "gas" : "electricity") + ", plus the water itself.");
+      }
+      case "wash30": return r(0.3 * elecF, "A cooler wash uses about 0.3 kWh less electricity than at 40°" + (e.greenTariff ? ", on your green tariff." : "."));
+      case "standby": return r(0.25 * elecF, "Kit left on standby uses around 0.25 kWh a day in a typical home" + (e.greenTariff ? ", on your green tariff." : "."));
+      case "nothingnew": return r(D.ASSUMED_SHOPPING.totalKg / 365, "An average UK day of new clothes, household things, electronics and hobbies (about " + Math.round(D.ASSUMED_SHOPPING.totalKg / 100) / 10 + " t a year).");
+      case "secondhand": return r(D.ASSUMED_SHOPPING.clothesKg / 365, "An average UK day of new clothes (about " + Math.round(D.ASSUMED_SHOPPING.clothesKg) + " kg a year).");
+      case "bankstep": return r(0, "A step, not a saving yet: moving your money is one of the biggest cuts once it's done.");
+      case "meter": return r(0, "Not a saving in itself: seeing what uses most is how the big cuts start.");
+      case "plantomorrow": return r(0, "Not a saving in itself: planned habits are the ones that happen.");
+      default: return r(0, "");
+    }
+  }
+  const keySaving = (key) => habitSaving(String(key).split(":")[1] || "");
+  const kgShort = (kg) => (kg >= 10 ? kgFmt(Math.round(kg)) : kg >= 1 ? kg.toFixed(1) : kg.toFixed(2).replace(/^0/, "0"));
+  // Saved by daily habits: this week, and everything kept on this phone.
+  function dailySaved(log) {
+    log = log || dailyLog();
+    const ws = localDay(weekStartOf(new Date()));
+    let week = 0, all = 0;
+    Object.keys(log).forEach((d) => (log[d] || []).forEach((k) => { const kg = keySaving(k).kg; all += kg; if (d >= ws) week += kg; }));
+    return { week, all };
+  }
+  const TREE_DAY = () => D.EVERYDAY_COMPARISONS.treeKgYear / 365;
+  const treeWork = (kg) => {
+    const days = kg / TREE_DAY();
+    if (days < 45) return Math.max(1, Math.round(days)) + (Math.round(days) === 1 ? " day" : " days");
+    const months = Math.round(days / 30.4);
+    if (months < 24) return months + " months";
+    const y = Math.floor(months / 12), m = months % 12;
+    return y + (y === 1 ? " year" : " years") + (m ? " " + m + (m === 1 ? " month" : " months") : "");
+  };
   function chosenHabit(n) {
     const opts = actHabitOptions(n), pick = (lsGet(KEY_DAILY_CHOICE, {}) || {})[n];
     return opts.find((x) => x.k === pick) || opts[0];
@@ -6289,7 +6375,7 @@
     [...set].forEach((x) => { if (actOf(x) === actOf(k)) set.delete(x); });
     if (!had) set.add(k);
     if (set.size) log[key] = [...set].sort(); else delete log[key];
-    const cutoff = localDay(dayAdd(new Date(), -70));
+    const cutoff = localDay(dayAdd(new Date(), -400));
     Object.keys(log).forEach((d) => { if (d < cutoff) delete log[d]; });
     lsSet(KEY_DAILY, log);
     clearTimeout(dailyTimer);
@@ -6355,10 +6441,11 @@
       '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
       '<h2 id="dh-h" class="display">Daily habits</h2></div><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div></div>" +
       '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
+      '<div class="dh-saved-wrap">' + dhSavedHtml() + "</div>" +
       '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c, n], i) => {
         const on = doneAct(n), pl = planToday["a" + n];
         return '<li class="dh-li" style="--k:' + i + ";--c:" + c + '"><button type="button" class="dh-h' + (on ? " on" : pl ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on + '">' +
-          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><span class="dh-act">Act ' + n + "</span><b>" + esc(name) + "</b><small>" + esc(sub) + "</small>" +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><span class="dh-act">Act ' + n + (keySaving(k).kg >= 0.01 ? '<span class="dh-kg"> · −' + kgShort(keySaving(k).kg) + " kg</span>" : "") + "</span><b>" + esc(name) + "</b><small>" + esc(sub) + "</small>" +
           (pl && !on ? '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(pl) + "</span>" : "") + "</span>" +
           '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
           '<button type="button" class="dh-swap" data-action="dh-swap" data-n="' + n + '" aria-label="Choose another daily habit for Act ' + n + ", " + esc(DH_ACTS[n]) + '">' + svgPath(DH_ICON.swap, 16) + "</button></li>";
@@ -6419,6 +6506,129 @@
     dailySig = null;
     await syncDailyReminder();
     render();
+  }
+
+  // ---------- What you've saved, pictured ----------
+  // Ticking a habit opens a picture of it: the kilos, a tank of CO₂ saved
+  // this week filling up, the trees it would take to soak it up, and the
+  // sums. The strip on the card opens the same for everything so far.
+  const KEY_DH_QUIET = "co2_dh_quiet"; // "1": just a little "−1.2 kg" instead
+  const TREE_PATH = "M12 2.5l5.2 7.3h-3.1l4.4 6.2H13v5.5h-2V16H5.5l4.4-6.2H6.8Z";
+  const PHONE_PATH = "M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5ZM11 18.5h2";
+  const niceCap = (x) => [2, 5, 10, 15, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000].find((v) => v >= x) || Math.ceil(x / 1000) * 1000;
+  function dhSavedHtml() {
+    const sv = dailySaved();
+    const cap = niceCap(Math.max(sv.week * 1.25, 5));
+    return '<button type="button" class="dh-saved" data-action="dh-saved-open">' +
+      '<span class="dh-mini" aria-hidden="true"><i style="height:' + Math.min(100, (sv.week / cap) * 100).toFixed(1) + '%"></i></span>' +
+      '<span class="dh-saved-t"><span><b class="display tnum">−' + kgShort(sv.week) + " kg</b> CO₂e saved this week</span>" +
+      "<small>" + (sv.all > 0 ? "−" + kgShort(sv.all) + " kg so far: a tree's work for " + treeWork(sv.all) : "Tick a habit and watch your tank fill") + "</small></span>" +
+      '<span class="dh-saved-go" aria-hidden="true">' + icon("chevronRight") + "</span></button>";
+  }
+  function tankSvg(cap) {
+    const ticks = [0.25, 0.5, 0.75, 1].map((f) => { const y = 164 - f * 150; return '<line x1="104" x2="118" y1="' + y + '" y2="' + y + '"></line><text x="124" y="' + (y + 4) + '">' + kgShort(cap * f) + "</text>"; }).join("");
+    const bubbles = [[38, 0], [58, 0.7], [80, 1.4], [96, 0.35], [48, 1.9], [72, 2.4]].map(([x, d]) => '<circle cx="' + x + '" cy="20" r="' + (2 + (x % 3)) + '" style="animation-delay:' + d + 's"></circle>').join("");
+    return '<svg class="dhb-tank" viewBox="0 0 150 180" role="img" aria-hidden="true"><defs><clipPath id="dhb-clip"><rect x="22" y="14" width="96" height="150" rx="22"></rect></clipPath>' +
+      '<linearGradient id="dhb-liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4f08f"></stop><stop offset="1" stop-color="#4f8f4c"></stop></linearGradient></defs>' +
+      '<rect class="dhb-glass" x="22" y="14" width="96" height="150" rx="22"></rect>' +
+      '<g clip-path="url(#dhb-clip)"><g class="dhb-liq"><path class="dhb-wave" d="M-10 0q17.5-7 35 0t35 0 35 0 35 0 35 0 35 0 35 0v220h-245Z" fill="url(#dhb-liq)"></path><g class="dhb-bub">' + bubbles + "</g></g></g>" +
+      '<g class="dhb-ticks">' + ticks + "</g>" +
+      '<rect class="dhb-shine" x="32" y="26" width="8" height="110" rx="4"></rect><rect class="dhb-rim" x="22" y="14" width="96" height="150" rx="22"></rect></svg>';
+  }
+  function treesHtml(n) {
+    const per = n > 40 ? Math.ceil(n / 40) : 1;
+    const shown = Math.max(1, Math.min(40, Math.round(n / per)));
+    return '<div class="dhb-trees" aria-hidden="true">' + Array.from({ length: shown }, (_, i) => '<i style="--i:' + i + '">' + svgPath(TREE_PATH, 20) + "</i>").join("") + "</div>" +
+      (per > 1 ? '<p class="dhb-scale">Each tree here stands for ' + per + "</p>" : "");
+  }
+  function openSaved(o) {
+    document.querySelectorAll(".dhb").forEach((x) => x.remove());
+    const sv = dailySaved(), st = dailyStats();
+    const kg = o.mode === "tick" ? o.kg : sv.all;
+    const isTick = o.mode === "tick";
+    const cap = niceCap(Math.max((isTick ? sv.week : sv.all) * 1.25, 5));
+    const fromLv = isTick ? Math.min(1, (o.before || 0) / cap) : 0;
+    const toLv = Math.min(1, (isTick ? sv.week : sv.all) / cap);
+    const trees = kg / TREE_DAY();
+    const km = kg / factorOf(D.COMMUTE_MODES, "car_petrol");
+    const charges = (kg * 1000) / phoneChargeG();
+    let body;
+    if (kg > 0) {
+      body =
+        '<div class="dhb-sec"><h3>' + (isTick ? "The same as <b>" + kgFmt(Math.round(trees)) + (Math.round(trees) === 1 ? " tree" : " trees") + "</b> soak up in a day" : "A tree's work for <b>" + treeWork(kg) + "</b>") + "</h3>" +
+        treesHtml(isTick ? trees : Math.min(trees / 30.4, 4000)) + (isTick ? "" : '<p class="dhb-scale">Each tree here is a month of one tree\'s work</p>') + "</div>" +
+        '<div class="dhb-eq"><span>' + svgPath(SW_ICONS.commute, 18) + "<b>" + (km >= 10 ? kgFmt(Math.round(km)) : km.toFixed(1)) + " km</b> not driven in a petrol car</span>" +
+        "<span>" + svgPath(PHONE_PATH, 18) + "<b>" + kgFmt(Math.round(charges)) + "</b> phone charges</span></div>";
+    } else {
+      const a1 = o.n === 1 ? habitActs().acts[0] : null;
+      body = '<div class="dhb-sec dhb-step"><h3>' + (a1 && !a1.done && a1.save >= 1 ? "Towards <b>−" + kgFmt(a1.save) + " kg a year</b> once your money has moved" : isTick ? "A step that leads to the big cuts" : "Your tank fills as you tick") + "</h3><p>" + esc(o.how || "") + "</p></div>";
+    }
+    // Where it came from: kilos by Act, this week or so far.
+    const byAct = [0, 0, 0, 0, 0, 0];
+    const ws = localDay(weekStartOf(new Date())), log = dailyLog();
+    Object.keys(log).forEach((d) => { if (isTick && d < ws) return; (log[d] || []).forEach((k) => { const n = Number(String(k).slice(1, 2)); if (n) byAct[n] += keySaving(k).kg; }); });
+    const maxA = Math.max(...byAct, 0.01);
+    const bars = byAct.some((x) => x > 0)
+      ? '<div class="dhb-sec"><h3>Where it came from ' + (isTick ? "this week" : "so far") + '</h3><ul class="dhb-bars">' + [1, 2, 3, 4, 5].map((n) =>
+          '<li style="--c:' + HB_COL[n] + ";--w:" + ((byAct[n] / maxA) * 100).toFixed(1) + '%"><span>Act ' + n + " · " + esc(DH_ACTS[n]) + "</span><i><b></b></i><em class=\"tnum\">" + (byAct[n] ? "−" + kgShort(byAct[n]) + " kg" : "–") + "</em></li>").join("") + "</ul></div>"
+      : "";
+    document.body.insertAdjacentHTML("beforeend",
+      '<div class="dhb" role="dialog" aria-modal="true" aria-labelledby="dhb-h"><div class="dhb-card">' +
+      '<button type="button" class="dhb-x" data-dhb="close" aria-label="Close">' + icon("x") + "</button>" +
+      '<span class="dhb-k">' + (isTick ? "Act " + o.n + " · " + esc(DH_ACTS[o.n]) : "Your daily habits") + "</span>" +
+      '<h2 id="dhb-h" class="display">' + esc(isTick ? o.name : "Saved so far") + "</h2>" +
+      '<div class="dhb-top"><div class="dhb-tankwrap">' + tankSvg(cap) + "</div><div class=\"dhb-stats\">" +
+      '<div class="dhb-big"><b class="display tnum" data-to="' + kg.toFixed(2) + '">' + (kg > 0 ? "−0" : "0") + "</b><span>kg CO₂e" + (isTick ? (kg > 0 ? " saved today" : " today") : " saved") + "</span></div></div></div>" +
+      '<div class="dhb-mini-stats"><span><small>This week</small><b class="tnum">−' + kgShort(sv.week) + " kg</b></span><span><small>So far</small><b class=\"tnum\">−" + kgShort(sv.all) + " kg</b></span>" +
+      "<span><small>Streak</small><b>" + (st.streak ? st.streak + (st.streak === 1 ? " day" : " days") : "–") + "</b></span></div>" +
+      body + bars +
+      '<details class="dhb-how"><summary>How we worked it out</summary>' + (o.how ? "<p>" + esc(o.how) + "</p>" : "") +
+      "<p>Tank: kg CO₂e saved " + (isTick ? "this week by your daily habits (it empties every Monday)" : "by your daily habits on this phone") + ". Trees: about " + D.EVERYDAY_COMPARISONS.treeKgYear + " kg of CO₂ a year each (Arbor Day Foundation). Driving: " + factorOf(D.COMMUTE_MODES, "car_petrol").toFixed(3) + " kg a km (DESNZ). Phone charges: " + phoneChargeG().toFixed(1) + " g each (US EPA, UK grid).</p>" +
+      "<p>These are estimates from " + (survey && survey.completedAt ? "your answers" : "a typical UK resident's answers") + ", to show roughly what each habit does.</p></details>" +
+      '<div class="dhb-ctl"><button type="button" class="btn dhb-go" data-dhb="close">' + (isTick ? (kg > 0 ? "Lovely" : "Got it") : "Close") + "</button>" +
+      (isTick ? '<button type="button" class="dhb-quiet" data-dhb="quiet">Show me less of this</button>' : "") + "</div></div></div>");
+    const el = document.body.lastElementChild;
+    document.body.classList.add("modal-open");
+    const liq = el.querySelector(".dhb-liq");
+    const at = (lv) => "translateY(" + (164 - lv * 150).toFixed(1) + "px)";
+    liq.style.transform = at(fromLv);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.classList.add("in");
+      liq.style.transition = reducedMotion() ? "none" : "transform 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.25s";
+      liq.style.transform = at(toLv);
+    }));
+    // The kilos count up.
+    const num = el.querySelector(".dhb-big b"), to = Number(num.dataset.to);
+    if (to > 0) {
+      const t0 = performance.now(), dur = reducedMotion() ? 0 : 1100;
+      const step = (t) => { const p = dur ? Math.min(1, (t - t0) / dur) : 1, v = to * (1 - Math.pow(1 - p, 3)); num.textContent = "−" + kgShort(v); if (p < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
+    if (isTick && kg > 0) haptic("success");
+    const from = document.activeElement;
+    const close = () => {
+      if (!el.isConnected) return;
+      el.classList.remove("in");
+      el.classList.add("out");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => el.remove(), reducedMotion() ? 0 : 320);
+      if (from && from.isConnected) from.focus({ preventScroll: true });
+    };
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-dhb]");
+      if (e.target === el || (b && b.dataset.dhb === "close")) close();
+      else if (b && b.dataset.dhb === "quiet") { lsSet(KEY_DH_QUIET, "1"); ui.flash = "Done: ticks now just show the kilos. Tap \"saved this week\" for the full picture."; close(); render(); }
+    });
+    el.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); close(); } });
+    setTimeout(() => { const b = el.querySelector(".dhb-go"); if (b) b.focus({ preventScroll: true }); }, 60);
+  }
+  // Quiet mode: the kilos float up from the habit you ticked.
+  function floatKg(tile, kg) {
+    if (!(kg > 0)) return;
+    const r = tile.getBoundingClientRect();
+    document.body.insertAdjacentHTML("beforeend", '<span class="dh-float tnum" style="left:' + Math.round(r.left + r.width - 70) + "px;top:" + Math.round(r.top + 6) + 'px">−' + kgShort(kg) + " kg</span>");
+    const f = document.body.lastElementChild;
+    setTimeout(() => f.remove(), 1400);
   }
 
   // ---------- Plan & remind, and the shower timer ----------
@@ -11290,6 +11500,7 @@
     // A level-up moment belongs to My Habits: leaving the page closes it.
     document.querySelectorAll(".lvup:not(.out) [data-lv-close]").forEach((b) => b.click());
     if (stimer && !/timer=shower/.test(location.hash)) stimer.close();
+    document.querySelectorAll(".dhb").forEach((x) => { x.remove(); document.body.classList.remove("modal-open"); });
     ui.shownStep = null;
     ui.flash = "";
     ui.inputMsg = null;
@@ -12075,6 +12286,7 @@
     "dh-tick": (el) => {
       const card = el.closest(".dh");
       const before = dailyStats().streak;
+      const weekBefore = dailySaved().week;
       const on = toggleDaily(el.dataset.k);
       el.classList.toggle("on", on);
       el.setAttribute("aria-pressed", on);
@@ -12091,7 +12303,15 @@
       card.querySelector(".dh-week").innerHTML = dhWeekHtml(st);
       card.querySelector(".dh-foot").innerHTML = dhFootHtml(st);
       card.querySelector(".dh-tools").innerHTML = dhToolsHtml();
+      card.querySelector(".dh-saved-wrap").innerHTML = dhSavedHtml();
+      if (on) {
+        const n = Number(el.dataset.k.slice(1, 2)), sv = keySaving(el.dataset.k);
+        const name = (el.querySelector(".dh-t b") || {}).textContent || "";
+        if (lsGet(KEY_DH_QUIET, "") === "1") floatKg(el, sv.kg);
+        else setTimeout(() => openSaved({ mode: "tick", n, name, kg: sv.kg, how: sv.how, before: weekBefore }), 260);
+      }
     },
+    "dh-saved-open": () => openSaved({ mode: "total", how: "" }),
     "shower-timer": () => openShowerTimer(),
     "plan-open": () => {
       ui.planDay = new Date().getHours() >= 17 ? 1 : 0;
