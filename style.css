@@ -8289,3 +8289,105 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 /* Friends: section headings all one size. */
 .fr-page .fr-groups h2.display { font-size: 22px; margin: 0; }
 .fr-page .fr-groups { padding: 20px 18px; }
+
+/* ===== Friends, refreshed: essentials on top, one panel at a time ===== */
+.frx { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.frx > .lgb { margin: 8px 0 0; }
+/* You, in one line */
+.frx-me { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 22px; background: var(--surface, #fffcf5); border: 1px solid var(--line, rgba(46, 42, 34, 0.14)); box-shadow: 0 8px 22px -18px rgba(46, 42, 34, 0.45); }
+.frx-me .fr-av { flex: none; }
+.frx-me-txt { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; }
+.frx-me-txt b { font-size: 18px; line-height: 1.15; }
+.frx-me-txt span { font-size: 13px; color: var(--ink-muted, #6b6455); }
+.frx-stats { display: flex; gap: 6px; flex: none; }
+.frx-stat { min-width: 50px; padding: 7px 8px 6px; border-radius: 14px; background: rgba(63, 91, 58, 0.07); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.frx-stat b { font-size: 16px; line-height: 1; }
+.frx-stat b small { font-size: 11px; margin-left: 1px; }
+.frx-stat i { font-style: normal; font-size: 11px; font-weight: 700; line-height: 1; color: var(--ink-faint, #8a8273); }
+.frx-stat.down i { color: #3f7a3a; }
+.frx-stat.up i { color: #b8653d; }
+/* Friends heading and the add button */
+.frx-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.frx-head .fr-h1 { margin: 0; font-size: 30px; display: flex; align-items: center; gap: 8px; }
+.frx-count { padding: 3px 9px; border-radius: 999px; background: var(--sprout, #c4e57d); color: var(--canopy, #17241a); font: 800 14px/1.2 var(--font); }
+.frx-add { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px 0 11px; border-radius: 999px; border: 0; background: var(--primary, #3f5b3a); color: #fff; font: 700 14px/1 var(--font); cursor: pointer; transition: background var(--dur-quick, 200ms) ease, transform var(--dur-quick, 200ms) var(--ease-out); }
+.frx-add svg { width: 16px; height: 16px; }
+.frx-add:active { transform: scale(0.96); }
+.frx-add.on { background: rgba(46, 42, 34, 0.08); color: var(--ink, #2e2a22); }
+.frx .fr-strip { margin-top: -4px; }
+.frx-addbox > .fr-manage { margin: 0; padding: 16px; border-radius: 22px; animation: frx-in 260ms var(--ease-out, ease-out) both; }
+.frx-addbox > .fr-manage h2 { font-size: 18px; }
+/* A friend request, on one line */
+.frx-req { flex-wrap: nowrap !important; gap: 10px !important; padding: 10px 10px 10px 12px !important; border-radius: 20px !important; background: linear-gradient(100deg, #fbefd2, #f6e6c2) !important; border: 1px solid rgba(217, 164, 65, 0.45) !important; font-size: 14px !important; }
+.frx-req .fr-btn { min-height: 36px; }
+/* The switch: ink glides under the chosen one */
+.frx-tabs { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border-radius: 16px; background: rgba(46, 42, 34, 0.07); margin-top: 4px; }
+.frx-ink { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / 4); border-radius: 12px; background: var(--surface, #fffcf5); box-shadow: 0 2px 8px rgba(46, 42, 34, 0.12); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 340ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)); }
+.frx-tabs button { position: relative; z-index: 1; min-height: 40px; padding: 0 4px; border: 0; background: transparent; color: var(--ink-3, #5c5649); font: 700 14px/1.1 var(--font); cursor: pointer; transition: color var(--dur-quick, 200ms) ease; }
+.frx-tabs button.on { color: var(--ink, #2e2a22); }
+.frx-tabs button:focus-visible { outline: 2px solid var(--primary, #3f5b3a); outline-offset: -2px; border-radius: 12px; }
+.frx-panel { display: flex; flex-direction: column; gap: 14px; }
+.frx-panel[hidden] { display: none; }
+.frx-panel.in { animation: frx-in 260ms var(--ease-out, ease-out) both; }
+@keyframes frx-in { from { opacity: 0; transform: translateY(8px); } }
+/* Everyone below the podium, in the same card */
+.pd-rest { list-style: none; margin: 14px 0 0; padding: 10px 0 0; border-top: 1px solid var(--line, rgba(46, 42, 34, 0.12)); display: grid; gap: 4px; }
+.pd-rest li { display: grid; grid-template-columns: 24px 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 14px; }
+.pd-rest li.me { background: rgba(63, 91, 58, 0.1); }
+.pd-rest-n { font-size: 15px; font-weight: 800; color: var(--ink-faint, #8a8273); text-align: center; }
+.pd-rest-name { font-weight: 700; }
+.pd-rest b { font-size: 16px; }
+.pd-rest b small { font-size: 12px; color: var(--ink-faint, #8a8273); }
+/* Cards inside the panels share one look */
+.frx .frx-panel > section, .frx .frx-panel > .fr-box { margin: 0; padding: 18px; border-radius: 24px; }
+.frx #fr-standings h2, .frx .pd-head h2 { font-size: 20px; }
+.frx .fr-tabs { border-radius: 14px; }
+.frx .fr-tabs button { border-radius: 10px; font-size: 14px; }
+.frx .fr-feedhead { display: none; }
+.frx .fr-groups > .row-between:first-child { display: none; }
+.frx .fr-groups .group-head { margin-top: 0; }
+.frx .fr-groups .board { gap: 4px; margin-top: 12px; }
+.frx .fr-groups .board li { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.1fr) auto; gap: 10px; padding: 8px 10px; border-radius: 14px; background: transparent; }
+.frx .fr-groups .board li.me { background: rgba(63, 91, 58, 0.1); outline: 0; }
+.frx .fr-groups .board-bar { height: 6px; }
+.frx .fr-groups .board-t b { font-size: 16px; }
+.frx .fr-groups .group-stats > div { padding: 12px; border-radius: 16px; }
+/* Animations on the first visit only: a refresh in the background shouldn't replay them */
+.frx:not(.frx-anim) .rise, .frx:not(.frx-anim) .pd-step, .frx:not(.frx-anim) .pd-track > i,
+.frx:not(.frx-anim) .tro-i.got .tro-medal, .frx:not(.frx-anim) .lgh-t, .frx:not(.frx-anim) .cc-rv { animation: none !important; }
+.frx:not(.frx-anim) .cc-rv { opacity: 1 !important; transform: none !important; }
+@media (max-width: 420px) {
+  .frx { gap: 12px; }
+  .frx-me { gap: 10px; padding: 10px 10px 10px 12px; }
+  .frx-me .fr-av { width: 42px !important; height: 42px !important; font-size: 16px !important; }
+  .frx-stat { min-width: 44px; padding: 6px 6px 5px; }
+  .frx-stat b { font-size: 15px; }
+  .frx-head .fr-h1 { font-size: 27px; }
+  .frx-tabs button { font-size: 13px; }
+  .frx .frx-panel > section, .frx .frx-panel > .fr-box { padding: 16px; border-radius: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .frx-ink { transition: none; } .frx-panel.in, .frx-addbox > .fr-manage { animation: none; } }
+@media (prefers-color-scheme: dark) {
+  .frx-me { background: #2b271f; border-color: rgba(236, 235, 233, 0.1); box-shadow: none; }
+  .frx-me-txt span, .frx-stat i { color: #b5ae9f; }
+  .frx-stat { background: rgba(236, 235, 233, 0.07); }
+  .frx-stat.down i { color: #c4e57d; }
+  .frx-tabs { background: rgba(236, 235, 233, 0.08); }
+  .frx-ink { background: #3a352b; box-shadow: none; }
+  .frx-tabs button { color: #b5ae9f; }
+  .frx-tabs button.on { color: #f1ede4; }
+  .frx-add.on { background: rgba(236, 235, 233, 0.1); color: #f1ede4; }
+  .frx-req { background: linear-gradient(100deg, rgba(217, 164, 65, 0.18), rgba(217, 164, 65, 0.1)) !important; border-color: rgba(217, 164, 65, 0.35) !important; }
+  .pd-rest { border-color: rgba(236, 235, 233, 0.1); }
+  .pd-rest li.me, .frx .fr-groups .board li.me { background: rgba(196, 229, 125, 0.1); }
+}
+/* A request stays on one line, with its buttons on the right. */
+.frx .frx-req { display: flex !important; align-items: center; }
+.frx .frx-req > * { grid-row: auto !important; grid-column: auto !important; }
+.frx .frx-req > .grow { flex: 1 1 auto; line-height: 1.3; }
+.frx .frx-req .fr-btn.sq, .frx .frx-req .fr-more-btn { width: 36px; padding: 0; flex: none; }
+/* The switch already says "Leaderboard": the card keeps its rule as a quiet label. */
+.frx .pd .pd-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.frx .pd .pd-head { justify-content: center; margin-bottom: 30px; }
+.frx .pd .pd-k { padding: 4px 10px; border-radius: 999px; background: rgba(217, 164, 65, 0.16); color: #8a5d14; font-weight: 800; }
+@media (prefers-color-scheme: dark) { .frx .pd .pd-k { color: #f0c879; } }

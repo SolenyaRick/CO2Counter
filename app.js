@@ -8843,7 +8843,12 @@
     }
     return (
       '<section class="glass pd rise" aria-labelledby="pd-h"><div class="pd-head"><h2 id="pd-h" class="display">Leaderboard</h2><span class="pd-k">Lowest footprint wins</span></div>' +
-      '<ol class="pd-podium n' + top.length + '">' + order.map((k) => step(top[k], k + 1)).join("") + "</ol>" + chase + "</section>"
+      '<ol class="pd-podium n' + top.length + '">' + order.map((k) => step(top[k], k + 1)).join("") + "</ol>" +
+      (board.length > 3
+        ? '<ol class="pd-rest" start="4">' + board.slice(3).map((b, k) =>
+            '<li class="' + (b.is_self ? "me" : "") + '"><span class="pd-rest-n display">' + (k + 4) + "</span>" + frAv(b.user_id, b.display_name, 34, b.is_self) +
+            '<span class="pd-rest-name truncate">' + (b.is_self ? "You" : esc(b.display_name)) + '</span><b class="display tnum">' + tonnes(b.total_yearly) + "<small> t</small></b></li>").join("") + "</ol>"
+        : "") + chase + "</section>"
     );
   }
 
@@ -9084,9 +9089,9 @@
       (me == null ? '<a class="btn btn-outline btn-sm" href="#/" data-action="start-survey">Take the survey</a>' : '<button type="button" class="btn btn-outline btn-sm" data-action="fr-find">Find by username</button>') + "</div></div>"
     );
   }
-  function standingsHtml() {
+  function standingsHtml(withPodium) {
     const myName = friends.myName || (currentUser.email || "").split("@")[0];
-    const tab = ui.standTab === "imp" ? "imp" : ui.standTab === "all" ? "all" : "board";
+    const tab = ui.standTab === "all" ? "all" : ui.standTab === "imp" || withPodium ? "imp" : "board";
     const nameOf = (b) => (b.is_self ? (friends.myName ? friends.myName + " (you)" : "You") : b.display_name);
     let rows;
     if (tab === "board") {
@@ -9101,10 +9106,10 @@
     }
     const latest = friends.board.reduce((t, b) => Math.max(t, new Date(b.updated_at || 0).getTime()), 0);
     return (
-      '<section class="glass fr-box" id="fr-standings" aria-labelledby="fr-st-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="fr-st-h" class="display">Standings</h2>' +
+      '<section class="glass fr-box" id="fr-standings" aria-labelledby="fr-st-h"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><h2 id="fr-st-h" class="display">' + (withPodium ? "More rankings" : "Standings") + "</h2>" +
       (latest ? '<span class="xs muted">Updated ' + new Date(latest).toLocaleDateString(undefined, { day: "numeric", month: "long" }) + "</span>" : "") + "</div>" +
       '<div class="fr-tabs" role="tablist" aria-label="Standings">' +
-      [["board", "Lowest footprint"], ["imp", "Most improved"], ["all", "Everyone"]].map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
+      (withPodium ? [["imp", "Most improved"], ["all", "My league"]] : [["board", "Lowest footprint"], ["imp", "Most improved"], ["all", "Everyone"]]).map(([k, l]) => '<button type="button" role="tab" aria-selected="' + (tab === k) + '" class="' + (tab === k ? "on" : "") + '" data-action="stand-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
       (tab === "all"
         ? ui.rankFull
           ? '<button type="button" class="link-btn lg-back" data-action="rank-league">' + icon("chevronLeft") + " Your league</button>" + rankBoardHtml()
@@ -9146,15 +9151,16 @@
     const info = ui.actsInfo;
     const done7 = info ? Math.min(7, info.finished || 0) : 0;
 
-    // You
+    // You: who you are and how you're doing, in one line.
+    const stat = (v, l, cls) => '<span class="frx-stat' + (cls ? " " + cls : "") + '"><b class="display tnum">' + v + "</b><i>" + l + "</i></span>";
     const me =
-      '<section class="glass fr-me rise" aria-label="You"><div class="fr-me-top">' + frAv(currentUser.id, myName, 60, true, "ringed") +
-      '<span class="min0 grow"><span class="display fr-me-name">' + esc(myName) + '</span><span class="fr-me-sub">' + (ui.username ? "@" + esc(ui.username) : "") + (ui.username && rank ? " · " : "") + (rank ? esc(rank.label) : "") + "</span></span>" +
-      (meBoard ? '<span class="fr-me-t"><b class="display tnum">' + tonnes(meBoard.total_yearly) + "<small> t</small></b>" + pctTxt + "</span>" : "") + "</div>" +
-      '<div class="fr-me-stats"><div class="dark"><b class="display tnum">' + (meBoard ? tonnes(meBoard.total_yearly) + "<small> t</small>" : "–") + "</b>" + (pctTxt || '<span class="fr-small">a year</span>') + "</div>" +
-      '<div><b class="display tnum">' + accepted.length + '</b><span class="fr-small">' + (accepted.length === 1 ? "friend" : "friends") + "</span></div>" +
-      '<div class="cheers"><b class="display tnum">' + (friends.cheersGot || 0) + '</b><span class="fr-small">cheers</span></div></div>' +
-      "</section>";
+      '<section class="frx-me" aria-label="You">' + frAv(currentUser.id, myName, 48, true, "ringed") +
+      '<span class="frx-me-txt min0"><b class="display truncate">' + esc(myName) + '</b><span class="truncate">' + (ui.username ? "@" + esc(ui.username) : "Your profile") + "</span></span>" +
+      '<span class="frx-stats">' +
+      (meBoard ? stat(tonnes(meBoard.total_yearly) + "<small>t</small>", myPct ? (myPct < 0 ? "▼" : "▲") + Math.abs(myPct) + "%" : "a year", myPct < 0 ? "down" : myPct > 0 ? "up" : "") : "") +
+      (rank ? stat(ordinal(friends.board.findIndex((b) => b.is_self) + 1), "of " + friends.board.length) : "") +
+      stat(friends.cheersGot || 0, (friends.cheersGot || 0) === 1 ? "cheer" : "cheers") +
+      "</span></section>";
 
     // Add a friend, waiting, manage
     const manage =
@@ -9191,10 +9197,10 @@
     };
     const strip =
       '<ul class="fr-strip" aria-label="Your friends">' + people.map(story).join("") +
-      '<li class="fr-story dash"><button type="button" class="fr-story-av" data-action="fr-find" aria-label="Add a friend"><span class="fr-av fr-plus" style="width:62px;height:62px">' + icon("plus") + '</span></button><span class="fr-story-n">Add</span></li></ul>';
+      (people.length ? "" : '<li class="fr-story dash"><button type="button" class="fr-story-av" data-action="fr-find" aria-label="Add a friend"><span class="fr-av fr-plus" style="width:62px;height:62px">' + icon("plus") + '</span></button><span class="fr-story-n">Add</span></li>') + "</ul>";
 
     const reqs = incoming.map((f) =>
-      '<div class="fr-req rise">' + frAv(f.otherId, f.name, 42) + '<span class="grow min0"><b>' + esc(f.name) + "</b> wants to be friends</span>" +
+      '<div class="fr-req frx-req">' + frAv(f.otherId, f.name, 40) + '<span class="grow min0"><b>' + esc(f.name) + "</b> wants to be friends</span>" +
       '<button type="button" class="fr-btn green" data-action="friend-accept" data-id="' + f.id + '">Accept</button>' +
       '<button type="button" class="fr-btn ghost sq" data-action="friend-remove" data-id="' + f.id + '" aria-label="Decline ' + esc(f.name) + '\'s request">' + icon("x") + "</button>" + safetyBtn("user", f.otherId, f.name) + "</div>").join("");
 
@@ -9213,12 +9219,35 @@
           : stateCard({ inline: true, icon: "user", title: "Your feed is empty", text: "Add friends to see their retakes and cheer them on. Lowest footprint wins.", actions: [["Find a friend", 'data-action="fr-find"', true]] })) +
       (friends.feedReady === false && accepted.length ? '<p class="xs muted center">Cheers and retakes appear once the latest database update is run.</p>' : "");
 
+    // One panel at a time, switched in place (see "fr-tab").
+    const tabs = [["board", "Leaderboard"], ["feed", "Feed"], ["groups", "Groups"], ["trophies", "Trophies"]];
+    const tab = tabs.some((t) => t[0] === ui.frTab) ? ui.frTab : "board";
+    const hasPodium = (friends.board || []).length >= 2;
+    const panels = {
+      board: hasPodium ? frPodiumHtml() + standingsHtml(true) : standingsHtml(),
+      feed: feed,
+      groups: ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + groupFormsHtml(),
+      trophies: frTrophiesHtml(accepted, meBoard, myProg),
+    };
+    const addOpen = ui.frAddOpen || !accepted.length;
+    // Animations play on the first visit only, not on every refresh.
+    const anim = !ui.frSeen;
+    ui.frSeen = true;
+    const ti = tabs.findIndex((t) => t[0] === tab);
     return (
-      '<div class="container friends-v2 fr-page" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' + (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
-      // Your tree league comes first, above everything (full width on a laptop).
-      leagueBannerHtml() +
-      '<div class="fr-layout"><aside class="fr-side">' + me + manage + groupFormsHtml() + "</aside>" +
-      '<main class="fr-feed"><h1 class="display fr-h1">Friends</h1>' + strip + reqs + frPodiumHtml() + frTrophiesHtml(accepted, meBoard, myProg) + standingsHtml() + ((friends.groups || []).length || !friends.groupsReady ? groupsHtml() : "") + feed + "</main></div></div>"
+      '<div class="container friends-v2 fr-page frx' + (anim ? " frx-anim" : "") + '" data-fs-pill="' + esc(myName) + '" data-fs-unit="' + (meBoard ? kgFmt(meBoard.total_yearly) + ' kg' : '') + '">' +
+      (friends.error ? stateCard({ kind: "error", inline: true, icon: "refresh", title: "Couldn't refresh", text: "Showing what we had. Check your connection.", actions: [["Try again", 'data-action="friends-retry"', true]] }) : "") +
+      leagueBannerHtml() + me +
+      '<div class="frx-head"><h1 class="display fr-h1">Friends' + (accepted.length ? ' <span class="frx-count tnum">' + accepted.length + "</span>" : "") + "</h1>" +
+      // With no friends yet the add box is simply open: no button, no empty row.
+      (accepted.length ? '<button type="button" class="frx-add' + (addOpen ? " on" : "") + '" data-action="fr-add-toggle" aria-expanded="' + addOpen + '" aria-controls="frx-addbox">' + icon(addOpen ? "x" : "plus") + (addOpen ? "Close" : "Add a friend") + "</button>" : "") + "</div>" +
+      (people.length ? strip : "") +
+      '<div id="frx-addbox" class="frx-addbox"' + (addOpen ? "" : " hidden") + ">" + manage + "</div>" +
+      reqs +
+      '<div class="frx-tabs" role="tablist" aria-label="Friends" style="--i:' + ti + '"><span class="frx-ink" aria-hidden="true"></span>' +
+      tabs.map(([k, l]) => '<button type="button" role="tab" id="frx-t-' + k + '" aria-controls="frx-p-' + k + '" aria-selected="' + (k === tab) + '" tabindex="' + (k === tab ? 0 : -1) + '" class="' + (k === tab ? "on" : "") + '" data-action="fr-tab" data-tab="' + k + '">' + l + "</button>").join("") + "</div>" +
+      tabs.map(([k]) => '<div class="frx-panel" role="tabpanel" id="frx-p-' + k + '" aria-labelledby="frx-t-' + k + '"' + (k === tab ? "" : " hidden") + ">" + panels[k] + "</div>").join("") +
+      "</div>"
     );
   }
 
@@ -11158,7 +11187,33 @@
       card.querySelector(".calc-body").innerHTML = calcInner(byKey(ex, ui.calcEx) || ex[0]);
       calcPlay();
     },
+    "fr-tab": (el) => {
+      const k = el.dataset.tab;
+      if (ui.frTab === k && el.classList.contains("on")) return;
+      ui.frTab = k;
+      // Swapped in place: no redraw, no jump, the bar's ink glides across.
+      const bar = el.closest(".frx-tabs");
+      const btns = [...bar.querySelectorAll("button")];
+      bar.style.setProperty("--i", btns.indexOf(el));
+      btns.forEach((b) => { const on = b === el; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; });
+      document.querySelectorAll(".frx-panel").forEach((p) => {
+        const on = p.id === "frx-p-" + k;
+        p.hidden = !on;
+        if (on) { p.classList.remove("in"); void p.offsetWidth; p.classList.add("in"); }
+      });
+      haptic("light");
+      centreLeagueTrees();
+      // Keep the switch in view when the page above it is long.
+      const top = bar.getBoundingClientRect().top;
+      if (top < 0) window.scrollTo({ top: window.scrollY + top - 80, behavior: reducedMotion() ? "auto" : "smooth" });
+    },
+    "fr-add-toggle": () => {
+      ui.frAddOpen = !(ui.frAddOpen || !friends.rows.some((f) => f.status === "accepted"));
+      render();
+      if (ui.frAddOpen) setTimeout(() => { const i = document.getElementById("friend-email"); if (i) i.focus({ preventScroll: true }); }, 60);
+    },
     "fr-find": () => {
+      if (!ui.frAddOpen) { ui.frAddOpen = true; render(); }
       const inp = document.getElementById("friend-email");
       if (!inp) return;
       inp.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
@@ -11556,6 +11611,7 @@
     "league-open": () => {
       ui.standTab = "all";
       ui.rankFull = false;
+      ui.frTab = "board";
       render();
       const t = document.getElementById("fr-standings");
       if (t) t.scrollIntoView({ behavior: fsReduce() ? "auto" : "smooth", block: "start" });
