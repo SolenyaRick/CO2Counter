@@ -1297,6 +1297,10 @@
   // field of dots or a grid of drawings; heights a stack of figures as tall
   // as your CO2 would be as a cube of gas; giants "years of you" stripes.
   const piItems = () => D.FUN_COMPARISONS.items;
+  // Mascots (the lettuce, capybara, Danny DeVito...) are off for now:
+  // Picture it, the share card and "Your 3 biggest moves" use trees, phone
+  // charges and your fair share instead. Set to true to bring them back.
+  const MASCOTS = false;
   const KEY_MASCOT = "co2_mascot";
   const piMascot = () => {
     const k = lsGet(KEY_MASCOT, "");
@@ -1333,8 +1337,20 @@
   // One drawing, in a 48 x 48 box.
   // crisp: no blur filter (iPhones draw filters at low resolution), a
   // vector sheen on each shape instead, so icons stay sharp at any size.
+  // A tree in the same style as the mascots: [path, fill, stroke, width].
+  const TREE_ART = [
+    ["M21.4 29h5.2v15.2c0 1-.8 1.8-1.8 1.8h-1.6c-1 0-1.8-.8-1.8-1.8Z", "#8A6238", "none", 0],
+    ["M24.2 37.4c1.6-1.4 3.6-2.2 5.6-2.4M23.8 33.6c-1.4-1.2-3.2-1.8-5-1.8", "none", "#8A6238", 1.8],
+    ["M5.6 25.4a9.2 9.2 0 1 0 18.4 0a9.2 9.2 0 1 0 -18.4 0Z", "#4F7A43", "none", 0],
+    ["M24 25.4a9.2 9.2 0 1 0 18.4 0a9.2 9.2 0 1 0 -18.4 0Z", "#4F7A43", "none", 0],
+    ["M12.2 15a11.8 11.8 0 1 0 23.6 0a11.8 11.8 0 1 0 -23.6 0Z", "#5E8A4E", "none", 0],
+    ["M13.6 26.6a10.4 8.4 0 1 0 20.8 0a10.4 8.4 0 1 0 -20.8 0Z", "#5E8A4E", "none", 0],
+    ["M16.2 11.8c1.2-3 3.8-5 7-5.4", "none", "#9CC27E", 1.6],
+    ["M9.2 22.6c.6-1.8 2-3.2 3.8-3.8", "none", "#86B06C", 1.4],
+  ];
+  const artOf = (key) => (key === "bigtree" ? TREE_ART : D.FUN_COMPARISONS.art[key] || []);
   function piArt(key, shadow, crisp) {
-    const parts = (D.FUN_COMPARISONS.art[key] || [])
+    const parts = artOf(key)
       .map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"/>' +
         (crisp && p[1] && p[1] !== "none" ? '<path d="' + p[0] + '" fill="url(#pi-sheen)" stroke="none"/>' : ""))
       .join("");
@@ -1495,8 +1511,8 @@
       : "";
 
   // Picture it: your footprint now and after the 7 Acts, in trees, phone
-  // charges and your fair share of 2.5 t, then four mascots. The rest of
-  // the mascots are for the share card.
+  // charges and your fair share of 2.5 t, then your mascot (when MASCOTS is
+  // on). The rest of the mascots are for the share card.
   const KEY_PI_VIEW = "co2_pi_view";
   const PI_REAL = [
     { key: "tree", short: "Trees" },
@@ -1505,7 +1521,11 @@
   ];
   // Your mascot: the one you picked, or the default until you do.
   const piMine = () => piItems().find((x) => x.key === (piMascot() || D.EVERYDAY_COMPARISONS.defaultMascot)) || piItems()[0];
-  const piViews = () => { const m = piMine(); return PI_REAL.concat([{ key: "mascot", short: m.short, tab: "Mascot", mascot: m }]); };
+  const piViews = () => {
+    if (!MASCOTS) return PI_REAL;
+    const m = piMine();
+    return PI_REAL.concat([{ key: "mascot", short: m.short, tab: "Mascot", mascot: m }]);
+  };
   const piView = () => {
     const k = ui.piView || lsGet(KEY_PI_VIEW, "tree");
     return piViews().find((v) => v.key === k) || piViews()[0];
@@ -4175,15 +4195,20 @@
     if (!top.length) return "";
     const cut = top.reduce((t, x) => t + x.t.saving, 0);
     const items = piItems();
-    const pal = items.find((x) => x.key === piMascot()) || items[0];
+    const pal = !MASCOTS
+      ? { key: "bigtree", type: "w", size: D.EVERYDAY_COMPARISONS.treeKgYear, one: "tree", many: "trees", short: "Tree" }
+      : items.find((x) => x.key === piMascot()) || items[0];
     // The mascot's outline as a mask: fills and strokes both count, so legs,
     // necks and arms drawn as thick lines take the colour too.
-    const parts = (D.FUN_COMPARISONS.art[pal.key] || []).map((p) => '<path d="' + p[0] + '" fill="' + (p[1] && p[1] !== "none" ? "#fff" : "none") + '" stroke="' + (p[2] && p[2] !== "none" ? "#fff" : "none") + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"></path>').join("");
+    const parts = artOf(pal.key).map((p) => '<path d="' + p[0] + '" fill="' + (p[1] && p[1] !== "none" ? "#fff" : "none") + '" stroke="' + (p[2] && p[2] !== "none" ? "#fff" : "none") + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"></path>').join("");
     // Tall shapes and heights fill from the ground up; the rest side by side.
     const up = pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
     const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
     const ofA = (/^[aeiou]/i.test(pal.one) ? "an " : "a ") + pal.one;
-    const worth = pal.type === "h"
+    const trees = cut / D.EVERYDAY_COMPARISONS.treeKgYear;
+    const worth = !MASCOTS
+      ? trees >= 1 ? "the work of " + piNum(trees) + (piNum(trees) === "1" ? " tree" : " trees") : Math.max(1, Math.round(trees * 100)) + "% of what a tree soaks up"
+      : pal.type === "h"
       ? "a cube of CO₂ " + cubeSide(cut).toFixed(1) + " m tall: " + howMany(total, pal)
       : total >= 1 ? howMany(total, pal) : Math.max(1, Math.round(total * 100)) + "% of " + ofA;
     // Slices left to right, by share of the saving (laid out on the
@@ -4195,7 +4220,7 @@
       return s;
     });
     const big =
-      '<svg class="mv3-big" viewBox="' + (up ? "-1 -6 56 56" : "0 -6 48 56") + '" role="img" aria-label="Your mascot, ' + esc(pal.one) + ", split into the three moves: " +
+      '<svg class="mv3-big" viewBox="' + (up ? "-1 -6 56 56" : "0 -6 48 56") + '" role="img" aria-label="' + (MASCOTS ? "Your mascot, " + esc(pal.one) : "A tree") + ", split into the three moves: " +
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
       '<defs><mask id="mv3-sil" maskUnits="userSpaceOnUse" x="-4" y="-8" width="60" height="62">' + parts + "</mask>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
@@ -4214,7 +4239,7 @@
           (x, i) =>
             '<li style="--c:' + CAT_COLOR[x.b.key] + ";--d:" + (0.2 + i * 0.7).toFixed(2) + 's"><a class="move mv3-row" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
             '<span class="mv3-n display">' + (i + 1) + "</span>" +
-            '<span class="mv3-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + Math.round((x.t.saving / cut) * 100) + "% of " + esc(pal.key === "lettuce" ? "the lettuce" : "your " + (["devito", "lincoln", "argentinosaurus"].includes(pal.key) ? pal.short : pal.short.toLowerCase())) + "</span></span>" +
+            '<span class="mv3-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + Math.round((x.t.saving / cut) * 100) + "% of " + esc(!MASCOTS ? "the saving" : pal.key === "lettuce" ? "the lettuce" : "your " + (["devito", "lincoln", "argentinosaurus"].includes(pal.key) ? pal.short : pal.short.toLowerCase())) + "</span></span>" +
             '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg</span></span>' + icon("chevronRight") + "</a></li>"
         )
         .join("") +
@@ -5171,7 +5196,8 @@
     const ba = actsBeforeAfter();
     if (ba && ba.cut >= 50)
       return "My carbon footprint is " + (ba.now / 1000).toFixed(1) + " t CO₂e a year. Real Zero's 7 Acts would take it to " + (ba.after / 1000).toFixed(1) + " t: that's " +
-        lettuces(ba.cut) + " Liz Truss lettuces 🥬 less CO₂ a year. Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
+        (MASCOTS ? lettuces(ba.cut) + " Liz Truss lettuces 🥬 less CO₂ a year"
+          : (ba.cut >= 1000 ? (ba.cut / 1000).toFixed(1) + " t" : kgFmt(ba.cut) + " kg") + " less CO₂ a year, the work of " + piNum(ba.cut / D.EVERYDAY_COMPARISONS.treeKgYear) + " trees 🌳") + ". Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
     return (fp ? "I worked out my carbon footprint: " + (fp.totalYearly / 1000).toFixed(1) + " t CO₂e a year. " : "I'm working out my carbon footprint. ") +
       "Find yours, free, with CO2 Counter" + (ui.actsInfo && ui.actsInfo.code ? " (my invite code: " + ui.actsInfo.code + ")" : "") + ":";
   }
@@ -5213,6 +5239,130 @@
       img.onerror = rej;
       img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     });
+  // The share card's picture without mascots: trees, phone charges or your
+  // fair share, the same as the Picture it tabs.
+  const SHARE_REAL = [
+    { key: "tree", short: "Trees", many: "trees" },
+    { key: "phone", short: "Phone charges", many: "phone charges" },
+    { key: "target", short: "Fair share", many: "my fair share of the 1.5°C budget" },
+  ];
+  const shareReal = () => SHARE_REAL.find((s) => s.key === ui.shareKey) || SHARE_REAL[0];
+  // Icons in a grid, one per tree (or 10, 100, ...): kept dark, cut pale.
+  function shareGridSvg(glyph, nNow, nAft, maxW, maxH) {
+    let u = 1;
+    for (const v of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6]) {
+      u = v;
+      if (Math.ceil(nNow / v) <= 50) break;
+    }
+    const total = Math.max(1, Math.ceil(nNow / u)), kept = Math.min(total, Math.round(nAft / u));
+    // as many columns as give the biggest icons in the space
+    let cols = 1, cell = 0;
+    for (let c = 1; c <= Math.min(10, total); c++) {
+      const sz = Math.min(maxW / c, maxH / Math.ceil(total / c), 150);
+      if (sz > cell + 0.5) { cell = sz; cols = c; }
+    }
+    const rows = Math.ceil(total / cols);
+    cell = Math.max(8, cell);
+    const w = Math.round(cols * cell), h = Math.round(rows * cell), sc = (cell * 0.84) / 24;
+    let g = "";
+    for (let i = 0; i < total; i++)
+      g += '<g transform="translate(' + ((i % cols) * cell + cell * 0.08).toFixed(1) + " " + (Math.floor(i / cols) * cell + cell * 0.08).toFixed(1) + ") scale(" + sc.toFixed(3) + ')" fill="' + (i < kept ? "#3F5B3A" : "#CBD3C1") + '">' + PI_GLYPH[glyph] + "</g>";
+    return { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + " " + h + '">' + g + "</svg>", w, h, u };
+  }
+  async function drawRealPicture(x, ba, o) {
+    const E = D.EVERYDAY_COMPARISONS, it = shareReal(), INK = "#2E2A22", MUTED = "#5E574B";
+    const iconS = o.story ? 110 : 84;
+    let title, headline, caption, a = 0, b = 0;
+    if (it.key === "target") {
+      const B = D.BUDGET_YEARLY, r = (v) => (v / B).toFixed(1).replace(/\.0$/, "") + "×";
+      title = "My fair share of " + (B / 1000).toFixed(1) + " t a year";
+      headline = r(ba.now) + " → " + r(ba.after);
+      caption = ba.after <= B ? "The 7 Acts would bring me inside the 1.5°C budget." : "The 7 Acts would close " + Math.round(((ba.now - ba.after) / Math.max(1, ba.now - B)) * 100) + "% of the gap to it.";
+    } else {
+      const per = it.key === "tree" ? E.treeKgYear : E.phoneKwh * D.ELECTRICITY_FACTOR;
+      a = ba.now / per;
+      b = ba.after / per;
+      title = it.key === "tree" ? "Trees to soak up my CO₂ every year" : "Phone charges' worth of CO₂ a year";
+      headline = piNum(a) + " → " + piNum(b);
+      caption = it.key === "tree" ? "The 7 Acts would save the work of " + piNum(a - b) + " trees, every year." : "Like charging a phone every day for " + funNum(a / 365) + " years. After the 7 Acts, " + funNum(b / 365) + " years.";
+    }
+    // the icon, what it's counted in, and now -> after
+    let tx = o.X;
+    if (!o.plain) {
+      x.fillStyle = "#E2E8D8";
+      roundRect(x, o.X, o.Y, iconS, iconS, 24);
+      x.fill();
+      const ic = await svgImage('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + iconS + '" height="' + iconS + '"><g fill="#3F5B3A">' + PI_GLYPH[it.key] + "</g></svg>");
+      x.drawImage(ic, o.X + iconS * 0.2, o.Y + iconS * 0.2, iconS * 0.6, iconS * 0.6);
+      tx = o.X + iconS + 20;
+    }
+    x.fillStyle = MUTED;
+    x.font = "700 26px " + o.BODY;
+    x.fillText(title, tx, o.Y + iconS / 2 - 14);
+    x.fillStyle = INK;
+    x.font = "800 " + (o.story ? 64 : 50) + "px " + o.DISP;
+    x.fillText(headline, tx, o.Y + iconS / 2 + (o.story ? 48 : 38));
+    const vy = o.Y + iconS + 30, vh = o.B - 60 - vy;
+    let legend = [];
+    if (it.key === "target") {
+      // two bars against the 2.5 t line
+      const B = D.BUDGET_YEARLY, max = Math.max(ba.now, B) * 1.08;
+      const labW = 150, numW = 170, bx = o.X + labW, bw = o.W - labW - numW, bh = o.story ? 84 : 60, gap = o.story ? 72 : 46;
+      const top = vy + Math.max(0, (vh - (60 + bh * 2 + gap + 110)) / 2) + 60;
+      [["Now", ba.now, "#B8653D"], ["After", ba.after, "#3F5B3A"]].forEach(([lab, v, col], i) => {
+        const y = top + i * (bh + gap);
+        x.fillStyle = "rgba(46,42,34,.08)";
+        roundRect(x, bx, y, bw, bh, bh / 2);
+        x.fill();
+        x.fillStyle = col;
+        roundRect(x, bx, y, Math.max(bh, (bw * v) / max), bh, bh / 2);
+        x.fill();
+        x.fillStyle = INK;
+        x.font = "700 34px " + o.BODY;
+        x.fillText(lab, o.X, y + bh / 2 + 12);
+        x.font = "800 46px " + o.DISP;
+        const t = (v / 1000).toFixed(1) + " t";
+        x.fillText(t, o.X + o.W - x.measureText(t).width, y + bh / 2 + 16);
+      });
+      const lx = bx + (bw * B) / max;
+      x.strokeStyle = INK;
+      x.lineWidth = 3;
+      x.setLineDash([8, 6]);
+      x.beginPath();
+      x.moveTo(lx, top - 12);
+      x.lineTo(lx, top + bh * 2 + gap + 12);
+      x.stroke();
+      x.setLineDash([]);
+      x.font = "700 28px " + o.BODY;
+      const ml = (B / 1000).toFixed(1) + " t fair share", mw = x.measureText(ml).width;
+      x.fillText(ml, Math.min(Math.max(lx - mw / 2, bx), o.X + o.W - mw), top - 26);
+      x.fillStyle = MUTED;
+      x.font = "600 32px " + o.BODY;
+      wrapText(x, caption, o.X, top + bh * 2 + gap + 80, o.W, 44);
+    } else if (!o.plain) {
+      const gr = shareGridSvg(it.key, a, b, o.W, vh);
+      const pic = await svgImage(gr.svg);
+      x.drawImage(pic, o.X + (o.W - gr.w) / 2, vy + Math.max(0, (vh - gr.h) / 2), gr.w, gr.h);
+      const one = it.key === "tree" ? "tree" : "charge", many = it.key === "tree" ? "trees" : "charges";
+      legend = [["#3F5B3A", it.key === "tree" ? "Still needed" : "After the 7 Acts"], ["#CBD3C1", it.key === "tree" ? "Saved by the 7 Acts" : "Cut by them"], ["", gr.u === 1 ? "Each is one " + one : "Each is " + piNum(gr.u) + " " + many]];
+    } else {
+      x.fillStyle = MUTED;
+      x.font = "600 30px " + o.BODY;
+      wrapText(x, caption, o.X, vy + 40, o.W, 40);
+    }
+    if (legend.length) {
+      x.font = "700 22px " + o.BODY;
+      const parts = legend.map((l) => ({ l, w: (l[0] ? 26 : 0) + x.measureText(l[1]).width }));
+      let lx = o.X + (o.W - parts.reduce((t, q) => t + q.w, 0) - 24 * (parts.length - 1)) / 2;
+      const ly = o.B - 12;
+      parts.forEach(({ l, w }) => {
+        if (l[0]) { x.fillStyle = l[0]; roundRect(x, lx, ly - 16, 16, 16, 3); x.fill(); }
+        x.fillStyle = l[0] ? INK : MUTED;
+        x.fillText(l[1], lx + (l[0] ? 26 : 0), ly);
+        lx += w + 24;
+      });
+    }
+  }
   async function drawShareCard(ba, fmt, theme, plain) {
     const story = fmt === "story";
     const T = SHARE_THEMES[theme] || SHARE_THEMES.light;
@@ -5296,6 +5446,10 @@
     x.fillStyle = T.card;
     roundRect(x, PAD, cardY, W - PAD * 2, cardB - cardY, 36);
     x.fill();
+    if (!MASCOTS) {
+      await drawRealPicture(x, ba, { X: PAD + cp, Y: cardY + cp, W: W - PAD * 2 - cp * 2, B: cardB - cp, story, plain, DISP, BODY });
+      return c;
+    }
     const it = piItems()[piIndex()];
     const iconS = story ? 110 : 84;
     const vw = W - PAD * 2 - cp * 2, vy = cardY + cp + iconS + 20, vh = cardB - cp - 50 - vy;
@@ -5363,9 +5517,12 @@
       '<div class="sheet-head"><div class="min0"><h2 id="sheet-title" class="display">Your before and after</h2><p class="sheet-habit">Share it, or press and hold the picture to save it</p></div>' +
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" + piDefsSvg() +
       '<div class="pi-chips sm-chips" role="tablist" aria-label="Compare with">' +
-      piItems().map((it, k) => '<button type="button" role="tab" class="pi-chip' + (k === idx ? " on" : "") + '" aria-selected="' + (k === idx) + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piIcon(it.key, 26) + "</span>" + esc(it.short) + "</button>").join("") + "</div>" +
+      (MASCOTS
+        ? piItems().map((it, k) => '<button type="button" role="tab" class="pi-chip' + (k === idx ? " on" : "") + '" aria-selected="' + (k === idx) + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piIcon(it.key, 26) + "</span>" + esc(it.short) + "</button>")
+        : SHARE_REAL.map((it, k) => { const on = it.key === shareReal().key; return '<button type="button" role="tab" class="pi-chip' + (on ? " on" : "") + '" aria-selected="' + on + '" data-action="share-pick" data-i="' + k + '"><span class="pi-chip-ic">' + piGlyph(it.key, 20) + "</span>" + esc(it.short) + "</button>"; })
+      ).join("") + "</div>" +
       '<div class="chip-row share-opts">' + seg("share-fmt", fmt, [["post", "Post"], ["story", "Story"]]) + seg("share-theme", theme, [["light", "Light"], ["dark", "Dark"]]) + "</div>" +
-      '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(piItems()[idx].many) + '" />' +
+      '<img class="share-card-img' + (fmt === "story" ? " story" : "") + '" src="' + url + '" alt="My carbon footprint: ' + (ba.now / 1000).toFixed(1) + " t now, " + (ba.after / 1000).toFixed(1) + " t with the 7 Acts, pictured in " + esc(MASCOTS ? piItems()[idx].many : shareReal().many) + '" />' +
       '<div class="chip-row mt-3">' + (canShareFile ? '<button type="button" class="btn btn-green btn-sm" data-action="share-card-send">' + icon("image") + " Share picture</button>" : "") +
       (navigator.share ? '<button type="button" class="btn btn-outline btn-sm" data-action="share-link-send">' + icon("link") + " Share link</button>" : "") +
       '<a class="btn ' + (canShareFile ? "btn-outline" : "btn-green") + ' btn-sm" href="' + url + '" download="co2counter-before-after.png">' + icon("download") + " Download</a>" +
@@ -7987,11 +8144,13 @@
           ]) +
           "<p>Because your shared footprint is in it, even a very small personal footprint doesn't reach zero. And the 1.5°C budget is meant to keep falling after 2030, so holding today's 2.5 tonnes flat until 2100 would still pass 2°C.</p>"
       ) +
+      (MASCOTS ?
       section(
         "Fun comparisons",
         "<p>To make tonnes easier to picture, Picture it and the share card also compare your footprint with some less everyday things. By weight: Liz Truss's lettuce (the Daily Star's iceberg, about 0.5 kg), and typical adults of some unusual animals, from a 100 g axolotl to a 1.3-tonne narwhal, plus an Argentinosaurus (an estimated 70 tonnes). " +
           "As a gas: CO₂ weighs about 1.87 kg a cubic metre (at 15°C at sea level), so a tonne fills a cube about 8 m tall, which we measure in published heights: Danny DeVito (1.47 m), Abraham Lincoln (1.93 m), a London double-decker bus (4.38 m) and a giraffe (about 5.5 m). They're for fun and scale, not precision.</p>"
-      ) +
+      )
+      : "") +
       section(
         "Potential savings",
         "<p>For each area we show two figures: what a <strong>realistic</strong> change would save, and the most you could save <strong>going all the way</strong>.</p>" +
@@ -12677,7 +12836,8 @@
       render();
     },
     "share-pick": (el) => {
-      ui.piIdx = Number(el.dataset.i);
+      if (!MASCOTS) ui.shareKey = (SHARE_REAL[Number(el.dataset.i)] || SHARE_REAL[0]).key;
+      else ui.piIdx = Number(el.dataset.i);
       if (currentPath() === "/results") render();
       openShareCard();
     },
@@ -12709,9 +12869,9 @@
     },
     // Picture your year: the full-screen story.
     "pi-story": (el) => openStory(el),
-    // Share: the card opens on your mascot.
+    // Share: the card opens on the tab you're looking at (or your mascot).
     "pi-share": () => {
-      const v = piView();
+      if (!MASCOTS) { ui.shareKey = piView().key; return openShareCard(); }
       const k = piMine().key;
       ui.piIdx = Math.max(0, piItems().findIndex((x) => x.key === k));
       openShareCard();
