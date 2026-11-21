@@ -11093,13 +11093,13 @@
 
   // ---------- Sign in with Apple ----------
   // In the iPhone app: Apple's own sheet (AppleSignInPlugin.swift), then
-  // Supabase signs in with Apple's identity token. On the website it's off
-  // until Apple's Services ID is set up in Supabase (see README.md, "Sign in
-  // with Apple"); then set APPLE_ON_WEB to true.
-  const APPLE_ON_WEB = false;
+  // Supabase signs in with Apple's identity token. On the website it goes
+  // through Apple's page (the Services ID set up in Supabase, see README.md,
+  // "Sign in with Apple"). Not in the Android app: no Apple sheet there.
+  const APPLE_ON_WEB = true;
   const KEY_APPLE_WEB = "co2_apple_web";
   const APPLE_LOGO = '<svg width="17" height="17" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.06 10.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.86-.76-1.47.02-2.83.86-3.59 2.17-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.24 2.73 2.2 1.1-.05 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.41 1.2-2.47-.03-.01-2.3-.88-2.3-3.51ZM11.88 4.14c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.55 1.31-.56.65-1.05 1.69-.92 2.68.97.08 1.96-.49 2.57-1.23Z"/></svg>';
-  const appleAvailable = () => (isNativeApp() && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios") || APPLE_ON_WEB;
+  const appleAvailable = () => (isNativeApp() ? !!(window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios") : APPLE_ON_WEB);
   function appleButtonHtml() {
     if (!appleAvailable()) return "";
     return '<button type="button" class="btn btn-apple btn-block" data-action="apple-signin"' + (ui.appleBusy ? " disabled" : "") + ">" + APPLE_LOGO + (ui.appleBusy ? "Signing in…" : "Continue with Apple") + "</button>" +
@@ -13737,6 +13737,15 @@
     let painted = paintFromPhone(savedUser(), fromEmail, fromCheckout);
     if (!painted) render();
     await refreshUser();
+    // Back from Sign in with Apple on the website: keep Apple's token (it
+    // comes back in the link) so deleting the account can revoke it.
+    if (currentUser && linkParams.get("provider_refresh_token")) {
+      appleToken({ action: "store", refresh_token: linkParams.get("provider_refresh_token"), client: "web" });
+      // Apple shares the name once, the first time; keep it if there's none yet.
+      const md = currentUser.user_metadata || {}, nm = String(md.full_name || md.name || "").trim().slice(0, 40);
+      if (nm && sb) sb.from("profiles").update({ display_name: nm }).eq("id", currentUser.id).is("display_name", null).then(() => {}, () => {});
+    }
+    if (!currentUser) lsRemove(KEY_APPLE_WEB);
     if (fromEmail || fromCheckout) {
       const to = fromCheckout ? "#/results" : linkParams.has("error_description") && !currentUser ? "#/account" : "#/";
       history.replaceState(null, "", location.pathname + to);
