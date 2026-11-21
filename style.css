@@ -3741,7 +3741,7 @@ body::after { --amb: #e8c88a; right: calc(-14vw - 170px); top: calc(46vh - 170px
 
 /* ---------- Section pop-ups as sheets (Glass v2) ---------- */
 .sheet-backdrop { background: rgba(46, 42, 34, 0.32); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); align-items: flex-start; padding: 32px 16px; overflow-y: auto; }
-.sheet { position: relative; width: min(920px, 100%); margin: 0 auto; border-radius: 28px; background: #f4efe4; box-shadow: 0 40px 80px rgba(46, 42, 34, 0.3); overflow: hidden; animation: sheet-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.sheet { position: relative; width: min(920px, 100%); min-width: 0; margin: 0 auto; border-radius: 28px; background: #f4efe4; box-shadow: 0 40px 80px rgba(46, 42, 34, 0.3); overflow: hidden; animation: sheet-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: none; } }
 .sheet-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 12px 16px 0; background: rgba(63, 91, 58, 0.08); border-bottom: 1px solid rgba(46, 42, 34, 0.1); }
 .sheet-tabs::-webkit-scrollbar { display: none; }
@@ -5785,6 +5785,10 @@ html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   #app *, #modal-root * { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   .glass { background: rgba(255, 252, 245, 0.8); }
 }
+/* The page slides in from the side; never let that make the page wider than
+   the screen for a moment (phones then zoom out and stay zoomed). "clip"
+   doesn't make a scroll box, so sticky bars keep working. */
+html, body { overflow-x: clip; }
 @keyframes pg-push { from { opacity: 0; transform: translateX(44px); } to { opacity: 1; transform: none; } }
 @keyframes pg-pop { from { opacity: 0; transform: translateX(-44px); } to { opacity: 1; transform: none; } }
 @keyframes pg-tab { from { opacity: 0.3; } to { opacity: 1; } }
@@ -8722,3 +8726,17 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 @media (prefers-color-scheme: dark) { .pk-kg { background: color-mix(in srgb, var(--c) 28%, transparent); color: #f1ede4; } }
 /* While closing, overlays let taps through to the page underneath. */
 .dhb.out, .lvup.out, .stimer.out { pointer-events: none; }
+
+/* Sign in with Apple: Apple's black button (white in dark mode), then email. */
+.btn-apple { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 12px; border: 0; background: #000; color: #fff; font: 600 16px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font); letter-spacing: -0.01em; cursor: pointer; }
+.btn-apple svg { margin-top: -2px; }
+.btn-apple:disabled { opacity: 0.6; }
+.btn-apple:active { transform: scale(0.98); }
+.auth-apple-note { margin: 8px 2px 0; font-size: 12px; line-height: 1.4; color: var(--ink-muted, #6b6455); text-align: center; }
+.auth-or { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; font-size: 12px; font-weight: 700; color: var(--ink-faint, #8a8273); text-transform: uppercase; letter-spacing: 0.06em; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--line, rgba(46, 42, 34, 0.14)); }
+@media (prefers-color-scheme: dark) {
+  .btn-apple { background: #fff; color: #000; }
+  .auth-apple-note { color: #b5ae9f; }
+  .auth-or::before, .auth-or::after { background: rgba(236, 235, 233, 0.14); }
+}

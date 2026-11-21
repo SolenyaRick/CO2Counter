@@ -415,6 +415,87 @@ One-off setup for friends' activity:
 Until the secrets are set the function quietly sends nothing, so the app keeps
 working.
 
+## Sign in with Apple (iPhone app)
+
+In the app, the account page has a **Continue with Apple** button above the
+email form. Apple's own sheet opens (Face ID, no password), then Supabase signs
+the person in with Apple's identity token (`AppleSignInPlugin.swift`, and
+`appleSignIn()` in `app.js`). New people then pick a username as usual. The
+line under the button covers the terms and privacy policy, so they aren't asked
+again. If someone hides their email, their account gets Apple's relay address.
+
+Apple requires that deleting an account also revokes Apple's token (App Store
+rule 5.1.1(v)). Straight after signing in, the app sends Apple's one-time code
+to the `apple-token` Edge Function, which swaps it for Apple's refresh token and
+keeps it in `apple_tokens` (only the server can read it). Deleting the account
+revokes it with Apple first. Until the secrets below are set, signing in still
+works and the token step quietly does nothing.
+
+One-off setup:
+
+1. Run `supabase/2026-11-sign-in-with-apple.sql` in the Supabase SQL Editor
+   (safe to run more than once).
+2. Apple Developer → Certificates, IDs & Profiles → **Identifiers** → the app
+   (`com.solenyarick.co2tracker`): tick **Sign in with Apple** and **App
+   Groups**, then Save. (Xcode's automatic signing usually does this when you
+   build. Check it's ticked.)
+3. Apple Developer → **Keys** → **+**: name it "CO2 Counter Sign in with
+   Apple" and tick **Sign in with Apple** → **Configure** → primary App ID
+   `com.solenyarick.co2tracker` → Save → Continue → Register. Download the
+   `.p8` file (you can only download it once) and note the **Key ID**.
+4. Supabase → Authentication → Sign In / Providers → **Apple**: turn it on and
+   put `com.solenyarick.co2tracker` in **Client IDs**. Leave the secret key
+   empty (that's only for the website). Save.
+5. Supabase → Edge Functions → Secrets: add `APPLE_TEAM_ID` (your Team ID, top
+   right of the developer site), `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY` (paste
+   the whole `.p8` file, including the BEGIN/END lines).
+6. Deploy the function: Edge Functions → **Deploy a new function** → name it
+   `apple-token` and paste `supabase/functions/apple-token/index.ts`, or
+   `npx supabase functions deploy apple-token --project-ref fbgfylfnbtxzbwgilktt`.
+7. Emails to hidden addresses: Apple Developer → **Services** → **Sign in with
+   Apple for Email Communication** → Configure: add the domain
+   `co2counter.co.uk` and the address `letters@co2counter.co.uk`. Without this,
+   Apple's relay drops the copy of a letter sent to someone who hid their email.
+8. In Xcode, App target → **Signing & Capabilities**: check **Sign in with
+   Apple** and **App Groups** (`group.com.solenyarick.co2tracker`) are listed.
+   They come from `App/App.entitlements`. If the group shows red, click it to
+   register it.
+
+The website doesn't show the button yet. Turning it on needs a Services ID
+(Apple Developer → Identifiers → **+** → Services IDs, with Sign in with Apple
+for the domain `co2counter.co.uk` and the return URL
+`https://fbgfylfnbtxzbwgilktt.supabase.co/auth/v1/callback`), added first in
+Supabase's Apple **Client IDs** with a generated secret key (Apple makes it
+expire every 6 months). After that, set `APPLE_WEB_CLIENT_ID` in the Edge
+Function secrets and `APPLE_ON_WEB = true` in `app.js`.
+
+## Home-screen widget (iPhone app)
+
+The `CO2Widget` target (`ios/App/CO2Widget/`) puts the daily habits on the home
+and lock screen, on iOS 16 and later:
+
+- **Small:** your streak, today's ring (ticks out of 5) and what you've saved
+  this week.
+- **Medium:** the same, plus today's five habits with ticks.
+- **Lock screen:** a streak gauge, and a line with streak, habits and kilos.
+
+Tapping it opens My Habits (`co2counter://habits`). The app writes a small
+summary to the shared App Group whenever a habit is ticked, a plan changes or
+the app is opened (`WidgetBridgePlugin.swift`, `syncWidget()` in `app.js`). The
+widget resets "today" at midnight and "this week" on Monday by itself, and a
+streak stays alive until the end of the day after the last tick.
+
+Setup in Xcode (once): select the **CO2Widget** target → **Signing &
+Capabilities** → pick the same **Team** as the App target. With automatic
+signing, Xcode registers the widget's App ID
+(`com.solenyarick.co2tracker.CO2Widget`) and the App Group. Check **App
+Groups** shows `group.com.solenyarick.co2tracker` ticked. Then build the
+**App** scheme as usual: the widget is built and embedded with it. To add it
+on a phone, long-press the home screen → **+** → CO2 Counter.
+
+The widget's build and version numbers are kept the same as the app's, which
+App Store Connect expects.
+
 ## Android app (Capacitor)
 
 The `android/` folder is the same Capacitor wrapper for Android, made with
