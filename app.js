@@ -28,7 +28,7 @@
   // Shown on the Privacy and Terms pages. Fill these in before publishing.
   const OPERATOR_NAME = "Jack Brown";
   const CONTACT_EMAIL = "CO2counter@outlook.com";
-  const LEGAL_UPDATED = "20 November 2026";
+  const LEGAL_UPDATED = "21 November 2026";
   // Bump when the privacy policy changes in a way people should be told
   // about: signed-in accounts on an older version see a one-time notice.
   const PRIVACY_VERSION = "2026-11-20";
@@ -6417,6 +6417,7 @@
     dailyTimer = setTimeout(() => saveDailyRemote(key, log[key] || []), 500);
     syncDailyReminder();
     syncPlanReminders();
+    syncWidget();
     return set.has(k);
   }
   async function saveDailyRemote(day, list) {
@@ -6441,6 +6442,7 @@
       const card = app.querySelector(".dh");
       if (card) card.outerHTML = dailyCardHtml(true);
       syncDailyReminder();
+      syncWidget();
     } catch (e) {}
   }
   const dhStreakHtml = (st) =>
@@ -6541,6 +6543,28 @@
     dailySig = null;
     await syncDailyReminder();
     render();
+  }
+
+  // ---------- The home-screen widget ----------
+  // The app hands the widget a small summary (WidgetBridgePlugin.swift):
+  // streak, today's habits, this week's points and kilos. Only when it
+  // changes, and only in the iPhone app.
+  let widgetSig = "";
+  function syncWidget() {
+    // iPhone only: Android has no widget yet.
+    const W = isNativeApp() && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios" ? plugin("WidgetBridge") : null;
+    if (!W) return;
+    try {
+      const st = dailyStats(), sv = dailySaved();
+      const habits = dailyHabits().map(([, name, , , c, n]) => ({ name, color: c, done: st.today.some((x) => actOf(x) === "a" + n) }));
+      const json = JSON.stringify({
+        day: localDay(new Date()), weekStart: localDay(weekStartOf(new Date())), streak: st.streak, done: st.today.length, total: 5,
+        weekPts: st.points, weekKg: Math.round(sv.week * 10) / 10, allKg: Math.round(sv.all * 10) / 10, habits,
+      });
+      if (json === widgetSig) return;
+      widgetSig = json;
+      Promise.resolve(W.update({ json })).catch(() => (widgetSig = ""));
+    } catch (e) {}
   }
 
   // ---------- What you've saved, pictured ----------
@@ -6811,6 +6835,7 @@
   }
   function afterPlanChange() {
     syncPlanReminders();
+    syncWidget();
     dailySig = null;
     syncDailyReminder();
     const card = app.querySelector(".dh");
@@ -9538,10 +9563,21 @@
           const r = a && a.notification && a.notification.extra && a.notification.extra.route;
           location.hash = r || "#/habits";
         })).catch(() => {});
+      const AppP = plugin("App");
+      if (AppP) {
+        // The widget opens co2counter://habits.
+        Promise.resolve(AppP.addListener("appUrlOpen", (e) => {
+          const m = String((e && e.url) || "").match(/^co2counter:\/\/([a-z-]+)/i);
+          if (m) location.hash = "#/" + (m[1] === "habits" ? "habits" : m[1]);
+        })).catch(() => {});
+        // Leaving or coming back: the widget's day may have moved on.
+        Promise.resolve(AppP.addListener("appStateChange", () => { widgetSig = ""; syncWidget(); })).catch(() => {});
+      }
     }
     syncSunday();
     syncDailyReminder();
     syncPlanReminders();
+    syncWidget();
     if (currentUser && canFeedPush() && lsGet(KEY_FEEDPUSH, "") === "on") registerPush().catch(() => {});
     // Turned down before? Show how to allow them, on the Account page.
     const LN = plugin("LocalNotifications");
@@ -10295,7 +10331,7 @@
           "What we collect",
           ul([
             "<strong>Survey answers</strong>: your answers about food, travel, flights, home energy, water, pets, banking and pensions. If you don't have an account, these stay on your device only, and we only count that a survey was finished and when, with nothing about you or your answers.",
-            "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account.",
+            "<strong>Account details</strong>: your email address and a securely hashed password, if you create an account. If you sign in with Apple instead, the email address Apple shares with us (which can be a private relay address Apple makes for you), an Apple account ID, and Apple's sign-in token, kept only so we can revoke it with Apple if you delete your account.",
             "<strong>Optional details</strong>: if you choose to, what best describes your work (for example, nurse or teacher), and whether you agree to share your answers for research.",
             "<strong>Leagues</strong>: if you're signed in, your username, how many of the 7 Acts you've done and your yearly footprint total are shown in the leagues of people ranked near you (Friends, Everyone). Nothing else about you is shown. You can hide from leagues on your Account page; you still see your own place, and you're still counted in anonymous totals.",
             "<strong>Groups</strong>: the groups you create or join on the Friends page. Other members of a group see your display name and yearly total, never your answers.",
@@ -10305,6 +10341,7 @@
             "<strong>Asking the bill payer to switch</strong>: if someone else chooses your energy supplier, your message to them includes a private link. When they tap it to confirm the switch, we record only the date.",
             "<strong>Letters sent from the app</strong>: if you send a letter to your MP or a message to whoever pays your energy bills from CO2 Counter, it's sent through our email provider, Resend, from our address, with a copy to you and replies going to you. We keep only the date and the type of letter, not what you wrote or your address.",
             "<strong>Letters to your MP</strong>: if you email your MP from the Habits page, we're copied in (BCC) so we can verify it. We record only the date it arrived and delete the email, which will include your name and address.",
+            "<strong>Home-screen widget (app only)</strong>: your streak, today's habits and this week's totals are copied to the widget on your phone, and stay on your phone.",
             "<strong>Notifications (app only)</strong>: Sunday reminders and daily habit reminders are scheduled on your phone, and nothing about them is sent to us. If you turn on notifications about friends' activity, we store your phone's push token (an address Apple gives your phone for notifications) until you turn them off, sign out or delete your account.",
             "<strong>Reports and blocks</strong>: if you report someone or a group, we keep the report (the reason, anything you add, and the name at the time) so we can review it. If you block someone, we keep that so they can't contact you. The person you report or block isn't told.",
             "<strong>Partner link clicks</strong>: if you're signed in and open one of the partner sites we suggest (such as an energy supplier or bank), we record which link you opened and whether it was an affiliate link, once per link.",
@@ -10339,6 +10376,7 @@
           "<p>Only the providers that run the service for us:</p>" +
             ul([
               "<strong>Supabase</strong>: sign-in and database (your account, saved answers and support status).",
+              "<strong>Apple</strong>: only if you choose Sign in with Apple. Apple confirms who you are and shares your email (or a private relay address) under its own privacy policy.",
               "<strong>Stripe</strong>: payments and subscriptions. Stripe handles your card details under its own privacy policy.",
               "<strong>GitHub Pages</strong>: hosting the website.",
               "<strong>Apple Push Notification service</strong>: delivers app notifications about friends' activity, if you turn them on.",
@@ -10871,7 +10909,7 @@
     const seg = (mode, label) =>
       '<button type="button" role="tab" aria-selected="' + (ui.authMode === mode) + '" class="auth-seg-b' + (ui.authMode === mode ? " on" : "") + '" data-action="auth-mode" data-mode="' + mode + '">' + label + "</button>";
     return (
-      '<div class="auth-seg" role="tablist" aria-label="Account">' + seg("signup", "Create account") + seg("signin", "Sign in") + "</div>" +
+      '<div class="auth-seg" role="tablist" aria-label="Account">' + seg("signup", "Create account") + seg("signin", "Sign in") + "</div>" + appleButtonHtml() +
       '<form id="auth-form" class="auth-form" novalidate>' +
       (signup ? usernameField("auth-username") : "") +
       emailField() +
@@ -10892,6 +10930,77 @@
           '<button type="button" class="link-btn" data-action="auth-mode" data-mode="link">Email me a sign-in link</button>') +
       "</div></form>"
     );
+  }
+
+  // ---------- Sign in with Apple ----------
+  // In the iPhone app: Apple's own sheet (AppleSignInPlugin.swift), then
+  // Supabase signs in with Apple's identity token. On the website it's off
+  // until Apple's Services ID is set up in Supabase (see README.md, "Sign in
+  // with Apple"); then set APPLE_ON_WEB to true.
+  const APPLE_ON_WEB = false;
+  const KEY_APPLE_WEB = "co2_apple_web";
+  const APPLE_LOGO = '<svg width="17" height="17" viewBox="0 0 17 20" aria-hidden="true"><path fill="currentColor" d="M14.06 10.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.86-.76-1.47.02-2.83.86-3.59 2.17-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.24 2.73 2.2 1.1-.05 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.41 1.2-2.47-.03-.01-2.3-.88-2.3-3.51ZM11.88 4.14c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.55 1.31-.56.65-1.05 1.69-.92 2.68.97.08 1.96-.49 2.57-1.23Z"/></svg>';
+  const appleAvailable = () => (isNativeApp() && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === "ios") || APPLE_ON_WEB;
+  function appleButtonHtml() {
+    if (!appleAvailable()) return "";
+    return '<button type="button" class="btn btn-apple btn-block" data-action="apple-signin"' + (ui.appleBusy ? " disabled" : "") + ">" + APPLE_LOGO + (ui.appleBusy ? "Signing in…" : "Continue with Apple") + "</button>" +
+      '<p class="auth-apple-note">By continuing with Apple you agree to the <a class="link-btn" href="/terms/" target="_blank" rel="noopener">Terms</a> and have read the <a class="link-btn" href="/privacy/" target="_blank" rel="noopener">Privacy policy</a>.</p>' +
+      '<p class="auth-or"><span>or with email</span></p>';
+  }
+  async function sha256Hex(t) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
+    return Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  // Keeps (or, before deletion, revokes) Apple's token on the server.
+  async function appleToken(body) {
+    try {
+      const { data } = await sb.auth.getSession();
+      const t = data && data.session && data.session.access_token;
+      if (!t) return;
+      // Never hold up sign-in or deleting an account for more than a few seconds.
+      const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined;
+      await fetch(SUPABASE_URL + "/functions/v1/apple-token", { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + t }, body: JSON.stringify(body), signal });
+    } catch (e) {}
+  }
+  async function appleSignIn() {
+    if (!sb || ui.appleBusy) return;
+    ui.authErr = "";
+    ui.authMsg = "";
+    const A = isNativeApp() ? plugin("AppleSignIn") : null;
+    if (A) {
+      const raw = Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, "0")).join("");
+      let r;
+      try {
+        r = await A.authorize({ nonce: await sha256Hex(raw) });
+      } catch (e) {
+        if (/cancel/i.test(String((e && (e.code || e.message)) || ""))) return;
+        ui.authErr = "Sign in with Apple didn't work. Please try again, or use your email.";
+        return render();
+      }
+      ui.appleBusy = true;
+      render();
+      const { error } = await sb.auth.signInWithIdToken({ provider: "apple", token: r.identityToken, nonce: raw });
+      ui.appleBusy = false;
+      if (error) {
+        ui.authErr = friendlyAuthError(error);
+        return render();
+      }
+      // They agreed by continuing; Apple shares a name only the first time.
+      ui.appleConsent = true;
+      ui.appleName = [r.givenName, r.familyName].filter(Boolean).join(" ").slice(0, 40);
+      if (r.authorizationCode) appleToken({ action: "store", code: r.authorizationCode, client: "app" });
+      await afterSignIn();
+      return;
+    }
+    if (APPLE_ON_WEB) {
+      lsSet(KEY_APPLE_WEB, 1);
+      const { error } = await sb.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: authRedirectUrl() } });
+      if (error) {
+        lsRemove(KEY_APPLE_WEB);
+        ui.authErr = friendlyAuthError(error);
+        render();
+      }
+    }
   }
 
   // Supabase's error messages, in plainer words.
@@ -11101,6 +11210,8 @@
       if (data.privacy_version === PRIVACY_VERSION) return;
       // Agreed at sign-up but the trigger didn't save it: save it now.
       if ((currentUser.user_metadata || {}).privacy_version === PRIVACY_VERSION) return acceptPrivacy(true);
+      // Signed in with Apple: they agreed when they continued.
+      if (ui.appleConsent || lsGet(KEY_APPLE_WEB, 0)) { ui.appleConsent = false; lsRemove(KEY_APPLE_WEB); return acceptPrivacy(true); }
       ui.privacyNotice = true;
     } catch (e) {}
   }
@@ -11166,6 +11277,11 @@
 
   async function afterSignIn() {
     await refreshUser();
+    if (ui.appleName && currentUser && sb) {
+      const name = ui.appleName;
+      ui.appleName = "";
+      try { await sb.from("profiles").update({ display_name: name }).eq("id", currentUser.id).is("display_name", null); } catch (e) {}
+    }
     ui.authMsg = "";
     ui.authErr = "";
     ui.authSentTo = "";
@@ -12383,6 +12499,7 @@
       paintPlanSheet();
     },
     "plan-done": () => closeModal(),
+    "apple-signin": () => appleSignIn(),
     "dh-swap": (el) => {
       modalRoot.innerHTML = dhPickHtml(Number(el.dataset.n));
       document.body.classList.add("modal-open");
@@ -12686,6 +12803,8 @@
         ui.deleteErr = "Type DELETE to confirm.";
         return render();
       }
+      // Apple asks that its sign-in token is revoked when an account is deleted.
+      await appleToken({ action: "revoke" });
       const { error } = await sb.rpc("delete_own_account");
       if (error) {
         ui.deleteErr = "Couldn't delete your account. Please try again.";
