@@ -8718,3 +8718,7 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 .dhb-mini-stats span { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 @media (max-width: 380px) { .dhb-mini-stats span { flex-direction: column; } }
 .dh-kg { text-transform: none; letter-spacing: 0; }
+.pk-kg { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 12%, transparent); color: var(--c); font-size: 11.5px; font-weight: 800; }
+@media (prefers-color-scheme: dark) { .pk-kg { background: color-mix(in srgb, var(--c) 28%, transparent); color: #f1ede4; } }
+/* While closing, overlays let taps through to the page underneath. */
+.dhb.out, .lvup.out, .stimer.out { pointer-events: none; }
