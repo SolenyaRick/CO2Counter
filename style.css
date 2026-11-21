@@ -8740,3 +8740,7 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
   .auth-apple-note { color: #b5ae9f; }
   .auth-or::before, .auth-or::after { background: rgba(236, 235, 233, 0.14); }
 }
+
+/* Share card chips without mascots: the trees / phone / fair share glyphs */
+.pi-chip-ic .pi-gl { color: #3F5B3A; }
+@media (prefers-color-scheme: dark) { .pi-chip-ic .pi-gl { color: #A9C795; } }

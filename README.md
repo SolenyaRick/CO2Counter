@@ -461,13 +461,28 @@ One-off setup:
    They come from `App/App.entitlements`. If the group shows red, click it to
    register it.
 
-The website doesn't show the button yet. Turning it on needs a Services ID
-(Apple Developer → Identifiers → **+** → Services IDs, with Sign in with Apple
-for the domain `co2counter.co.uk` and the return URL
-`https://fbgfylfnbtxzbwgilktt.supabase.co/auth/v1/callback`), added first in
-Supabase's Apple **Client IDs** with a generated secret key (Apple makes it
-expire every 6 months). After that, set `APPLE_WEB_CLIENT_ID` in the Edge
-Function secrets and `APPLE_ON_WEB = true` in `app.js`.
+On the website the same button goes through Apple's own page and back
+(`signInWithOAuth`). Apple's token comes back in the link, and the app hands
+it to `apple-token` (as the website client) so deleting the account revokes it
+there too. The Android app doesn't show the button. Setup for the website, on
+top of the steps above:
+
+1. Apple Developer → Identifiers → **+** → **Services IDs**:
+   `com.solenyarick.co2tracker.web`. Tick **Sign in with Apple** →
+   **Configure**: primary App ID `com.solenyarick.co2tracker`, domain
+   `fbgfylfnbtxzbwgilktt.supabase.co`, return URL
+   `https://fbgfylfnbtxzbwgilktt.supabase.co/auth/v1/callback`. Save.
+2. Make the client secret from the same `.p8` key (Team ID, Key ID and the
+   Services ID): an ES256 JWT that Apple lets last at most 6 months.
+3. Supabase → Authentication → Sign In / Providers → **Apple**: **Client IDs**
+   `com.solenyarick.co2tracker.web,com.solenyarick.co2tracker`, and the client
+   secret in **Secret Key (for OAuth)**.
+4. Edge Function secrets: `APPLE_WEB_CLIENT_ID` = `com.solenyarick.co2tracker.web`.
+
+**Renew the secret key every 6 months.** When it expires, Apple sign-in on the
+website stops (the app keeps working) until a new one is pasted into Supabase.
+The one made on 21 November 2026 lasts until 22 May 2027. To turn the website
+button off, set `APPLE_ON_WEB = false` in `app.js`.
 
 ## Home-screen widget (iPhone app)
 
