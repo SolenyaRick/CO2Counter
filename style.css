@@ -8744,3 +8744,65 @@ body:not(.calm) .cat-v2 .cat-share circle + circle { animation: pie-in 1s var(--
 /* Share card chips without mascots: the trees / phone / fair share glyphs */
 .pi-chip-ic .pi-gl { color: #3F5B3A; }
 @media (prefers-color-scheme: dark) { .pi-chip-ic .pi-gl { color: #A9C795; } }
+
+/* ==================== Motion: page changes, pop-ups, messages, presses ==================== */
+/* Page changes (View Transitions, where the browser has them). On a phone a
+   new page slides in over the old one like an iPhone app, Back slides it
+   away, and the tabs cross-fade; on a computer it's a short fade. The top
+   bar and tab bar stay put. */
+.topbar { view-transition-name: topbar; }
+.tabbar { view-transition-name: tabbar; }
+::view-transition-old(tabbar) { display: none; }
+::view-transition-new(tabbar) { animation: none; }
+::view-transition-group(topbar) { animation-duration: 0.22s; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.32s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); animation-fill-mode: both; }
+html[data-nav="push"]::view-transition-old(root) { animation-name: vt-push-out; }
+html[data-nav="push"]::view-transition-new(root) { animation-name: vt-push-in; box-shadow: -14px 0 34px rgba(23, 36, 26, 0.14); }
+html[data-nav="pop"]::view-transition-old(root) { animation-name: vt-pop-out; z-index: 2; box-shadow: -14px 0 34px rgba(23, 36, 26, 0.14); }
+html[data-nav="pop"]::view-transition-new(root) { animation-name: vt-pop-in; }
+html[data-nav="tab"]::view-transition-old(root) { animation: vt-fade-out 0.12s ease-out both; }
+html[data-nav="tab"]::view-transition-new(root) { animation: vt-fade-in 0.22s ease-out both; }
+html[data-nav="fade"]::view-transition-old(root) { animation: vt-fade-out 0.14s ease-out both; }
+html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes vt-push-out { to { transform: translateX(-28%); filter: brightness(0.93); } }
+@keyframes vt-push-in { from { transform: translateX(100%); } }
+@keyframes vt-pop-out { to { transform: translateX(100%); } }
+@keyframes vt-pop-in { from { transform: translateX(-28%); filter: brightness(0.93); } }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+@keyframes vt-rise-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* Pop-ups slide away when closed instead of vanishing. */
+.modal-backdrop.closing { animation: bd-out 0.2s ease-in both; pointer-events: none; }
+@keyframes bd-out { from { opacity: 1; } to { opacity: 0; } }
+.modal-backdrop.closing > .sheet, .modal-backdrop.closing > .modal { animation: pop-out 0.18s cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes pop-out { to { opacity: 0; transform: translateY(14px) scale(0.98); } }
+@media (max-width: 600px) { .modal-backdrop.closing > .sheet { animation: sheet-down 0.22s cubic-bezier(0.4, 0, 1, 1) both; } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+
+/* Messages ("Username saved", "You're signed in") drop in, and slide away when dismissed. */
+.flash-new { animation: flash-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes flash-in { from { opacity: 0; transform: translateY(-10px) scale(0.98); } }
+.flash-out { animation: flash-out 0.2s ease-in both; pointer-events: none; }
+@keyframes flash-out { to { opacity: 0; transform: translateY(-8px) scale(0.98); } }
+
+/* Every button gives a little under your finger. */
+.btn { transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.12s ease; }
+:where(.btn, .icon-btn, .chip, .seg > button, .pi-tab, .pi-chip, .uk-toggle):active { transform: scale(0.97); }
+:where(.icon-btn, .chip, .seg > button, .pi-tab, .pi-chip) { transition: transform 0.12s ease, background-color 0.15s, color 0.15s; }
+.tabbar a:active svg { transform: scale(0.9); transition: transform 0.1s ease; }
+
+/* My Habits before the survey: what to do first. */
+.hb-start { margin-top: 16px; display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 24px; background: var(--forest-grad, #3f5b3a); color: #F6F1E6; box-shadow: 0 14px 30px rgba(31, 42, 29, 0.18); animation: state-in 0.3s ease-out both; }
+.hb-start h2 { margin: 0 0 4px; font-size: 20px; line-height: 1.15; color: #F6F1E6; }
+.hb-start p { margin: 0; font-size: 14px; line-height: 1.45; color: rgba(246, 241, 230, 0.84); }
+.hb-start-ic { flex: none; width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.12); color: #C4E57D; }
+.hb-start-ic .icon { width: 22px; height: 22px; }
+.hb-start-go.btn-green, .hb-start-go.btn-green:hover { flex: none; background: #C4E57D; border-color: #C4E57D; color: #17241A; font-weight: 700; }
+@media (max-width: 600px) { .hb-start { display: grid; grid-template-columns: 46px minmax(0, 1fr); align-items: start; padding: 16px; } .hb-start h2 { font-size: 19px; margin-top: 2px; } .hb-start-go { grid-column: 1 / -1; width: 100%; height: 46px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .modal-backdrop.closing, .modal-backdrop.closing > .sheet, .modal-backdrop.closing > .modal, .flash-new, .flash-out, .hb-start { animation: none !important; }
+  :where(.btn, .icon-btn, .chip, .seg > button, .pi-tab, .pi-chip, .uk-toggle):active, .tabbar a:active svg { transform: none; }
+}

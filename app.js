@@ -1933,6 +1933,18 @@
   let navTrail = null;
   let lastRoute = null;
   let navIntent = null; // "back" from our back button or swipe, "tab" from the tab bar
+  // Where you were when you went to sign in (Friends, a page of results...),
+  // so signing in, by password, email link or Apple, takes you back there.
+  const KEY_AUTH_BACK = "co2_auth_back";
+  function landingAfterSignIn() {
+    const b = lsGet(KEY_AUTH_BACK, null);
+    lsRemove(KEY_AUTH_BACK);
+    const done = !!(survey && survey.completedAt);
+    const fresh = b && b.path && Date.now() - (b.t || 0) < 3600000 && b.path !== "/account" && b.path !== "/";
+    // Results and Habits need a survey; without one, the survey comes first.
+    if (fresh && (done || !/^\/(results|habits|check-in|explainer)/.test(b.path))) return "#" + b.path;
+    return done ? "#/habits" : "#/";
+  }
   const scrollMem = {};
   function backTarget(path) {
     const prev = navTrail && navTrail.length > 1 ? navTrail[navTrail.length - 2] : null;
@@ -6285,7 +6297,7 @@
     hbSheetBuild = null;
     return (
       '<div class="container hb-page hb2 hb3' + (animate ? " hb-anim" : "") + '" data-fs-pill="' + made + "/7 · " + HB_LEVELS[lv][1] + '" data-fs-unit="">' +
-      party + '<div class="hb3-top-row">' + hero + spot + "</div>" + dailyCardHtml(!animate) + sundayOffer(acts) +
+      party + (ready ? "" : hbStartCard()) + '<div class="hb3-top-row">' + hero + spot + "</div>" + dailyCardHtml(!animate) + sundayOffer(acts) +
       '<section class="hb-acts" aria-labelledby="hb3-ah"><div class="hb3-ahead"><h2 id="hb3-ah" class="display">The 7 Acts</h2><span>Tap one to start</span></div>' +
       '<ol class="hb-list hb3-grid">' + acts.map(row).join("") + "</ol></section>" + badges +
 
@@ -6730,7 +6742,7 @@
     const cap = niceCap(Math.max(sv.week * 1.25, 5));
     return '<button type="button" class="dh-saved" data-action="dh-saved-open">' +
       '<span class="dh-mini" aria-hidden="true"><i style="height:' + Math.min(100, (sv.week / cap) * 100).toFixed(1) + '%"></i></span>' +
-      '<span class="dh-saved-t"><span><b class="display tnum">−' + kgShort(sv.week) + " kg</b> CO₂e saved this week</span>" +
+      '<span class="dh-saved-t"><span><b class="display tnum">' + (sv.week >= 0.005 ? "−" + kgShort(sv.week) : "0") + " kg</b> CO₂e saved this week</span>" +
       "<small>" + (sv.all > 0 ? "−" + kgShort(sv.all) + " kg so far: a tree's work for " + treeWork(sv.all) : "Tick a habit and watch your tank fill") + "</small></span>" +
       '<span class="dh-saved-go" aria-hidden="true">' + icon("chevronRight") + "</span></button>";
   }
@@ -7238,6 +7250,14 @@
 
   // Checked by us (the MP letter, the invite link, the bill payer's confirmation), not just ticked.
   const hbVerified = (a) => !!a.done && (!!a.verifiedTick || /^Verified/.test(a.sub || ""));
+  // My Habits before the survey: the first thing to do, at the top.
+  function hbStartCard() {
+    const started = JSON.stringify(survey) !== JSON.stringify(normaliseSurvey(null));
+    return '<section class="hb-start" aria-labelledby="hb-start-h"><span class="hb-start-ic" aria-hidden="true">' + icon("clipboard") + '</span><div class="min0">' +
+      '<h2 id="hb-start-h" class="display">' + (started ? "Finish the survey first" : "Start with the survey") + "</h2>" +
+      "<p>About 5 minutes. Acts 1 to 5 tick themselves from your answers, and your daily habits and kilos are worked out from them.</p></div>" +
+      '<a class="btn btn-green hb-start-go" href="#/" data-action="start-survey">' + (started ? "Continue the survey" : "Take the survey") + " " + icon("arrowRight") + "</a></section>";
+  }
   function hbPhonePage(o) {
     const { acts, ready, made, lv, nextLv, toSave, party, shows, state } = o;
     setTimeout(() => (ui.hbfDailySeen = true), 0);
@@ -7264,8 +7284,7 @@
       '<a class="hbf-strip" href="#/habits/level" aria-label="Your level and badges"><span class="hbf-ring" style="--p:' + ringDeg + 'deg" aria-hidden="true"><b class="tnum">' + made + "<small>/7</small></b></span>" +
       '<div class="min0 hbf-lv"><h1 class="display">' + HB_LEVELS[lv][1] + '<span class="sr-only">: ' + made + " of 7 acts done</span></h1><span>Level " + (lv + 1) + " · " + (nextLv ? toNext + " to " + nextLv[1] : "Top level") + (rankTop(ui.rank) ? " · Top " + rankTop(ui.rank) + "%" : "") + "</span></div>" +
       (ready && toSave >= 0.5 ? '<div class="hbf-togo"><b class="display tnum">−' + kgFmt(toSave) + "</b><span>kg a year to go</span></div>" : "") + '<span class="hbf-strip-go" aria-hidden="true">' + icon("chevronRight") + "</span></a>" +
-      dailyCardHtml(ui.hbfDailySeen) + sundayOffer(acts) +
-      (ready ? "" : '<button type="button" class="hbf-start" data-action="start-survey"><b class="display">Take the survey first</b><span>Acts 1 to 5 tick themselves from it</span>' + icon("arrowRight") + "</button>") +
+      (ready ? "" : hbStartCard()) + dailyCardHtml(ui.hbfDailySeen) + sundayOffer(acts) +
       (todo.length
         ? '<section class="hbf-sec" aria-labelledby="hbf-todo"><div class="hbf-h"><h2 id="hbf-todo" class="display">To do</h2><span>' + todo.length + ' left</span></div><ul class="hbf-list">' + todo.map((a) => row(a, a === nextOne)).join("") + "</ul></section>"
         : '<section class="hbf-all"><b class="display">All seven done</b><span>Keep measuring to keep your line falling.</span></section>') +
@@ -7933,10 +7952,14 @@
     );
   }
 
-  function closeModal() {
+  function closeModal(instant) {
     ui.hbSheet = null;
-    modalRoot.innerHTML = "";
     document.body.classList.remove("modal-open");
+    const bd = modalRoot.firstElementChild;
+    if (instant === true || !bd || reducedMotion() || !bd.classList.contains("modal-backdrop")) { modalRoot.innerHTML = ""; return; }
+    // It slides away, then goes; a pop-up opened meanwhile replaces it.
+    bd.classList.add("closing");
+    setTimeout(() => { if (bd.parentNode === modalRoot) bd.remove(); }, 220);
   }
 
 
@@ -11448,7 +11471,7 @@
       saveSurveyRemote(survey);
       await loadHistory();
       loadDaily();
-      if (currentPath() === "/account") location.hash = "#/results";
+      if (currentPath() === "/account") location.hash = landingAfterSignIn();
     }
     notifStart();
     render();
@@ -11707,8 +11730,10 @@
     if (!navigator.onLine && html !== spinner)
       html = '<div class="offline-note" role="status">' + icon("info") + "<span><b>You're offline.</b> Showing what's saved on this phone. Changes save when you're back online.</span></div>" + html;
     if (ui.flash && html !== spinner) {
+      const fresh = ui.flash !== ui.flashSeen;
+      ui.flashSeen = ui.flash;
       html =
-        '<div class="flash" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
+        '<div class="flash' + (fresh ? " flash-new" : "") + '" role="status">' + icon("check") + "<span>" + esc(ui.flash) + "</span>" +
         '<button type="button" class="icon-btn" data-action="dismiss-flash" aria-label="Dismiss">' + icon("x") + "</button></div>" + html;
     }
     // Re-rendering a form after an error shouldn't wipe the passwords
@@ -11827,13 +11852,18 @@
     // Moving on from a real page address (/about/ ...) inside the app: show
     // the usual /#/… address rather than /about/#/….
     if (location.pathname !== "/" && location.hash && !/^\/(?:index\.html)?$/.test(location.pathname)) history.replaceState(null, "", "/" + location.hash);
-    closeModal();
+    closeModal(true);
     // A level-up moment belongs to My Habits: leaving the page closes it.
     document.querySelectorAll(".lvup:not(.out) [data-lv-close]").forEach((b) => b.click());
     if (stimer && !/timer=shower/.test(location.hash)) stimer.close();
     document.querySelectorAll(".dhb").forEach((x) => { x.remove(); document.body.classList.remove("modal-open"); });
     ui.shownStep = null;
-    ui.flash = "";
+    // A message belongs to the page it was shown on; the address tidying
+    // itself up (as after an email link) isn't a new page.
+    if (currentPath() !== lastRoute) {
+      ui.flash = "";
+      ui.flashSeen = "";
+    }
     ui.inputMsg = null;
     ui.switchTouched = false;
     ui.switchOn = null;
@@ -11851,6 +11881,7 @@
     // screen, or across the tabs.
     const from = lastRoute, to = currentPath();
     if (from) scrollMem[from] = window.scrollY;
+    if (to === "/account" && !currentUser && from && from !== "/account") lsSet(KEY_AUTH_BACK, { path: from, t: Date.now() });
     let dir = null;
     if (!navTrail) navTrail = [to];
     else if (from !== to) {
@@ -11862,12 +11893,35 @@
     const intent = navIntent;
     navIntent = null;
     lastRoute = to;
-    render();
-    // Every page opens at the top, whether from a tab, Back or a link.
-    window.scrollTo(0, 0);
-    ui.restoreScroll = null;
     // A browser's own back swipe animates by itself, so only our Back slides.
-    glide(dir === "pop" ? (intent === "back" ? "pop" : null) : dir);
+    const anim = dir === "pop" ? (intent === "back" ? "pop" : null) : dir;
+    const swap = () => {
+      render();
+      // Every page opens at the top, whether from a tab, Back or a link.
+      window.scrollTo(0, 0);
+      ui.restoreScroll = null;
+    };
+    if (anim && pageTransition(anim, swap)) return;
+    swap();
+    glide(anim);
+  }
+  // Where the browser can (Safari 18 and the iPhone app on iOS 18, Chrome,
+  // Edge), the old page slides away as the new one comes in, like an iPhone
+  // app; across the tabs it's a quick cross-fade. Elsewhere glide() slides
+  // the new page in.
+  function pageTransition(dir, update) {
+    if (!document.startViewTransition || reducedMotion() || document.hidden) return false;
+    const root = document.documentElement, kind = onPhoneScreen() ? dir : "fade";
+    root.dataset.nav = kind;
+    try {
+      const t = document.startViewTransition(update);
+      const done = () => { if (root.dataset.nav === kind) delete root.dataset.nav; };
+      t.finished.then(done, done);
+      return true;
+    } catch (e) {
+      delete root.dataset.nav;
+      return false;
+    }
   }
 
   function setPath(obj, path, value) {
@@ -12331,9 +12385,12 @@
       lsSet(KEY_SHOW_UK, ui.showUk);
       render();
     },
-    "dismiss-flash": () => {
+    "dismiss-flash": (el) => {
       ui.flash = "";
-      render();
+      const f = el && el.closest(".flash");
+      if (!f || reducedMotion()) return render();
+      f.classList.add("flash-out");
+      setTimeout(() => { if (!ui.flash) render(); }, 200);
     },
     "update-figures": () => {
       if (location.hash !== "#/") history.pushState(null, "", "#/");
@@ -13765,6 +13822,16 @@
     notifStart();
     // Coming back with a finished survey: start on your plan (or your results
     // when signed out), not on the survey you've already done.
+    // Back from an email link or Sign in with Apple: where you were going,
+    // or your habits (the survey first if it isn't done), not the survey.
+    if (fromEmail && currentUser && !ui.recovery && !ui.pendingVerify && /^#\/?$/.test(location.hash)) {
+      history.replaceState(null, "", location.pathname + (linkType === "email_change" ? "#/account" : landingAfterSignIn()));
+      lastRoute = currentPath();
+      navTrail = [lastRoute];
+      if (linkParams.get("provider_refresh_token")) ui.flash = "You're signed in with Apple.";
+      else if (linkType === "signup") ui.flash = "Your email is confirmed and you're signed in.";
+      else if (linkType === "email_change") ui.flash = "Your email address has been updated.";
+    }
     const bareHome = (location.pathname === "/" || /\/index\.html$/.test(location.pathname)) && /^#?$/.test(location.hash);
     if (bareHome && !fromEmail && !fromCheckout && survey && survey.completedAt) history.replaceState(null, "", location.pathname + (currentUser ? "#/habits" : "#/results"));
     render();
