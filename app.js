@@ -4355,26 +4355,23 @@
     const pct = (v) => (now ? Math.round((v / now) * 100) : 0);
     const cmp = ukComparison(fp);
     const budget = D.BUDGET_YEARLY;
-    // The path to the budget is like for like (see budgetBasis): no money,
-    // plus typical shopping, for you and for the UK average alike.
-    const bb = budgetBasis(fp, tips);
-    const lifeNow = bb.life;
-    const lifeSaving = Math.max(0, totalSaving - bb.moneySave);
-    const after = Math.max(0, lifeNow - lifeSaving);
-    const afterMax = Math.max(0, lifeNow - Math.max(0, totalMax - bb.moneyMax));
-    const lifePct = (v) => (lifeNow ? Math.round((v / lifeNow) * 100) : 0);
-    const ukTotal = cmp.uk + bb.shop;
+    // The budget is compared with the same numbers as the rest of the page:
+    // your footprint now, with realistic changes, and all the way (the
+    // finer points are on the budget page).
+    const after = Math.max(0, now - totalSaving);
+    const afterMax = Math.max(0, now - totalMax);
     const snapshots = getSnapshots();
     const mode = ui.showUk ? "bars" : ui.chartMode || "donut";
     const animate = !ui.resultsSeen;
     ui.resultsSeen = true;
 
     const ukTag = cmp.pct < 5 ? "About the UK average" : ukWords(cmp) + " UK average";
-    const budgetRatio = lifeNow / budget;
+    const budgetRatio = now / budget;
+    const xb = (v) => (v / budget).toFixed(1).replace(/\.0$/, "") + "×";
     const budgetTag = budgetRatio <= 1 ? "Inside the 1.5°C budget" : budgetRatio < 1.5 ? Math.round((budgetRatio - 1) * 100) + "% over the 1.5°C budget" : budgetRatio.toFixed(1).replace(/\.0$/, "") + "× the 1.5°C budget";
 
-    // Path bar scale: room for now, the UK average and the budget.
-    const scale = Math.max(lifeNow, ukTotal, budget) * 1.15;
+    // Path bar scale: room for now and the budget.
+    const scale = Math.max(now, budget) * 1.15;
     const W = (v) => Math.min(100, (v / scale) * 100).toFixed(2);
     // Labels near either end line up with the mark instead of centring, so they stay inside the card.
     const edge = (pct) => (pct < 22 ? " edge-l" : pct > 78 ? " edge-r" : "");
@@ -4411,23 +4408,19 @@
       '<div class="res-hero-path"><div class="row-between gap-3" style="flex-wrap:wrap;align-items:baseline"><span class="fw-600 muted">With realistic changes</span>' +
       (totalSaving > 0.5 ? '<span class="res-chip">−' + kgFmt(totalSaving) + " kg · " + pct(totalSaving) + "% less</span>" : "") +
       '</div><div class="res-after"><span class="display tnum">' + kgFmt(Math.max(0, now - totalSaving)) + '</span><span class="muted">kg a year</span></div>' +
-      // The budget is compared like for like (see budgetBasis): without bank
-      // and pension, with typical shopping. It gets its own heading and its
-      // own numbers so the two comparisons aren't mixed up.
+      // Against the budget: the same now, realistic and all-the-way numbers,
+      // as multiples of 2.5 t.
       '<div class="res-budget-head"><span class="fw-600">Against the 1.5°C budget</span>' +
-      '<span class="res-budget-nums tnum">' + kgFmt(lifeNow) + (lifeSaving > 0.5 ? ' <span aria-hidden="true">→</span><span class="sr-only"> down to </span> ' + kgFmt(after) : "") + " kg</span></div>" +
-      '<p class="res-basis">Your lifestyle footprint: without your bank and pension, with typical shopping, like the budget.</p>' +
-      // Both markers are labelled above the bar; when they're close, the UK one sits a line higher.
-      '<div class="path' + (animate ? " animate" : "") + (Math.abs(W(ukTotal) - W(budget)) < 34 ? " two-rows" : "") + '">' +
+      '<span class="res-budget-nums tnum">' + xb(now) + (totalSaving > 0.5 ? ' <span aria-hidden="true">→</span><span class="sr-only"> with realistic changes, </span> ' + xb(after) : "") + "</span></div>" +
+      '<div class="path' + (animate ? " animate" : "") + '">' +
       '<span class="path-mark budget' + edge(W(budget)) + '" style="left:' + W(budget) + '%"><i>1.5°C · ' + (budget / 1000).toFixed(1) + " t</i></span>" +
-      '<span class="path-mark uk' + edge(W(ukTotal)) + '" style="left:' + W(ukTotal) + '%"><i>UK avg · ' + (ukTotal / 1000).toFixed(1) + " t*</i></span>" +
-      '<span class="path-now" style="width:' + W(lifeNow) + '%"></span>' +
+      '<span class="path-now" style="width:' + W(now) + '%"></span>' +
       '<span class="path-real" style="width:' + W(after) + '%"></span>' +
       '<span class="path-all" style="width:' + W(afterMax) + '%"></span></div>' +
       '<div class="path-legend"><span><i class="lg-all"></i>All the way <b class="tnum">' + kgFmt(afterMax) + "</b></span>" +
       '<span><i class="lg-real"></i>Realistic <b class="tnum">' + kgFmt(after) + "</b></span>" +
-      '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(lifeNow) + "</b></span></div>" +
-      '<p class="xs muted mt-2">Compared like for like. <a class="link-btn" href="#/budget">How we compare</a></p></div>' + heroNextAct() + "</section>";
+      '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(now) + "</b></span></div>" +
+      '<p class="xs muted mt-2"><a class="link-btn" href="#/budget">About the 1.5°C budget</a></p></div>' + heroNextAct() + "</section>";
 
     html +=
       '<div class="res-grid">' + (ui.exampleMode ? "" : pictureItHtml()) + '<section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
@@ -8108,8 +8101,8 @@
       section(
         "The 1.5°C budget",
         "<p>To keep global warming to 1.5°C, lifestyle footprints need to fall to about {{budget_t}} tonnes of CO₂-equivalent per person a year by 2030 (Hot or Cool Institute). " +
-          "The budget covers food, home, travel, goods and leisure, but not banks and pensions or public services, so we compare like with like: your survey without money, plus typical shopping. " +
-          'Your bank and pension are shown on their own. <a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
+          "We compare it with your footprint, the same number as on your results page. The budget covers food, home, travel, goods and leisure, but not banks and pensions or public services, so it's a close match rather than an exact one. " +
+          '<a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
       ) +
       section(
         "Picture it: trees, phones and your fair share",
@@ -8196,13 +8189,15 @@
     const done = survey && survey.completedAt;
     const fp = done ? footprint(survey) : null;
     const bb = fp ? budgetBasis(fp) : null;
+    const tips = fp ? fp.breakdown.map((b) => ({ b, t: tipFor(b.key, survey) })) : [];
+    const realKg = fp ? Math.max(0, fp.totalYearly - tips.reduce((n, x) => n + x.t.saving, 0)) : 0;
+    const xb = (kg) => (kg / D.BUDGET_YEARLY).toFixed(1).replace(/\.0$/, "") + "×";
     const yours = fp
       ? '<section class="glass budget-you fade-up"><span class="eyebrow">Your figures</span>' +
-        '<div class="budget-sum"><div><b class="display tnum">' + t(fp.totalYearly - bb.money) + ' t</b><span class="xs muted">your survey, without money</span></div><span class="budget-op" aria-hidden="true">+</span>' +
-        '<div><b class="display tnum">' + t(bb.shop) + ' t</b><span class="xs muted">typical shopping</span></div><span class="budget-op" aria-hidden="true">=</span>' +
-        '<div class="hl"><b class="display tnum">' + t(bb.life) + ' t</b><span class="xs muted">compared with the budget</span></div></div>' +
-        '<p class="sm mt-3">That\'s <b>' + budgetPhrase(bb.life) + "</b> of " + t(D.BUDGET_YEARLY) + " t." +
-        (bb.money >= 0.5 ? " Your bank and pension add another <b>" + t(bb.money) + " t</b>, shown on their own." : "") + "</p></section>"
+        '<div class="budget-sum"><div><b class="display tnum">' + t(fp.totalYearly) + ' t</b><span class="xs muted">your footprint now</span></div><span class="budget-op" aria-hidden="true">÷</span>' +
+        '<div><b class="display tnum">' + t(D.BUDGET_YEARLY) + ' t</b><span class="xs muted">the 1.5°C budget</span></div><span class="budget-op" aria-hidden="true">=</span>' +
+        '<div class="hl"><b class="display tnum">' + xb(fp.totalYearly) + '</b><span class="xs muted">the budget</span></div></div>' +
+        '<p class="sm mt-3">That\'s <b>' + budgetPhrase(fp.totalYearly) + "</b>. With realistic changes you'd be at " + t(realKg) + " t, " + (realKg <= D.BUDGET_YEARLY ? "inside it." : xb(realKg) + " the budget.") + "</p></section>"
       : "";
     const inOut = (rows) => '<ul class="budget-list">' + rows.map(([ok, text]) => '<li class="' + (ok ? "in" : "out") + '"><span aria-hidden="true">' + (ok ? "✓" : "✕") + "</span>" + text + "</li>").join("") + "</ul>";
     return (
@@ -8225,13 +8220,10 @@
             [false, "Public services and infrastructure, like the NHS, schools and roads"],
           ])) +
       card("How we compare you with it",
-        "<p>We compare like with like. From your survey we take everything except your bank and pension: food, commuting and travel, flights, home energy, water and pets. " +
-          "Shopping isn't in the survey yet, so we add a typical UK figure of " + t(D.ASSUMED_SHOPPING.totalKg) + " t, the same as the budget would count. That total is what we put against the budget, and the UK average on the results page is worked out the same way.</p>" +
-          "<p>Your bank and pension are still in your footprint, and still count. We show them on their own because the budget doesn't include them, and because financed emissions are also counted in the footprints of the companies they fund, so adding them would mix two different kinds of figure.</p>" +
+        "<p>We put your footprint, the same number as on your results page, against the budget, so the figures match everywhere: on results, in Picture it and on your share card. As you make changes, you can watch the gap close.</p>" +
+          "<p>It's a close match rather than an exact one. Your footprint includes your bank and pension, which the budget leaves out, and it doesn't include shopping yet, which the budget counts. For many people the two roughly balance out." +
+          (fp ? " Counted strictly the budget's way (without your bank and pension, plus a typical " + t(D.ASSUMED_SHOPPING.totalKg) + " t of shopping) you'd be at " + t(budgetBasis(fp).life) + " t, " + xb(budgetBasis(fp).life) + " the budget." : "") + "</p>" +
           "<p>Public services and infrastructure (about " + t(D.SHARED_FOOTPRINT.totalKg) + " t a person between them) are left out of both, as the budget leaves them out too. They're shown on the results page as your shared footprint.</p>") +
-      card("Why your headline total is different",
-        "<p>The big number on your results page is everything the survey measures, including your bank and pension, so it's the one to watch as you make changes. " +
-          "The comparison with the budget takes money out and adds typical shopping, so the two figures won't match.</p>") +
       "</div>" +
       '<div class="center chip-row" style="justify-content:center">' + (done ? '<a class="btn btn-green" href="#/results">Back to my results ' + icon("arrowRight") + "</a>" : '<a class="btn btn-green" href="#/">Take the survey ' + icon("arrowRight") + "</a>") +
       '<a class="btn btn-outline" href="/how-we-calculate/">How we calculate</a></div></div>'
