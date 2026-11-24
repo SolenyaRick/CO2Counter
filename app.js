@@ -6665,49 +6665,73 @@
     });
     return best;
   }
-  function dhCalHtml() {
+  // The three views share one look: small squares, no numbers, the same
+  // shades. Week is a row; Month the same seven columns, a row a week; Year
+  // a column a week.
+  const DH_VIEWS = ["week", "month", "year"];
+  const dhKey = '<div class="dhc-key" aria-hidden="true"><span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span></div>';
+  function dhCalParts() {
     const view = dhView(), log = dailyLog(), now = new Date(), tk = localDay(now);
     const n = (k) => (log[k] || []).length;
     const cls = (k) => "l" + dhLevel(n(k)) + (k === tk ? " today" : "") + (k > tk ? " later" : "");
-    let body = "", stat = "";
+    const cell = (d) => { const k = localDay(d); return '<i class="dhc-c ' + cls(k) + '" title="' + esc(dhDayLabel(d, n(k))) + '"></i>'; };
+    const letters = "MTWTFSS".split("").map((x) => '<span class="dhc-l" aria-hidden="true">' + x + "</span>").join("");
     if (view === "week") {
-      const ws = weekStartOf(now);
-      const days = Array.from({ length: 7 }, (_, i) => dayAdd(ws, i));
+      const ws = weekStartOf(now), days = Array.from({ length: 7 }, (_, i) => dayAdd(ws, i));
       const got = days.filter((d) => n(localDay(d))).length;
-      stat = got + " of 7 days";
-      body = '<div class="dhc-week">' + days.map((d, i) => {
-        const k = localDay(d);
-        return '<span class="dhc-wd ' + cls(k) + '"><i aria-hidden="true">' + "MTWTFSS"[i] + '</i><b aria-hidden="true">' + d.getDate() + '</b><span class="sr-only">' + esc(dhDayLabel(d, n(k))) + "</span></span>";
-      }).join("") + "</div>";
-    } else if (view === "month") {
+      return { view, stat: got + " of 7 days", body: '<div class="dhc-grid7" role="img" aria-label="' + esc("This week: " + got + " of 7 days with a habit ticked") + '">' + letters + days.map(cell).join("") + "</div>" };
+    }
+    if (view === "month") {
       const off = Math.min(0, ui.dhMonth || 0);
       const first = new Date(now.getFullYear(), now.getMonth() + off, 1), last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
       const days = Array.from({ length: last.getDate() }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1));
-      const got = days.filter((d) => n(localDay(d))).length, ticks = days.reduce((t, d) => t + n(localDay(d)), 0);
-      stat = got + (got === 1 ? " day" : " days") + " · " + ticks + (ticks === 1 ? " tick" : " ticks");
-      body = '<div class="dhc-mhead"><button type="button" class="dhc-nav" data-action="dh-month" data-d="-1" aria-label="Previous month"' + (off <= -12 ? " disabled" : "") + ">" + icon("chevronLeft") + "</button>" +
-        "<b>" + esc(first.toLocaleDateString(undefined, { month: "long", year: "numeric" })) + "</b>" +
-        '<button type="button" class="dhc-nav" data-action="dh-month" data-d="1" aria-label="Next month"' + (off >= 0 ? " disabled" : "") + ">" + icon("chevronRight") + "</button></div>" +
-        '<div class="dhc-month"><span class="dhc-dow" aria-hidden="true">M</span><span class="dhc-dow" aria-hidden="true">T</span><span class="dhc-dow" aria-hidden="true">W</span><span class="dhc-dow" aria-hidden="true">T</span><span class="dhc-dow" aria-hidden="true">F</span><span class="dhc-dow" aria-hidden="true">S</span><span class="dhc-dow" aria-hidden="true">S</span>' +
-        ((first.getDay() + 6) % 7 ? '<span class="dhc-pad" style="grid-column: span ' + ((first.getDay() + 6) % 7) + '"></span>' : "") +
-        days.map((d) => { const k = localDay(d); return '<span class="dhc-md ' + cls(k) + '"><b aria-hidden="true">' + d.getDate() + '</b><span class="sr-only">' + esc(dhDayLabel(d, n(k))) + "</span></span>"; }).join("") + "</div>";
-    } else {
-      // The past 52 weeks, a column a week (Monday at the top), like a contribution grid.
-      const start = dayAdd(weekStartOf(now), -51 * 7), from = localDay(start);
-      const cells = [], months = [];
-      for (let c = 0; c < 52; c++) {
-        const wk = dayAdd(start, c * 7);
-        if (wk.getDate() <= 7) months.push('<span style="grid-column:' + (c + 1) + ' / span 4">' + esc(wk.toLocaleDateString(undefined, { month: "short" })) + "</span>");
-        for (let r = 0; r < 7; r++) { const k = localDay(dayAdd(wk, r)); cells.push('<i class="' + cls(k) + '"></i>'); }
-      }
-      const got = Object.keys(log).filter((d) => d >= from && d <= tk && n(d)).length;
-      stat = got + (got === 1 ? " day" : " days") + " · best streak " + dhBestStreak(log, from);
-      body = '<div class="dhc-year-wrap" role="img" aria-label="' + esc("The past year: " + got + " days with a habit ticked") + '"><div class="dhc-months" aria-hidden="true">' + months.join("") + '</div><div class="dhc-year">' + cells.join("") + "</div></div>" +
-        '<div class="dhc-key" aria-hidden="true"><span>Less</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>More</span></div>';
+      const got = days.filter((d) => n(localDay(d))).length, ticks = days.reduce((t, d) => t + n(localDay(d)), 0), lead = (first.getDay() + 6) % 7;
+      const name = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      return { view, stat: got + (got === 1 ? " day" : " days") + " · " + ticks + (ticks === 1 ? " tick" : " ticks"),
+        body: '<div class="dhc-mwrap"><div class="dhc-grid7" role="img" aria-label="' + esc(name + ": " + got + " days with a habit ticked") + '">' + letters +
+          (lead ? '<span class="dhc-pad" style="grid-column: span ' + lead + '"></span>' : "") + days.map(cell).join("") + "</div>" +
+          '<div class="dhc-side"><div class="dhc-mnav"><button type="button" class="dhc-nav" data-action="dh-month" data-d="-1" aria-label="Previous month"' + (off <= -12 ? " disabled" : "") + ">" + icon("chevronLeft") + "</button>" +
+          "<b>" + esc(first.toLocaleDateString(undefined, { month: "short", year: "numeric" })) + "</b>" +
+          '<button type="button" class="dhc-nav" data-action="dh-month" data-d="1" aria-label="Next month"' + (off >= 0 ? " disabled" : "") + ">" + icon("chevronRight") + "</button></div>" + dhKey + "</div></div>" };
     }
-    const tab = (v, label) => '<button type="button" role="tab" aria-selected="' + (view === v) + '"' + (view === v ? ' class="on"' : "") + ' data-action="dh-cal" data-v="' + v + '">' + label + "</button>";
-    return '<div class="dhc-head"><div class="dhc-tabs" role="tablist" aria-label="Show your days">' + tab("week", "Week") + tab("month", "Month") + tab("year", "Year") + "</div>" +
-      '<span class="dhc-stat tnum">' + stat + "</span></div>" + '<div class="dhc-body dhc-' + view + '-v">' + body + "</div>";
+    // The past 52 weeks, a column a week (Monday at the top).
+    const start = dayAdd(weekStartOf(now), -51 * 7), from = localDay(start), cells = [], months = [];
+    for (let c = 0; c < 52; c++) {
+      const wk = dayAdd(start, c * 7);
+      if (wk.getDate() <= 7) months.push('<span style="grid-column:' + (c + 1) + ' / span 4">' + esc(wk.toLocaleDateString(undefined, { month: "short" })) + "</span>");
+      for (let r = 0; r < 7; r++) cells.push(cell(dayAdd(wk, r)));
+    }
+    const got = Object.keys(log).filter((d) => d >= from && d <= tk && n(d)).length;
+    return { view, stat: got + (got === 1 ? " day" : " days") + " · best streak " + dhBestStreak(log, from),
+      body: '<div class="dhc-year-wrap" role="img" aria-label="' + esc("The past year: " + got + " days with a habit ticked") + '"><div class="dhc-months" aria-hidden="true">' + months.join("") + '</div><div class="dhc-year">' + cells.join("") + "</div></div>" + dhKey };
+  }
+  function dhCalHtml() {
+    const c = dhCalParts();
+    const tab = (v, label) => '<button type="button" role="tab" aria-selected="' + (c.view === v) + '"' + (c.view === v ? ' class="on"' : "") + ' data-action="dh-cal" data-v="' + v + '">' + label + "</button>";
+    return '<div class="dhc-head"><div class="dhc-tabs" role="tablist" aria-label="Show your days" style="--i:' + DH_VIEWS.indexOf(c.view) + '">' + tab("week", "Week") + tab("month", "Month") + tab("year", "Year") + "</div>" +
+      '<span class="dhc-stat tnum">' + c.stat + '</span></div><div class="dhc-stage"><div class="dhc-body dhc-' + c.view + '-v">' + c.body + "</div></div>";
+  }
+  // Switching view or month: the tab pill slides, the grid eases to its new
+  // height and the new days fade in, all in place.
+  function dhCalSwap(box, anim) {
+    const c = dhCalParts(), tabs = box.querySelector(".dhc-tabs"), stage = box.querySelector(".dhc-stage");
+    if (!tabs || !stage) { box.innerHTML = dhCalHtml(); dhYearEnd(box); return; }
+    tabs.style.setProperty("--i", DH_VIEWS.indexOf(c.view));
+    tabs.querySelectorAll("button").forEach((b) => { const on = b.dataset.v === c.view; b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on)); });
+    box.querySelector(".dhc-stat").textContent = c.stat;
+    const h0 = stage.offsetHeight;
+    stage.innerHTML = '<div class="dhc-body dhc-' + c.view + "-v" + (anim ? " " + anim : "") + '">' + c.body + "</div>";
+    dhYearEnd(box);
+    if (reducedMotion()) return;
+    const h1 = stage.scrollHeight;
+    if (Math.abs(h1 - h0) < 2) return;
+    clearTimeout(stage._t);
+    stage.style.transition = "none";
+    stage.style.height = h0 + "px";
+    void stage.offsetHeight;
+    stage.style.transition = "height 0.36s cubic-bezier(0.2, 0.8, 0.2, 1)";
+    stage.style.height = h1 + "px";
+    stage._t = setTimeout(() => { stage.style.height = ""; stage.style.transition = ""; }, 380);
   }
   const dhWeekHtml = (st) => st.week.map((d, i) =>
     '<span class="dh-day' + (d.n ? " got" : "") + (d.today ? " today" : "") + (d.future ? " later" : "") + '"><i aria-hidden="true">' + "MTWTFSS"[i] + "</i><b>" + (d.n ? icon("check") : "") + "</b>" +
@@ -12924,19 +12948,16 @@
       haptic("light");
     },
     "dh-cal": (el) => {
+      if (el.dataset.v === dhView()) return;
+      const was = DH_VIEWS.indexOf(dhView());
       lsSet(KEY_DH_CAL, el.dataset.v);
       ui.dhMonth = 0;
-      const box = el.closest(".dh-cal");
-      box.innerHTML = dhCalHtml();
-      box.querySelector(".dhc-body").classList.add("dhc-in");
-      dhYearEnd(box);
+      dhCalSwap(el.closest(".dh-cal"), DH_VIEWS.indexOf(el.dataset.v) > was ? "dhc-next" : "dhc-prev");
       haptic("light");
     },
     "dh-month": (el) => {
       ui.dhMonth = Math.max(-12, Math.min(0, (ui.dhMonth || 0) + Number(el.dataset.d)));
-      const box = el.closest(".dh-cal");
-      box.innerHTML = dhCalHtml();
-      box.querySelector(".dhc-body").classList.add(Number(el.dataset.d) < 0 ? "dhc-prev" : "dhc-next");
+      dhCalSwap(el.closest(".dh-cal"), Number(el.dataset.d) < 0 ? "dhc-prev" : "dhc-next");
     },
     "hq-open": () => hqOpen(0),
     "hq-edit": () => hqOpen("pick"),
