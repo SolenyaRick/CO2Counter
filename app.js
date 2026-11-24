@@ -6682,8 +6682,9 @@
       '<h2 id="dh-h" class="display">Daily habits</h2><span class="dh-sum">' + dhSumText(st, fresh) + "</span></div>" +
       '<div class="dh-top-r"><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div>" +
       '<button type="button" class="dh-fold" data-action="dh-fold" aria-expanded="' + !folded + '" aria-controls="dh-body" aria-label="' + (folded ? "Show" : "Hide") + ' daily habits">' + icon("chevronDown") + "</button></div></div>" +
-      '<div class="dh-body" id="dh-body"><div class="dh-body-in">' +
+      // The week's streak stays in sight when the card is folded away.
       '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
+      '<div class="dh-body" id="dh-body"><div class="dh-body-in">' +
       (picked ? "" : dhQuizPrompt(fresh)) +
       (fresh ? "" : '<div class="dh-saved-wrap">' + dhSavedHtml() + "</div>" +
       '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c, n], i) => {

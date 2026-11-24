@@ -8819,7 +8819,8 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
 .dh-body-in { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 14px; }
 .dh.folded .dh-body { grid-template-rows: 0fr; opacity: 0; }
 .dh.folded .dh-body-in { visibility: hidden; transition: visibility 0s 0.34s; }
-.dh.folded { gap: 0; }
+.dh.folded { gap: 12px; }
+.dh.folded .dh-body { margin-top: -12px; }
 .dh-li.solo { grid-template-columns: minmax(0, 1fr); }
 
 /* Before the quiz: the way in. */
