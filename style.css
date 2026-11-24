@@ -8912,9 +8912,11 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
 .dh-cal .l3 { --lv: var(--l3); --lt: #fff; }
 .dh-cal .l4 { --lv: var(--l4); --lt: #fff; }
 .dhc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dhc-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(46, 42, 34, 0.06); }
-.dhc-tabs button { border: 0; background: transparent; padding: 5px 11px; border-radius: 999px; font: 700 12px var(--font); color: var(--ink-faint, #8a8273); cursor: pointer; transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
-.dhc-tabs button.on { background: var(--surface, #fffcf5); color: var(--ink, #2e2a22); box-shadow: 0 1px 3px rgba(46, 42, 34, 0.14); }
+/* A pill that slides under the tab you pick. */
+.dhc-tabs { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 3px; border-radius: 999px; background: rgba(46, 42, 34, 0.06); }
+.dhc-tabs::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: 999px; background: var(--surface, #fffcf5); box-shadow: 0 1px 3px rgba(46, 42, 34, 0.14); transform: translateX(calc(var(--i, 0) * 100%)); transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.dhc-tabs button { position: relative; z-index: 1; border: 0; background: transparent; padding: 4px 10px; min-width: 50px; border-radius: 999px; font: 700 11.5px var(--font); color: var(--ink-faint, #8a8273); cursor: pointer; transition: color 0.25s; }
+.dhc-tabs button.on { color: var(--ink, #2e2a22); }
 .dhc-stat { font-size: 12px; font-weight: 700; color: var(--ink-faint, #8a8273); white-space: nowrap; }
 .dhc-in { animation: dhc-fade 0.26s ease-out both; }
 .dhc-prev { animation: dhc-from-l 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -8923,30 +8925,6 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
 @keyframes dhc-from-l { from { opacity: 0; transform: translateX(-14px); } }
 @keyframes dhc-from-r { from { opacity: 0; transform: translateX(14px); } }
 
-/* This week: seven quiet squares, the day inside, today ringed. */
-.dhc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.dhc-wd { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.dhc-wd i { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink-faint, #8a8273); }
-.dhc-wd.today i { color: var(--ink, #2e2a22); }
-.dhc-wd b { width: 100%; max-width: 40px; aspect-ratio: 1; border-radius: 11px; display: grid; place-items: center; background: var(--lv); color: var(--lt); font-size: 13px; font-weight: 700; transition: background 0.3s ease, color 0.3s ease; }
-.dhc-wd.today b { outline: 1.5px solid var(--ring); outline-offset: 2px; }
-.dhc-wd.later b { background: transparent; box-shadow: inset 0 0 0 1.5px var(--l0); color: var(--ink-faint, #8a8273); font-weight: 600; }
-
-/* A month: a calendar of squares. */
-.dhc-mhead { display: flex; align-items: center; justify-content: space-between; }
-.dhc-mhead b { font-size: 14px; font-weight: 800; }
-.dhc-nav { width: 30px; height: 30px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-faint, #8a8273); display: grid; place-items: center; cursor: pointer; }
-.dhc-nav .icon { width: 16px; height: 16px; }
-.dhc-nav:disabled { opacity: 0.3; cursor: default; }
-.dhc-month { width: 100%; max-width: 300px; margin: 0 auto; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
-.dhc-dow { text-align: center; font-size: 10px; font-weight: 800; color: var(--ink-faint, #8a8273); padding-bottom: 2px; }
-.dhc-md { aspect-ratio: 1; border-radius: 8px; display: grid; place-items: center; background: var(--lv); }
-.dhc-md b { font-size: 11.5px; font-weight: 700; color: var(--lt); }
-.dhc-md.today { outline: 1.5px solid var(--ring); outline-offset: 1.5px; }
-.dhc-md.later { background: transparent; box-shadow: inset 0 0 0 1px var(--l0); }
-.dhc-md.later b { color: var(--ink-faint, #8a8273); opacity: 0.6; }
-
-/* The past year: a square a day, a column a week. */
 /* Readable squares, in a strip that swipes sideways and opens on the latest weeks. */
 .dhc-year-wrap { --cell: 10px; display: grid; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 2px 0; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 22px); mask-image: linear-gradient(to right, transparent 0, #000 22px); overscroll-behavior-x: contain; }
 .dhc-year-wrap::-webkit-scrollbar { display: none; }
@@ -8968,7 +8946,29 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
   .dh-cal .l2 { --lt: #f1ede4; }
   .dh-cal .l3, .dh-cal .l4 { --lt: #17241a; }
   .dhc-tabs { background: rgba(236, 235, 233, 0.08); }
-  .dhc-tabs button.on { background: #4a4434; color: #f1ede4; box-shadow: none; }
-  .dhc-wd.today i { color: #f1ede4; }
+  .dhc-tabs::before { background: #4a4434; box-shadow: none; }
+  .dhc-tabs button.on { color: #f1ede4; }
 }
-@media (prefers-reduced-motion: reduce) { .dhc-in, .dhc-prev, .dhc-next { animation: none; } .dhc-wd b { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .dhc-in, .dhc-prev, .dhc-next { animation: none; } .dhc-tabs::before { transition: none; } }
+
+/* Week and Month: the same small squares as the year, seven columns. */
+.dhc-stage { position: relative; overflow: hidden; }
+.dhc-grid7 { --cell: 15px; display: grid; grid-template-columns: repeat(7, var(--cell)); column-gap: 9px; row-gap: 5px; justify-content: start; align-items: center; }
+.dhc-l { font-size: 9px; font-weight: 800; line-height: 1; color: var(--ink-faint, #8a8273); text-align: center; padding-bottom: 1px; }
+.dhc-c { display: block; width: var(--cell); height: var(--cell); border-radius: 4px; background: var(--lv); transition: background 0.3s ease; }
+.dhc-c.today { outline: 1.5px solid var(--ring); outline-offset: 1.5px; }
+.dhc-c.later { background: transparent; box-shadow: inset 0 0 0 1px var(--l0); }
+.dhc-year .dhc-c { width: var(--cell); height: var(--cell); border-radius: 2.5px; }
+.dhc-year .dhc-c.later { box-shadow: none; }
+.dhc-year .dhc-c.today { outline-width: 1px; outline-offset: 0.5px; }
+.dhc-mwrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dhc-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; padding-top: 2px; }
+.dhc-mnav { display: flex; align-items: center; gap: 0; }
+.dhc-mnav b { font-size: 12px; font-weight: 800; min-width: 62px; text-align: center; }
+.dhc-nav { width: 26px; height: 26px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-faint, #8a8273); display: grid; place-items: center; cursor: pointer; }
+.dhc-nav .icon { width: 15px; height: 15px; }
+.dhc-nav:disabled { opacity: 0.3; cursor: default; }
+.dhc-next { animation: dhc-from-r 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.dhc-prev { animation: dhc-from-l 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes dhc-from-r { from { opacity: 0; transform: translateX(16px); } }
+@keyframes dhc-from-l { from { opacity: 0; transform: translateX(-16px); } }
