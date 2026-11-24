@@ -8903,3 +8903,72 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
   .dh-body, .dh-sum, .dh-fold .icon, .hq-prog i { transition: none; }
   .hq-next, .hq-q.hq-back, .hq-peek li { animation: none; }
 }
+
+/* ==================== Your days as a grid: week, month, past year ==================== */
+.dh-cal { --l0: rgba(46, 42, 34, 0.07); --l1: #d4e6bd; --l2: #a3cc80; --l3: #62a052; --l4: #2f5d36; --ring: #2e2a22; display: flex; flex-direction: column; gap: 10px; }
+.dh-cal .l0 { --lv: var(--l0); --lt: var(--ink-3, #5c5649); }
+.dh-cal .l1 { --lv: var(--l1); --lt: #2f5d36; }
+.dh-cal .l2 { --lv: var(--l2); --lt: #1f3d24; }
+.dh-cal .l3 { --lv: var(--l3); --lt: #fff; }
+.dh-cal .l4 { --lv: var(--l4); --lt: #fff; }
+.dhc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dhc-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(46, 42, 34, 0.06); }
+.dhc-tabs button { border: 0; background: transparent; padding: 5px 11px; border-radius: 999px; font: 700 12px var(--font); color: var(--ink-faint, #8a8273); cursor: pointer; transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
+.dhc-tabs button.on { background: var(--surface, #fffcf5); color: var(--ink, #2e2a22); box-shadow: 0 1px 3px rgba(46, 42, 34, 0.14); }
+.dhc-stat { font-size: 12px; font-weight: 700; color: var(--ink-faint, #8a8273); white-space: nowrap; }
+.dhc-in { animation: dhc-fade 0.26s ease-out both; }
+.dhc-prev { animation: dhc-from-l 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.dhc-next { animation: dhc-from-r 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes dhc-fade { from { opacity: 0; transform: translateY(4px); } }
+@keyframes dhc-from-l { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes dhc-from-r { from { opacity: 0; transform: translateX(14px); } }
+
+/* This week: seven quiet squares, the day inside, today ringed. */
+.dhc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.dhc-wd { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.dhc-wd i { font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--ink-faint, #8a8273); }
+.dhc-wd.today i { color: var(--ink, #2e2a22); }
+.dhc-wd b { width: 100%; max-width: 40px; aspect-ratio: 1; border-radius: 11px; display: grid; place-items: center; background: var(--lv); color: var(--lt); font-size: 13px; font-weight: 700; transition: background 0.3s ease, color 0.3s ease; }
+.dhc-wd.today b { outline: 1.5px solid var(--ring); outline-offset: 2px; }
+.dhc-wd.later b { background: transparent; box-shadow: inset 0 0 0 1.5px var(--l0); color: var(--ink-faint, #8a8273); font-weight: 600; }
+
+/* A month: a calendar of squares. */
+.dhc-mhead { display: flex; align-items: center; justify-content: space-between; }
+.dhc-mhead b { font-size: 14px; font-weight: 800; }
+.dhc-nav { width: 30px; height: 30px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-faint, #8a8273); display: grid; place-items: center; cursor: pointer; }
+.dhc-nav .icon { width: 16px; height: 16px; }
+.dhc-nav:disabled { opacity: 0.3; cursor: default; }
+.dhc-month { width: 100%; max-width: 300px; margin: 0 auto; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.dhc-dow { text-align: center; font-size: 10px; font-weight: 800; color: var(--ink-faint, #8a8273); padding-bottom: 2px; }
+.dhc-md { aspect-ratio: 1; border-radius: 8px; display: grid; place-items: center; background: var(--lv); }
+.dhc-md b { font-size: 11.5px; font-weight: 700; color: var(--lt); }
+.dhc-md.today { outline: 1.5px solid var(--ring); outline-offset: 1.5px; }
+.dhc-md.later { background: transparent; box-shadow: inset 0 0 0 1px var(--l0); }
+.dhc-md.later b { color: var(--ink-faint, #8a8273); opacity: 0.6; }
+
+/* The past year: a square a day, a column a week. */
+/* Readable squares, in a strip that swipes sideways and opens on the latest weeks. */
+.dhc-year-wrap { --cell: 10px; display: grid; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 2px 0; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 22px); mask-image: linear-gradient(to right, transparent 0, #000 22px); overscroll-behavior-x: contain; }
+.dhc-year-wrap::-webkit-scrollbar { display: none; }
+.dhc-months, .dhc-year { display: grid; grid-template-columns: repeat(52, var(--cell)); gap: 3px; width: max-content; }
+.dhc-months { font-size: 9px; font-weight: 700; color: var(--ink-faint, #8a8273); }
+.dhc-months span { white-space: nowrap; }
+.dhc-year { grid-template-rows: repeat(7, auto); grid-auto-flow: column; }
+.dhc-year i { width: var(--cell); height: var(--cell); border-radius: 2.5px; background: var(--lv); }
+.dhc-year i.later { background: transparent; }
+.dhc-year i.today { outline: 1px solid var(--ring); outline-offset: 0.5px; }
+.dhc-key { display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-size: 10px; font-weight: 700; color: var(--ink-faint, #8a8273); }
+.dhc-key i { width: 9px; height: 9px; border-radius: 2px; background: var(--lv); }
+.dhc-key span { margin: 0 3px; }
+
+@media (prefers-color-scheme: dark) {
+  .dh-cal { --l0: rgba(236, 235, 233, 0.08); --l1: #2f4a2a; --l2: #4b7a3e; --l3: #7fb35f; --l4: #c4e57d; --ring: #f1ede4; }
+  .dh-cal .l0 { --lt: #b5ae9f; }
+  .dh-cal .l1 { --lt: #c4e57d; }
+  .dh-cal .l2 { --lt: #f1ede4; }
+  .dh-cal .l3, .dh-cal .l4 { --lt: #17241a; }
+  .dhc-tabs { background: rgba(236, 235, 233, 0.08); }
+  .dhc-tabs button.on { background: #4a4434; color: #f1ede4; box-shadow: none; }
+  .dhc-wd.today i { color: #f1ede4; }
+}
+@media (prefers-reduced-motion: reduce) { .dhc-in, .dhc-prev, .dhc-next { animation: none; } .dhc-wd b { transition: none; } }
