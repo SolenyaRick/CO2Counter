@@ -1348,7 +1348,12 @@
     ["M16.2 11.8c1.2-3 3.8-5 7-5.4", "none", "#9CC27E", 1.6],
     ["M9.2 22.6c.6-1.8 2-3.2 3.8-3.8", "none", "#86B06C", 1.4],
   ];
-  const artOf = (key) => (key === "bigtree" ? TREE_ART : D.FUN_COMPARISONS.art[key] || []);
+  // The trunk stays brown; only the canopy is shared out between the moves.
+  const TREE_TRUNK = TREE_ART.slice(0, 2), TREE_CANOPY = TREE_ART.slice(2);
+  // Your 3 biggest moves on the tree: three greens, deepest for the biggest
+  // (it fills the canopy from the bottom), with readable numbers on each.
+  const TREE_SHADES = ["#2F5D36", "#4F8A45", "#8DBB69"], TREE_SHADE_INK = ["#FFFCF5", "#FFFCF5", "#17241A"];
+  const artOf = (key) => (key === "bigtree" ? TREE_CANOPY : D.FUN_COMPARISONS.art[key] || []);
   function piArt(key, shadow, crisp) {
     const parts = artOf(key)
       .map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -4214,7 +4219,9 @@
     // necks and arms drawn as thick lines take the colour too.
     const parts = artOf(pal.key).map((p) => '<path d="' + p[0] + '" fill="' + (p[1] && p[1] !== "none" ? "#fff" : "none") + '" stroke="' + (p[2] && p[2] !== "none" ? "#fff" : "none") + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"></path>').join("");
     // Tall shapes and heights fill from the ground up; the rest side by side.
-    const up = pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
+    const up = !MASCOTS || pal.type === "h" || ["shoebill", "sunfish"].includes(pal.key);
+    const colOf = (i, key) => (MASCOTS ? CAT_COLOR[key] : TREE_SHADES[i]);
+    const inkOf = (i) => (MASCOTS ? "#FFFCF5" : TREE_SHADE_INK[i]);
     const total = pal.type === "h" ? cubeSide(cut) / pal.size : cut / pal.size;
     const ofA = (/^[aeiou]/i.test(pal.one) ? "an " : "a ") + pal.one;
     const trees = cut / D.EVERYDAY_COMPARISONS.treeKgYear;
@@ -4227,7 +4234,7 @@
     // drawing's own width once it's on the page).
     let at = 0;
     const slices = top.map((x, i) => {
-      const s = { i, c: CAT_COLOR[x.b.key], from: at, share: x.t.saving / cut };
+      const s = { i, c: colOf(i, x.b.key), from: at, share: x.t.saving / cut };
       at += s.share;
       return s;
     });
@@ -4236,10 +4243,12 @@
       top.map((x) => esc(x.t.realisticLabel || x.t.title) + " " + Math.round((x.t.saving / cut) * 100) + "%").join(", ") + '">' +
       '<defs><mask id="mv3-sil" maskUnits="userSpaceOnUse" x="-4" y="-8" width="60" height="62">' + parts + "</mask>" +
       slices.map((s) => '<clipPath id="mv3-band' + s.i + '"><rect class="mv3-band" data-from="' + s.from.toFixed(4) + '" data-share="' + s.share.toFixed(4) + '" x="0" y="-6" width="0" height="56"></rect></clipPath>').join("") + "</defs>" +
-      '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, true, true) + "</g>" +
+      // the tree's trunk and its shadow on the ground, in their own colours
+      (!MASCOTS ? '<g class="mv3-trunk">' + piArt("", true, true) + TREE_TRUNK.map((p) => '<path d="' + p[0] + '" fill="' + p[1] + '" stroke="' + p[2] + '" stroke-width="' + p[3] + '" stroke-linecap="round" stroke-linejoin="round"></path>' + (p[1] !== "none" ? '<path d="' + p[0] + '" fill="url(#pi-sheen)"></path>' : "")).join("") + "</g>" : "") +
+      '<g class="mv3-ghost" filter="url(#pi-grey)">' + piArt(pal.key, MASCOTS, true) + "</g>" +
       slices.map((s) => '<g clip-path="url(#mv3-band' + s.i + ')"><g mask="url(#mv3-sil)"><rect x="0" y="-6" width="48" height="56" fill="' + s.c + '"></rect><rect x="0" y="-6" width="48" height="56" fill="url(#pi-sheen)"></rect></g><g class="mv3-shade">' + piArt(pal.key, false, true) + "</g></g>").join("") +
       '<g mask="url(#mv3-sil)">' + slices.map((s) => '<line class="mv3-cut" data-at="' + (s.from + s.share).toFixed(4) + '" x1="0" x2="0" y1="-6" y2="50"></line>').slice(0, -1).join("") + "</g>" +
-      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="#FFFCF5">' + (s.i + 1) + "</text></g>").join("") +
+      slices.map((s) => '<g class="mv3-tag" data-mid="' + (s.from + s.share / 2).toFixed(4) + '" style="--d:' + (0.2 + s.i * 0.7).toFixed(2) + 's"><circle r="3.4" fill="' + s.c + '"></circle><text y="1.3" text-anchor="middle" font-size="3.8" font-weight="800" fill="' + inkOf(s.i) + '">' + (s.i + 1) + "</text></g>").join("") +
       "</svg>";
     return (
       '<section class="glass moves mv3' + (up ? " mv3-up" : "") + '" aria-labelledby="moves-h">' + piDefsSvg() +
@@ -4249,7 +4258,7 @@
       top
         .map(
           (x, i) =>
-            '<li style="--c:' + CAT_COLOR[x.b.key] + ";--d:" + (0.2 + i * 0.7).toFixed(2) + 's"><a class="move mv3-row" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
+            '<li style="--c:' + colOf(i, x.b.key) + ";--ci:" + inkOf(i) + ";--d:" + (0.2 + i * 0.7).toFixed(2) + 's"><a class="move mv3-row" href="' + catHref(x.b.key) + '" data-action="open-move" data-cat="' + x.b.key + '">' +
             '<span class="mv3-n display">' + (i + 1) + "</span>" +
             '<span class="mv3-text"><b class="display">' + esc(capFirst(x.t.realisticLabel || x.t.title)) + '</b><span class="xs muted">' + esc(x.b.label) + " · " + Math.round((x.t.saving / cut) * 100) + "% of " + esc(!MASCOTS ? "the saving" : pal.key === "lettuce" ? "the lettuce" : "your " + (["devito", "lincoln", "argentinosaurus"].includes(pal.key) ? pal.short : pal.short.toLowerCase())) + "</span></span>" +
             '<span class="move-kg"><b class="display tnum">−' + kgFmt(x.t.saving) + '</b><span class="xs muted">kg</span></span>' + icon("chevronRight") + "</a></li>"
