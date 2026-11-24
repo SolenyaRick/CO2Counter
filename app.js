@@ -6335,6 +6335,28 @@
   const KEY_DAILY_CHOICE = "co2_daily_choice"; // { 3: "redfree", ... }
   const DH_ACTS = ["", "Move your money", "Move your energy", "More plant-based food", "More green travel", "Monitor your footprint"];
   const actOf = (k) => (/^a[1-5]:/.test(k) ? k.slice(0, 2) : null);
+  // Everyday habits: the small things you can do day to day, picked with a
+  // quick quiz (what you could do, and what isn't for you). Keys keep their
+  // area ("a3:meatfree" is a food habit), and you can pick several in one.
+  const KEY_DH_SETUP = "co2_dh_setup"; // { v: 1, at, picks: ["a3:redfree", ...], answers: { "a3:redfree": "yes" | "some" | "no" } }
+  const KEY_DH_OPEN = "co2_dh_open"; // "0": the card is folded away
+  const DH_AREA = ["", "Shopping", "Home energy", "Food", "Travel", "Keeping track"];
+  const DH_NOT_DAILY = ["bankstep", "plantomorrow"]; // one-off steps, not everyday habits
+  const DH_MAX = 6; // the most you can pick (and that count in a day)
+  const dhSetup = () => { const x = lsGet(KEY_DH_SETUP, null); return x && Array.isArray(x.picks) && x.picks.length ? x : null; };
+  const areaOf = (key) => Number(String(key).slice(1, 2)) || 0;
+  function habitByKey(key) {
+    const n = areaOf(key);
+    return n ? actHabitOptions(n).find((o) => "a" + n + ":" + o.k === key) || null : null;
+  }
+  // Every everyday habit that fits your answers, biggest saving first.
+  function everydayHabits() {
+    const out = [];
+    [1, 2, 3, 4, 5].forEach((n) => actHabitOptionsRanked(n).forEach((o) => {
+      if (!DH_NOT_DAILY.includes(o.k)) out.push({ key: "a" + n + ":" + o.k, n, o, kg: habitSaving(o.k).kg });
+    }));
+    return out.sort((a, b) => b.kg - a.kg);
+  }
   // Ticks from before habits were one per Act.
   const DH_LEGACY = { nothingnew: "a1:nothingnew", heating: "a2:heating", shower: "a2:shower", meatfree: "a3:meatfree", nowaste: "a3:nowaste", carfree: "a4:carfree" };
   const listDays = (ds) => (ds.length >= 5 ? "every weekday" : ds.length > 1 ? ds.slice(0, -1).join(", ") + " and " + ds[ds.length - 1] : ds[0]);
@@ -6525,7 +6547,8 @@
     return list;
   }
   function chosenHabit(n) {
-    const opts = actHabitOptionsRanked(n), pick = (lsGet(KEY_DAILY_CHOICE, {}) || {})[n];
+    const opts = actHabitOptionsRanked(n), set = dhSetup();
+    const pick = set ? (set.picks.find((k) => areaOf(k) === n) || "").split(":")[1] : (lsGet(KEY_DAILY_CHOICE, {}) || {})[n];
     return opts.find((x) => x.k === pick) || opts[0];
   }
   // The card's habits: [key, name, why, icon, colour, act, option]
@@ -6533,6 +6556,12 @@
   // ticks Short shower even when Act 2's usual habit is the heating).
   const dailyHabits = () => {
     const today = dailyLog()[localDay(new Date())] || [];
+    const set = dhSetup();
+    if (set) {
+      const keys = set.picks.filter((k) => habitByKey(k));
+      today.forEach((k) => { if (!keys.includes(k) && habitByKey(k)) keys.push(k); });
+      return keys.map((k) => { const h = habitByKey(k), n = areaOf(k); return [k, h.name, h.sub, h.ic, HB_COL[n], n, h]; });
+    }
     return [1, 2, 3, 4, 5].map((n) => {
       const t = today.find((x) => actOf(x) === "a" + n);
       const h = (t && actHabitOptions(n).find((o) => "a" + n + ":" + o.k === t)) || chosenHabit(n);
@@ -6550,10 +6579,10 @@
     Object.keys(l).forEach((d) => {
       const seen = new Set(), out = [];
       (Array.isArray(l[d]) ? l[d] : []).forEach((k) => {
-        const nk = DH_LEGACY[k] || k, a = actOf(nk);
+        const nk = DH_LEGACY[k] || k;
         if (nk !== k) changed = true;
-        if (!a || seen.has(a)) { changed = true; return; }
-        seen.add(a);
+        if (!actOf(nk) || seen.has(nk)) { changed = true; return; }
+        seen.add(nk);
         out.push(nk);
       });
       if (out.length) l[d] = out.sort(); else delete l[d];
@@ -6577,9 +6606,8 @@
   function toggleDaily(k) {
     const log = dailyLog(), key = localDay(new Date());
     const set = new Set(log[key] || []);
-    const had = set.has(k);
-    [...set].forEach((x) => { if (actOf(x) === actOf(k)) set.delete(x); });
-    if (!had) set.add(k);
+    if (set.has(k)) set.delete(k);
+    else set.add(k);
     if (set.size) log[key] = [...set].sort(); else delete log[key];
     const cutoff = localDay(dayAdd(new Date(), -400));
     Object.keys(log).forEach((d) => { if (d < cutoff) delete log[d]; });
@@ -6636,31 +6664,137 @@
   // Nudges still to come: today's planned but not done, and tomorrow's.
   function dhToolsHtml() {
     const plans = dailyPlan(), done = dailyLog()[localDay(new Date())] || [];
-    const n = Object.keys(plans[localDay(new Date())] || {}).filter((a) => !done.some((x) => actOf(x) === a)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
-    return '<button type="button" class="dh-tool" data-action="shower-timer">' + svgPath(SW_ICONS.water, 16) + "Shower timer</button>" +
+    const n = Object.keys(plans[localDay(new Date())] || {}).filter((h) => !done.includes(h)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
+    return (dhSetup() ? '<button type="button" class="dh-tool" data-action="hq-edit">' + svgPath(DH_ICON.swap, 16) + "Change habits</button>" : "") +
+      '<button type="button" class="dh-tool" data-action="shower-timer">' + svgPath(SW_ICONS.water, 16) + "Shower timer</button>" +
       '<button type="button" class="dh-tool" data-action="plan-open">' + icon("bell") + "Plan &amp; remind" + (n ? '<span class="dh-tool-n tnum">' + n + "</span>" : "") + "</button>";
   }
   function dailyCardHtml(still) {
     const st = dailyStats();
-    const doneAct = (n) => st.today.some((x) => actOf(x) === "a" + n);
     const planToday = dailyPlan()[localDay(new Date())] || {};
+    const picked = !!dhSetup();
+    // Before the quiz, with nothing ticked yet: the quiz is the way in.
+    const fresh = !picked && !Object.keys(dailyLog()).length;
+    const folded = lsGet(KEY_DH_OPEN, "1") === "0";
     return (
-      '<section class="dh' + (still ? " still" : "") + '" aria-labelledby="dh-h">' +
-      '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })) + "</span>" +
-      '<h2 id="dh-h" class="display">Daily habits</h2></div><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div></div>" +
+      '<section class="dh' + (still ? " still" : "") + (folded ? " folded" : "") + '" aria-labelledby="dh-h">' +
+      '<div class="dh-top"><div class="min0"><span class="dh-k">' + esc(new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })) + "</span>" +
+      '<h2 id="dh-h" class="display">Daily habits</h2><span class="dh-sum">' + dhSumText(st, fresh) + "</span></div>" +
+      '<div class="dh-top-r"><div class="dh-streak-wrap">' + dhStreakHtml(st) + "</div>" +
+      '<button type="button" class="dh-fold" data-action="dh-fold" aria-expanded="' + !folded + '" aria-controls="dh-body" aria-label="' + (folded ? "Show" : "Hide") + ' daily habits">' + icon("chevronDown") + "</button></div></div>" +
+      '<div class="dh-body" id="dh-body"><div class="dh-body-in">' +
       '<div class="dh-week" role="group" aria-label="This week">' + dhWeekHtml(st) + "</div>" +
-      '<div class="dh-saved-wrap">' + dhSavedHtml() + "</div>" +
+      (picked ? "" : dhQuizPrompt(fresh)) +
+      (fresh ? "" : '<div class="dh-saved-wrap">' + dhSavedHtml() + "</div>" +
       '<ul class="dh-list">' + dailyHabits().map(([k, name, sub, ic, c, n], i) => {
-        const on = doneAct(n), pl = planToday["a" + n];
-        return '<li class="dh-li" style="--k:' + i + ";--c:" + c + '"><button type="button" class="dh-h' + (on ? " on" : pl ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on + '">' +
-          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><span class="dh-act">Act ' + n + (keySaving(k).kg >= 0.01 ? '<span class="dh-kg"> · −' + kgShort(keySaving(k).kg) + " kg</span>" : "") + "</span><b>" + esc(name) + "</b><small>" + esc(sub) + "</small>" +
+        const on = st.today.includes(k), pl = planToday[k];
+        return '<li class="dh-li' + (picked ? " solo" : "") + '" style="--k:' + i + ";--c:" + c + '"><button type="button" class="dh-h' + (on ? " on" : pl ? " planned" : "") + '" data-action="dh-tick" data-k="' + k + '" aria-pressed="' + on + '">' +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><span class="dh-act">' + DH_AREA[n] + (keySaving(k).kg >= 0.01 ? '<span class="dh-kg"> · −' + kgShort(keySaving(k).kg) + " kg</span>" : "") + "</span><b>" + esc(name) + "</b><small>" + esc(sub) + "</small>" +
           (pl && !on ? '<span class="dh-plan">' + icon("bell") + '<span class="dh-plan-l">Planned · </span>' + esc(pl) + "</span>" : "") + "</span>" +
           '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
-          '<button type="button" class="dh-swap" data-action="dh-swap" data-n="' + n + '" aria-label="Choose another daily habit for Act ' + n + ", " + esc(DH_ACTS[n]) + '">' + svgPath(DH_ICON.swap, 16) + "</button></li>";
+          (picked ? "" : '<button type="button" class="dh-swap" data-action="dh-swap" data-n="' + n + '" aria-label="Choose another ' + esc(DH_AREA[n].toLowerCase()) + ' habit">' + svgPath(DH_ICON.swap, 16) + "</button>") + "</li>";
       }).join("") + "</ul>" +
-      '<div class="dh-tools">' + dhToolsHtml() + "</div>" +
-      '<div class="dh-foot">' + dhFootHtml(st) + "</div>" + dailyRemindOffer() + "</section>"
+      '<div class="dh-tools">' + dhToolsHtml() + "</div>") +
+      '<div class="dh-foot">' + dhFootHtml(st) + "</div>" + (fresh ? "" : dailyRemindOffer()) + "</div></div></section>"
     );
+  }
+  // Folded away: how today's going, in a line.
+  function dhSumText(st, fresh) {
+    if (fresh) return "Take the quiz to pick yours";
+    const keys = dailyHabits().map((r) => r[0]), done = keys.filter((k) => st.today.includes(k)).length;
+    return done && done === keys.length ? "All " + done + " done today" : done + " of " + keys.length + " done today";
+  }
+  function dhQuizPrompt(fresh) {
+    return '<div class="dh-quiz"><span class="dh-quiz-ic" aria-hidden="true">' + icon("target") + '</span><div class="min0"><b>Find your everyday habits</b>' +
+      "<small>A one-minute quiz from your survey answers: what you could cut down day to day, and what isn't realistic for you. Then tick the ones you'll do.</small></div>" +
+      '<button type="button" class="btn btn-green dh-quiz-go" data-action="hq-open">Take the quiz ' + icon("arrowRight") + "</button>" +
+      (fresh ? '<button type="button" class="link-btn dh-quiz-skip" data-action="hq-skip">Or start with our suggestions</button>' : "") + "</div>";
+  }
+
+  // ---------- The habit quiz ----------
+  // Everything that fits your answers, one question each: could you do it
+  // on a normal day? Then, from the ones you could, tick the ones you'll do.
+  const HQ_DAYS = { yes: 5, some: 2 }; // days a week, for "a year if you do it"
+  const hqViable = (x) => (ui.hq.answers[x.key] || "yes") !== "no";
+  const hqYear = (x) => x.kg * (HQ_DAYS[ui.hq.answers[x.key]] || 3) * 52;
+  function hqOpen(step) {
+    const set = lsGet(KEY_DH_SETUP, null) || {}, list = everydayHabits();
+    ui.hq = { step, list, answers: Object.assign({}, set.answers || {}), picks: (set.picks || []).filter((k) => list.some((x) => x.key === k)), note: "" };
+    paintHq(true);
+  }
+  function hqDefaultPicks() {
+    const yes = ui.hq.list.filter((x) => ui.hq.answers[x.key] === "yes");
+    return (yes.length ? yes : ui.hq.list.filter(hqViable).slice(0, 2)).slice(0, 4).map((x) => x.key);
+  }
+  function paintHq(first, dir) {
+    const bd = modalRoot.querySelector(".hq-bd"), body = bd && bd.querySelector(".sheet-body");
+    if (!first && body) {
+      const y = bd.scrollTop;
+      body.innerHTML = hqBodyHtml(dir);
+      bd.scrollTop = dir ? 0 : y;
+      return;
+    }
+    modalRoot.innerHTML = '<div class="modal-backdrop sheet-backdrop pl-bd hq-bd" data-action="close-modal"><div class="sheet pl-sheet hq-sheet" role="dialog" aria-modal="true" aria-labelledby="hq-h"><div class="sheet-body">' + hqBodyHtml() + "</div></div></div>";
+    document.body.classList.add("modal-open");
+  }
+  const hqClose = '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button>";
+  function hqBodyHtml(dir) {
+    const q = ui.hq, N = q.list.length, mine = !!(survey && survey.completedAt);
+    const kgLine = (x) => (x.kg >= 0.01 ? "About −" + kgShort(x.kg) + " kg CO₂e each day you do it" : "Not counted in kilos, but it helps");
+    if (q.step === 0) {
+      return '<div class="sheet-head"><div class="min0"><span class="dh-k">Everyday habits</span><h2 id="hq-h" class="display">What could you cut down?</h2>' +
+        "<p class=\"sheet-habit\">" + N + " quick questions" + (mine ? ", worked out from your survey" : "") + ". For each, say whether you could do it on a normal day. There are no wrong answers: it's about what fits your life.</p></div>" + hqClose + "</div>" +
+        (mine ? "" : '<p class="hq-note">' + icon("info") + '<span>Take the survey first and these fit your life, with your own kilos. <a class="link-btn" href="#/" data-action="start-survey">Take the survey</a></span></p>') +
+        '<ul class="hq-peek" aria-hidden="true">' + q.list.slice(0, 6).map((x) => '<li style="--c:' + HB_COL[x.n] + '">' + svgPath(x.o.ic, 18) + "</li>").join("") + "</ul>" +
+        '<button type="button" class="btn btn-green btn-block hq-go" data-action="hq-start">Start the quiz ' + icon("arrowRight") + "</button>";
+    }
+    if (q.step !== "pick") {
+      const x = q.list[q.step - 1], a = q.answers[x.key] || "";
+      const ans = (v, label) => '<button type="button" class="hq-a ' + v + (a === v ? " on" : "") + '" data-action="hq-answer" data-v="' + v + '" aria-pressed="' + (a === v) + '">' + label + "</button>";
+      return '<div class="hq-top"><button type="button" class="icon-btn hq-back" data-action="hq-back" aria-label="Back">' + icon("chevronLeft") + "</button>" +
+        '<div class="hq-prog" role="progressbar" aria-valuemin="0" aria-valuemax="' + N + '" aria-valuenow="' + q.step + '"><i style="width:' + ((q.step / N) * 100).toFixed(1) + '%"></i></div>' +
+        '<span class="hq-count tnum">' + q.step + " of " + N + "</span>" + hqClose + "</div>" +
+        '<div class="hq-q' + (dir ? " hq-" + dir : "") + '" style="--c:' + HB_COL[x.n] + '"><span class="hq-area">' + DH_AREA[x.n] + '</span><span class="hq-ic" aria-hidden="true">' + svgPath(x.o.ic, 26) + "</span>" +
+        '<h2 id="hq-h" class="display">' + esc(x.o.name) + "</h2><p>" + esc(x.o.sub) + '</p><span class="hq-kg">' + kgLine(x) + "</span></div>" +
+        '<p class="hq-ask">Could you do this on a normal day?</p>' +
+        '<div class="hq-ans">' + ans("yes", "Yes, easily") + ans("some", "Some days") + ans("no", "Not for me") + "</div>";
+    }
+    // Results: what you can cut, what isn't for you; tick the ones you'll do.
+    const can = q.list.filter(hqViable), cant = q.list.filter((x) => !hqViable(x));
+    const could = can.reduce((t, x) => t + hqYear(x), 0), mineKg = can.filter((x) => q.picks.includes(x.key)).reduce((t, x) => t + hqYear(x), 0);
+    const badge = (x) => ({ yes: "Easy for you", some: "Some days" }[q.answers[x.key]] || "");
+    return '<div class="sheet-head"><div class="min0"><span class="dh-k">Your everyday habits</span><h2 id="hq-h" class="display">' + (can.length ? "Tick the ones you'll do" : "Nothing fitted this time") + "</h2>" +
+      '<p class="sheet-habit">' + (can.length ? "From the ones you said you could do. Up to " + DH_MAX + ", so every day stays doable." : "Retake the quiz, or take the survey so the habits fit your life.") + "</p></div>" + hqClose + "</div>" +
+      (can.length ? '<div class="hq-sum"><div><span>You could cut</span><b class="display tnum">−' + kgFmt(could) + " kg</b><small>a year, doing them as often as you said</small></div>" +
+        '<div class="mine"><span>Your picks</span><b class="display tnum">−' + kgFmt(mineKg) + " kg</b><small>" + q.picks.length + " of " + DH_MAX + " picked</small></div></div>" : "") +
+      (q.note ? '<p class="hq-note warn">' + icon("info") + "<span>" + esc(q.note) + "</span></p>" : "") +
+      '<ul class="pl-list hq-list">' + can.map((x) => {
+        const on = q.picks.includes(x.key);
+        return '<li class="pl-row' + (on ? " on" : "") + '" style="--c:' + HB_COL[x.n] + '"><button type="button" class="pl-pick" data-action="hq-tick" data-k="' + x.key + '" aria-pressed="' + on + '">' +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(x.o.ic, 20) + '</span><span class="dh-t"><span class="dh-act">' + DH_AREA[x.n] + (badge(x) ? " · " + badge(x) : "") + "</span><b>" + esc(x.o.name) + "</b><small>" + esc(x.o.sub) + "</small>" +
+          '<span class="pk-kg">' + (x.kg >= 0.01 ? "About −" + kgShort(x.kg) + " kg a day" : "Not counted in kilos") + "</span></span>" +
+          '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button></li>";
+      }).join("") + "</ul>" +
+      (cant.length ? '<details class="hq-no"><summary>Not for you right now <span class="tnum">(' + cant.length + ")</span></summary><ul>" +
+        cant.map((x) => '<li style="--c:' + HB_COL[x.n] + '"><span class="dh-ic" aria-hidden="true">' + svgPath(x.o.ic, 16) + "</span><span>" + esc(x.o.name) + "<small>" + DH_AREA[x.n] + "</small></span></li>").join("") +
+        "</ul><p>We won't put these on your list. Life changes: retake the quiz any time.</p></details>" : "") +
+      '<div class="hq-foot"><button type="button" class="btn btn-green btn-block" data-action="hq-save"' + (q.picks.length ? "" : " disabled") + ">" +
+      (q.picks.length ? "Save my " + q.picks.length + (q.picks.length === 1 ? " habit" : " habits") : "Tick at least one") + "</button>" +
+      '<button type="button" class="link-btn hq-redo" data-action="hq-redo">Retake the quiz</button></div>';
+  }
+  function hqSave(picks, answers, msg) {
+    const order = everydayHabits().map((x) => x.key);
+    picks = picks.slice().sort((a, b) => areaOf(a) - areaOf(b) || order.indexOf(a) - order.indexOf(b)).slice(0, DH_MAX);
+    lsSet(KEY_DH_SETUP, { v: 1, at: new Date().toISOString(), picks, answers: answers || {} });
+    lsSet(KEY_DH_OPEN, "1");
+    ui.hq = null;
+    closeModal();
+    ui.flash = msg;
+    haptic("success");
+    render();
+    syncDailyReminder();
+    syncPlanReminders();
+    syncWidget();
   }
   // App only: tonight at 7.30 if nothing's ticked yet, and tomorrow's.
   let dailySig = null;
@@ -6685,7 +6819,7 @@
       if (times.length)
         await LN.schedule({ notifications: times.map((t, i) => {
           const isToday = i === 0 && localDay(t) === localDay(now);
-          const names = left.map((a) => chosenHabit(Number(a.slice(1))).name);
+          const names = left.map((h) => (habitByKey(h) || {}).name).filter(Boolean);
           const title = isToday && names.length ? "Did you manage it?" : isToday && st.streak > 0 ? "Keep your " + st.streak + "-day streak going" : "One small thing today?";
           const body = isToday && names.length ? "Still to tick: " + names.join(", ") + ". Done it? Tick it off on My Habits." : isToday && st.streak > 0 ? "Tick off a daily habit before midnight." : "A meat-free day, a car-free day or a short shower: tick it off on My Habits.";
           return { id: DAILY_ID + i, title, body, schedule: { at: t, allowWhileIdle: true }, extra: { route: "#/habits" } };
@@ -6727,9 +6861,9 @@
     if (!W) return;
     try {
       const st = dailyStats(), sv = dailySaved();
-      const habits = dailyHabits().map(([, name, , , c, n]) => ({ name, color: c, done: st.today.some((x) => actOf(x) === "a" + n) }));
+      const habits = dailyHabits().map(([k, name, , , c]) => ({ name, color: c, done: st.today.includes(k) }));
       const json = JSON.stringify({
-        day: localDay(new Date()), weekStart: localDay(weekStartOf(new Date())), streak: st.streak, done: st.today.length, total: 5,
+        day: localDay(new Date()), weekStart: localDay(weekStartOf(new Date())), streak: st.streak, done: habits.filter((h) => h.done).length, total: habits.length,
         weekPts: st.points, weekKg: Math.round(sv.week * 10) / 10, allKg: Math.round(sv.all * 10) / 10, habits,
       });
       if (json === widgetSig) return;
@@ -6804,12 +6938,12 @@
     const maxA = Math.max(...byAct, 0.01);
     const bars = byAct.some((x) => x > 0)
       ? '<div class="dhb-sec"><h3>Where it came from ' + (isTick ? "this week" : "so far") + '</h3><ul class="dhb-bars">' + [1, 2, 3, 4, 5].map((n) =>
-          '<li style="--c:' + HB_COL[n] + ";--w:" + ((byAct[n] / maxA) * 100).toFixed(1) + '%"><span>Act ' + n + " · " + esc(DH_ACTS[n]) + "</span><i><b></b></i><em class=\"tnum\">" + (byAct[n] ? "−" + kgShort(byAct[n]) + " kg" : "–") + "</em></li>").join("") + "</ul></div>"
+          '<li style="--c:' + HB_COL[n] + ";--w:" + ((byAct[n] / maxA) * 100).toFixed(1) + '%"><span>' + DH_AREA[n] + "</span><i><b></b></i><em class=\"tnum\">" + (byAct[n] ? "−" + kgShort(byAct[n]) + " kg" : "–") + "</em></li>").join("") + "</ul></div>"
       : "";
     document.body.insertAdjacentHTML("beforeend",
       '<div class="dhb" role="dialog" aria-modal="true" aria-labelledby="dhb-h"><div class="dhb-card">' +
       '<button type="button" class="dhb-x" data-dhb="close" aria-label="Close">' + icon("x") + "</button>" +
-      '<span class="dhb-k">' + (isTick ? "Act " + o.n + " · " + esc(DH_ACTS[o.n]) : "Your daily habits") + "</span>" +
+      '<span class="dhb-k">' + (isTick ? DH_AREA[o.n] : "Your daily habits") + "</span>" +
       '<h2 id="dhb-h" class="display">' + esc(isTick ? o.name : "Saved so far") + "</h2>" +
       '<div class="dhb-top"><div class="dhb-tankwrap">' + tankSvg(cap) + "</div><div class=\"dhb-stats\">" +
       '<div class="dhb-big"><b class="display tnum" data-to="' + kg.toFixed(2) + '">' + (kg > 0 ? "−0" : "0") + "</b><span>kg CO₂e" + (isTick ? (kg > 0 ? " saved today" : " today") : " saved") + "</span></div></div></div>" +
@@ -6891,26 +7025,31 @@
   const TIMER_ID = 7300;
 
   // Today, a default that's already gone becomes the next half hour.
-  function planDefault(a, off) {
-    const t = chosenHabit(Number(a.slice(1))).time;
+  function planDefault(h, off) {
+    const t = (habitByKey(h) || {}).time || "09:00";
     if (off) return t;
     const now = new Date(), [hh, mm] = t.split(":").map(Number);
     if (hh * 60 + mm > now.getHours() * 60 + now.getMinutes() + 10) return t;
     const next = Math.min(23 * 60 + 30, Math.ceil((now.getHours() * 60 + now.getMinutes() + 20) / 30) * 30);
     return pad2(Math.floor(next / 60)) + ":" + pad2(next % 60);
   }
-  // Plans are by Act ({ a4: "07:30" }), so they follow whichever habit you pick.
+  // Plans are by habit ({ "a4:carfree": "07:30" }); older ones by Act or by
+  // name move onto the habit they meant.
   function dailyPlan() {
     const p = lsGet(KEY_DAILY_PLAN, {});
     if (!p || typeof p !== "object" || Array.isArray(p)) return {};
     const today = localDay(new Date());
     Object.keys(p).forEach((d) => {
       if (d < today) { delete p[d]; return; }
-      Object.keys(p[d] || {}).forEach((h) => { const a = actOf(DH_LEGACY[h] || "") ; if (a && !p[d][a]) p[d][a] = p[d][h]; if (!/^a[1-5]$/.test(h)) delete p[d][h]; });
+      Object.keys(p[d] || {}).forEach((h) => {
+        const key = DH_LEGACY[h] || (/^a[1-5]$/.test(h) ? h + ":" + chosenHabit(Number(h.slice(1))).k : h);
+        if (key !== h) { if (!p[d][key]) p[d][key] = p[d][h]; delete p[d][h]; }
+        if (!/^a[1-5]:[a-z0-9]{2,20}$/.test(key)) delete p[d][key];
+      });
     });
     return p;
   }
-  const plannedLeft = (k) => { const done = dailyLog()[k] || []; return Object.keys(dailyPlan()[k] || {}).filter((a) => !done.some((x) => actOf(x) === a)); };
+  const plannedLeft = (k) => { const done = dailyLog()[k] || []; return Object.keys(dailyPlan()[k] || {}).filter((h) => !done.includes(h)); };
   let planSig = null;
   async function syncPlanReminders() {
     const LN = plugin("LocalNotifications");
@@ -6918,13 +7057,13 @@
     const plan = dailyPlan(), log = dailyLog(), now = new Date(), list = [];
     [0, 1].forEach((off) => {
       const d = dayAdd(now, off), k = localDay(d), p = plan[k] || {};
-      [1, 2, 3, 4, 5].forEach((n) => {
-        const a = "a" + n;
-        if (!p[a] || (log[k] || []).some((x) => actOf(x) === a)) return;
-        const [hh, mm] = String(p[a]).split(":").map(Number);
+      Object.keys(p).slice(0, 10).forEach((h, i) => {
+        const opt = habitByKey(h);
+        if (!opt || !p[h] || (log[k] || []).includes(h)) return;
+        const [hh, mm] = String(p[h]).split(":").map(Number);
         const at = new Date(d);
         at.setHours(hh || 0, mm || 0, 0, 0);
-        if (at > now) list.push({ id: PLAN_ID + off * 10 + n, h: chosenHabit(n), at });
+        if (at > now) list.push({ id: PLAN_ID + off * 10 + i, h: opt, at });
       });
     });
     const sig = list.map((x) => x.id + "@" + x.at.getTime()).join(",");
@@ -6959,11 +7098,11 @@
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
       '<div class="wk-mode pl-day" role="tablist" aria-label="Which day">' + [[0, "Today"], [1, "Tomorrow"]].map(([v, l]) =>
         '<button type="button" role="tab" aria-selected="' + (off === v) + '" class="' + (off === v ? "on" : "") + '" data-action="plan-day" data-day="' + v + '">' + l + "</button>").join("") + "</div>" +
-      '<ul class="pl-list">' + dailyHabits().map(([, name, , ic, c, n]) => {
-        const h = "a" + n, on = !!plan[h], isDone = done.some((x) => actOf(x) === h);
+      '<ul class="pl-list">' + dailyHabits().map(([h, name, , ic, c, n]) => {
+        const on = !!plan[h], isDone = done.includes(h);
         return '<li class="pl-row' + (on ? " on" : "") + (isDone ? " done" : "") + '" style="--c:' + c + '">' +
           '<button type="button" class="pl-pick" data-action="plan-toggle" data-h="' + h + '" aria-pressed="' + on + '"' + (isDone ? " disabled" : "") + ">" +
-          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + (isDone ? "Done already today" : "Act " + n + " · " + esc(DH_ACTS[n])) + "</small></span>" +
+          '<span class="dh-ic" aria-hidden="true">' + svgPath(ic, 20) + '</span><span class="dh-t"><b>' + esc(name) + "</b><small>" + (isDone ? "Done already today" : DH_AREA[n]) + "</small></span>" +
           '<span class="dh-tick" aria-hidden="true">' + icon("check") + "</span></button>" +
           '<label class="pl-time' + (on ? "" : " off") + '">' + icon("bell") + '<span class="sr-only">Reminder time for ' + esc(name) + "</span>" +
           '<input type="time" class="pl-time-in" data-h="' + h + '" value="' + esc(plan[h] || planDefault(h, off)) + '"' + (on ? "" : " disabled") + " /></label></li>";
@@ -6979,7 +7118,7 @@
     const opts = actHabitOptionsRanked(n), cur = chosenHabit(n).k;
     return (
       '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet" role="dialog" aria-modal="true" aria-labelledby="pk-h"><div class="sheet-body">' +
-      '<div class="sheet-head"><div class="min0"><span class="dh-k">Act ' + n + " · " + esc(DH_ACTS[n]) + '</span><h2 id="pk-h" class="display">Your daily habit</h2>' +
+      '<div class="sheet-head"><div class="min0"><span class="dh-k">' + DH_AREA[n] + '</span><h2 id="pk-h" class="display">Your daily habit</h2>' +
       '<p class="sheet-habit">' + (survey && survey.completedAt ? "Worked out from your survey. Pick the one that fits your days." : "Take the survey and these fit your answers.") + "</p></div>" +
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
       '<ul class="pl-list pk-list">' + opts.map((h) =>
@@ -12687,7 +12826,7 @@
       const on = toggleDaily(el.dataset.k);
       el.classList.toggle("on", on);
       el.setAttribute("aria-pressed", on);
-      const planned = (dailyPlan()[localDay(new Date())] || {})[actOf(el.dataset.k)];
+      const planned = (dailyPlan()[localDay(new Date())] || {})[el.dataset.k];
       el.classList.toggle("planned", !on && !!planned);
       const pb = el.querySelector(".dh-plan");
       if (on && pb) pb.remove();
@@ -12698,6 +12837,7 @@
       card.querySelector(".dh-streak-wrap").innerHTML = dhStreakHtml(st);
       if (st.streak > before) card.querySelector(".dh-streak").classList.add("up");
       card.querySelector(".dh-week").innerHTML = dhWeekHtml(st);
+      card.querySelector(".dh-sum").textContent = dhSumText(st, false);
       card.querySelector(".dh-foot").innerHTML = dhFootHtml(st);
       card.querySelector(".dh-tools").innerHTML = dhToolsHtml();
       card.querySelector(".dh-saved-wrap").innerHTML = dhSavedHtml();
@@ -12709,6 +12849,62 @@
       }
     },
     "dh-saved-open": () => openSaved({ mode: "total", how: "" }),
+    // Fold the card away, or open it again (no redraw: it slides).
+    "dh-fold": (el) => {
+      const card = el.closest(".dh"), folded = !card.classList.contains("folded");
+      card.classList.toggle("folded", folded);
+      el.setAttribute("aria-expanded", String(!folded));
+      el.setAttribute("aria-label", (folded ? "Show" : "Hide") + " daily habits");
+      lsSet(KEY_DH_OPEN, folded ? "0" : "1");
+      haptic("light");
+    },
+    "hq-open": () => hqOpen(0),
+    "hq-edit": () => hqOpen("pick"),
+    "hq-start": () => { ui.hq.step = 1; paintHq(false, "next"); },
+    "hq-answer": (el) => {
+      const q = ui.hq;
+      if (!q || q.step === 0 || q.step === "pick") return;
+      const x = q.list[q.step - 1];
+      q.answers[x.key] = el.dataset.v;
+      if (el.dataset.v === "no") q.picks = q.picks.filter((k) => k !== x.key);
+      haptic("light");
+      // A moment to see the answer light up, then on to the next.
+      el.classList.add("on");
+      setTimeout(() => {
+        if (ui.hq !== q) return;
+        if (q.step < q.list.length) q.step++;
+        else { q.step = "pick"; if (!q.picks.length) q.picks = hqDefaultPicks(); }
+        paintHq(false, "next");
+      }, 160);
+    },
+    "hq-back": () => {
+      const q = ui.hq;
+      if (!q) return;
+      q.step = q.step === "pick" ? q.list.length : Math.max(0, q.step - 1);
+      paintHq(false, "back");
+    },
+    "hq-tick": (el) => {
+      const q = ui.hq, k = el.dataset.k;
+      if (!q) return;
+      q.note = "";
+      if (q.picks.includes(k)) q.picks = q.picks.filter((x) => x !== k);
+      else if (q.picks.length >= DH_MAX) q.note = "Up to " + DH_MAX + " a day, so it stays doable. Untick one to swap it in.";
+      else q.picks = q.picks.concat(k);
+      haptic("light");
+      paintHq(false);
+    },
+    "hq-redo": () => { ui.hq.step = 1; paintHq(false, "next"); },
+    "hq-save": () => {
+      const q = ui.hq;
+      if (!q || !q.picks.length) return;
+      hqSave(q.picks, q.answers, "Your " + q.picks.length + " everyday " + (q.picks.length === 1 ? "habit is" : "habits are") + " set. Tick them off as you go.");
+    },
+    // Straight in: the top habit in each area.
+    "hq-skip": () => {
+      const list = everydayHabits(), picks = [];
+      [1, 2, 3, 4, 5].forEach((n) => { const x = list.find((y) => y.n === n); if (x && picks.length < 5) picks.push(x.key); });
+      hqSave(picks, {}, "Started you with " + picks.length + " suggested habits. Change them any time, or take the quiz.");
+    },
     "shower-timer": () => openShowerTimer(),
     "plan-open": () => {
       ui.planDay = new Date().getHours() >= 17 ? 1 : 0;
@@ -12743,7 +12939,7 @@
     },
     "plan-toggle": async (el) => {
       const h = el.dataset.h, k = localDay(dayAdd(new Date(), ui.planDay || 0)), all = dailyPlan();
-      if (!/^a[1-5]$/.test(h)) return;
+      if (!/^a[1-5]:[a-z0-9]{2,20}$/.test(h)) return;
       const day = all[k] || {};
       if (day[h]) delete day[h];
       else day[h] = planDefault(h, ui.planDay || 0);

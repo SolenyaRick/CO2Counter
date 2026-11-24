@@ -2828,15 +2828,15 @@ begin
   if auth.uid() is null then raise exception 'Sign in first'; end if;
   -- Today or yesterday (a day either side for people abroad).
   if p_day is null or p_day < public.uk_today() - 1 or p_day > public.uk_today() + 1 then raise exception 'Only today or yesterday'; end if;
-  -- One habit per Act a day ("a3:meatfree": Act 3's habit, picked from the
-  -- person's options), plus the first six names from before.
+  -- Your everyday habits ("a3:meatfree": a food habit, from the person's
+  -- options; several in one area are fine), plus the first six names from
+  -- before. Each counts once a day, and at most six a day.
   select coalesce(array_agg(x.h order by x.h), '{}') into v
   from (
-    select distinct on (case when h ~ '^a[1-5]:' then left(h, 2) else h end) h
+    select distinct h
     from unnest(coalesce(p_habits, '{}')) h
     where h ~ '^a[1-5]:[a-z0-9]{2,20}$'
        or h in ('meatfree', 'carfree', 'shower', 'heating', 'nothingnew', 'nowaste')
-    order by case when h ~ '^a[1-5]:' then left(h, 2) else h end, h
   ) x;
   if cardinality(v) > 6 then v := v[1:6]; end if;
   if cardinality(v) = 0 then
