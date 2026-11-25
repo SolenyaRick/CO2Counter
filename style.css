@@ -8972,3 +8972,26 @@ html[data-nav="fade"]::view-transition-new(root) { animation: vt-rise-in 0.28s c
 .dhc-prev { animation: dhc-from-l 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes dhc-from-r { from { opacity: 0; transform: translateX(16px); } }
 @keyframes dhc-from-l { from { opacity: 0; transform: translateX(-16px); } }
+
+/* ==================== Your daily habits, counted (Results) ==================== */
+.hc { margin: 0 0 20px; padding: 20px 22px; border-radius: 24px; }
+.hc-top { display: flex; gap: 12px; align-items: flex-start; }
+.hc-ic { flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: #3f5b3a; color: #f6f1e6; }
+.hc-ic .icon { width: 20px; height: 20px; }
+.hc-top p { margin: 4px 0 0; }
+.hc-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.hc-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 14px; }
+.hc-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.hc-list b { display: block; font-weight: 700; }
+.hc-list small { display: block; font-size: 12px; color: var(--ink-faint, #8a8273); }
+.hc-list em { font-style: normal; font-weight: 800; color: #3f5b3a; }
+.hc-acts { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+.hc-note { margin: 12px 0 0; line-height: 1.5; }
+.dh-count { text-decoration: none; }
+@media (prefers-color-scheme: dark) { .hc-list em { color: #a9c795; } .hc-ic { background: #4f6e49; } }
+
+/* ==================== Share your habits ==================== */
+.dhs-pre { margin: 14px 0 0; padding: 16px; border-radius: 18px; background: rgba(46, 42, 34, 0.05); font: 600 15px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; color: var(--ink, #2e2a22); }
+.dhs-acts { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.dhs-acts .btn { height: 46px; }
+@media (prefers-color-scheme: dark) { .dhs-pre { background: rgba(236, 235, 233, 0.07); color: #f1ede4; } }
