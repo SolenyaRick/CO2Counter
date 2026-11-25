@@ -896,6 +896,13 @@
       detail: [bank ? bank.label : "", pot > 0 ? "pension: " + pension.label : ""].filter(Boolean).join(" · "),
     });
 
+    // Daily habits you chose to count (habitCreditNow): each off the part of
+    // your footprint it belongs to, and never more than 60% of that part.
+    const hc = s.habitCredit && s.habitCredit.cats;
+    if (hc) items.forEach((it) => {
+      const c = Math.min(Number(hc[it.key]) || 0, it.yearly * 0.6);
+      if (c >= 0.5) { it.yearly -= c; it.habits = c; it.detail += " · −" + Math.round(c) + " kg from your daily habits"; }
+    });
     const totalYearly = items.reduce((sum, i) => sum + i.yearly, 0);
     items.sort((a, b) => b.yearly - a.yearly);
     return { totalYearly, breakdown: items, biggest: items[0] };
@@ -2193,6 +2200,7 @@
       ui.prevSurvey = null;
     }
     ui.reviewing = ui.fromReview = false;
+    delete survey.habitCredit;
     survey.completedAt = new Date().toISOString();
     // Kept with the survey, so later edits on the Inputs page don't move it.
     survey.factors = { ...liveInputs };
@@ -4443,6 +4451,7 @@
       '<span><i class="lg-now"></i>Now <b class="tnum">' + kgFmt(now) + "</b></span></div>" +
       '<p class="xs muted mt-2"><a class="link-btn" href="#/budget">About the 1.5°C budget</a></p></div>' + heroNextAct() + "</section>";
 
+    html += habitCreditCard();
     html +=
       '<div class="res-grid">' + (ui.exampleMode ? "" : pictureItHtml()) + '<section class="glass res-chart"><div class="row-between gap-3" style="flex-wrap:wrap">' +
       '<div><h2 class="card-title">Where it comes from</h2><p class="sm muted">Tap one to see how to cut it</p></div>' +
@@ -6647,6 +6656,93 @@
   const dhStreakHtml = (st) =>
     '<span class="dh-streak' + (st.streak ? " on" : "") + '"><span class="dh-flame" aria-hidden="true">' + icon("flame") + "</span>" +
     (st.streak ? '<b class="display tnum">' + st.streak + "</b><small>" + (st.streak === 1 ? "day" : "days") + '</small><span class="sr-only"> streak</span>' : "<small>Start a streak</small>") + "</span>";
+  // ---------- Your habits, counted in your footprint ----------
+  // From the last 2 to 4 weeks of ticks: how often you do each habit, and
+  // what that's worth in a year, against your own answers. Food habits come
+  // off Meals, travel off Commute, home energy off Energy. Shopping isn't in
+  // the footprint total yet, so those are shown but don't change it.
+  const HC_CAT = ["", "shopping", "energy", "meals", "commute", ""];
+  function habitCreditNow() {
+    const log = dailyLog(), days = Object.keys(log).filter((d) => (log[d] || []).length).sort();
+    if (!days.length) return null;
+    const today = localDay(new Date());
+    const since = Math.round((new Date(today + "T12:00:00") - new Date(days[0] + "T12:00:00")) / 86400000) + 1;
+    const span = Math.max(14, Math.min(28, since)), from = localDay(dayAdd(new Date(), -(span - 1)));
+    const counts = {};
+    days.forEach((d) => { if (d >= from) (log[d] || []).forEach((k) => (counts[k] = (counts[k] || 0) + 1)); });
+    const items = Object.keys(counts).filter((k) => counts[k] >= 2 && habitByKey(k)).map((k) => {
+      const perWeek = (counts[k] / span) * 7;
+      return { key: k, name: habitByKey(k).name, n: areaOf(k), perWeek, kg: perWeek * 52 * keySaving(k).kg, cat: HC_CAT[areaOf(k)] };
+    }).filter((x) => x.kg >= 1).sort((a, b) => b.kg - a.kg);
+    const cats = {};
+    items.forEach((x) => { if (x.cat && x.cat !== "shopping") cats[x.cat] = (cats[x.cat] || 0) + x.kg; });
+    const sum = (f) => items.filter(f).reduce((t, x) => t + x.kg, 0);
+    return { span, weeks: Math.round(span / 7), items, cats, kg: sum((x) => x.cat && x.cat !== "shopping"), shop: sum((x) => x.cat === "shopping") };
+  }
+  function habitCreditCard() {
+    if (ui.exampleMode || !survey || !survey.completedAt) return "";
+    const cur = survey.habitCredit, now = habitCreditNow();
+    if (!cur && (!now || now.kg < 5)) return "";
+    const counted = cur ? Object.values(cur.cats || {}).reduce((t, x) => t + (Number(x) || 0), 0) : 0;
+    const often = (x) => (x.perWeek >= 6.5 ? "every day" : x.perWeek >= 1.25 ? "about " + Math.round(x.perWeek) + " days a week" : "about once a week");
+    const list = now && now.items.length ? '<ul class="hc-list">' + now.items.slice(0, 4).map((x) =>
+      '<li style="--c:' + HB_COL[x.n] + '"><span class="hc-dot" aria-hidden="true"></span><span class="min0"><b>' + esc(x.name) + "</b><small>" + often(x) + (x.cat === "shopping" ? " · not in your total yet" : "") + '</small></span><em class="tnum">−' + kgFmt(x.kg) + " kg</em></li>").join("") + "</ul>" : "";
+    const date = (iso) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "long" });
+    return '<section class="glass hc" id="your-habits" aria-labelledby="hc-h"><div class="hc-top"><span class="hc-ic" aria-hidden="true">' + icon("check") + '</span><div class="min0">' +
+      (cur
+        ? '<h2 id="hc-h" class="card-title">Your daily habits are counted</h2><p class="sm muted">Your footprint includes <b>−' + kgFmt(counted) + " kg a year</b> from them, counted " + esc(date(cur.at)) + ".</p></div></div>" + list +
+          '<div class="hc-acts">' + (now && Math.abs(now.kg - counted) >= 10 ? '<button type="button" class="btn btn-green btn-sm" data-action="hc-count">Update to −' + kgFmt(now.kg) + " kg</button>" : "") +
+          '<button type="button" class="btn btn-outline btn-sm" data-action="hc-remove">Take them out</button></div>'
+        : '<h2 id="hc-h" class="card-title">Count your daily habits?</h2><p class="sm muted">Your last ' + now.weeks + " weeks of ticks are worth about <b>−" + kgFmt(now.kg) + " kg a year</b>, if you keep them up.</p></div></div>" + list +
+          '<div class="hc-acts"><button type="button" class="btn btn-green btn-sm" data-action="hc-count">Count them in my footprint</button></div>') +
+      '<p class="xs muted hc-note">Worked out against your survey answers. If you already did these when you took the survey, your answers include them, so leave them out.' +
+      (now && now.shop >= 1 ? " Shopping habits (−" + kgFmt(now.shop) + " kg) aren't in your total, as shopping isn't in the survey yet." : "") + "</p></section>";
+  }
+
+  // ---------- Share your habits, like a Wordle grid ----------
+  // Green squares say more than words: a row for each habit this week, or the
+  // month in rows of seven days, then your streak, kilos and invite link.
+  const DH_EMOJI = ["", "🛍️", "💡", "🥦", "🚲", "📊"];
+  const isoWeek = (d) => { const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - day); const y = new Date(Date.UTC(x.getUTCFullYear(), 0, 1)); return Math.ceil(((x - y) / 86400000 + 1) / 7); };
+  function dhShareText(kind) {
+    const log = dailyLog(), now = new Date(), tk = localDay(now), st = dailyStats();
+    const n = (k) => (log[k] || []).length;
+    let head, grid, days;
+    if (kind === "month") {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      days = Array.from({ length: now.getDate() }, (_, i) => localDay(new Date(first.getFullYear(), first.getMonth(), i + 1)));
+      const sq = (k) => (n(k) >= 3 ? "🟩" : n(k) ? "🟨" : "⬜");
+      const rows = [];
+      for (let i = 0; i < days.length; i += 7) rows.push(days.slice(i, i + 7).map(sq).join(""));
+      head = "CO2 Counter 🌱 " + now.toLocaleDateString("en-GB", { month: "long" });
+      grid = rows.join("\n");
+    } else {
+      const ws = weekStartOf(now);
+      days = Array.from({ length: ((now.getDay() + 6) % 7) + 1 }, (_, i) => localDay(dayAdd(ws, i)));
+      const keys = dailyHabits().map((r) => r[0]);
+      days.forEach((d) => (log[d] || []).forEach((k) => { if (!keys.includes(k) && habitByKey(k)) keys.push(k); }));
+      head = "CO2 Counter 🌱 Week " + isoWeek(now);
+      grid = keys.map((k) => DH_EMOJI[areaOf(k)] + " " + days.map((d) => ((log[d] || []).includes(k) ? "🟩" : "⬜")).join("")).join("\n");
+    }
+    const got = days.filter((d) => n(d)).length, ticks = days.reduce((t, d) => t + n(d), 0);
+    const kg = days.reduce((t, d) => t + (log[d] || []).reduce((u, k) => u + keySaving(k).kg, 0), 0);
+    const line = got + (got === 1 ? " day · " : " days · ") + ticks + (ticks === 1 ? " habit" : " habits") + (kg >= 0.5 ? " · −" + kgShort(kg) + " kg CO₂e" : "");
+    return [head, "", grid, "", line + (st.streak > 1 ? "\n🔥 " + st.streak + "-day streak" : ""), inviteLink()].join("\n");
+  }
+  function dhShareSheet() {
+    const kind = ui.dhShare || "week", text = dhShareText(kind);
+    const tab = (v, l) => '<button type="button" role="tab" aria-selected="' + (kind === v) + '" class="' + (kind === v ? "on" : "") + '" data-action="dh-share-kind" data-v="' + v + '">' + l + "</button>";
+    modalRoot.innerHTML = '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet dhs-sheet" role="dialog" aria-modal="true" aria-labelledby="dhs-h"><div class="sheet-body">' +
+      '<div class="sheet-head"><div class="min0"><h2 id="dhs-h" class="display">Share your habits</h2><p class="sheet-habit">Coloured squares, like a Wordle grid: green for a habit done.</p></div>' +
+      '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
+      '<div class="wk-mode pl-day" role="tablist" aria-label="Which">' + tab("week", "This week") + tab("month", "This month") + "</div>" +
+      '<pre class="dhs-pre" aria-label="Your share text">' + esc(text) + "</pre>" +
+      '<div class="dhs-acts">' + (navigator.share ? '<button type="button" class="btn btn-green" data-action="dh-share-send">' + icon("share") + " Share</button>" : "") +
+      '<button type="button" class="btn ' + (navigator.share ? "btn-outline" : "btn-green") + '" data-action="dh-share-copy">' + icon("copy") + " Copy</button></div>" +
+      '<p class="xs muted pl-note">' + (kind === "month" ? "Green: 3 or more habits that day. Yellow: 1 or 2. Grey: none." : "A row for each habit, Monday to today. The emoji says what it's about.") + "</p></div></div></div>";
+    document.body.classList.add("modal-open");
+  }
+
   // ---------- Your days as a grid: this week, a month, the past year ----------
   // Each square is a day, shaded by how many habits you ticked (1, 2, 3, 4+).
   const KEY_DH_CAL = "co2_dh_cal"; // "week" | "month" | "year"
@@ -6751,7 +6847,10 @@
   function dhToolsHtml() {
     const plans = dailyPlan(), done = dailyLog()[localDay(new Date())] || [];
     const n = Object.keys(plans[localDay(new Date())] || {}).filter((h) => !done.includes(h)).length + Object.keys(plans[localDay(dayAdd(new Date(), 1))] || {}).length;
+    const hcNow = survey && survey.completedAt && !survey.habitCredit ? habitCreditNow() : null;
     return (dhSetup() ? '<button type="button" class="dh-tool" data-action="hq-edit">' + svgPath(DH_ICON.swap, 16) + "Change habits</button>" : "") +
+      (Object.keys(dailyLog()).length ? '<button type="button" class="dh-tool" data-action="dh-share">' + icon("share") + "Share</button>" : "") +
+      (hcNow && hcNow.kg >= 20 ? '<a class="dh-tool dh-count" href="#/results" data-action="hc-go">' + icon("check") + "Count in my footprint · −" + kgFmt(hcNow.kg) + " kg</a>" : "") +
       '<button type="button" class="dh-tool" data-action="shower-timer">' + svgPath(SW_ICONS.water, 16) + "Shower timer</button>" +
       '<button type="button" class="dh-tool" data-action="plan-open">' + icon("bell") + "Plan &amp; remind" + (n ? '<span class="dh-tool-n tnum">' + n + "</span>" : "") + "</button>";
   }
@@ -8361,6 +8460,12 @@
         "<p>To keep global warming to 1.5°C, lifestyle footprints need to fall to about {{budget_t}} tonnes of CO₂-equivalent per person a year by 2030 (Hot or Cool Institute). " +
           "We compare it with your footprint, the same number as on your results page. The budget covers food, home, travel, goods and leisure, but not banks and pensions or public services, so it's a close match rather than an exact one. " +
           '<a class="link-btn" href="#/budget">What\'s in the budget and how we compare</a></p>'
+      ) +
+      section(
+        "Your daily habits",
+        "<p>If you choose to count your daily habits on the results page, we look at how often you've ticked each one over the last 2 to 4 weeks and what that's worth in a year, against your own survey answers (a day without beef or lamb, say, compared with your usual day). " +
+          "Food habits come off Meals, travel off Commute & Travel and home ones off Home Energy, never more than 60% of any part. Shopping isn't in the survey yet, so shopping habits don't change the total. " +
+          "It's your choice, because if you already did a habit when you took the survey, your answers include it. Taking the survey again starts the count afresh, as your new answers describe life as it is.</p>"
       ) +
       section(
         "Picture it: trees, phones and your fair share",
@@ -11856,7 +11961,7 @@
       '<div class="big-number"><span class="num">' + fp.totalYearly.toLocaleString(undefined, { maximumFractionDigits: 0 }) +
       '</span><span class="unit">kg CO₂e / year</span></div>' +
       '<p class="sm muted mt-1">≈ ' + (fp.totalYearly / 1000).toFixed(1) + " tonnes</p>" +
-      '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>" +
+      '<div class="chip-row mt-5">' + ukPill(cmp) + "</div>" + ukNote(cmp) + sharedLine(fp.totalYearly) + "</div></div>" + habitCreditCard() +
       '<div class="card callout strong fade-up"><div class="label-row mb-4"><span class="round-badge sm">' + icon("lock") +
       '</span><span class="eyebrow">' + (FREE_MODE ? "See your full results, free" : "Unlock your full results") + "</span></div>" +
       '<h3 class="tip-title">See where your footprint comes from, and how to cut it</h3>' +
@@ -11995,6 +12100,11 @@
       const l = ui.levelUp;
       ui.levelUp = null;
       setTimeout(() => openLevelUp(l), 500);
+    }
+    if (ui.jumpHabits && path === "/results") {
+      ui.jumpHabits = false;
+      const c = document.getElementById("your-habits");
+      if (c) setTimeout(() => c.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" }), 350);
     }
     if (ui.revealStory && path === "/results" && app.querySelector(".results-v2 .res-hero")) {
       ui.revealStory = false;
@@ -12958,6 +13068,36 @@
     "dh-month": (el) => {
       ui.dhMonth = Math.max(-12, Math.min(0, (ui.dhMonth || 0) + Number(el.dataset.d)));
       dhCalSwap(el.closest(".dh-cal"), Number(el.dataset.d) < 0 ? "dhc-prev" : "dhc-next");
+    },
+    "hc-count": () => {
+      const now = habitCreditNow();
+      if (!now || !survey) return;
+      const before = footprint(survey).totalYearly;
+      survey.habitCredit = { at: new Date().toISOString(), weeks: now.weeks, cats: Object.fromEntries(Object.entries(now.cats).map(([k, v]) => [k, Math.round(v)])), items: now.items.map((x) => [x.key, Math.round(x.perWeek * 10) / 10, Math.round(x.kg)]) };
+      surveyChanged();
+      const after = footprint(survey).totalYearly;
+      ui.flash = "Counted: your footprint is now " + kgFmt(after) + " kg a year (−" + kgFmt(before - after) + " kg from your daily habits).";
+      haptic("success");
+      render();
+    },
+    "hc-remove": () => {
+      if (!survey) return;
+      delete survey.habitCredit;
+      surveyChanged();
+      ui.flash = "Taken out: your footprint is back to your survey answers.";
+      render();
+    },
+    "hc-go": () => { ui.jumpHabits = true; },
+    "dh-share": () => { ui.dhShare = ui.dhShare || "week"; dhShareSheet(); },
+    "dh-share-kind": (el) => { ui.dhShare = el.dataset.v; dhShareSheet(); },
+    "dh-share-send": async () => {
+      try { await navigator.share({ text: dhShareText(ui.dhShare || "week") }); } catch (e) {}
+    },
+    "dh-share-copy": async (el) => {
+      try { await navigator.clipboard.writeText(dhShareText(ui.dhShare || "week")); el.innerHTML = icon("check") + " Copied"; haptic("light"); } catch (e) {
+        const pre = modalRoot.querySelector(".dhs-pre"), r = document.createRange();
+        if (pre) { r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      }
     },
     "hq-open": () => hqOpen(0),
     "hq-edit": () => hqOpen("pick"),
