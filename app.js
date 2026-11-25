@@ -4781,7 +4781,9 @@
           ["Pick one day", "Choose the day that's easiest to change, like one with fewer bags or appointments."],
           [d <= A.ACTIVE_TRAVEL_MAX_KM ? "Try the bike" : "Try the train or bus", d <= A.ACTIVE_TRAVEL_MAX_KM ? "At " + d + " km, cycling takes most people about " + Math.max(5, Math.round((d / 15) * 60)) + " minutes, with zero emissions." : "At " + d + " km, the train or bus is the realistic swap, and you can read or rest on the way."],
           ["Or work from home", "One work-from-home day removes that day's commute entirely."],
-          ["Plan for an EV later", "When it's time to replace the car, an electric one emits {{ev_share}} as much per km on today's grid."],
+          hasEv(survey)
+            ? ["Charge on green electricity", (survey.energy || {}).greenTariff ? "You're on a green tariff, so charging at home is close to zero-carbon. Charge at home when you can." : "How your electricity is produced decides how clean your car is. A 100% renewable home tariff makes home charging close to zero-carbon: see Home Energy."]
+            : ["Plan for an EV later", "When it's time to replace the car, an electric one emits {{ev_share}} as much per km on today's grid."],
         ],
       };
     }
@@ -4926,8 +4928,12 @@
   };
 
   const carDaysOf = (s) => DAYS.filter((d) => MOTOR_MODES.includes((s.commute || {})[d]));
-  // Cards that don't apply are shown greyed out (sectionNA) rather than hidden.
-  function sectionHidden() {
+  // An electric (or plug-in hybrid) car, or an electric commute.
+  const hasEv = (s) => (s.cars || []).some((c) => c.fuel === "ev" || c.fuel === "phev") || DAYS.some((d) => (s.commute || {})[d] === "ev");
+  // Cards that don't apply are shown greyed out (sectionNA) rather than
+  // hidden; charging only matters to people with an electric car.
+  function sectionHidden(cat, s) {
+    if (cat === "commute" && s && s.dynamicKey === "evCharging") return !hasEv(survey);
     return false;
   }
 
@@ -4941,6 +4947,12 @@
       if (!bank) return '<p class="xs green-dark fw-600 mt-3">Pick your bank in the survey to see its rating.</p>';
       const rt = bankRating(bank);
       return '<p class="sm mt-3 label-row" style="flex-wrap:wrap">Your bank, ' + esc(bank.label) + ": " + rateChip(rt.key, rt.label) + '<span class="xs green-dark fw-600">Tap to compare</span></p>';
+    }
+    if (s.dynamicKey === "evCharging") {
+      const g = (survey.energy || {}).greenTariff;
+      return '<p class="xs ' + (g ? "green-dark" : "amber-dark") + ' fw-600 mt-3">' + (g
+        ? "You're on a green tariff, so charging at home is close to zero-carbon."
+        : "You're on a standard tariff: a green one would cut home charging by about " + Math.round((1 - D.GREEN_ELECTRICITY_FACTOR / D.ELECTRICITY_FACTOR) * 100) + "%. Tap to see how.") + "</p>";
     }
     if (s.dynamicKey === "commuteSwap") {
       const n = carDaysOf(survey).length;
@@ -6289,7 +6301,7 @@
 
     const order = [1, 2, 3, 4, 5, 6, 7];
     const badges =
-      '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + " of 8</span></div><ul>" +
+      '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + ' of 8</span><button type="button" class="hb3-bshare" data-action="acts-share">' + icon("share") + "Share</button></div><ul>" +
       order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
       '<li class="' + (made === 7 ? "got" : "") + '"><span>' + svgPath(HB_STAR, 22) + "</span><b>Seven strong</b><small>" + (made === 7 ? "Unlocked" : "All 7") + "</small></li></ul></section>";
 
@@ -6729,17 +6741,32 @@
     const line = got + (got === 1 ? " day · " : " days · ") + ticks + (ticks === 1 ? " habit" : " habits") + (kg >= 0.5 ? " · −" + kgShort(kg) + " kg CO₂e" : "");
     return [head, "", grid, "", line + (st.streak > 1 ? "\n🔥 " + st.streak + "-day streak" : ""), inviteLink()].join("\n");
   }
+  // Your 7 Acts passport, the same way: a stamp for each act.
+  const ACT_EMOJI = ["", "💷", "⚡\uFE0F", "🥗", "🚲", "📊", "📣", "🤝"];
+  const LEVEL_EMOJI = { Seed: "🌰", Sprout: "🌱", Sapling: "🌿", Tree: "🌳", Forest: "🌲" };
+  function actsShareText() {
+    const { acts } = habitActs();
+    const made = acts.filter((a) => a.done).length;
+    const lv = HB_LEVELS.reduce((k, l, i) => (made >= l[0] ? i : k), 0);
+    const done = acts.filter((a) => a.done).map((a) => ACT_SHORT[a.n]);
+    return ["CO2 Counter 🌱 My 7 Acts passport", "", acts.map((a) => ACT_EMOJI[a.n]).join(""), acts.map((a) => (a.done ? "🟩" : a.pending ? "🟨" : "⬜")).join(""), "",
+      made + " of 7 · " + HB_LEVELS[lv][1] + " " + (LEVEL_EMOJI[HB_LEVELS[lv][1]] || "") + (done.length ? "\n✅ " + done.join(" · ") : ""), inviteLink()].join("\n");
+  }
+  const shareNowText = () => (ui.dhShareWhat === "acts" ? actsShareText() : dhShareText(ui.dhShare || "week"));
   function dhShareSheet() {
-    const kind = ui.dhShare || "week", text = dhShareText(kind);
+    const what = ui.dhShareWhat === "acts" ? "acts" : "habits";
+    const kind = ui.dhShare || "week", text = shareNowText();
     const tab = (v, l) => '<button type="button" role="tab" aria-selected="' + (kind === v) + '" class="' + (kind === v ? "on" : "") + '" data-action="dh-share-kind" data-v="' + v + '">' + l + "</button>";
+    const pick = (v, ic, l, sub) => '<button type="button" role="tab" aria-selected="' + (what === v) + '" class="dhs-pick' + (what === v ? " on" : "") + '" data-action="dh-share-what" data-v="' + v + '"><span class="dhs-pick-ic" aria-hidden="true">' + ic + "</span><b>" + l + "</b><small>" + sub + "</small></button>";
     modalRoot.innerHTML = '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet dhs-sheet" role="dialog" aria-modal="true" aria-labelledby="dhs-h"><div class="sheet-body">' +
-      '<div class="sheet-head"><div class="min0"><h2 id="dhs-h" class="display">Share your habits</h2><p class="sheet-habit">Coloured squares, like a Wordle grid: green for a habit done.</p></div>' +
+      '<div class="sheet-head"><div class="min0"><h2 id="dhs-h" class="display">Share your progress</h2><p class="sheet-habit">Coloured squares, like a Wordle grid. Pick what to share.</p></div>' +
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
-      '<div class="wk-mode pl-day" role="tablist" aria-label="Which">' + tab("week", "This week") + tab("month", "This month") + "</div>" +
+      '<div class="dhs-picks" role="tablist" aria-label="What to share">' + pick("habits", "🟩🟨⬜", "Daily habits", "Your week or month, a square a day") + pick("acts", "🟩⬜", "7 Acts passport", "A stamp for each act you've done") + "</div>" +
+      (what === "habits" ? '<div class="wk-mode pl-day" role="tablist" aria-label="Which">' + tab("week", "This week") + tab("month", "This month") + "</div>" : "") +
       '<pre class="dhs-pre" aria-label="Your share text">' + esc(text) + "</pre>" +
       '<div class="dhs-acts">' + (navigator.share ? '<button type="button" class="btn btn-green" data-action="dh-share-send">' + icon("share") + " Share</button>" : "") +
       '<button type="button" class="btn ' + (navigator.share ? "btn-outline" : "btn-green") + '" data-action="dh-share-copy">' + icon("copy") + " Copy</button></div>" +
-      '<p class="xs muted pl-note">' + (kind === "month" ? "Green: 3 or more habits that day. Yellow: 1 or 2. Grey: none." : "A row for each habit, Monday to today. The emoji says what it's about.") + "</p></div></div></div>";
+      '<p class="xs muted pl-note">' + (what === "acts" ? "Green: done. Yellow: waiting to be confirmed. Grey: still to do." : kind === "month" ? "Green: 3 or more habits that day. Yellow: 1 or 2. Grey: none." : "A row for each habit, Monday to today. The emoji says what it's about.") + "</p></div></div></div>";
     document.body.classList.add("modal-open");
   }
 
@@ -7787,6 +7814,7 @@
     else if (s.dynamicKey === "switchAccount") body = switchSheet();
     else if (s.dynamicKey === "savingsPensions") body = pensionSheet();
     else if (s.dynamicKey === "greenTariff") body = greenTariffSheet();
+    else if (s.dynamicKey === "evCharging") body = evChargingSheet();
     else if (s.dynamicKey === "cheeseDairy") body = cheeseSheet();
     else body = "";
     // The biggest step carries the guide: comparison (unless the step has
@@ -7801,7 +7829,7 @@
             "</div>"
           : "") +
         '<div class="sheet-body"><div class="sheet-head"><span class="cat-badge sheet-icon">' + ex.icon + '</span><div class="min0"><h2 id="sheet-title" class="display">' + esc(s.heading) + "</h2>" +
-        (habits[index] ? '<p class="sheet-habit">Pairs with habit: ' + esc(habits[index].label) + "</p>" : "") + "</div>" +
+        (habits[index] && s.dynamicKey !== "evCharging" ? '<p class="sheet-habit">Pairs with habit: ' + esc(habits[index].label) + "</p>" : "") + "</div>" +
         '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
         '<p class="sheet-lede">' + esc(s.body) + "</p>" + body +
         (shown.length > 1
@@ -8120,6 +8148,32 @@
   }
 
   // Standard against green for their own electricity, then the suppliers.
+  // Charging an electric car: the same miles on the grid's usual mix, and on
+  // a 100% renewable tariff. (The car's own figure in your footprint uses the
+  // UK grid average, as public chargers and the grid's mix vary.)
+  function evChargingSheet() {
+    const e = survey.energy || {};
+    const km = 1609, perKm = byKey(D.COMMUTE_MODES, "ev").factor;
+    const kwh = (perKm * km) / D.ELECTRICITY_FACTOR;
+    const std = perKm * km, green = kwh * D.GREEN_ELECTRICITY_FACTOR, max = Math.max(1, std);
+    let html = panel(
+      "Charging for 1,000 miles, kg CO₂e",
+      '<ul class="sbars">' +
+        sheetBar("Standard tariff" + (e.greenTariff ? "" : " (yours)"), std, max, "var(--clay)", { text: kgFmt(std) + " kg", mine: !e.greenTariff }) +
+        sheetBar("Green tariff" + (e.greenTariff ? " (yours)" : ""), green, max, "var(--em-600)", { text: kgFmt(green) + " kg", mine: !!e.greenTariff }) +
+        "</ul>" +
+        '<p class="xs muted mt-2">About ' + kgFmt(kwh) + " kWh of charging. UK grid " + D.ELECTRICITY_FACTOR + " kg per kWh, renewable " + D.GREEN_ELECTRICITY_FACTOR + ". Your footprint counts your car at the UK grid average, as public chargers vary.</p>",
+      e.greenTariff ? chipBig("Already close to zero at home") : chipBig("A green tariff cuts it by " + Math.round((1 - green / std) * 100) + "%")
+    );
+    html += panel(
+      "How to charge cleaner",
+      '<ul class="steps-list"><li><b>Check how your electricity is produced.</b> Your tariff is on your bill or in your supplier\'s app: look for 100% renewable.</li>' +
+        "<li><b>Charge at home, overnight.</b> The grid is cleanest and cheapest at night, and an EV tariff makes those hours cheaper still.</li>" +
+        "<li><b>Public chargers vary.</b> Some networks are 100% renewable: it's worth checking the ones you use.</li></ul>" +
+        '<a class="btn btn-outline btn-sm mt-3" href="#/explainer/energy">' + (e.greenTariff ? "Your green tariff" : "See your tariff in Home Energy") + " " + icon("arrowRight") + "</a>"
+    );
+    return html;
+  }
   function greenTariffSheet() {
     const e = survey.energy || {};
     const hh = Math.max(1, e.household || 1);
@@ -13088,13 +13142,15 @@
       render();
     },
     "hc-go": () => { ui.jumpHabits = true; },
-    "dh-share": () => { ui.dhShare = ui.dhShare || "week"; dhShareSheet(); },
+    "dh-share": () => { ui.dhShare = ui.dhShare || "week"; ui.dhShareWhat = ui.dhShareWhat || "habits"; dhShareSheet(); },
+    "acts-share": () => { ui.dhShareWhat = "acts"; dhShareSheet(); },
+    "dh-share-what": (el) => { ui.dhShareWhat = el.dataset.v; dhShareSheet(); haptic("light"); },
     "dh-share-kind": (el) => { ui.dhShare = el.dataset.v; dhShareSheet(); },
     "dh-share-send": async () => {
-      try { await navigator.share({ text: dhShareText(ui.dhShare || "week") }); } catch (e) {}
+      try { await navigator.share({ text: shareNowText() }); } catch (e) {}
     },
     "dh-share-copy": async (el) => {
-      try { await navigator.clipboard.writeText(dhShareText(ui.dhShare || "week")); el.innerHTML = icon("check") + " Copied"; haptic("light"); } catch (e) {
+      try { await navigator.clipboard.writeText(shareNowText()); el.innerHTML = icon("check") + " Copied"; haptic("light"); } catch (e) {
         const pre = modalRoot.querySelector(".dhs-pre"), r = document.createRange();
         if (pre) { r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
       }
