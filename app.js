@@ -6301,7 +6301,7 @@
 
     const order = [1, 2, 3, 4, 5, 6, 7];
     const badges =
-      '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + " of 8</span></div><ul>" +
+      '<section class="hb3-badges" aria-labelledby="hb3-bh"><div class="hb3-bhead"><h2 id="hb3-bh" class="display">Badges</h2><span>' + (made + (made === 7 ? 1 : 0)) + ' of 8</span><button type="button" class="hb3-bshare" data-action="acts-share">' + icon("share") + "Share</button></div><ul>" +
       order.map((n) => { const a = acts.find((x) => x.n === n); return '<li class="' + (a.done ? "got" : "") + '"><span>' + svgPath(a.icon, 22) + "</span><b>" + esc(HB_BADGE[n]) + "</b><small>" + (a.done ? "Unlocked" : "Act " + n) + "</small></li>"; }).join("") +
       '<li class="' + (made === 7 ? "got" : "") + '"><span>' + svgPath(HB_STAR, 22) + "</span><b>Seven strong</b><small>" + (made === 7 ? "Unlocked" : "All 7") + "</small></li></ul></section>";
 
@@ -6741,17 +6741,32 @@
     const line = got + (got === 1 ? " day · " : " days · ") + ticks + (ticks === 1 ? " habit" : " habits") + (kg >= 0.5 ? " · −" + kgShort(kg) + " kg CO₂e" : "");
     return [head, "", grid, "", line + (st.streak > 1 ? "\n🔥 " + st.streak + "-day streak" : ""), inviteLink()].join("\n");
   }
+  // Your 7 Acts passport, the same way: a stamp for each act.
+  const ACT_EMOJI = ["", "💷", "⚡\uFE0F", "🥗", "🚲", "📊", "📣", "🤝"];
+  const LEVEL_EMOJI = { Seed: "🌰", Sprout: "🌱", Sapling: "🌿", Tree: "🌳", Forest: "🌲" };
+  function actsShareText() {
+    const { acts } = habitActs();
+    const made = acts.filter((a) => a.done).length;
+    const lv = HB_LEVELS.reduce((k, l, i) => (made >= l[0] ? i : k), 0);
+    const done = acts.filter((a) => a.done).map((a) => ACT_SHORT[a.n]);
+    return ["CO2 Counter 🌱 My 7 Acts passport", "", acts.map((a) => ACT_EMOJI[a.n]).join(""), acts.map((a) => (a.done ? "🟩" : a.pending ? "🟨" : "⬜")).join(""), "",
+      made + " of 7 · " + HB_LEVELS[lv][1] + " " + (LEVEL_EMOJI[HB_LEVELS[lv][1]] || "") + (done.length ? "\n✅ " + done.join(" · ") : ""), inviteLink()].join("\n");
+  }
+  const shareNowText = () => (ui.dhShareWhat === "acts" ? actsShareText() : dhShareText(ui.dhShare || "week"));
   function dhShareSheet() {
-    const kind = ui.dhShare || "week", text = dhShareText(kind);
+    const what = ui.dhShareWhat === "acts" ? "acts" : "habits";
+    const kind = ui.dhShare || "week", text = shareNowText();
     const tab = (v, l) => '<button type="button" role="tab" aria-selected="' + (kind === v) + '" class="' + (kind === v ? "on" : "") + '" data-action="dh-share-kind" data-v="' + v + '">' + l + "</button>";
+    const pick = (v, ic, l, sub) => '<button type="button" role="tab" aria-selected="' + (what === v) + '" class="dhs-pick' + (what === v ? " on" : "") + '" data-action="dh-share-what" data-v="' + v + '"><span class="dhs-pick-ic" aria-hidden="true">' + ic + "</span><b>" + l + "</b><small>" + sub + "</small></button>";
     modalRoot.innerHTML = '<div class="modal-backdrop sheet-backdrop pl-bd" data-action="close-modal"><div class="sheet pl-sheet dhs-sheet" role="dialog" aria-modal="true" aria-labelledby="dhs-h"><div class="sheet-body">' +
-      '<div class="sheet-head"><div class="min0"><h2 id="dhs-h" class="display">Share your habits</h2><p class="sheet-habit">Coloured squares, like a Wordle grid: green for a habit done.</p></div>' +
+      '<div class="sheet-head"><div class="min0"><h2 id="dhs-h" class="display">Share your progress</h2><p class="sheet-habit">Coloured squares, like a Wordle grid. Pick what to share.</p></div>' +
       '<button type="button" class="sheet-close modal-close" data-action="close-modal" aria-label="Close">' + icon("x") + "</button></div>" +
-      '<div class="wk-mode pl-day" role="tablist" aria-label="Which">' + tab("week", "This week") + tab("month", "This month") + "</div>" +
+      '<div class="dhs-picks" role="tablist" aria-label="What to share">' + pick("habits", "🟩🟨⬜", "Daily habits", "Your week or month, a square a day") + pick("acts", "🟩⬜", "7 Acts passport", "A stamp for each act you've done") + "</div>" +
+      (what === "habits" ? '<div class="wk-mode pl-day" role="tablist" aria-label="Which">' + tab("week", "This week") + tab("month", "This month") + "</div>" : "") +
       '<pre class="dhs-pre" aria-label="Your share text">' + esc(text) + "</pre>" +
       '<div class="dhs-acts">' + (navigator.share ? '<button type="button" class="btn btn-green" data-action="dh-share-send">' + icon("share") + " Share</button>" : "") +
       '<button type="button" class="btn ' + (navigator.share ? "btn-outline" : "btn-green") + '" data-action="dh-share-copy">' + icon("copy") + " Copy</button></div>" +
-      '<p class="xs muted pl-note">' + (kind === "month" ? "Green: 3 or more habits that day. Yellow: 1 or 2. Grey: none." : "A row for each habit, Monday to today. The emoji says what it's about.") + "</p></div></div></div>";
+      '<p class="xs muted pl-note">' + (what === "acts" ? "Green: done. Yellow: waiting to be confirmed. Grey: still to do." : kind === "month" ? "Green: 3 or more habits that day. Yellow: 1 or 2. Grey: none." : "A row for each habit, Monday to today. The emoji says what it's about.") + "</p></div></div></div>";
     document.body.classList.add("modal-open");
   }
 
@@ -13127,13 +13142,15 @@
       render();
     },
     "hc-go": () => { ui.jumpHabits = true; },
-    "dh-share": () => { ui.dhShare = ui.dhShare || "week"; dhShareSheet(); },
+    "dh-share": () => { ui.dhShare = ui.dhShare || "week"; ui.dhShareWhat = ui.dhShareWhat || "habits"; dhShareSheet(); },
+    "acts-share": () => { ui.dhShareWhat = "acts"; dhShareSheet(); },
+    "dh-share-what": (el) => { ui.dhShareWhat = el.dataset.v; dhShareSheet(); haptic("light"); },
     "dh-share-kind": (el) => { ui.dhShare = el.dataset.v; dhShareSheet(); },
     "dh-share-send": async () => {
-      try { await navigator.share({ text: dhShareText(ui.dhShare || "week") }); } catch (e) {}
+      try { await navigator.share({ text: shareNowText() }); } catch (e) {}
     },
     "dh-share-copy": async (el) => {
-      try { await navigator.clipboard.writeText(dhShareText(ui.dhShare || "week")); el.innerHTML = icon("check") + " Copied"; haptic("light"); } catch (e) {
+      try { await navigator.clipboard.writeText(shareNowText()); el.innerHTML = icon("check") + " Copied"; haptic("light"); } catch (e) {
         const pre = modalRoot.querySelector(".dhs-pre"), r = document.createRange();
         if (pre) { r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
       }
