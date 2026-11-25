@@ -1208,6 +1208,11 @@
       {
         "heading": "Rethink the trip itself",
         "body": "Can the meeting be a video call? Can two nearby errands merge into one journey? The cleanest kilometre is the one you never drive."
+      },
+      {
+        "dynamicKey": "evCharging",
+        "heading": "Charge it on green electricity",
+        "body": "An electric car is only as clean as the electricity that charges it. Most charging happens at home, so how your electricity is produced matters most: on a 100% renewable tariff, the miles you charge at home are close to zero-carbon. Check your tariff (it's on your bill or in your supplier's app), switch to a green one if it isn't, and charge overnight, when the grid is cleanest and cheapest."
       }
     ],
     "habits": [
